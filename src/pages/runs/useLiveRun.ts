@@ -26,11 +26,15 @@ export function useLiveRun(doc: SystemDoc) {
     }
   }, [doc.id]);
 
-  // the list, and the latest run selected by default
+  // the list, and the run named in ?run= (an evaluation's case links there), else the latest
   useEffect(() => {
     setSelected(null);
     setEvents([]);
-    void refreshList().then((rs) => rs[0] && setSelected(rs[0].id));
+    const wanted = new URLSearchParams(window.location.search).get("run");
+    void refreshList().then((rs) => {
+      const pick = rs.find((r) => r.id === wanted) ?? rs[0];
+      if (pick) setSelected(pick.id);
+    });
   }, [refreshList]);
 
   // load the selected run, then follow it while it is active

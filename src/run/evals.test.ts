@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finalAnswer, gradeByRule, parseNumber } from "./evals";
+import { finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -27,5 +27,22 @@ describe("grading", () => {
     expect(gradeByRule("answer", "Answer: B. Hyperkalaemia", "B").pass).toBe(true);
     expect(gradeByRule("answer", "Answer: Because of B", "B").pass).toBe(false);
     expect(gradeByRule("contains", "It is hyperkalaemia, clearly.", "Hyperkalaemia").pass).toBe(true);
+  });
+});
+
+describe("cases from text", () => {
+  it("reads 'question | expected', tabs and JSON lines, and counts what it could not read", () => {
+    const { cases, skipped } = parseCases('# a comment\nWhat is 2+2? | 4\nA | B | C\nCapital of France?\tParis\n{"question": "1+1", "answer": 2}\nno separator here\n{"input": "x"}');
+    expect(cases).toEqual([
+      { input: "What is 2+2?", expected: "4" },
+      { input: "A | B", expected: "C" },
+      { input: "Capital of France?", expected: "Paris" },
+      { input: "1+1", expected: "2" },
+    ]);
+    expect(skipped).toBe(2);
+  });
+
+  it("the sample sets parse completely", () => {
+    for (const s of SAMPLE_SETS) expect(parseCases(s.text).skipped, s.name).toBe(0);
   });
 });

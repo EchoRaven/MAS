@@ -98,3 +98,72 @@ export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expe
   const pass = a === e || letter;
   return { pass, answer, why: pass ? "the final answer matches" : `"${answer}" is not "${expected}"` };
 }
+
+/**
+ * Cases from pasted text: JSON lines ({input, expected}, or question/answer),
+ * or one case per line as "question | expected" (a tab works as well).
+ */
+export function parseCases(text: string): { cases: EvalCase[]; skipped: number } {
+  const cases: EvalCase[] = [];
+  let skipped = 0;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    if (line.startsWith("{")) {
+      try {
+        const o = JSON.parse(line) as Record<string, unknown>;
+        const input = o.input ?? o.question ?? o.prompt;
+        const expected = o.expected ?? o.answer ?? o.target;
+        if (input != null && expected != null) {
+          cases.push({ input: String(input), expected: String(expected) });
+          continue;
+        }
+      } catch {
+        /* not JSON: counted as skipped */
+      }
+      skipped++;
+      continue;
+    }
+    const cut = Math.max(line.lastIndexOf(" | "), line.lastIndexOf("\t"));
+    if (cut <= 0) {
+      skipped++;
+      continue;
+    }
+    const sep = line[cut] === "\t" ? 1 : 3;
+    const input = line.slice(0, cut).trim();
+    const expected = line.slice(cut + sep).trim();
+    if (input && expected) cases.push({ input, expected });
+    else skipped++;
+  }
+  return { cases, skipped };
+}
+
+/** Small ready-made sets to try an evaluation with. Answers checked by hand. */
+export const SAMPLE_SETS: { name: string; grader: Grader; text: string }[] = [
+  {
+    name: "Reasoning traps",
+    grader: "number",
+    text: [
+      "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost, in dollars? | 0.05",
+      "A train leaves at 3:40 pm and arrives at 6:15 pm the same day. How many minutes does the trip take? | 155",
+      "If 5 machines take 5 minutes to make 5 widgets, how many minutes would 100 machines take to make 100 widgets? | 5",
+      "A patch of lily pads doubles in size every day. It covers the whole lake on day 48. On which day did it cover half the lake? | 47",
+      "Alice walks up a hill at 1 m/s and comes back down the same path at 3 m/s. What is her average speed for the whole trip, in m/s? | 1.5",
+      "How many trailing zeros does 100! have when written in base 12? | 48",
+    ].join("\n"),
+  },
+  {
+    name: "Harder counting",
+    grader: "number",
+    text: [
+      "What is the sum of all integers from 1 to 200 that are divisible by 3 or by 5? | 9368",
+      "In how many ways can 8 people sit around a round table if two particular people refuse to sit next to each other? (Rotations of the same seating count once.) | 3600",
+      "How many three-digit numbers have digits that add up to 10? | 54",
+      "In how many ways can you make 50 cents from pennies, nickels, dimes and quarters? | 49",
+      "What is the remainder when 2^100 is divided by 7? | 2",
+      "A clock shows 3:15. What is the smaller angle between the hour and minute hands, in degrees? | 7.5",
+      "How many positive divisors does 360 have? | 24",
+      "What is 17 × 24 − 13 × 19? | 161",
+    ].join("\n"),
+  },
+];

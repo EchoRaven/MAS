@@ -4,14 +4,17 @@ import type { EvalCase, Grader } from "@/run/evals";
 import type { Router } from "../http";
 import type { EvalManager } from "../runtime/evals";
 import { HttpError, type Store } from "../store/files";
+import { checkDoc } from "./systems";
 
 const GRADERS: Grader[] = ["answer", "contains", "number", "llm"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   r.on("POST", "/api/evals", async (req) => {
-    const b = (await req.body()) as { system_id?: string; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; force?: boolean };
-    const doc = b.system_id ? store.getSystem(b.system_id) : null;
-    if (!doc) throw new HttpError(400, "Give the system_id of a stored system");
+    const b = (await req.body()) as { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; force?: boolean };
+    // like runs: the browser sends the system as it is now, which also stores it
+    const doc = b.doc ? checkDoc(b.doc) : b.system_id ? store.getSystem(b.system_id) : null;
+    if (!doc) throw new HttpError(400, "Give a system_id or a doc");
+    if (b.doc) store.putSystem(doc);
     if (!Array.isArray(b.cases) || !b.cases.length) throw new HttpError(400, "Give cases: [{input, expected}, …]");
     const grader = b.grader ?? "answer";
     if (!GRADERS.includes(grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);

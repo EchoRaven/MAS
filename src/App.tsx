@@ -14,6 +14,7 @@ import { startSync } from "@/store/sync";
 const SystemsPage = lazy(() => import("@/pages/Systems").then((m) => ({ default: m.SystemsPage })));
 const CanvasPage = lazy(() => import("@/pages/canvas").then((m) => ({ default: m.CanvasPage })));
 const RunsPage = lazy(() => import("@/pages/runs").then((m) => ({ default: m.RunsPage })));
+const EvalsPage = lazy(() => import("@/pages/evals").then((m) => ({ default: m.EvalsPage })));
 const TemplatesPage = lazy(() => import("@/pages/Templates").then((m) => ({ default: m.TemplatesPage })));
 const LibraryPage = lazy(() => import("@/pages/library").then((m) => ({ default: m.LibraryPage })));
 const DemosPage = lazy(() => import("@/pages/demos").then((m) => ({ default: m.DemosPage })));
@@ -74,6 +75,8 @@ export function AppLayout() {
               <Route path="/canvas/:systemId" element={<CanvasPage />} />
               <Route path="/runs" element={<RunsPage />} />
               <Route path="/runs/:systemId" element={<RunsPage />} />
+              <Route path="/evals" element={<EvalsPage />} />
+              <Route path="/evals/:systemId" element={<EvalsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/library/:systemId" element={<LibraryPage />} />

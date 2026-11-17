@@ -1,6 +1,7 @@
 // The browser's side of the server API (served under /api on the same
 // origin; the dev and preview servers proxy it). Every call carries the
 // server token the person entered in Settings.
+import type { EvalCase, EvalRecord, Grader } from "@/run/evals";
 import type { RunEvent, RunRecord } from "@/run/events";
 import type { ModelSpec, SystemDoc } from "@/model/types";
 
@@ -62,6 +63,11 @@ export const Api = {
   answer: (id: string, request: string, answer: { approved?: boolean; text?: string }) => api("POST", `/runs/${id}/answer`, { request, ...answer }),
   stop: (id: string) => api("POST", `/runs/${id}/stop`),
   deleteRun: (id: string) => api("DELETE", `/runs/${id}`),
+  startEval: (body: { doc: SystemDoc; cases: EvalCase[]; grader: Grader; mock?: boolean; concurrency?: number; force?: boolean }) => api<EvalRecord>("POST", "/evals", body),
+  evals: (systemId: string) => api<{ evals: (Omit<EvalRecord, "cases"> & { total: number })[] }>("GET", `/evals?system=${encodeURIComponent(systemId)}`),
+  evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
+  stopEval: (id: string) => api("POST", `/evals/${id}/stop`),
+  deleteEval: (id: string) => api("DELETE", `/evals/${id}`),
   secrets: () => api<{ secrets: { name: string; source: "store" | "environment" | null; referenced: boolean }[] }>("GET", "/secrets"),
   setSecret: (name: string, value: string) => api("PUT", `/secrets/${encodeURIComponent(name)}`, { value }),
   deleteSecret: (name: string) => api("DELETE", `/secrets/${encodeURIComponent(name)}`),
