@@ -65,8 +65,15 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   const inputText = asText(inputMsg);
 
   const { tools, server_tools, access } = await agentTools(svc, node, transfers);
+  // code often calls ctx.observe without awaiting it: it must never reject
   const observe = async (text: unknown) => {
-    for (const e of access) await hub.get(e.target).observe?.(node.id, typeof text === "string" ? text : JSON.stringify(text));
+    for (const e of access) {
+      try {
+        await hub.get(e.target).observe?.(node.id, typeof text === "string" ? text : JSON.stringify(text));
+      } catch (err) {
+        rc.emit({ type: "log", node: node.id, level: "warn", text: `observe → ${nameOf(rc, e.target)}: ${(err as Error).message}` });
+      }
+    }
   };
   const io = new AgentIO(rc, node.id, a, tools, server_tools, { observe });
   if (!state.started.has(node.id)) {

@@ -43,6 +43,10 @@ router.on(
 );
 router.on("DELETE", "/mcp", () => ({ ok: true }), { auth: false });
 
+// user code can leave a promise rejected and unawaited; log it, never exit
+process.on("unhandledRejection", (e) => console.error("unhandled rejection:", e instanceof Error ? e.message : e));
+process.on("uncaughtException", (e) => console.error("uncaught exception:", e.message));
+
 const server = http.createServer((req, res) => void router.handle(req, res));
 server.listen(config.port, config.host, () => {
   console.log(`MAS Studio server on http://${config.host}:${config.port} (data: ${config.dataDir})`);

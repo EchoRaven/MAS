@@ -4,7 +4,8 @@ import type { ModelSpec } from "@/model/types";
 
 export type Part =
   | { type: "text"; text: string }
-  | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
+  /** extra: provider fields that must come back with the call (Gemini's thought_signature) */
+  | { type: "tool_call"; id: string; name: string; input: Record<string, unknown>; extra?: Record<string, unknown> }
   | { type: "tool_result"; id: string; content: string; error?: boolean }
   /** a provider block that must be sent back verbatim (thinking, server tool use and results) */
   | { type: "raw"; provider: string; block: unknown };

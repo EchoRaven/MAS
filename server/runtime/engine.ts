@@ -498,10 +498,12 @@ export class Engine implements TurnServices {
         break;
       case "selector": {
         const selector = room.node.data.room?.selector;
-        const names = members.map((m) => `${m}: ${nameOf(rc, m)}`).join("\n");
+        // the selector (a group chat manager) picks among the others
+        const candidates = members.filter((m) => m !== selector);
+        const names = candidates.map((m) => `${m}: ${nameOf(rc, m)}${"role" in (rc.byId.get(m)?.data ?? {}) ? ` (${(rc.byId.get(m)!.data as { role: string }).role})` : ""}`).join("\n");
         const sel = selector && rc.byId.get(selector)?.data.kind === "agent" ? (rc.byId.get(selector)!.data as AgentData).model : null;
         const pick = await llmCall(rc, selector ?? roomId, `Conversation:\n${room.transcript(12_000)}\n\nWho should speak next? Reply with one id from:\n${names}`, sel);
-        const found = members.find((m) => pick.includes(m)) ?? members.find((m) => pick.toLowerCase().includes(nameOf(rc, m).toLowerCase()));
+        const found = candidates.find((m) => pick.includes(m)) ?? candidates.find((m) => pick.toLowerCase().includes(nameOf(rc, m).toLowerCase()));
         next = found ? [found] : [];
         break;
       }

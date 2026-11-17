@@ -22,3 +22,24 @@ describe("retryWait", () => {
     expect(retryWait(res(503), "", 5)).toBeNull();
   });
 });
+
+describe("OpenAI-compatible tool calls", () => {
+  it("send Gemini's thought_signature back with the call", async () => {
+    const { openaiProvider } = await import("./openai");
+    const bodies: { messages: { tool_calls?: Record<string, unknown>[] }[] }[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      const call = { id: "c1", type: "function", function: { name: "f", arguments: "{}" }, extra_content: { google: { thought_signature: "sig" } } };
+      return new Response(JSON.stringify({ choices: [{ message: { content: null, tool_calls: [call] }, finish_reason: "tool_calls" }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+    }) as unknown as typeof fetch;
+    try {
+      const model = { id: "g", provider: "google" as const, model: "gemini-3-flash-preview", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
+      const first = await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }], tools: [{ name: "f", description: "", input_schema: { type: "object" } }] });
+      await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }, { role: "assistant", content: first.content }, { role: "user", content: [{ type: "tool_result", id: "c1", content: "ok" }] }] });
+      expect(bodies[1].messages[1].tool_calls?.[0].extra_content).toEqual({ google: { thought_signature: "sig" } });
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

@@ -23,7 +23,7 @@ const g = (model: string, price_in: number, price_out: number) => ({ provider: "
 const GEMINI: Record<string, Omit<ModelSpec, "id">> = {
   opus: g("gemini-3-flash-preview", 0.5, 3),
   sonnet: g("gemini-2.5-flash", 0.3, 2.5),
-  haiku: g("gemini-2.5-flash-lite", 0.1, 0.4),
+  haiku: g("gemini-3.5-flash-lite", 0.1, 0.4),
   gpt: g("gemini-3.1-flash-lite", 0.25, 1.5),
   local: g("gemini-flash-lite-latest", 0.1, 0.4),
   gemini: g("gemini-2.5-flash", 0.3, 2.5),

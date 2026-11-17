@@ -75,7 +75,7 @@ function toMessages(system: string | undefined, msgs: ChatMessage[]): OAMessage[
     const text = m.content.filter((p) => p.type === "text").map((p) => (p as { text: string }).text).join("");
     if (m.role === "assistant") {
       const calls = m.content.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call");
-      out.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: JSON.stringify(c.input) } })) } : {}) });
+      out.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls.map((c) => ({ id: c.id, type: "function", function: { name: c.name, arguments: JSON.stringify(c.input) }, ...(c.extra ?? {}) })) } : {}) });
     } else {
       for (const p of m.content) if (p.type === "tool_result") out.push({ role: "tool", tool_call_id: p.id, content: p.content });
       if (text) out.push({ role: "user", content: text });
@@ -95,7 +95,7 @@ export const openaiProvider: Provider = {
       ...(model.api.params ?? {}),
     };
     const data = (await post(model, key, "/chat/completions", body, req.signal)) as {
-      choices: { message: { content?: string | null; tool_calls?: { id: string; function: { name: string; arguments: string } }[] }; finish_reason: string }[];
+      choices: { message: { content?: string | null; tool_calls?: ({ id: string; type?: string; function: { name: string; arguments: string } } & Record<string, unknown>)[] }; finish_reason: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number };
     };
     const choice = data.choices[0];
@@ -108,7 +108,10 @@ export const openaiProvider: Provider = {
       } catch {
         input = { _raw: c.function.arguments };
       }
-      content.push({ type: "tool_call", id: c.id, name: c.function.name, input });
+      // keep provider extras (Gemini returns extra_content.google.thought_signature, which must be sent back)
+      const { id: _id, type: _type, function: _fn, ...extra } = c;
+      void _id, void _type, void _fn;
+      content.push({ type: "tool_call", id: c.id, name: c.function.name, input, ...(Object.keys(extra).length ? { extra } : {}) });
     }
     const stop: ChatResponse["stop"] = choice.finish_reason === "tool_calls" ? "tool_use" : choice.finish_reason === "length" ? "max_tokens" : choice.finish_reason === "content_filter" ? "refusal" : "end";
     return { content, stop, usage: { input: data.usage?.prompt_tokens ?? 0, output: data.usage?.completion_tokens ?? 0 } };
