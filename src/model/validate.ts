@@ -100,6 +100,8 @@ export function validate(doc: SystemDoc): Issue[] {
   if (doc.nodes.length > 0 && !starts.length) add("warning", "Nothing here can start a run yet: add an agent, model, function or group");
   if (starts.length > 1) add("info", `${starts.length} components start the run at once (${starts.map((s) => nodeName(byId.get(s.node))).join(", ")}). Pick one under System → Start to send the input to just one`);
 
+  if (doc.termination.includes("judge_outputs_verdict")) add("info", "“Judge returns a verdict” does not end a run by itself: add a policy on the judge's output (on: output(<judge>), action: terminate)");
+
   // ---- policies the runtime would never act on
   for (const p of doc.policies) {
     const why = policyProblem(doc, p);

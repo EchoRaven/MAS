@@ -14,7 +14,12 @@ export interface ToolServices {
   call(edge: SysEdge, text: string): Promise<string>;
   /** run the spawn template on one task */
   spawn(template: string, task: string, i: number): Promise<string>;
+  /** end the run with this answer (the finish tool) */
+  finish(node: string, answer: string): void;
 }
+
+/** in termination: every agent gets a finish tool (off unless chosen; the old "any_agent_calls_finish" never did anything, so it does not turn this on) */
+export const AGENTS_CAN_FINISH = "agents_can_finish";
 
 const safe = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48);
 
@@ -78,6 +83,21 @@ export async function agentTools(svc: ToolServices, node: SysNode<AgentData>, tr
           return `Will hand over to ${nameOf(rc, e.target)} after this turn.`;
         },
       });
+
+  // "agents can end the run": every agent can end the run with its answer
+  if (rc.doc.termination.includes(AGENTS_CAN_FINISH)) {
+    tools.push({
+      name: "finish",
+      description: "End the whole run now, when the task is done. Give the final answer; it becomes the run's result.",
+      input_schema: { type: "object", properties: { answer: { type: "string", description: "The final answer" } }, required: ["answer"] },
+      effect: "pure",
+      source: "system",
+      run: async (args) => {
+        svc.finish(node.id, String(args.answer ?? ""));
+        return "The run is ending with this answer.";
+      },
+    });
+  }
 
   // spawning: fan out copies of a template agent
   if (a.spawn && rc.byId.get(a.spawn.template)?.data.kind === "agent") {

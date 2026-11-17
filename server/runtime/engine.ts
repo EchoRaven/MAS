@@ -149,6 +149,8 @@ export class Engine implements TurnServices {
   /** filter -> transform -> gate -> coercion, then arrival. */
   async deliver(e: SysEdge, value: unknown, from: string): Promise<void> {
     const rc = this.rc;
+    // a run that is stopping (finish, a policy, a limit) sends nothing more
+    if (rc.signal.aborted) return;
     let v = value;
     if (e.filter) {
       const scope = { ...(v && typeof v === "object" && !Array.isArray(v) ? (v as object) : {}), input: exprValue(v), value: exprValue(v), text: asText(v) };
@@ -341,6 +343,7 @@ export class Engine implements TurnServices {
 
   private async afterAgent(n: SysNode<AgentData>, r: { output: unknown; text: string; port?: string; transfers: string[]; conversation?: import("./models").ChatMessage[] }, via?: SysEdge) {
     const ports = r.port ? [r.port] : n.data.interface.outputs.map((p) => p.id);
+    if (this.rc.signal.aborted) return;
     if (!(await this.outputPolicies(n.id, ports[0] ?? "out", r.output))) return;
     const edges = ports.flatMap((p) => this.outEdges(n.id, p));
     const handoffs = edges.filter((e) => e.kind === "handoff");
@@ -450,6 +453,15 @@ export class Engine implements TurnServices {
     return r.text;
   }
 
+  /** An agent called finish: its answer is the run's result, and the run ends. */
+  finish(node: string, answer: string) {
+    const rc = this.rc;
+    this.outputs++;
+    rc.emit({ type: "output", node, port: "finish", text: clip(answer, 20_000) });
+    rc.emit({ type: "log", node, level: "info", text: `${nameOf(rc, node)} called finish: the run ends` });
+    rc.stop(`${nameOf(rc, node)} called finish`);
+  }
+
   exposeTools(node: string, tools: RtTool[]) {
     return this.opts.expose?.(node, tools);
   }
@@ -511,7 +523,7 @@ export class Engine implements TurnServices {
   private async post(roomId: string, from: string, text: string) {
     const rc = this.rc;
     const room = this.hub.room(roomId);
-    if (!room) return;
+    if (!room || rc.signal.aborted) return;
     const edge = rc.doc.edges.find((e) => e.kind === "access" && e.source === from && e.target === roomId);
     const tag = edge?.binding?.write?.tag ?? undefined;
     room.post(from, text, tag);

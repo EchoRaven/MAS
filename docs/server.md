@@ -127,6 +127,12 @@ The scheduler is `server/runtime/engine.ts`.
     - `notify`.
 
   The validator warns about a policy the runtime would never act on.
+- **Ending.** A run ends when nothing is left to do or at a limit. Beyond that:
+  - With "Agents can end the run" (`agents_can_finish` in `termination`), every agent has a `finish` tool; calling it ends the run with its answer as the result.
+  - The expressions in `termination` end room conversations.
+  - A policy on an output can end the run on a value.
+
+  Once a run is stopping, nothing more is delivered.
 - **Limits.** `budget.usd`, `budget.max_rounds` (component activations),
   `budget.wallclock_min` and each agent's `budget_usd`. A run ends when
   nothing is left to do, a limit is reached, or it is stopped.

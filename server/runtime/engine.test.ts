@@ -532,6 +532,37 @@ describe("runtime", () => {
     });
   });
 
+  it("finish: with 'agents can end the run', an agent's finish ends it with that answer; without it there is no such tool", async () => {
+    const doc = () => {
+      const b = new Builder("Finish", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "f_a", harness: { ...native(), loop: "react", max_steps: 3, instructions: "" } })
+        .agent("b", 0, 0, { name: "B", model: "f_b", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "a", "message")
+        .edge("a", "b", "message")
+        .edge("b", "me", "message");
+      b.doc.models.push(
+        { id: "f_a", provider: "mock", model: "mock", api: { params: { script: [{ tool: "finish", input: { answer: "42, and done" } }, "carry on"] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+        { id: "f_b", provider: "mock", model: "mock", api: { params: { script: ["B ran"] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      );
+      return b.doc;
+    };
+    const on = doc();
+    on.termination = ["agents_can_finish"];
+    const { rec, events } = await run(on, "go", { mock: false });
+    expect(events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text)).toEqual(["42, and done"]);
+    expect(usages(events, "b").length).toBe(0);
+    expect(runs.get(rec.id)).toMatchObject({ status: "finished", reason: "A called finish" });
+    const off = doc();
+    // the old keyword, which every system made from the blank default has, does not turn it on
+    off.termination = ["any_agent_calls_finish"];
+    const second = await run(off, "go", { mock: false });
+    // no finish tool: nothing ends the run early, and B gets its turn
+    expect(second.events.some((e) => e.type === "tool" && e.tool === "finish" && !e.error)).toBe(false);
+    expect(usages(second.events, "b").length).toBe(1);
+    expect(second.events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text)).toEqual(["B ran"]);
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
@@ -586,7 +617,7 @@ describe("runtime", () => {
     const { Hub } = await import("./resources/hub");
     const { Models } = await import("./models");
     const rc = { doc: b.doc, byId: new Map(b.doc.nodes.map((n) => [n.id, n])), models: new Models(b.doc.models, new Secrets(dir), true), emit: () => undefined, store, config, runId: "t", vars: {} } as unknown as import("./context").RunCtx;
-    const { tools } = await agentTools({ rc, hub: new Hub(rc), call: async () => "", spawn: async () => "" }, b.doc.nodes.find((n) => n.id === "a") as never, new Set());
+    const { tools } = await agentTools({ rc, hub: new Hub(rc), call: async () => "", spawn: async () => "", finish: () => undefined }, b.doc.nodes.find((n) => n.id === "a") as never, new Set());
     expect(tools.map((t) => t.name)).toEqual(["memory_search"]);
     const { events } = await run(b.doc, "I like tea");
     expect(errors(events)).toEqual([]);
@@ -658,7 +689,7 @@ describe("runtime", () => {
     const { Models } = await import("./models");
     const rc = { doc: b.doc, byId: new Map(b.doc.nodes.map((n) => [n.id, n])), models: new Models(b.doc.models, new Secrets(dir), true), emit: () => undefined, store, config, runId: "t", vars: {} } as unknown as import("./context").RunCtx;
     const hub = new Hub(rc);
-    const { tools } = await agentTools({ rc, hub, call: async () => "", spawn: async () => "" }, b.doc.nodes.find((n) => n.id === "a") as never, new Set());
+    const { tools } = await agentTools({ rc, hub, call: async () => "", spawn: async () => "", finish: () => undefined }, b.doc.nodes.find((n) => n.id === "a") as never, new Set());
     const names = tools.map((t) => t.name);
     expect(names.filter((n) => n.startsWith("bash"))).toEqual(["bash"]);
   });

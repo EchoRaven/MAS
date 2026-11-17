@@ -5,16 +5,11 @@ import { interfaceOf, nodeName } from "@/model/ports";
 import { seedId, TEMPLATES } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
 import type { Issue } from "@/model/validate";
-import { AreaField, Chips, FIELD, NumberField, Section, SelectField, TextField } from "../fields";
+import { AreaField, FIELD, NumberField, Section, SelectField, TextField } from "../fields";
 import { AddButton, Body, IssueList, type Update } from "./shared";
 
-const TERMINATION = [
-  { value: "any_agent_calls_finish", label: "An agent calls finish" },
-  { value: "all_idle", label: "All idle" },
-  { value: "budget_exceeded", label: "Budget exceeded" },
-  { value: "max_rounds", label: "Max rounds reached" },
-  { value: "judge_outputs_verdict", label: "Judge returns a verdict" },
-];
+/** Old "stops when" keywords that are not expressions: a run always ends idle or at a limit, so they mean nothing on their own. */
+const KEYWORDS = new Set(["agents_can_finish", "any_agent_calls_finish", "all_idle", "budget_exceeded", "max_rounds", "judge_outputs_verdict"]);
 
 export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDoc; update: Update; issues: Issue[]; onPick: (i: Issue) => void }) {
   const set = (patch: Partial<SystemDoc>) => update((d) => ({ ...d, ...patch }));
@@ -83,7 +78,28 @@ export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDo
           <NumberField label="Budget (USD)" value={doc.budget.usd} onChange={(usd) => set({ budget: { ...doc.budget, usd } })} step={0.5} />
           <NumberField label="Max rounds" value={doc.budget.max_rounds} onChange={(max_rounds) => set({ budget: { ...doc.budget, max_rounds } })} />
           <NumberField label="Max minutes" value={doc.budget.wallclock_min} onChange={(wallclock_min) => set({ budget: { ...doc.budget, wallclock_min } })} />
-          <Chips label="Stops when" hint="The run ends as soon as any of these is met" options={TERMINATION} value={doc.termination} onChange={(termination) => set({ termination })} />
+          <div className="space-y-2 pt-1 text-[12px]">
+            <p className="text-muted-foreground">A run ends when nothing is left to do, or when it reaches one of the limits above.</p>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={doc.termination.includes("agents_can_finish")}
+                onChange={(e) => set({ termination: e.target.checked ? [...doc.termination, "agents_can_finish"] : doc.termination.filter((t) => t !== "agents_can_finish") })}
+              />
+              <span>
+                Agents can end the run
+                <span className="block text-[11px] text-muted-foreground">Every agent gets a finish tool; calling it ends the run, with its answer as the result.</span>
+              </span>
+            </label>
+            <AreaField
+              label="Room talk ends when"
+              value={doc.termination.filter((t) => !KEYWORDS.has(t)).join("\n")}
+              onChange={(text) => set({ termination: [...doc.termination.filter((t) => KEYWORDS.has(t)), ...text.split("\n").map((x) => x.trim()).filter(Boolean)] })}
+              rows={2}
+            />
+            <p className="text-[11px] text-muted-foreground">One expression per line over the last message (text, from); a message containing TERMINATE always ends it. To end a run on a component's output, add a policy.</p>
+          </div>
         </Section>
         <Section title="Policies" aside={<AddButton label="Add policy" onClick={() => set({ policies: [...doc.policies, { id: `p${Date.now() % 100000}`, on: "usage", condition: "", action: "notify" }] })} />}>
           {doc.policies.length === 0 && <p className="text-xs text-muted-foreground">No system policies. Gates live on edges.</p>}

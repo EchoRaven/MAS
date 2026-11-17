@@ -26,7 +26,7 @@ function debate(): SystemDoc {
     .edge("con", "arena", "access")
     .edge("judge", "arena", "access");
   b.doc.budget = { usd: 2, max_rounds: 12, wallclock_min: 10 };
-  b.doc.termination = ["judge_outputs_verdict", "max_rounds"];
+  // the policy below ends the run on the verdict
   b.doc.policies = [{ id: "p1", on: "output(judge.verdict)", condition: "output.winner != null", action: "terminate" }];
   return b.doc;
 }
