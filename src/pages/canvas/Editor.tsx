@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
-import { Code2, Download, PanelRightClose, PanelRightOpen, PlayCircle, Wand2, Workflow } from "lucide-react";
+import { Code2, Download, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Wand2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AgentView } from "@/canvas/agent/AgentView";
@@ -15,6 +15,7 @@ import { PALETTE } from "@/canvas/presets";
 import { downloadText, slug } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AgentData, NodeData, NodeKind, Processor, SystemDoc } from "@/model/types";
+import { autoLayout } from "@/model/layout";
 import { validate } from "@/model/validate";
 import { toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
@@ -58,6 +59,8 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const [importing, setImporting] = useState<ImportKind | null>(null);
   const [architect, setArchitect] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // positions before the last tidy, so it can be undone for a few seconds
+  const [beforeTidy, setBeforeTidy] = useState<Record<string, { x: number; y: number }> | null>(null);
   const nav = useEditorNav(doc);
 
   const update = useCallback((fn: (d: SystemDoc) => SystemDoc) => updateStore(doc.id, fn), [updateStore, doc.id]);
@@ -73,6 +76,20 @@ export function Editor({ doc }: { doc: SystemDoc }) {
     return { nodes, edges };
   }, [issues]);
   const modelLabel = useCallback((id: string) => doc.models.find((m) => m.id === id)?.model ?? id, [doc.models]);
+
+  const tidy = () => {
+    setBeforeTidy(Object.fromEntries(doc.nodes.map((n) => [n.id, n.position])));
+    update((d) => autoLayout(structuredClone(d)));
+    window.setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50);
+    window.setTimeout(() => setBeforeTidy(null), 8000);
+  };
+  const undoTidy = () => {
+    const prev = beforeTidy;
+    if (!prev) return;
+    update((d) => ({ ...d, nodes: d.nodes.map((n) => (prev[n.id] ? { ...n, position: prev[n.id] } : n)) }));
+    setBeforeTidy(null);
+    window.setTimeout(() => rf.fitView({ padding: 0.2, duration: 300 }), 50);
+  };
 
   const flash = (msg: string) => {
     setToast(msg);
@@ -140,6 +157,16 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           <ViewSwitch view={view} setView={setView} />
           <IssuesMenu doc={doc} issues={issues} onPick={(i) => { setView("canvas"); nav.pickIssue(i); setInspectorOpen(true); }} />
           <div className="ml-auto flex gap-1.5">
+            {view === "canvas" &&
+              (beforeTidy ? (
+                <Button variant="outline" size="sm" onClick={undoTidy} title="Put everything back where it was">
+                  Undo tidy
+                </Button>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={tidy} title="Lay the canvas out left to right, following the flow from the start">
+                  <LayoutGrid className="mr-1.5 h-3.5 w-3.5" /> Tidy
+                </Button>
+              ))}
             <Button variant="outline" size="sm" onClick={() => setArchitect(true)} title="Describe a change and let the architect make it">
               <Wand2 className="mr-1.5 h-3.5 w-3.5" /> Architect
             </Button>

@@ -2,6 +2,7 @@
 // a description. It works through the same editing operations a person has,
 // then has to fix whatever the validator and the contracts still complain
 // about before it is allowed to finish.
+import { autoLayout } from "@/model/layout";
 import type { SystemDoc } from "@/model/types";
 import type { ChatMessage, Models, Part } from "../runtime/models";
 import { textOf, userText } from "../runtime/models";
@@ -94,6 +95,8 @@ export async function design(opts: { models: Models; model?: string | null; prom
   }
 
   const { errors, warnings } = draft.problems();
+  // a fresh design gets a tidy layout; an edited one keeps the arrangement its owner made
+  if (!opts.doc) autoLayout(draft.doc);
   draft.doc.updated_at = new Date().toISOString();
   return { doc: draft.doc, log, summary: summary || "The architect stopped before it explained the system.", errors, warnings, usage };
 }
