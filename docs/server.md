@@ -39,7 +39,7 @@ functions, and Docker sandboxes. Treat the token like a password.
 | `POST /api/runs/:id/answer` `{request, approved?, text?}` | Answer an approval or a request for input |
 | `POST /api/runs/:id/stop` · `DELETE /api/runs/:id` | Stop a run · delete a finished one |
 | `POST /api/evals` `{system_id, cases: [{input, expected}], grader, concurrency?, judge?, mock?}` | Evaluate a system: every case is a run, graded by `answer` (the final answer matches; an option letter matches "B. …"), `contains`, `number` (fractions and percentages too) or `llm` (a judge model) |
-| `GET /api/evals?system=` · `GET /api/evals/:id` · `POST /api/evals/:id/stop` · `DELETE /api/evals/:id` | Evaluations so far, one with its graded cases, stop one, delete a finished one |
+| `GET /api/evals?system=` (summaries, each with `set`: an id for its question set, the same for the same questions) · `GET /api/evals/:id` · `POST /api/evals/:id/stop` · `DELETE /api/evals/:id` | Evaluations so far, one with its graded cases, stop one, delete a finished one |
 | `GET/PUT/DELETE /api/secrets[/:name]` | Which secrets are set; set or remove one |
 | `POST /api/models/test` `{model}` | Call a model once (chat, embedding or rerank) |
 | `POST /api/models/health` `{models}` | What is known about each model without calling it: `ok`, `failing` (with the error), `no_key`, or `unknown`. A failure that waiting won't fix (a refused key, no credit, a used-up daily quota) is remembered for an hour, per key value: a new key starts clean |

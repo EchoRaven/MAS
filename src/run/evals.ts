@@ -55,6 +55,14 @@ export interface EvalRecord {
   usd: number;
 }
 
+/** Which question set an evaluation ran: the same questions and answers give the same id, whatever the order or repeats. */
+export function caseSetId(cases: Pick<EvalCaseResult, "input" | "expected">[]): string {
+  const uniq = [...new Set(cases.map((c) => `${c.input}\u0000${c.expected}`))].sort();
+  let h = 0x811c9dc5;
+  for (const ch of uniq.join("\u0001")) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return `set_${(h >>> 0).toString(36)}_${uniq.length}`;
+}
+
 /** Accuracy of each repeat, their mean and standard deviation, and how often each question passed. */
 export function repeatStats(rec: Pick<EvalRecord, "cases" | "repeats">) {
   const n = rec.repeats ?? 1;

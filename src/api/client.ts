@@ -33,6 +33,8 @@ export class ApiError extends Error {
   }
 }
 
+export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; set: string; questions: number; first_question: string };
+
 export interface ModelHealth {
   id: string;
   model: string;
@@ -73,7 +75,7 @@ export const Api = {
   stop: (id: string) => api("POST", `/runs/${id}/stop`),
   deleteRun: (id: string) => api("DELETE", `/runs/${id}`),
   startEval: (body: { doc: SystemDoc; cases: EvalCase[]; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; repeats?: number; model_map?: Record<string, string>; force?: boolean }) => api<EvalRecord>("POST", "/evals", body),
-  evals: (systemId: string) => api<{ evals: (Omit<EvalRecord, "cases"> & { total: number })[] }>("GET", `/evals?system=${encodeURIComponent(systemId)}`),
+  evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
   stopEval: (id: string) => api("POST", `/evals/${id}/stop`),

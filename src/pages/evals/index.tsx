@@ -229,7 +229,12 @@ function Evals({ systemId }: { systemId: string }) {
         </form>
 
         <section aria-label="Evaluations of this system" className="space-y-1">
-          <h2 className="px-1 text-xs text-muted-foreground">{list.length ? "Earlier evaluations" : "No evaluations of this system yet"}</h2>
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs text-muted-foreground">{list.length ? "Earlier evaluations" : "No evaluations of this system yet"}</h2>
+            <Link to="/evals/compare" className="text-xs text-primary hover:underline">
+              Compare systems →
+            </Link>
+          </div>
           {list.map((e) => (
             <button
               key={e.id}

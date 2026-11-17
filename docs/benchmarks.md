@@ -49,3 +49,9 @@ see the git log).
 On the Evaluate page, pick a system and a sample set (or paste cases), choose
 "Everything on <model>", and press Evaluate. Each case is an ordinary run you
 can open and replay.
+
+To see systems side by side, open **Evaluate → Compare systems**. The page
+groups every evaluation by the questions it ran. For each group it shows
+accuracy, each repeat's score and the spread, the cost, and the cost per
+correct answer. Below that is a grid of which system got each question right.
+Older runs of the same system on the same models start unticked.

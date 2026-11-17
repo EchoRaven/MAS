@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { caseSetId, finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -54,5 +54,15 @@ describe("cases from text", () => {
 
   it("the sample sets parse completely", () => {
     for (const s of SAMPLE_SETS) expect(parseCases(s.text).skipped, s.name).toBe(0);
+  });
+});
+
+describe("question sets", () => {
+  it("the same questions give the same set id, whatever the order and repeats", () => {
+    const a = [{ input: "1+1", expected: "2" }, { input: "2+2", expected: "4" }];
+    const b = [a[1], a[0], a[1]];
+    expect(caseSetId(a)).toBe(caseSetId(b));
+    expect(caseSetId(a)).not.toBe(caseSetId([a[0], { input: "2+2", expected: "5" }]));
+    expect(caseSetId(a)).toMatch(/_2$/);
   });
 });

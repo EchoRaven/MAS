@@ -1,6 +1,6 @@
 // Evaluations: run a system over cases and grade the outputs.
 import { validate } from "@/model/validate";
-import type { EvalCase, Grader } from "@/run/evals";
+import { caseSetId, type EvalCase, type Grader } from "@/run/evals";
 import type { Router } from "../http";
 import type { EvalManager } from "../runtime/evals";
 import { HttpError, type Store } from "../store/files";
@@ -26,7 +26,16 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       throw new HttpError(400, (e as Error).message);
     }
   });
-  r.on("GET", "/api/evals", (req) => ({ evals: store.listEvals(req.query.get("system") ?? undefined).map(({ cases, ...rest }) => ({ ...rest, total: cases.length })) }));
+  r.on("GET", "/api/evals", (req) =>
+    ({
+      evals: store.listEvals(req.query.get("system") ?? undefined).map(({ cases, ...rest }) => ({
+        ...rest,
+        total: cases.length,
+        set: caseSetId(cases),
+        questions: new Set(cases.map((c) => c.input)).size,
+        first_question: cases[0]?.input.slice(0, 120) ?? "",
+      })),
+    })),
   r.on("GET", "/api/evals/:id", (req) => {
     const rec = evals.get(req.params.id);
     if (!rec) throw new HttpError(404, "No such evaluation");
