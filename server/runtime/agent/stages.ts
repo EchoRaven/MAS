@@ -13,11 +13,14 @@ export interface StageResult {
   port?: string;
 }
 
+// order matters: keys and card numbers before phone numbers, which would otherwise swallow them
 const REDACT: [RegExp, string][] = [
   [/[\w.+-]+@[\w-]+\.[\w.-]+/g, "[email]"],
-  [/\b(?:\+?\d[\d -]{7,}\d)\b/g, "[phone]"],
-  [/\b(sk|pk|rk|ghp|xox[bp])[-_][A-Za-z0-9_-]{12,}\b/g, "[secret]"],
+  [/\b(?:sk|pk|rk|ghp|xox[bp])[-_][A-Za-z0-9_-]{12,}\b/g, "[secret]"],
+  [/\bAIza[0-9A-Za-z_-]{30,}/g, "[secret]"],
+  [/\bAQ\.[0-9A-Za-z_-]{20,}/g, "[secret]"],
   [/\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{1,4}\b/g, "[card]"],
+  [/(?<![\w+])\+?\d[\d -]{7,}\d\b/g, "[phone]"],
 ];
 
 export class StageError extends Error {

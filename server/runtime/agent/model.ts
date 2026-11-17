@@ -53,7 +53,8 @@ export class AgentIO {
     let call = { system: req.system, messages: req.messages };
     const before = await this.hook("before_model", call);
     if (before === null) return { content: [{ type: "text", text: "" }], stop: "end", usage: { input: 0, output: 0 } };
-    call = before;
+    // a hook may return only what it changes ({ system } say); the rest of the call stays
+    if (before && typeof before === "object") call = { ...call, ...before };
     const { res, usage } = await this.rc.models.chat(req.model ?? this.agent.model, {
       system: call.system,
       messages: call.messages,

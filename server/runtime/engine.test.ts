@@ -768,6 +768,83 @@ describe("runtime", () => {
     });
   });
 
+  describe("hooks", () => {
+    // me -> a -> me; a can call the function f (ask_f), which echoes what it is asked
+    const hooked = (hooks: Record<string, string>, script: unknown[]) => {
+      const b = new Builder("Hooks", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "h_a", hooks: Object.fromEntries(Object.entries(hooks).map(([k, code]) => [k, { lang: "js", code }])), harness: { ...native(), loop: "react", max_steps: 3, instructions: "Base instructions." } } as never)
+        .node("f", "function", 0, 0, { name: "Echo", fn: { lang: "js", code: 'return "echo: " + String(input?.text ?? input);' }, interface: { inputs: [port("in", "message")], outputs: [port("out", "text")] } })
+        .edge("me", "a", "message")
+        .edge("a", "f", "call")
+        .edge("a", "me", "message");
+      b.doc.models.push({ id: "h_a", provider: "mock", model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return b.doc;
+    };
+    const toolEvent = (events: RunEvent[]) => events.find((e): e is Extract<RunEvent, { type: "tool" }> => e.type === "tool" && e.tool === "ask_f");
+    const out = (events: RunEvent[]) => (events.find((e) => e.type === "output") as { text: string } | undefined)?.text;
+
+    it("before_tool can block a call or rewrite its arguments", async () => {
+      const blocked = await run(hooked({ before_tool: "return event.tool.name === 'ask_f' ? null : event;" }, [{ tool: "ask_f", input: { request: "hi" } }, "after: {{input}}"]), "go", { mock: false });
+      expect(toolEvent(blocked.events)).toMatchObject({ error: true, result: expect.stringContaining("blocked by the before_tool hook") });
+      const rewritten = await run(hooked({ before_tool: "return { ...event, args: { request: 'rewritten' } };" }, [{ tool: "ask_f", input: { request: "hi" } }, "after: {{input}}"]), "go", { mock: false });
+      expect(toolEvent(rewritten.events)?.result).toBe("echo: rewritten");
+    });
+
+    it("after_tool can rewrite a result; after_model can rewrite the reply", async () => {
+      const { events } = await run(hooked({ after_tool: "return { ...event, result: event.result.toUpperCase() };", after_model: "return { text: event.text.replace('after', 'AFTER') };" }, [{ tool: "ask_f", input: { request: "hi" } }, "after: {{input}}"]), "go", { mock: false });
+      expect(toolEvent(events)?.result).toBe("ECHO: HI");
+      expect(out(events)).toBe("AFTER: ECHO: HI");
+    });
+
+    it("before_model may return only what it changes; the rest of the call stays", async () => {
+      const { events } = await run(hooked({ before_model: "return { system: event.system + ' Be brief.' };" }, ["fine: {{input}}"]), "go", { mock: false });
+      expect(errors(events)).toEqual([]);
+      expect(out(events)).toBe("fine: go");
+    });
+  });
+
+  describe("output stages", () => {
+    // me -> a -> (out | alt) -> me; a's reply goes through its output stages
+    const staged = (post: unknown[], script: unknown[], json = false) => {
+      const b = new Builder("Stages", "");
+      b.schema({ id: "Ok", description: "", json_schema: '{"type":"object","required":["ok"],"properties":{"ok":{"type":"boolean"}}}' });
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "s_a", interface: { inputs: [port("in", "message")], outputs: [port("out", json ? "json" : "text"), port("alt", "text")] }, pipeline: { pre: [], post }, harness: { ...native(), loop: "single_shot", instructions: "" } } as never)
+        .node("tag", "function", 0, 0, { name: "Tag alt", fn: { lang: "js", code: 'return "via alt: " + String(input?.text ?? input);' }, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
+        .edge("me", "a", "message")
+        .edge("a", "me", "message", { source_port: "out" })
+        .edge("a", "tag", "message", { source_port: "alt" })
+        .edge("tag", "me", "message");
+      b.doc.models.push({ id: "s_a", provider: "mock", model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return b.doc;
+    };
+    // an agent with two outputs and no routing sends on both; read the direct one
+    const outs = (events: RunEvent[]) => events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text);
+    const direct = (events: RunEvent[]) => events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text).filter((t) => !t.startsWith("via alt: "));
+
+    it("redact hides emails, phone numbers, card numbers and keys, each by its own name", async () => {
+      const text = "Mail ann@example.com or call +1 415 555 0100. Card 4111 1111 1111 1111. Keys sk-abcdefghijklmnop1234 and AIzaSyA1234567890abcdefghijklmnopqrstuv and AQ.Xx00exampleexampleexample0001.";
+      const { events } = await run(staged([{ id: "r", op: "redact", name: "Redact" }], [text]), "go", { mock: false });
+      expect(direct(events)).toEqual(["Mail [email] or call [phone]. Card [card]. Keys [secret] and [secret] and [secret]."]);
+    });
+
+    it("validate: a reply that breaks the schema is dropped, or passed on raw with a warning", async () => {
+      const bad = '{"ok": "yes"}';
+      const dropped = await run(staged([{ id: "p", op: "parse_json", name: "Parse" }, { id: "v", op: "validate", name: "Check", schema: "Ok", on_fail: "drop" }], [bad], true), "go", { mock: false });
+      expect(direct(dropped.events)).toEqual([]);
+      const fallback = await run(staged([{ id: "p", op: "parse_json", name: "Parse" }, { id: "v", op: "validate", name: "Check", schema: "Ok", on_fail: "fallback" }], [bad], true), "go", { mock: false });
+      expect(fallback.events.some((e) => e.type === "log" && e.level === "warn" && /Check/.test((e as { text: string }).text))).toBe(true);
+      expect(direct(fallback.events).length).toBe(1);
+    });
+
+    it("route sends the reply out of the port its function names", async () => {
+      const route = { id: "rt", op: "route", name: "Route", fn: { lang: "js", code: 'return String(input?.text ?? input).includes("urgent") ? { alt: input } : { out: input };' } };
+      expect(outs((await run(staged([route], ["urgent: fix it"]), "go", { mock: false })).events)).toEqual(["via alt: urgent: fix it"]);
+      expect(outs((await run(staged([route], ["all calm"]), "go", { mock: false })).events)).toEqual(["all calm"]);
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
