@@ -142,6 +142,20 @@ describe("runtime", () => {
     expect(out.text).toContain("CONSENSUS after layer 1: 9");
   });
 
+  it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
+    const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
+    expect(errors(events)).toEqual([]);
+    const calls = events.filter((e): e is Extract<typeof e, { type: "message" }> => e.type === "message" && e.kind === "call");
+    const visions = calls.filter((e) => e.text.startsWith("Your vision"));
+    expect(visions.length).toBeGreaterThan(0);
+    expect(new Set(visions.map((e) => e.to))).toEqual(new Set(["carol"]));
+    const kills = calls.filter((e) => /to kill tonight/.test(e.text));
+    expect(kills.length).toBeGreaterThan(0);
+    expect([...new Set(kills.map((e) => e.to))].every((p) => p === "alice" || p === "bob")).toBe(true);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toMatch(/Roles: /);
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

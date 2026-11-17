@@ -83,5 +83,6 @@ const ORDER = [
   "paper-metagpt",
   "paper-magentic-one",
   "paper-generative-agents",
+  "paper-werewolf",
 ];
 const order = (id: string) => (ORDER.indexOf(id) + 1 || 99);

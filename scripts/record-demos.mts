@@ -90,6 +90,10 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-werewolf": {
+    input: "Begin the game.",
+    vars: { days: 3 },
+  },
   "paper-tradingagents": {
     input: "Should we trade NVIDIA (NVDA) today? Use what you know up to your training cutoff.",
   },
