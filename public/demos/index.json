@@ -84,6 +84,18 @@
   "recorded_at": "2026-11-17T10:03:02.884Z"
  },
  {
+  "id": "paper-dylan",
+  "name": "DyLAN",
+  "input": "A team of three people is building its first web product. Which single programming language should they standardise on?",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 7,
+  "tokens": 6523,
+  "usd": 0.008114699999999999,
+  "seconds": 38.6,
+  "recorded_at": "2026-11-17T12:23:19.880Z"
+ },
+ {
   "id": "paper-generative-agents",
   "name": "Generative Agents",
   "input": "It is 8:00 am on February 13 in Smallville. Isabella is opening her café and mentions the Valentine's Day party she is planning.",

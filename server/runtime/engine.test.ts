@@ -132,6 +132,16 @@ describe("runtime", () => {
     expect(out.text).toContain('"a1":5');
   });
 
+  it("DyLAN stops in the first layer when the answers agree in different words", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-dylan")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(mock("long", ["Final: nine"]), mock("short", ["Final: 9"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "a1" || n.id === "a2" ? "long" : "short";
+    const { events } = await run(doc, "sheep", { mock: false });
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("CONSENSUS after layer 1: 9");
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

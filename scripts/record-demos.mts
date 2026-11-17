@@ -91,7 +91,9 @@ const DEMOS: Record<string, DemoConfig> = {
     },
   },
   "paper-dylan": {
-    input: "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left?",
+    // a question without one right answer, so the first layer disagrees and the selection shows
+    // (a question everyone gets right stops after layer 1: the early stop, which the tests cover)
+    input: "A team of three people is building its first web product. Which single programming language should they standardise on?",
   },
   "paper-reflexion": {
     input:

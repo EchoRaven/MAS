@@ -25,7 +25,17 @@ const COLLECT = `ctx.vars.got = { ...(ctx.vars.got ?? {}), ...input };
 if (Object.keys(ctx.vars.got).length < ctx.vars.expected) return null;
 const got = ctx.vars.got;
 ctx.vars.got = {};
-const finals = Object.values(got).map((t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? "").trim().toLowerCase()).filter(Boolean);
+ctx.vars.last = got;
+// "The farmer has 9 sheep left." and "9" are the same answer: compare the number when there is one, else the words
+const WORDS = { zero: 0, none: 0, one: 1, once: 1, two: 2, twice: 2, three: 3, thrice: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+const norm = (s) => {
+  const w = s.toLowerCase().replace(/[^a-z0-9. -]/g, " ").replace(/\\s+/g, " ").trim();
+  const n = w.match(/-?\\d+(?:\\.\\d+)?/);
+  if (n) return n[0];
+  const word = w.split(" ").find((x) => x in WORDS);
+  return word ? String(WORDS[word]) : w;
+};
+const finals = Object.values(got).map((t) => norm(((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? "").trim())).filter(Boolean);
 const counts = {};
 for (const f of finals) counts[f] = (counts[f] ?? 0) + 1;
 const [top, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
@@ -39,7 +49,9 @@ const SELECT = `const scores = input.scores ?? {};
 ctx.vars.importance = ctx.vars.importance ?? {};
 for (const [a, s] of Object.entries(scores)) ctx.vars.importance[a] = (ctx.vars.importance[a] ?? 0) + Number(s);
 ctx.vars.selected = Object.entries(scores).sort((x, y) => Number(y[1]) - Number(x[1])).slice(0, 2).map(([a]) => a);
-return "Layer " + ctx.vars.layer + " answers, ranked:\\n" + (input.summary ?? "") + "\\nGoing on: " + ctx.vars.selected.join(", ");`;
+const best = ctx.vars.selected[0];
+const answer = ((String(ctx.vars.last?.[best] ?? "").match(/Final:\\s*(.+)/) ?? [])[1] ?? "").trim();
+return "Layer " + ctx.vars.layer + " answers, ranked:\\n" + (input.summary ?? "") + "\\nGoing on: " + ctx.vars.selected.join(", ") + "\\nBest answer so far (" + best + "): " + answer;`;
 
 function build(): SystemDoc {
   const b = new Builder(
@@ -69,7 +81,7 @@ function build(): SystemDoc {
     }, "network")
     .node("select", "function", 1200, 220, { name: "Keep the best two", fn: { lang: "js", code: SELECT }, interface: { inputs: [port("in", "json")], outputs: [port("out", "text")] } }, "network");
   AGENTS.forEach(([id, name, how], i) =>
-    b.agent(id, 320, i * 120 - 60, { name, role: how.split(".")[0], model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: `${how} If earlier answers are shown, weigh them, then give your own. End with: Final: <answer>` } }, "network"),
+    b.agent(id, 320, i * 120 - 60, { name, role: how.split(".")[0], model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: `${how} If earlier answers are shown, weigh them, then give your own. End with one line: Final: <the answer alone — a number, or at most three words>` } }, "network"),
   );
   b.edge("asker", "network", "message", { label: "Question" }).edge("network", "dispatch", "message");
   for (const [id] of AGENTS) b.edge("dispatch", id, "message", { source_port: id }).edge(id, "collect", "message", { target_port: id });
