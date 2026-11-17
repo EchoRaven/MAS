@@ -68,6 +68,7 @@ export function DemosPage() {
 // simplest first, so the list reads as a tour
 const ORDER = [
   "paper-debate",
+  "paper-mad",
   "paper-moa",
   "paper-chateval",
   "paper-dylan",

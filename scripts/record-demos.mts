@@ -90,6 +90,10 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-mad": {
+    // the paper's own kind of question: a quick answer (2 m/s) that is wrong
+    input: "Alice walks up a hill at 1 m/s and comes back down the same path at 3 m/s. What is her average speed for the whole trip?",
+  },
   "paper-chain-of-agents": {
     // the long document is this platform's own server guide; the two answers sit in different parts of it
     input:
