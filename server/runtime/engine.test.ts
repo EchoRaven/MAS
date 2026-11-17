@@ -7,6 +7,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { TEMPLATES } from "@/model/templates";
 import { Builder, native } from "@/model/builder";
+import { port } from "@/model/ports";
 import type { RunEvent, RunRecord } from "@/run/events";
 import type { AgentData, SystemDoc } from "@/model/types";
 import type { Config } from "../config";
@@ -561,6 +562,66 @@ describe("runtime", () => {
     expect(second.events.some((e) => e.type === "tool" && e.tool === "finish" && !e.error)).toBe(false);
     expect(usages(second.events, "b").length).toBe(1);
     expect(second.events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text)).toEqual(["B ran"]);
+  });
+
+  it("concurrency: parallel runs turns at once; queue and coalesce do not", async () => {
+    // a function sends three messages at once to one agent whose turns take 100 ms
+    const doc = (concurrency: "parallel" | "queue" | "coalesce") => {
+      const b = new Builder("Fan", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("fan", "function", 0, 0, { name: "Fan out", fn: { lang: "js", code: "return { x: 'one', y: 'two', z: 'three' };" }, interface: { inputs: [port("in", "text")], outputs: [port("x", "text"), port("y", "text"), port("z", "text")] } })
+        .agent("w", 0, 0, { name: "Worker", model: "slow", concurrency, harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "fan", "message")
+        .edge("fan", "w", "message", { source_port: "x" })
+        .edge("fan", "w", "message", { source_port: "y" })
+        .edge("fan", "w", "message", { source_port: "z" });
+      b.doc.models.push({ id: "slow", provider: "mock", model: "mock", api: { params: { script: ["done: {{input}}"], delay_ms: 100 } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return b.doc;
+    };
+    const overlap = (events: RunEvent[]) => {
+      let now = 0;
+      let most = 0;
+      for (const e of events) {
+        if (e.type !== "status" || e.node !== "w") continue;
+        if (e.status === "working") most = Math.max(most, ++now);
+        if (e.status === "done") now--;
+      }
+      return most;
+    };
+    const par = await run(doc("parallel"), "go", { mock: false });
+    expect(usages(par.events, "w").length).toBe(3);
+    expect(overlap(par.events)).toBe(3);
+    const queued = await run(doc("queue"), "go", { mock: false });
+    expect(usages(queued.events, "w").length).toBe(3);
+    expect(overlap(queued.events)).toBe(1);
+    // coalesce: the first turn starts alone; what arrived meanwhile is merged into one more
+    const merged = await run(doc("coalesce"), "go", { mock: false });
+    expect(overlap(merged.events)).toBe(1);
+    expect(usages(merged.events, "w").length).toBeLessThan(3);
+  });
+
+  it("budgets: the system's ends the run; an agent's own stops only that agent", async () => {
+    const doc = (budget: { system?: number; agent?: number }) => {
+      const b = new Builder("Budget", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "pricey", ...(budget.agent != null ? { budget_usd: budget.agent } : {}), harness: { ...native(), loop: "react", max_steps: 4, instructions: "" } })
+        .agent("b", 0, 0, { name: "B", model: "cheap", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "a", "message")
+        .edge("me", "b", "message");
+      // each call to "pricey" costs far more than a cent
+      b.doc.models.push(
+        { id: "pricey", provider: "mock", model: "mock", api: { params: { script: [{ tool: "memory_search", input: { query: "x" } }, "a done"] } }, price_in: 10000, price_out: 10000, modalities: ["text"] },
+        { id: "cheap", provider: "mock", model: "mock", api: { params: { script: ["b done"] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      );
+      b.doc.budget = { usd: budget.system ?? null, max_rounds: 20, wallclock_min: 2 };
+      return b.doc;
+    };
+    const whole = await run(doc({ system: 0.01 }), "go", { mock: false });
+    expect(runs.get(whole.rec.id)).toMatchObject({ status: "finished", reason: "Over budget" });
+    const own = await run(doc({ agent: 0.01 }), "go", { mock: false });
+    const warned = own.events.filter((e) => e.type === "log" && e.level === "warn").map((e) => (e as { text: string }).text);
+    expect(warned.some((t) => /A is over its budget: it stops here/.test(t))).toBe(true);
+    expect(own.events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text)).toContain("b done");
   });
 
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {

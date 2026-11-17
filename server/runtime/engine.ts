@@ -56,7 +56,13 @@ export class Engine implements TurnServices {
     });
   }
   private onError(e: unknown, node?: string) {
-    if (e instanceof StopError || e instanceof BudgetError || this.rc.signal.aborted) return;
+    if (e instanceof StopError || this.rc.signal.aborted) return;
+    // an agent over its own budget stops while the run goes on: say so, or it just seems to vanish
+    if (e instanceof BudgetError) {
+      this.rc.emit({ type: "log", node, level: "warn", text: `${(e as Error).message}: it stops here, the rest of the run goes on` });
+      if (node) this.rc.emit({ type: "status", node, status: "blocked" });
+      return;
+    }
     this.errors++;
     this.rc.emit({ type: "log", node, level: "error", text: (e as Error).message ?? String(e) });
     if (node) this.rc.emit({ type: "status", node, status: "blocked" });
@@ -258,7 +264,8 @@ export class Engine implements TurnServices {
     const item: Item = { value: keyed ? value : value, via };
     const mode = n.data.kind === "agent" ? (n.data as AgentData).concurrency : "queue";
     if (mode === "parallel") {
-      this.track(this.activate(n, item));
+      // a new instance per message: no waiting for the component's earlier turns
+      this.track(this.activate(n, item, false));
       return;
     }
     const q = this.queues.get(id) ?? [];
@@ -280,10 +287,11 @@ export class Engine implements TurnServices {
     }
   }
 
-  private async activate(n: SysNode, item: Item) {
+  private async activate(n: SysNode, item: Item, oneAtATime = true) {
     await this.slot();
     try {
-      await this.lock(n.id, () => this.chain.run([n.id], () => this.runComponent(n, item, false)));
+      const turn = () => this.chain.run([n.id], () => this.runComponent(n, item, false));
+      await (oneAtATime ? this.lock(n.id, turn) : turn());
     } catch (e) {
       this.onError(e, n.id);
     } finally {

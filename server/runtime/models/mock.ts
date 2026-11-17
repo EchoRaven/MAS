@@ -3,6 +3,7 @@
 // real; only the model text is canned) and keeps the runtime tests offline.
 //
 // api.params.script: a list of replies used in order (then the last repeats).
+// api.params.delay_ms: wait this long before answering.
 // Each is a string, or { tool, input } to call a tool, or { text, tool, input }.
 import type { ModelSpec } from "@/model/types";
 import { textOf, type ChatResponse, type Part, type Provider } from "./types";
@@ -48,6 +49,12 @@ export function resetMock() {
 
 export const mockProvider: Provider = {
   async chat(model: ModelSpec, _key, req) {
+    // api.params.delay_ms: take this long to answer, as a real model does (tests of timing and concurrency)
+    const delay = Number(model.api.params?.delay_ms ?? 0);
+    if (delay > 0) await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, delay);
+      req.signal?.addEventListener("abort", () => (clearTimeout(t), reject(req.signal!.reason)), { once: true });
+    });
     const last = req.messages[req.messages.length - 1];
     const lastText = last ? textOf(last.content) || last.content.map((p) => (p.type === "tool_result" ? p.content : "")).join(" ") : "";
     const script = (model.api.params?.script ?? null) as Scripted[] | null;
