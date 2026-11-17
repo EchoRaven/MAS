@@ -323,6 +323,29 @@ describe("runtime", () => {
     expect(out.text).toBe("Final story: The keeper kept the light.");
   });
 
+  it("STORM: a spawned interviewer questions the expert through its call edge", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-storm")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(
+      mock("st_curator", [{ tool: "spawn_subagents", input: { tasks: ["You are an editor who cares about history. The topic is tea."] } }, "Interview notes, history: first drunk in China, around 2737 BC."]),
+      mock("st_interviewer", [{ tool: "ask_expert", input: { request: "When was tea first drunk?" } }, "Notes: first drunk in China [https://example.org/tea]."]),
+      mock("st_expert", ["Around 2737 BC, in China. Source: https://example.org/tea"]),
+      mock("st_outliner", ["Outline: 1. History"]),
+      mock("st_writer", ["Tea was first drunk in China [1].\n\nReferences\n1. https://example.org/tea"]),
+    );
+    const use: Record<string, string> = { curator: "st_curator", interviewer: "st_interviewer", expert: "st_expert", outliner: "st_outliner", writer: "st_writer" };
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = use[n.id];
+    const { events } = await run(doc, "Tea", { mock: false });
+    expect(errors(events)).toEqual([]);
+    expect(events.filter((e) => e.type === "spawn").length).toBe(1);
+    const asked = events.filter((e): e is Extract<RunEvent, { type: "tool" }> => e.type === "tool" && e.tool === "ask_expert");
+    expect(asked.length).toBe(1);
+    expect(asked[0].result).toContain("2737 BC");
+    expect(usages(events, "expert").length).toBe(1);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toMatch(/^Tea was first drunk in China \[1\]/);
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

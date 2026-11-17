@@ -73,6 +73,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [AutoAgents](https://arxiv.org/abs/2309.17288) | A team drafted per task; an agent observer and a plan observer must both approve the draft; the drafted agents are created (spawned) one plan step at a time |
 | [Exchange-of-Thought](https://arxiv.org/abs/2312.01823) | Four communication paradigms (memory, report, relay, debate) in one system, chosen by a run variable; confidence from each agent's consistency; stop at agreement |
 | [Agents' Room](https://arxiv.org/abs/2410.02603) | Story writing: planning agents (conflict, characters, setting, plot) and one writing agent per part of the narrative arc share a scratchpad; an orchestrator calls them in turn |
+| [STORM](https://arxiv.org/abs/2402.14207) | Article writing by research: one spawned interviewer per perspective questions a search-grounded expert through a call edge; outline, then a cited article |
 
 ## Layout
 
