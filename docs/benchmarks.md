@@ -8,29 +8,34 @@ as the page's sample sets, and their answers are computed by program.
 ## Exact computation (30 questions), all on gemini-3.1-flash-lite
 
 Long multiplication, date spans, letter counts, digit sums of powers, and
-counts of coprime integers. 2026-11-17, one run per system unless noted.
+counts of coprime integers. Every system answered every question 3 times
+(Evaluate page, Repeats = 3). Run on 2026-11-17.
 
-| System | Correct | Cost | Per case |
+| System | Correct per repeat | Mean | Cost (90 runs) |
 | --- | --- | --- | --- |
-| Single agent (baseline) | 25/30 (23, 25 and 27 over three runs) | $0.019 | 2.1 s |
-| Self-consistency, 5 samples | 26/30 | $0.121 | 4.0 s |
-| Multiagent debate (Du et al.) | 27/30 | $0.186 | 6.1 s |
-| ReConcile (Chen et al.) | 28/30 | $0.168 | 5.0 s |
-| DyLAN (Liu et al.) | 27/30 | $0.108 | 4.6 s |
-| Mixture-of-Agents (Wang et al.) | 25/30 | $0.203 | 8.0 s |
+| Single agent (baseline) | 25, 25, 26 | 25.3 | $0.06 |
+| Self-consistency, 5 samples | 26, 25, 27 | 26.0 | $0.36 |
+| DyLAN (Liu et al.) | 26, 26, 26 | 26.0 | $0.37 |
+| Multiagent debate (Du et al.) | 26, 26, 27 | 26.3 | $0.52 |
+| ReConcile (Chen et al.) | 27, 27, 27 | 27.0 | $0.48 |
 
-What this does and does not show:
+An earlier single-repeat run also included Mixture-of-Agents: 25/30 for
+$0.20. Its aggregator corrupted three multiplications that its proposers had
+right.
 
-- Every system gains at most 3 questions over the single agent, at 6–11× the
-  cost. A single agent's own score moves by 4 between runs. With 30 questions
-  and one run each, **none of these differences is significant.**
-- Self-consistency, five samples of one model, costs about the same as the
-  multi-agent systems and lands in the same band. That matches what the
-  critiques of multi-agent debate report (for example Smit et al. 2023,
-  "Should we be going MAD?").
-- The misses cluster on digit sums of large powers, where every system
-  struggles. Mixture-of-Agents also corrupted three multiplications that its
-  proposers had right: its aggregator recomputes instead of copying.
+What this shows:
+
+- **The ranking is stable across repeats, but the gaps are small.** ReConcile
+  is best in all three repeats, and the single agent is worst or tied in all
+  three. The best system gains about 1.7 questions in 30, at about 8× the cost.
+- **Self-consistency is the fair baseline.** At the same cost, five samples
+  and a vote do about as well as DyLAN and nearly as well as debate. Only
+  ReConcile, which mixes in confidence, stays ahead in every repeat.
+- **No system fixes the hardest questions.** Three or four questions, the
+  digit sums of large powers (#19, #21–23), fail for every system in almost
+  every repeat. Discussion helps when some agents get a question right; it
+  cannot produce a skill none of them has. (With one model behind every seat,
+  the papers' point about diverse models doesn't apply here.)
 
 ## Earlier sets
 
