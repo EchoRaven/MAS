@@ -206,6 +206,29 @@ describe("runtime", () => {
     expect(usages(events, "a")).toHaveLength(1);
   });
 
+  it("a database's tools describe its tables, and SQL is pulled out of what a model writes", async () => {
+    const { DatabaseEnv } = await import("./resources/envs/database");
+    expect(DatabaseEnv.statements("Here you go:\n```sql\n-- revenue\nSELECT 1;\nSELECT 2\n```")).toEqual(["SELECT 1", "SELECT 2"]);
+    expect(DatabaseEnv.statements("DELETE FROM orders")).toEqual([]);
+    const { DatabaseSync } = await import("node:sqlite");
+    const file = path.join(dir, "shop.sqlite");
+    const db = new DatabaseSync(file);
+    db.exec("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT); CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id), total REAL);");
+    db.close();
+    const b = new Builder("DB", "");
+    b.agent("a", 0, 0, { name: "A", model: "sonnet", harness: { ...native(), instructions: "" } })
+      .node("shop", "env", 0, 200, { name: "Shop", env_kind: "database", image: `sqlite:${file}`, db: { mode: "text_to_sql", templates: [], tables: [], read_only: true, row_limit: 10, model: null, fn: null } })
+      .edge("a", "shop", "access", { access: "read" });
+    const { Hub } = await import("./resources/hub");
+    const { Models } = await import("./models");
+    const rc = { doc: b.doc, byId: new Map(b.doc.nodes.map((n) => [n.id, n])), models: new Models(b.doc.models, new Secrets(dir), true), emit: () => undefined, store, config, runId: "t", vars: {} } as unknown as import("./context").RunCtx;
+    const hub = new Hub(rc);
+    const tools = await hub.get("shop").tools(b.doc.edges[0]);
+    expect(tools.find((t) => t.name === "run_sql")!.description).toContain("customers(id, name); orders(id, customer_id→customers, total)");
+    expect(await tools.find((t) => t.name === "run_sql")!.run({ sql: "DROP TABLE orders" }, { node: "a" }).catch((e) => e.message)).toMatch(/read-only/);
+    await hub.closeAll();
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

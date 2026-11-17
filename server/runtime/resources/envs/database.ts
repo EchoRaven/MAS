@@ -52,6 +52,30 @@ export class DatabaseEnv implements Resource {
     return `${r.changes} row(s) changed`;
   }
 
+  /** One line per table, with columns and what they point at: compact enough for a tool description. */
+  async compactSchema(): Promise<string> {
+    const db = await this.conn();
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all() as { name: string }[]).filter((t) => !this.spec.tables.length || this.spec.tables.includes(t.name));
+    return tables
+      .map((t) => {
+        const cols = db.prepare(`PRAGMA table_info("${t.name.replace(/"/g, "")}")`).all() as { name: string; type: string }[];
+        const fks = db.prepare(`PRAGMA foreign_key_list("${t.name.replace(/"/g, "")}")`).all() as { from: string; table: string }[];
+        const ref = new Map(fks.map((f) => [f.from, f.table]));
+        return `${t.name}(${cols.map((c) => c.name + (ref.has(c.name) ? `→${ref.get(c.name)}` : "")).join(", ")})`;
+      })
+      .join("; ");
+  }
+
+  /** The SELECT statements in what a model wrote: fences, comments and prose around them dropped. */
+  static statements(text: string): string[] {
+    const body = text.replace(/```(?:sql)?/gi, "\n").replace(/--[^\n]*/g, "");
+    return body
+      .split(";")
+      .map((s) => s.trim())
+      .map((s) => s.slice(Math.max(0, s.search(/\b(select|with)\b/i))))
+      .filter((s) => READ.test(s));
+  }
+
   async schemaText(): Promise<string> {
     const db = await this.conn();
     const tables = (db.prepare("SELECT name, sql FROM sqlite_master WHERE type='table'").all() as { name: string; sql: string }[]).filter((t) => !this.spec.tables.length || this.spec.tables.includes(t.name));
@@ -60,6 +84,9 @@ export class DatabaseEnv implements Resource {
 
   async tools(_edge: SysEdge): Promise<RtTool[]> {
     const s = this.spec;
+    // the tools say what is in the database, so a model writes the right SQL the first time
+    const shape = await this.compactSchema().catch(() => "");
+    const holds = shape ? ` Tables: ${shape}.` : "";
     if (s.mode === "templates")
       return s.templates.map((t) => {
         const params = [...new Set([...t.sql.matchAll(/:(\w+)/g)].map((m) => m[1]))];
@@ -67,15 +94,26 @@ export class DatabaseEnv implements Resource {
       });
     if (s.mode === "text_to_sql")
       return [
-        { name: "ask_database", description: `Ask ${this.node.data.name} a question in plain language`, input_schema: schema({ question: S }), effect: "read", source: this.id, run: async (a, c) => {
-          const sql = (await llmCall(this.rc, c.node, `Write one SQLite ${s.read_only ? "SELECT " : ""}query that answers the question. Reply with the SQL only.\n\nSchema:\n${await this.schemaText()}\n\nQuestion: ${a.question}`, s.model)).replace(/```(sql)?/g, "").trim();
-          return `SQL: ${sql}\n${await this.query(sql)}`;
+        { name: "ask_database", description: `Ask ${this.node.data.name} a question in plain language; it writes and runs the SQL.${holds}`, input_schema: schema({ question: S }), effect: "read", source: this.id, run: async (a, c) => {
+          const ask = (extra: string) => llmCall(this.rc, c.node, `Write SQLite ${s.read_only ? "SELECT " : ""}queries that answer the question: one statement per part of it, separated by semicolons. Reply with the SQL only.\n\nSchema:\n${shape || "(unknown)"}\n${extra}\nQuestion: ${a.question}`, s.model);
+          let sqls = DatabaseEnv.statements(await ask(""));
+          let out: string[] = [];
+          try {
+            if (!sqls.length) throw new Error("no SELECT statement in the reply");
+            for (const q of sqls) out.push(`SQL: ${q}\n${await this.query(q)}`);
+          } catch (e) {
+            // one repair: the error goes back with the schema
+            sqls = DatabaseEnv.statements(await ask(`The last attempt failed: ${(e as Error).message}. Fix it.\n`));
+            out = [];
+            for (const q of sqls) out.push(`SQL: ${q}\n${await this.query(q)}`);
+          }
+          return out.join("\n\n");
         } },
-        { name: "run_sql", description: "Run a SQL query", input_schema: schema({ sql: S }), effect: s.read_only ? "read" : "write", source: this.id, run: async (a) => this.query(String(a.sql)) },
+        { name: "run_sql", description: `Run a SQL query${s.read_only ? " (SELECT only)" : ""}.${holds}`, input_schema: schema({ sql: S }), effect: s.read_only ? "read" : "write", source: this.id, run: async (a) => this.query(String(a.sql)) },
       ];
     if (s.mode === "custom" && s.fn)
       return [{ name: "query_database", description: `Query ${this.node.data.name}`, input_schema: schema({ request: S }), effect: "read", source: this.id, run: async (a, c) => String(await runFn(s.fn!, a, this.rc, { node: c.node, helpers: { query: (sql: string, p?: Record<string, unknown>) => this.query(sql, p) } })) }];
-    return [{ name: "run_sql", description: "Run a SQL query", input_schema: schema({ sql: S }), effect: s.read_only ? "read" : "write", source: this.id, run: async (a) => this.query(String(a.sql)) }];
+    return [{ name: "run_sql", description: `Run a SQL query${s.read_only ? " (SELECT only)" : ""}.${holds}`, input_schema: schema({ sql: S }), effect: s.read_only ? "read" : "write", source: this.id, run: async (a) => this.query(String(a.sql)) }];
   }
 
   async close() {
