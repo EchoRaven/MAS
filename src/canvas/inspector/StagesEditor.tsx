@@ -1,9 +1,10 @@
-import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
+import { ArrowDown, ArrowUp, ChevronRight, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Pipeline, Processor, ProcessorOp, SystemDoc } from "@/model/types";
-import { NumberField, opts, Section, SelectField } from "../fields";
+import { NumberField, opts, Section, SelectField, TextField } from "../fields";
 import { emptyFn, FunctionEditor } from "./FunctionEditor";
-import { AddButton } from "./shared";
+import { AddButton, RowList } from "./shared";
 
 export const STAGE_OPS: [ProcessorOp, string, string][] = [
   ["parse_json", "Parse JSON", "Parse the reply, optionally against a schema"],
@@ -35,61 +36,104 @@ function newStage(op: ProcessorOp, n: number): Processor {
  * The agent's wrapper. Input stages run on every incoming value before the
  * harness sees it; output stages run on every reply before it leaves a port.
  */
+function StageRow({ s, i, count, doc, open, onToggle, setAt, move, remove }: { s: Processor; i: number; count: number; doc: SystemDoc; open: boolean; onToggle: () => void; setAt: (patch: Partial<Processor>) => void; move: (d: -1 | 1) => void; remove: () => void }) {
+  const opLabel = (op: ProcessorOp) => STAGE_OPS.find((o) => o[0] === op)![1];
+  const summary = s.schema ? s.schema : s.fn ? s.fn.lang : "";
+  return (
+    <li className={cn("group/row", open && "bg-card")}>
+      <div className="flex h-9 items-center gap-1.5 pl-2 pr-1">
+        <button type="button" onClick={onToggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <ChevronRight className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-90")} />
+          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-secondary text-[10px] font-medium tabular-nums text-muted-foreground">{i + 1}</span>
+          <span className="min-w-0 truncate text-[13px]">{s.name}</span>
+          <span className="shrink-0 text-[11px] text-muted-foreground">{opLabel(s.op).toLowerCase()}{summary ? ` · ${summary}` : ""}</span>
+        </button>
+        <div className="flex items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
+          <button type="button" disabled={i === 0} onClick={() => move(-1)} aria-label="Move up" className="flex h-7 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-30">
+            <ArrowUp className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" disabled={i === count - 1} onClick={() => move(1)} aria-label="Move down" className="flex h-7 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground disabled:opacity-30">
+            <ArrowDown className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={remove} aria-label="Delete stage" className="flex h-7 w-6 items-center justify-center rounded text-muted-foreground hover:text-destructive">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      {open && (
+        <div className="space-y-2 px-3 pb-3 pt-0.5">
+          <TextField label="Name" value={s.name} onChange={(name) => setAt({ name })} />
+          <SelectField<ProcessorOp>
+            label="Does"
+            value={s.op}
+            onChange={(op) => setAt({ ...newStage(op, i), id: s.id, name: s.name === opLabel(s.op) ? opLabel(op) : s.name })}
+            items={STAGE_OPS.map(([value, label, hint]) => ({ value, label, hint }))}
+          />
+          {NEEDS_SCHEMA.includes(s.op) && (
+            <>
+              <SelectField label="Schema" value={s.schema ?? "__none"} onChange={(v) => setAt({ schema: v === "__none" ? null : v })} items={[{ value: "__none", label: "Any JSON" }, ...doc.schemas.map((x) => ({ value: x.id, label: x.id }))]} />
+              <SelectField label="On failure" value={s.on_fail ?? "retry"} onChange={(on_fail) => setAt({ on_fail })} items={opts([["retry", "Ask again"], ["drop", "Drop"], ["error", "Fail the turn"], ["fallback", "Pass through"]])} />
+              <NumberField label="Retries" value={s.max_retries} onChange={(v) => setAt({ max_retries: v })} />
+            </>
+          )}
+          {s.fn && <FunctionEditor label="Function" fn={s.fn} onChange={(fn) => setAt({ fn })} doc={doc} rows={3} />}
+        </div>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The agent's wrapper. Input stages run on every incoming value before the
+ * harness sees it; output stages run on every reply before it leaves a port.
+ */
 export function StagesEditor({ pipeline, onChange, doc, focus }: { pipeline: Pipeline; onChange: (p: Pipeline) => void; doc: SystemDoc; focus?: string }) {
+  const [open, setOpen] = useState<string | undefined>(focus);
+  useEffect(() => setOpen(focus), [focus]);
   const list = (which: "pre" | "post") => {
     const stages = pipeline[which];
     const set = (next: Processor[]) => onChange({ ...pipeline, [which]: next });
-    const setAt = (i: number, patch: Partial<Processor>) => set(stages.map((s, j) => (j === i ? { ...s, ...patch } : s)));
-    const move = (i: number, d: -1 | 1) => {
-      const next = [...stages];
-      [next[i], next[i + d]] = [next[i + d], next[i]];
-      set(next);
-    };
     return (
-      <Section title={which === "pre" ? "Input stages" : "Output stages"} aside={<AddButton onClick={() => set([...stages, newStage(which === "pre" ? "redact" : "parse_json", stages.length)])} />}>
-        {stages.length === 0 && <p className="text-xs text-muted-foreground">{which === "pre" ? "Input reaches the harness as it arrives." : "Replies leave as the harness returns them."}</p>}
-        <ol className="space-y-2">
+      <Section
+        title={which === "pre" ? "Input stages" : "Output stages"}
+        aside={
+          <AddButton
+            label={`Add ${which === "pre" ? "input" : "output"} stage`}
+            onClick={() => {
+              set([...stages, newStage(which === "pre" ? "redact" : "parse_json", stages.length)]);
+              setOpen(`${which}:${stages.length}`);
+            }}
+          />
+        }
+      >
+        <RowList empty={which === "pre" ? "Input reaches the harness as it arrives." : "Replies leave as the harness returns them."}>
           {stages.map((s, i) => (
-            <li key={s.id} id={`stage-${which}-${i}`} className={`space-y-2 rounded-lg p-2.5 shadow-[0_0_0_1px_hsl(var(--border))] ${focus === `${which}:${i}` ? "ring-2 ring-ring" : ""}`}>
-              <div className="flex items-center gap-1.5">
-                <span className="w-4 text-center text-[11px] text-muted-foreground">{i + 1}</span>
-                <Input value={s.name} onChange={(e) => setAt(i, { name: e.target.value })} aria-label="Stage name" className="h-8 min-w-0 flex-1 text-xs" />
-                <button type="button" disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up" className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" disabled={i === stages.length - 1} onClick={() => move(i, 1)} aria-label="Move down" className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
-                  <ArrowDown className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" onClick={() => set(stages.filter((_, j) => j !== i))} aria-label="Delete stage" className="rounded p-1 text-muted-foreground hover:text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <SelectField<ProcessorOp>
-                label="Does"
-                value={s.op}
-                onChange={(op) => setAt(i, { ...newStage(op, i), id: s.id, name: s.name === STAGE_OPS.find((o) => o[0] === s.op)![1] ? STAGE_OPS.find((o) => o[0] === op)![1] : s.name })}
-                items={STAGE_OPS.map(([value, label, hint]) => ({ value, label, hint }))}
-              />
-              {NEEDS_SCHEMA.includes(s.op) && (
-                <>
-                  <SelectField label="Schema" value={s.schema ?? "__none"} onChange={(v) => setAt(i, { schema: v === "__none" ? null : v })} items={[{ value: "__none", label: "Any JSON" }, ...doc.schemas.map((x) => ({ value: x.id, label: x.id, hint: x.description }))]} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <SelectField label="On failure" value={s.on_fail ?? "retry"} onChange={(on_fail) => setAt(i, { on_fail })} items={opts([["retry", "Ask again"], ["drop", "Drop"], ["error", "Fail the turn"], ["fallback", "Pass through"]])} />
-                    <NumberField label="Retries" value={s.max_retries} onChange={(v) => setAt(i, { max_retries: v })} />
-                  </div>
-                </>
-              )}
-              {s.fn && <FunctionEditor label="Function" fn={s.fn} onChange={(fn) => setAt(i, { fn })} doc={doc} rows={3} />}
-            </li>
+            <StageRow
+              key={s.id}
+              s={s}
+              i={i}
+              count={stages.length}
+              doc={doc}
+              open={open === `${which}:${i}`}
+              onToggle={() => setOpen(open === `${which}:${i}` ? undefined : `${which}:${i}`)}
+              setAt={(patch) => set(stages.map((x, j) => (j === i ? { ...x, ...patch } : x)))}
+              move={(d) => {
+                const next = [...stages];
+                [next[i], next[i + d]] = [next[i + d], next[i]];
+                set(next);
+                setOpen(`${which}:${i + d}`);
+              }}
+              remove={() => set(stages.filter((_, j) => j !== i))}
+            />
           ))}
-        </ol>
+        </RowList>
       </Section>
     );
   };
   return (
-    <div className="space-y-5">
+    <>
       {list("pre")}
       {list("post")}
-    </div>
+    </>
   );
 }

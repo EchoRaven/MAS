@@ -176,6 +176,25 @@
     box-shadow: 0 0 0 1px hsl(var(--ring)), 0 0 0 4px hsl(var(--ring) / 0.18);
   }
 
+  /* Property-panel controls: filled, no ring until focused. */
+  .prop-field {
+    border: 0;
+    border-radius: 0.5rem;
+    background: hsl(var(--secondary) / 0.65);
+    box-shadow: none;
+    transition: background-color 120ms ease, box-shadow 120ms ease;
+  }
+  .prop-field:hover {
+    background: hsl(var(--secondary));
+  }
+  .prop-field:focus,
+  .prop-field:focus-visible,
+  .prop-field[data-state="open"] {
+    outline: none;
+    background: hsl(var(--card));
+    box-shadow: 0 0 0 1px hsl(var(--ring) / 0.45), 0 0 0 3px hsl(var(--ring) / 0.1);
+  }
+
   .glass-overlay {
     border: 0;
     background: hsl(var(--popover));
@@ -211,4 +230,12 @@
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Edge ends: show where to grab an edge to reconnect it. */
+.react-flow__edge .react-flow__edgeupdater { transition: fill 120ms ease, stroke 120ms ease; }
+.react-flow__edge:hover .react-flow__edgeupdater,
+.react-flow__edge.selected .react-flow__edgeupdater {
+  fill: hsl(var(--ring) / 0.12);
+  cursor: grab;
 }

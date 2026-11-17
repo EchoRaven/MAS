@@ -89,6 +89,8 @@ export function migrateDoc(input: SystemDoc): SystemDoc {
   for (const raw of doc.edges as (SysEdge & Loose)[]) {
     const e = { ...raw } as SysEdge & Loose;
     delete e.schema;
+    if (e.bend) e.points = [e.bend as { x: number; y: number }];
+    delete e.bend;
     const s = kind(e.source);
     const t = kind(e.target);
     if (!s || !t) { edges.push(e); continue; }

@@ -23,9 +23,10 @@ export function BindingEditor({ binding, onChange, target, access, doc }: { bind
   const injects = binding.mode !== "tool";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <SelectField
-        label="How it reaches the agent"
+        label="Mode"
+        hint="How it reaches the agent"
         value={binding.mode}
         onChange={(mode) => onChange({ ...binding, mode })}
         items={opts([
@@ -36,7 +37,8 @@ export function BindingEditor({ binding, onChange, target, access, doc }: { bind
       />
       {tools.length > 0 && (
         <Chips
-          label="Tools it may call (none selected = all)"
+          label="Allowed tools"
+          hint="None selected = all of them"
           options={tools.map((t) => ({ value: t, label: t }))}
           value={binding.tools ?? []}
           onChange={(v) => onChange({ ...binding, tools: v })}
@@ -44,10 +46,8 @@ export function BindingEditor({ binding, onChange, target, access, doc }: { bind
       )}
       {injects && (
         <Section title="Read">
-          <div className="grid grid-cols-2 gap-2">
-            {binding.mode === "auto_inject" && <NumberField label="Top K" value={read.top_k} onChange={(top_k) => setRead({ top_k })} />}
-            <NumberField label="Token budget" value={read.budget_tokens} onChange={(budget_tokens) => setRead({ budget_tokens })} step={500} />
-          </div>
+          {binding.mode === "auto_inject" && <NumberField label="Top K" value={read.top_k} onChange={(top_k) => setRead({ top_k })} />}
+          <NumberField label="Token budget" value={read.budget_tokens} onChange={(budget_tokens) => setRead({ budget_tokens })} step={500} />
           {binding.mode === "auto_inject" && <TextField label="Filter" value={read.filter ?? ""} onChange={(f) => setRead({ filter: f || null })} mono placeholder='scope == "end_user" && age_days < 30' />}
           <Toggle label="Custom query" checked={!!read.query} onChange={(on) => setRead({ query: on ? emptyFn("template", "{{input.text}}") : null })} hint="Default: the incoming message's text" />
           {read.query && <FunctionEditor label="Query (ctx → query)" fn={read.query} onChange={(query) => setRead({ query })} doc={doc} rows={2} />}

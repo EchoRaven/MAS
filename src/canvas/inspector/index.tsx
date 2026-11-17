@@ -1,17 +1,15 @@
 import { Maximize2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { EntityAvatar } from "@/components/shared/EntityAvatar";
-import { KIND_LABEL } from "@/model/defaults";
 import { nodeName } from "@/model/ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, HumanData, ModelNodeData, NodeData, PluginData, SysEdge, SystemDoc } from "@/model/types";
 import type { Issue } from "@/model/validate";
 import { EDGE_LABEL } from "../convert";
+import { EDGE_STYLE, KIND_STYLE } from "../kinds";
 import { deleteNodes } from "../ops";
 import { AgentInspector, type AgentTab } from "./AgentInspector";
 import { FunctionInspector, GroupInspector, HumanInspector, ModelInspector } from "./ComponentInspectors";
 import { EdgeInspector } from "./EdgeInspector";
 import { EnvInspector, PluginInspector } from "./ResourceInspectors";
-import { Header, IssueList, type Update } from "./shared";
+import { Header, IconButton, IssueList, KindIcon, type Update } from "./shared";
 import { SystemInspector } from "./SystemInspector";
 
 export type { AgentTab } from "./AgentInspector";
@@ -65,20 +63,24 @@ export function Inspector(p: InspectorProps) {
       <div className="flex h-full min-h-0 flex-col">
         <Header
           title={name}
-          subtitle={`${KIND_LABEL[node.data.kind]} · ${node.id}`}
-          avatar={<EntityAvatar kind={node.data.kind === "agent" ? "agent" : "system"} id={node.id} name={name} className="h-8 w-8 text-[11px]" />}
+          subtitle={
+            <>
+              {KIND_STYLE[node.data.kind].label} · <span className="font-mono">{node.id}</span>
+            </>
+          }
+          icon={<KindIcon icon={KIND_STYLE[node.data.kind].icon} tint={KIND_STYLE[node.data.kind].tint} />}
           actions={
             openable && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => p.onOpen(node.id)} aria-label={node.data.kind === "group" ? "Open group canvas" : "Open agent internals"} title={node.data.kind === "group" ? "Open its canvas" : "Open its internals"}>
-                <Maximize2 className="h-4 w-4" />
-              </Button>
+              <IconButton label={node.data.kind === "group" ? "Open group canvas" : "Open agent internals"} onClick={() => p.onOpen(node.id)}>
+                <Maximize2 className="h-3.5 w-3.5" />
+              </IconButton>
             )
           }
           onDelete={() => update((d) => deleteNodes(d, [node.id]))}
           onClose={onClose}
         />
         {own.length > 0 && (
-          <div className="px-4 pt-3">
+          <div className="px-4 pb-2">
             <IssueList issues={own} />
           </div>
         )}
@@ -95,15 +97,16 @@ export function Inspector(p: InspectorProps) {
         <Header
           title={`${nm(edge.source)} → ${nm(edge.target)}`}
           subtitle={EDGE_LABEL[edge.kind]}
-          avatar={<EntityAvatar kind="system" id={edge.id} name="" className="h-8 w-8" />}
+          icon={<KindIcon icon={EDGE_STYLE.icon} tint={EDGE_STYLE.tint} />}
           onDelete={() => update((d) => ({ ...d, edges: d.edges.filter((e) => e.id !== edgeId) }))}
           onClose={onClose}
         />
         {own.length > 0 && (
-          <div className="px-4 pt-3">
+          <div className="px-4 pb-2">
             <IssueList issues={own} />
           </div>
         )}
+        <div className="border-b border-border/60" />
         <EdgeInspector key={edge.id} e={edge} doc={doc} set={setEdge} scope={p.scope} />
       </div>
     );

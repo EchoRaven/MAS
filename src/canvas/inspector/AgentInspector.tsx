@@ -1,10 +1,10 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { AgentData, SystemDoc, Trigger } from "@/model/types";
 import { Chips, NumberField, opts, SelectField, TextField } from "../fields";
 import { HarnessTab } from "./AgentHarness";
 import { ContextTab, ToolsTab } from "./AgentResources";
 import { PortsEditor } from "./PortsEditor";
-import { Note, type Update } from "./shared";
+import { Note, PanelTabs, type Update } from "./shared";
 import { StagesEditor } from "./StagesEditor";
 
 export type AgentTab = "basic" | "io" | "harness" | "tools" | "context" | "schedule";
@@ -22,23 +22,23 @@ const TRIGGERS: { value: Trigger; label: string }[] = [
 function BasicsTab({ a, doc, set }: { a: AgentData; doc: SystemDoc; set: (patch: Partial<AgentData>) => void }) {
   const usesModel = a.harness.tier === "native" || a.harness.tier === "sdk";
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <TextField label="Name" value={a.name} onChange={(name) => set({ name })} />
-      <TextField label="Role" value={a.role} onChange={(role) => set({ role })} placeholder="One line on what it is responsible for" />
+      <TextField label="Role" value={a.role} onChange={(role) => set({ role })} placeholder="What it is responsible for" />
       {usesModel ? (
         <SelectField
           label="Base model"
           value={a.model}
           onChange={(model) => set({ model })}
           items={doc.models.map((m) => ({ value: m.id, label: m.model, hint: m.price_in || m.price_out ? `$${m.price_in}/$${m.price_out}` : m.provider }))}
-          hint="API, key and price per model are under Library"
+          hint="API endpoint, key and price per model are under Library"
         />
       ) : (
         <Note>{a.harness.tier === "process" ? "A process harness picks and calls its own model; set the model in its own config." : "A remote agent's model is chosen by the remote side."}</Note>
       )}
-      <NumberField label="Agent budget (USD)" value={a.budget_usd} onChange={(budget_usd) => set({ budget_usd })} step={0.5} />
+      <NumberField label="Budget (USD)" value={a.budget_usd} onChange={(budget_usd) => set({ budget_usd })} step={0.5} />
       <Chips
-        label="Accepted input modalities"
+        label="Accepts"
         options={[
           { value: "text", label: "Text" },
           { value: "image", label: "Image" },
@@ -50,7 +50,8 @@ function BasicsTab({ a, doc, set }: { a: AgentData; doc: SystemDoc; set: (patch:
         onChange={(modalities_in) => set({ modalities_in })}
       />
       <SelectField
-        label="On unsupported modality"
+        label="Other inputs"
+        hint="What happens to an input type it does not accept"
         value={a.on_unsupported}
         onChange={(on_unsupported) => set({ on_unsupported })}
         items={opts([
@@ -87,19 +88,21 @@ export function AgentInspector({
 }) {
   return (
     <Tabs value={tab} onValueChange={(v) => onTab(v as AgentTab)} className="flex min-h-0 flex-1 flex-col">
-      <TabsList className="mx-4 mt-3 grid grid-cols-6">
-        <TabsTrigger value="basic" className="px-1 text-[11px]">Basics</TabsTrigger>
-        <TabsTrigger value="io" className="px-1 text-[11px]">I/O</TabsTrigger>
-        <TabsTrigger value="harness" className="px-1 text-[11px]">Harness</TabsTrigger>
-        <TabsTrigger value="tools" className="px-1 text-[11px]">Tools</TabsTrigger>
-        <TabsTrigger value="context" className="px-1 text-[11px]">Context</TabsTrigger>
-        <TabsTrigger value="schedule" className="px-1 text-[11px]">Schedule</TabsTrigger>
-      </TabsList>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-4">
-        <TabsContent value="basic" className="mt-0">
+      <PanelTabs
+        tabs={[
+          ["basic", "Basics"],
+          ["io", "I/O"],
+          ["harness", "Harness"],
+          ["tools", "Tools"],
+          ["context", "Context"],
+          ["schedule", "Schedule"],
+        ]}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-3">
+        <TabsContent value="basic" className="mt-0 space-y-2">
           <BasicsTab a={a} doc={doc} set={set} />
         </TabsContent>
-        <TabsContent value="io" className="mt-0 space-y-5">
+        <TabsContent value="io" className="mt-0">
           <PortsEditor nodeId={id} ifc={a.interface} doc={doc} update={update} />
           <StagesEditor pipeline={a.pipeline} onChange={(pipeline) => set({ pipeline })} doc={doc} focus={stageFocus} />
         </TabsContent>
@@ -112,10 +115,11 @@ export function AgentInspector({
         <TabsContent value="context" className="mt-0">
           <ContextTab id={id} a={a} doc={doc} set={set} onSelectEdge={onSelectEdge} />
         </TabsContent>
-        <TabsContent value="schedule" className="mt-0 space-y-4">
+        <TabsContent value="schedule" className="mt-0 space-y-2">
           <Chips label="Triggers" options={TRIGGERS} value={a.triggers} onChange={(triggers) => set({ triggers })} hint="Wakes on any of these" />
           <SelectField
-            label="New message while busy"
+            label="While busy"
+            hint="What happens to a new message while a turn is running"
             value={a.concurrency}
             onChange={(concurrency) => set({ concurrency })}
             items={opts([

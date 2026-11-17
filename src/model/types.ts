@@ -374,6 +374,8 @@ export interface SysEdge {
   transform?: FunctionSpec | null;
   /** deliver only when this expression is true, e.g. input.verdict == "approve" */
   filter?: string | null;
+  /** waypoints the edge is routed through, in canvas coordinates (UI only) */
+  points?: { x: number; y: number }[];
   label?: string;
   /** handoff: what context travels with it */
   carry?: "none" | "summary" | "full";

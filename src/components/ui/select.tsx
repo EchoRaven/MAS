@@ -26,6 +26,7 @@ export function Select({
   ariaLabel,
   placeholder = "Select…",
   size = "md",
+  variant = "control",
   className,
   contentClassName,
   disabled,
@@ -36,6 +37,8 @@ export function Select({
   ariaLabel: string;
   placeholder?: string;
   size?: "sm" | "md";
+  /** control: pill with a hairline ring · field: filled property-panel field */
+  variant?: "control" | "field";
   className?: string;
   contentClassName?: string;
   disabled?: boolean;
@@ -46,10 +49,10 @@ export function Select({
       <SelectPrimitive.Trigger
         aria-label={ariaLabel}
         className={cn(
-          "glass-control inline-flex min-w-0 items-center gap-2 text-left font-medium outline-none",
+          variant === "field" ? "prop-field inline-flex min-w-0 items-center gap-2 text-left font-normal outline-none" : "glass-control inline-flex min-w-0 items-center gap-2 text-left font-medium outline-none",
           "focus-visible:shadow-[0_0_0_1px_hsl(var(--ring)),0_0_0_4px_hsl(var(--ring)/0.18)] disabled:cursor-not-allowed disabled:opacity-50",
           "data-[state=open]:bg-secondary",
-          size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3.5 text-[13px]",
+          variant === "field" ? (size === "sm" ? "h-7 px-2 text-xs" : "h-8 px-2.5 text-[13px]") : size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3.5 text-[13px]",
           className,
         )}
       >

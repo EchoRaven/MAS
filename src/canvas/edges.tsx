@@ -1,15 +1,11 @@
-import { memo } from "react";
+import { memo, useContext, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { Filter, ShieldAlert, ShieldCheck, SquareFunction } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EdgeEditContext } from "./context";
 import { EDGE_COLOR, type FlowEdge } from "./convert";
-
-/** A feedback edge: out of the right side, up, back over both nodes, into the left side (access edges run below). */
-function loopPath(sx: number, sy: number, tx: number, ty: number): [string, number, number] {
-  const drop = Math.min(sy, ty) - 80;
-  const path = `M ${sx} ${sy} C ${sx + 70} ${sy}, ${sx + 70} ${drop}, ${sx} ${drop} L ${tx} ${drop} C ${tx - 70} ${drop}, ${tx - 70} ${ty}, ${tx} ${ty}`;
-  return [path, (sx + tx) / 2, drop];
-}
+import { loopPath, pointAlong, routedPath, type Pt } from "./edgePaths";
+import { Waypoints } from "./edgeWaypoints";
 
 const KIND_SHORT = { message: "msg", call: "call", handoff: "handoff", access: "" } as const;
 
@@ -17,14 +13,25 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
   const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, markerStart, selected, data } = props;
   const e = data!.sys;
   const rf = useReactFlow();
+  const edit = useContext(EdgeEditContext);
   // the label lives in its own layer: clicking it selects this edge
   const selectSelf = () => {
     rf.setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n)));
     rf.setEdges((es) => es.map((x) => (x.selected !== (x.id === id) ? { ...x, selected: x.id === id } : x)));
   };
-  // an output that feeds back to an earlier input loops underneath instead of cutting across
+  // waypoints follow the pointer while dragged and are saved on release
+  const [live, setLive] = useState<Pt[] | null>(null);
+  const points = live ?? e.points ?? [];
+  const s = { x: sourceX, y: sourceY };
+  const t = { x: targetX, y: targetY };
+  const routed = routedPath(s, sourcePosition, t, targetPosition, points);
+  // with no waypoints: the usual curve, or a loop above for an output feeding an earlier input
   const backward = sourcePosition === Position.Right && targetPosition === Position.Left && targetX < sourceX - 20;
-  const [path, lx, ly] = backward ? loopPath(sourceX, sourceY, targetX, targetY) : getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
+  const [path, lx, ly] = points.length
+    ? [routed.path, routed.label.x, routed.label.y - 16] // lifted off the curve so the segment's "+" stays reachable
+    : backward
+      ? loopPath(sourceX, sourceY, targetX, targetY)
+      : getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   const color = data?.blocked ? "hsl(var(--destructive))" : EDGE_COLOR[e.kind];
   const width = e.kind === "handoff" ? 2.25 : 1.5;
   const ports = data?.showPorts;
@@ -33,6 +40,8 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
     e.kind === "access"
       ? [e.access === "read" ? "read" : "read/write", e.binding?.mode && e.binding.mode !== "tool" ? e.binding.mode.replace("_", "-") : null].filter(Boolean).join(" · ")
       : [portText, e.label, e.kind === "handoff" && e.carry ? `carries ${e.carry}` : null].filter(Boolean).join(" · ") || KIND_SHORT[e.kind];
+  // where new waypoints can be pulled out: each segment's middle, or, on a plain edge, one spot clear of the label
+  const mids = points.length ? routed.mids : backward ? [{ x: lx - 48, y: ly }] : [pointAlong(s, sourcePosition, t, targetPosition, 0.28)];
 
   return (
     <>
@@ -54,6 +63,7 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
         <div
           className="nodrag nopan pointer-events-auto absolute flex cursor-pointer items-center gap-1"
           onClick={selectSelf}
+          title={edit.setPoints ? "Select the edge to route it through waypoints" : undefined}
           data-testid={`edge-label-${id}`}
           style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}
         >
@@ -91,6 +101,9 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
           )}
         </div>
       </EdgeLabelRenderer>
+      {selected && edit.setPoints && (
+        <Waypoints edgeId={id} points={points} mids={mids} onLive={setLive} onCommit={(pts) => edit.setPoints!(id, pts)} />
+      )}
     </>
   );
 });

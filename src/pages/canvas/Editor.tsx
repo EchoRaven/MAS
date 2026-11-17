@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
 import { Code2, Download, PanelRightClose, PanelRightOpen, PlayCircle, Workflow } from "lucide-react";
@@ -10,7 +10,8 @@ import { FlowView } from "@/canvas/FlowView";
 import { ImportDialog } from "@/canvas/ImportDialog";
 import { Inspector } from "@/canvas/inspector";
 import { addNode } from "@/canvas/ops";
-import { Palette, type ImportKind } from "@/canvas/Palette";
+import { Palette, SHORTCUT, type ImportKind } from "@/canvas/Palette";
+import { PALETTE } from "@/canvas/presets";
 import { downloadText, slug } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AgentData, NodeData, NodeKind, Processor, SystemDoc } from "@/model/types";
@@ -96,6 +97,22 @@ export function Editor({ doc }: { doc: SystemDoc }) {
     setInspectorOpen(true);
   };
 
+  // single-key shortcuts add a component (not while typing)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (view !== "canvas" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.closest("[role=dialog],[role=menu],[role=listbox]"))) return;
+      const kind = (Object.keys(SHORTCUT) as NodeKind[]).find((k) => SHORTCUT[k] === e.key.toUpperCase());
+      if (!kind) return;
+      e.preventDefault();
+      const entry = PALETTE.find((p) => p.kind === kind)!;
+      add([{ kind, data: entry.variants?.[0].make() }]);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const agentNode = nav.agent ? doc.nodes.find((n) => n.id === nav.agent) : undefined;
   const setAgent = (fn: (a: AgentData) => AgentData) => update((d) => ({ ...d, nodes: d.nodes.map((n) => (n.id === nav.agent && n.data.kind === "agent" ? { ...n, data: fn(n.data) } : n)) }));
   const moveParts = (moves: Record<string, { x: number; y: number }>) => setAgent((a) => ({ ...a, layout: { ...(a.layout ?? {}), ...moves } }));
@@ -139,8 +156,8 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           <YamlView doc={doc} onApply={(d) => replace(d)} />
         ) : (
           <div className="flex min-h-0 flex-1">
-            <Palette onAdd={(kind, data) => add([{ kind, data }])} onImport={setImporting} className="w-14 shrink-0 border-r border-border/70" />
             <div className="relative min-w-0 flex-1">
+              <Palette onAdd={(kind, data) => add([{ kind, data }])} onImport={setImporting} className="absolute left-3 top-1/2 z-10 -translate-y-1/2" />
               <div className="pointer-events-none absolute inset-x-3 top-2 z-10 flex">
                 <div className="pointer-events-auto rounded-lg bg-card/90 backdrop-blur empty:hidden">
                   <Breadcrumb doc={doc} scope={nav.scope} agent={nav.agent} onScope={nav.setScope} />
@@ -165,7 +182,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
               {toast && <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-foreground px-4 py-1.5 text-xs text-background shadow-[var(--pop-shadow)]">{toast}</div>}
             </div>
             {inspectorOpen && (
-              <aside className="w-[340px] shrink-0 border-l border-border/70 max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:w-[min(340px,92vw)] max-md:bg-card max-md:shadow-[var(--pop-shadow)]">
+              <aside className="w-[360px] shrink-0 border-l border-border/70 max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-20 max-md:w-[min(340px,92vw)] max-md:bg-card max-md:shadow-[var(--pop-shadow)]">
                 <Inspector
                   doc={doc}
                   update={update}

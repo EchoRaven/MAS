@@ -20,10 +20,14 @@ import { resolveTheme, useUiStore } from "@/store/ui";
 import { BOUNDARY_IN, BOUNDARY_OUT, toFlowEdges, toFlowNodes, type FlowEdge, type FlowNode, type RunStatus } from "./convert";
 import { EDGE_TYPES } from "./edges";
 import { NODE_TYPES } from "./nodes";
-import { addNode, connect, connectionHint, deleteNodes, moveNodes } from "./ops";
+import { EdgeEditContext } from "./context";
+import { addNode, connect, connectionHint, deleteNodes, moveNodes, reconnect, setEdgePoints } from "./ops";
 import type { NodeData } from "@/model/types";
 
 export const DND_MIME = "application/x-mas-component";
+
+/** Leave room for the floating palette on the left and the breadcrumb on top. */
+const FIT = { padding: { top: "56px", right: "32px", bottom: "40px", left: "80px" } as const, maxZoom: 1, minZoom: 0.5 };
 
 /** What the palette puts on the drag: a kind, optionally with preset data. */
 export interface DragPayload {
@@ -79,7 +83,7 @@ export function FlowView({
   const firstScope = useRef(true);
   useEffect(() => {
     if (firstScope.current) { firstScope.current = false; return; }
-    const id = window.setTimeout(() => rf.fitView({ padding: 0.15, maxZoom: 1, minZoom: 0.55 }), 30);
+    const id = window.setTimeout(() => rf.fitView(FIT), 30);
     return () => window.clearTimeout(id);
   }, [scope, rf]);
 
@@ -120,6 +124,18 @@ export function FlowView({
     },
     [update, scope],
   );
+
+  const onReconnect = useCallback(
+    (old: FlowEdge, c: Connection) => {
+      if (!update || !c.source || !c.target) return;
+      const r = reconnect(docRef.current, scope, old.id, c);
+      if (r.error) onErrorRef.current?.(r.error);
+      else update(() => r.doc);
+    },
+    [update, scope],
+  );
+
+  const edgeEdit = useMemo(() => (readOnly || !update ? {} : { setPoints: (edgeId: string, pts: { x: number; y: number }[]) => update((d) => setEdgePoints(d, edgeId, pts)) }), [readOnly, update]);
 
   const isValidConnection: IsValidConnection<FlowEdge> = useCallback(
     (c) => !!c.source && !!c.target && connectionHint(docRef.current, scope, { source: c.source, target: c.target, sourceHandle: c.sourceHandle ?? null, targetHandle: c.targetHandle ?? null }) !== "invalid",
@@ -165,6 +181,7 @@ export function FlowView({
   const minimap = useMemo(() => nodes.length > 6, [nodes.length]);
 
   return (
+    <EdgeEditContext.Provider value={edgeEdit}>
     <ReactFlow<FlowNode, FlowEdge>
       nodes={nodes}
       edges={edges}
@@ -173,6 +190,9 @@ export function FlowView({
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={readOnly ? undefined : onConnect}
+      onReconnect={readOnly ? undefined : onReconnect}
+      edgesReconnectable={!readOnly}
+      reconnectRadius={12}
       isValidConnection={isValidConnection}
       onNodeDragStop={readOnly ? undefined : onNodeDragStop}
       onNodeDoubleClick={(_, n) => n.id !== BOUNDARY_IN && n.id !== BOUNDARY_OUT && onOpen?.(n.id)}
@@ -189,7 +209,7 @@ export function FlowView({
       deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
       colorMode={resolveTheme(theme)}
       fitView
-      fitViewOptions={{ padding: 0.15, maxZoom: 1, minZoom: 0.55 }}
+      fitViewOptions={FIT}
       minZoom={0.2}
       proOptions={{ hideAttribution: true }}
     >
@@ -197,5 +217,6 @@ export function FlowView({
       <Controls showInteractive={false} position="bottom-left" />
       {minimap && <MiniMap pannable zoomable position="bottom-right" className="hidden md:block" style={{ width: 140, height: 96 }} />}
     </ReactFlow>
+    </EdgeEditContext.Provider>
   );
 }

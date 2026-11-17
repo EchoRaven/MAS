@@ -1,9 +1,9 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { FunctionNodeData, GroupData, HumanData, ModelNodeData, SystemDoc } from "@/model/types";
 import { AreaField, NumberField, opts, SelectField, TextField, Toggle } from "../fields";
 import { FunctionEditor } from "./FunctionEditor";
 import { PortsEditor } from "./PortsEditor";
-import { Body, Note, type Update } from "./shared";
+import { Body, Note, PanelTabs, type Update } from "./shared";
 
 type Set<D> = (patch: Partial<D>) => void;
 
@@ -11,12 +11,14 @@ type Set<D> = (patch: Partial<D>) => void;
 function WithInterface({ id, ifc, doc, update, children, inputsLabel, outputsLabel }: { id: string; ifc: GroupData["interface"]; doc: SystemDoc; update: Update; children: React.ReactNode; inputsLabel?: string; outputsLabel?: string }) {
   return (
     <Tabs defaultValue="settings" className="flex min-h-0 flex-1 flex-col">
-      <TabsList className="mx-4 mt-3 grid grid-cols-2">
-        <TabsTrigger value="settings">Settings</TabsTrigger>
-        <TabsTrigger value="interface">Interface</TabsTrigger>
-      </TabsList>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-4">
-        <TabsContent value="settings" className="mt-0 space-y-4">
+      <PanelTabs
+        tabs={[
+          ["settings", "Settings"],
+          ["interface", "Interface"],
+        ]}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-3">
+        <TabsContent value="settings" className="mt-0 space-y-2">
           {children}
         </TabsContent>
         <TabsContent value="interface" className="mt-0">
@@ -45,10 +47,8 @@ export function ModelInspector({ id, m, doc, set, update }: { id: string; m: Mod
       <SelectField label="Model" value={m.model} onChange={(model) => set({ model })} items={doc.models.map((x) => ({ value: x.id, label: x.model, hint: x.provider }))} hint="One call per input: no loop, no tools" />
       <AreaField label="System prompt" value={m.system_prompt} onChange={(system_prompt) => set({ system_prompt })} rows={3} />
       <AreaField label="Prompt" value={m.prompt} onChange={(prompt) => set({ prompt })} rows={3} mono hint="{{input}} is the incoming value; {{input.<field>}} for JSON" />
-      <div className="grid grid-cols-2 gap-2">
-        <NumberField label="Temperature" value={m.temperature} onChange={(temperature) => set({ temperature })} step={0.1} placeholder="Default" />
-        <NumberField label="Max tokens" value={m.max_tokens} onChange={(max_tokens) => set({ max_tokens })} step={256} placeholder="Default" />
-      </div>
+      <NumberField label="Temperature" value={m.temperature} onChange={(temperature) => set({ temperature })} step={0.1} placeholder="Default" />
+      <NumberField label="Max tokens" value={m.max_tokens} onChange={(max_tokens) => set({ max_tokens })} step={256} placeholder="Default" />
       {out?.type === "json" && <Note tone="info">The output port is json{out.schema ? ` (${out.schema})` : ""}: the call uses structured output and the reply is parsed before it leaves.</Note>}
     </WithInterface>
   );
@@ -80,8 +80,8 @@ export function GroupInspector({ id, g, doc, set, update, onOpen }: { id: string
   return (
     <WithInterface id={id} ifc={g.interface} doc={doc} update={update} inputsLabel="Inputs (sources inside)" outputsLabel="Outputs (targets inside)">
       <TextField label="Name" value={g.name} onChange={(name) => set({ name })} />
-      <NumberField label="Group budget (USD)" value={g.budget_usd} onChange={(budget_usd) => set({ budget_usd })} step={0.5} />
-      <SelectField label="On internal failure" value={g.on_error} onChange={(on_error) => set({ on_error })} items={opts([["retry_then_fail_up", "Retry once, then fail up"], ["fail_up", "Fail up"], ["ignore", "Ignore"]])} />
+      <NumberField label="Budget (USD)" value={g.budget_usd} onChange={(budget_usd) => set({ budget_usd })} step={0.5} />
+      <SelectField label="On failure" value={g.on_error} onChange={(on_error) => set({ on_error })} items={opts([["retry_then_fail_up", "Retry once, then fail up"], ["fail_up", "Fail up"], ["ignore", "Ignore"]])} />
       <Note>
         {members} component{members === 1 ? "" : "s"} inside.{" "}
         {onOpen && (

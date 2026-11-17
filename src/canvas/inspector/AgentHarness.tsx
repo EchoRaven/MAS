@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { RUNNERS, runnerById } from "@/model/defaults";
 import type { AgentData, HarnessTier } from "@/model/types";
-import { AreaField, NumberField, opts, Section, SelectField, TextField } from "../fields";
+import { AreaField, Hint, NumberField, opts, Section, SelectField, TextField } from "../fields";
 
 const LEVEL_TINT = { full: "bg-success/10 text-success", partial: "bg-info/10 text-info", none: "bg-secondary text-muted-foreground" };
 
@@ -17,9 +17,9 @@ export function CapabilityTable({ a }: { a: AgentData }) {
     ["Cost reporting", c.cost_reporting ? "Yes" : "Estimated by platform"],
   ];
   return (
-    <dl className="divide-y divide-border/70 rounded-lg text-xs shadow-[0_0_0_1px_hsl(var(--border))]">
+    <dl className="divide-y divide-border/50 overflow-hidden rounded-lg bg-secondary/30 text-[12px] ring-1 ring-border/50">
       {rows.map(([k, v]) => (
-        <div key={k} className="flex items-center justify-between gap-2 px-3 py-1.5">
+        <div key={k} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
           <dt className="text-muted-foreground">{k}</dt>
           <dd className="text-right">{v}</dd>
         </div>
@@ -37,9 +37,9 @@ export function HarnessTab({ a, set }: { a: AgentData; set: (patch: Partial<Agen
     setHarness({ tier, runner: r.id, capabilities: { ...r.caps }, loop: tier === "native" ? (a.harness.loop ?? "react") : undefined });
   };
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <SelectField
-        label="Integration tier"
+        label="Tier"
         value={a.harness.tier}
         onChange={changeTier}
         items={opts([
@@ -78,7 +78,7 @@ export function HarnessTab({ a, set }: { a: AgentData; set: (patch: Partial<Agen
       <NumberField label="Max steps" value={a.harness.max_steps} onChange={(v) => setHarness({ max_steps: v ?? undefined })} />
       {a.harness.tier !== "native" && (
         <SelectField
-          label="Harness's own memory"
+          label="Own memory"
           value={a.harness.own_memory ?? "keep"}
           onChange={(own_memory) => setHarness({ own_memory })}
           items={opts([
@@ -88,9 +88,8 @@ export function HarnessTab({ a, set }: { a: AgentData; set: (patch: Partial<Agen
           hint="Avoids two memory systems conflicting"
         />
       )}
-      <Section title="Capabilities">
+      <Section title="Capabilities" aside={<Hint>Declared by the adapter. The platform uses them to decide where context, tools and approvals are injected.</Hint>}>
         <CapabilityTable a={a} />
-        <p className="text-[11px] text-muted-foreground">Capabilities come from the adapter. The platform uses them to decide at which boundary context, tools and approvals are injected.</p>
       </Section>
     </div>
   );

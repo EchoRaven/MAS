@@ -102,3 +102,36 @@ export function connectionHint(doc: SystemDoc, scope: string | undefined, c: Con
   if (!sp || !tp) return "invalid";
   return compat(sp, tp).level;
 }
+
+/**
+ * Move one end of an edge to another handle. The edge keeps its id and its
+ * settings (label, transform, gate, binding); its ports, and its kind if it
+ * becomes or stops being an access edge, follow the new ends. Waypoints are
+ * dropped since the route changed.
+ */
+export function reconnect(doc: SystemDoc, scope: string | undefined, edgeId: string, c: ConnectRequest): { doc: SystemDoc; error?: string } {
+  const old = doc.edges.find((e) => e.id === edgeId);
+  if (!old) return { doc };
+  const without = { ...doc, edges: doc.edges.filter((e) => e.id !== edgeId) };
+  const r = connect(without, scope, c);
+  if (r.error || !r.id) return { doc, error: r.error ?? "That connection already exists" };
+  const fresh = r.doc.edges.find((e) => e.id === r.id)!;
+  const sameFamily = (old.kind === "access") === (fresh.kind === "access");
+  const merged: SysEdge = sameFamily
+    ? { ...old, source: fresh.source, source_port: fresh.source_port, target: fresh.target, target_port: fresh.target_port, points: undefined }
+    : { ...fresh, id: old.id };
+  return { doc: { ...doc, edges: doc.edges.map((e) => (e.id === edgeId ? merged : e)) } };
+}
+
+/** Save an edge's waypoints; an empty list makes it a plain curve again. */
+export function setEdgePoints(doc: SystemDoc, edgeId: string, points: { x: number; y: number }[]): SystemDoc {
+  return {
+    ...doc,
+    edges: doc.edges.map((e) => {
+      if (e.id !== edgeId) return e;
+      const { points: _old, ...rest } = e;
+      void _old;
+      return points.length ? { ...rest, points: points.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) })) } : rest;
+    }),
+  };
+}

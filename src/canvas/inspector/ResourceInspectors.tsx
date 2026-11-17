@@ -1,5 +1,4 @@
 import { Trash2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { checkContract, manifestToYaml } from "@/model/envspec";
 import { nodeName } from "@/model/ports";
@@ -7,7 +6,8 @@ import { PLUGIN_PRESETS, switchPreset } from "@/model/plugins";
 import type { EnvData, PluginData, PluginSpec, SystemDoc, ToolEffect } from "@/model/types";
 import { opts, Section, SelectField, TextField, Toggle } from "../fields";
 import { emptyFn, FunctionEditor } from "./FunctionEditor";
-import { AddButton, Body, IssueList, Note } from "./shared";
+import { cn } from "@/lib/utils";
+import { AddButton, Body, IssueList, Note, RowList } from "./shared";
 
 const SOURCE: Record<string, string> = { dtap: "DT (DecodingTrust)", envgen: "env-gen", compose: "docker compose", "mas-env": "mas-env manifest" };
 
@@ -46,7 +46,7 @@ export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc:
         <>
           <SelectField label="Lifecycle" value={e.lifecycle} onChange={(lifecycle) => set({ lifecycle })} items={opts([["per_run", "New for each run"], ["per_session", "Per session"], ["persistent", "Persistent"]])} />
           <SelectField label="Snapshots" value={e.snapshot} onChange={(snapshot) => set({ snapshot })} items={opts([["never", "Never"], ["on_write", "On every write"], ["on_checkpoint", "At checkpoints"]])} hint={e.env_kind === "external" ? "External envs cannot be snapshotted; actions are only logged" : "Enables replay and forking"} />
-          <TextField label="Allowed egress (comma-separated; all blocked by default)" value={e.egress.join(", ")} onChange={(v) => set({ egress: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />
+          <TextField label="Egress" hint="Hosts it may reach, comma-separated. Everything else is blocked." placeholder="none" value={e.egress.join(", ")} onChange={(v) => set({ egress: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />
         </>
       )}
       {m && (
@@ -56,9 +56,9 @@ export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc:
             {m.version ? ` · v${m.version}` : ""} · {m.exposes.mcp ? `${m.exposes.mcp.tools.length} MCP tools` : "no MCP"} · {m.lifecycle.reset ? "resettable" : "no reset"}
           </Note>
           <IssueList issues={checkContract(m)} />
-          <details className="rounded-lg shadow-[0_0_0_1px_hsl(var(--border))]">
-            <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground">Manifest (mas-env/1)</summary>
-            <pre className="max-h-72 overflow-auto border-t border-border/70 px-3 py-2 font-mono text-[10px] leading-relaxed">{manifestToYaml(m)}</pre>
+          <details className="overflow-hidden rounded-lg bg-secondary/40 ring-1 ring-border/50">
+            <summary className="cursor-pointer px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground">Manifest · mas-env/1</summary>
+            <pre className="max-h-72 overflow-auto border-t border-border/50 px-2.5 py-2 font-mono text-[10px] leading-relaxed">{manifestToYaml(m)}</pre>
           </details>
         </Section>
       )}
@@ -79,8 +79,8 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
   return (
     <Body>
       <TextField label="Name" value={p.name} onChange={(name) => set({ ...p, name })} />
-      <SelectField label="Preset" value={p.preset} onChange={(preset) => set(switchPreset(p, preset))} items={PLUGIN_PRESETS.map((x) => ({ value: x.id, label: x.label, hint: x.hint }))} hint="Switching to a preset fills its defaults; Custom keeps what is here and makes it yours" />
-      <div className="grid grid-cols-2 gap-2">
+      <SelectField label="Preset" value={p.preset} onChange={(preset) => set(switchPreset(p, preset))} items={PLUGIN_PRESETS.map((x) => ({ value: x.id, label: x.label, hint: x.hint }))} hint="A preset fills in its defaults; Custom keeps what is here and makes everything editable" />
+      <div className="space-y-2">
         <SelectField label="Scope" value={spec.scope} onChange={(scope) => setSpec({ scope })} items={opts([["agent", "Per agent"], ["group", "Shared in group"], ["end_user", "Per end user"], ["system", "Whole system"]])} />
         <SelectField label="Storage" value={spec.storage ?? "none"} onChange={(storage) => setSpec({ storage })} items={opts([["builtin", "Built-in"], ["pgvector", "pgvector"], ["qdrant", "Qdrant"], ["sqlite", "SQLite"], ["files", "Files"], ["none", "None"]])} />
       </div>
@@ -92,21 +92,29 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
       {(spec.sources || p.preset === "knowledge" || p.preset === "workspace") && (
         <TextField label={p.preset === "workspace" ? "Mounted directories" : "Sources"} value={(spec.sources ?? []).join(", ")} onChange={(v) => setSpec({ sources: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />
       )}
-      <Section title="Tools" aside={<AddButton onClick={() => setSpec({ tools: [...spec.tools, { name: "new_tool", description: "", effect: "read" }] })} />}>
-        <ul className="space-y-2">
+      <Section title={`Tools · ${spec.tools.length}`} aside={<AddButton label="Add tool" onClick={() => setSpec({ tools: [...spec.tools, { name: "new_tool", description: "", effect: "read" }] })} />}>
+        <RowList empty="No tools.">
           {spec.tools.map((t, i) => (
-            <li key={i} className="space-y-1.5 rounded-lg p-2 shadow-[0_0_0_1px_hsl(var(--border))]">
+            <li key={i} className="group/row px-2 py-1.5">
               <div className="flex items-center gap-1.5">
-                <Input value={t.name} onChange={(e) => setTool(i, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, "_") })} aria-label="Tool name" className="h-8 min-w-0 flex-1 font-mono text-xs" />
-                <Select value={t.effect} onValueChange={(v) => setTool(i, { effect: v as ToolEffect })} items={[{ value: "pure", label: "pure" }, { value: "read", label: "read" }, { value: "write", label: "write" }, { value: "irreversible", label: "irreversible" }]} ariaLabel="Effect" className="w-28" />
-                <button type="button" onClick={() => setSpec({ tools: spec.tools.filter((_, j) => j !== i) })} aria-label={`Delete tool ${t.name}`} className="rounded p-1 text-muted-foreground hover:text-destructive">
+                <input value={t.name} onChange={(e) => setTool(i, { name: e.target.value.replace(/[^a-zA-Z0-9_]/g, "_") })} aria-label="Tool name" className="h-7 min-w-0 flex-1 rounded-md bg-transparent px-1.5 font-mono text-[12px] outline-none hover:bg-secondary focus:bg-card focus:ring-1 focus:ring-ring/40" />
+                <Select
+                  variant="field"
+                  size="sm"
+                  value={t.effect}
+                  onValueChange={(v) => setTool(i, { effect: v as ToolEffect })}
+                  items={[{ value: "pure", label: "pure" }, { value: "read", label: "read" }, { value: "write", label: "write" }, { value: "irreversible", label: "irreversible" }]}
+                  ariaLabel="Effect"
+                  className={cn("w-[96px]", t.effect === "irreversible" && "text-destructive", t.effect === "write" && "text-warning")}
+                />
+                <button type="button" onClick={() => setSpec({ tools: spec.tools.filter((_, j) => j !== i) })} aria-label={`Delete tool ${t.name}`} className="flex h-7 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus:opacity-100 group-hover/row:opacity-100">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <Input value={t.description} onChange={(e) => setTool(i, { description: e.target.value })} placeholder="What it does" aria-label="Tool description" className="h-8 text-xs" />
+              <input value={t.description} onChange={(e) => setTool(i, { description: e.target.value })} placeholder="What it does" aria-label="Tool description" className="h-6 w-full rounded-md bg-transparent px-1.5 text-[12px] text-muted-foreground outline-none placeholder:text-muted-foreground/50 hover:bg-secondary focus:bg-card focus:text-foreground focus:ring-1 focus:ring-ring/40" />
             </li>
           ))}
-        </ul>
+        </RowList>
       </Section>
       <Section title="Hooks">
         {HOOKS.map(([key, label, hint]) => {
@@ -119,7 +127,7 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
           );
         })}
       </Section>
-      <p className="text-[11px] text-muted-foreground">Every plugin implements mas-plugin/1: tools + hooks + backend. Per-agent settings (which tools, query, top K, format) are on the access edge.</p>
+      <Note>Per-agent settings (which tools, query, top K, format) live on the access edge to each agent.</Note>
     </Body>
   );
 }
