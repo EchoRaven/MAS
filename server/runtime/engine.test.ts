@@ -172,6 +172,17 @@ describe("runtime", () => {
     expect(events.some((e) => e.type === "transform" && e.label === "rounds done" && /holds/.test(e.detail))).toBe(true);
   });
 
+  it("Chain-of-Agents reads a long input part by part, then the manager answers once", async () => {
+    const doc = "word ".repeat(1400); // 7000 characters: three parts of 3000
+    const { events } = await run(TEMPLATES.find((t) => t.id === "paper-chain-of-agents")!.build(), "What is it about?\n---\n" + doc);
+    expect(errors(events)).toEqual([]);
+    expect(usages(events, "worker")).toHaveLength(3);
+    expect(usages(events, "manager")).toHaveLength(1);
+    // every worker call carries the question, and none carries the whole document
+    const toWorker = events.filter((e) => e.type === "message" && e.kind === "call" && (e as { to: string }).to === "worker") as { text: string }[];
+    expect(toWorker.every((e) => e.text.startsWith("Question: What is it about?") && e.text.length < 4000)).toBe(true);
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

@@ -72,6 +72,7 @@ const ORDER = [
   "paper-chateval",
   "paper-dylan",
   "paper-reflexion",
+  "paper-chain-of-agents",
   "paper-camel",
   "paper-autogen",
   "paper-agentverse",

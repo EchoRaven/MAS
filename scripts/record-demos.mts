@@ -90,6 +90,12 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-chain-of-agents": {
+    // the long document is this platform's own server guide; the two answers sit in different parts of it
+    input:
+      "What happens to a run when it goes over its budget in dollars, and how does the server deal with a model provider's rate limit?\n---\n" +
+      fs.readFileSync(path.join(ROOT, "docs", "server.md"), "utf8"),
+  },
   "paper-werewolf": {
     input: "Begin the game.",
     vars: { days: 4 },
