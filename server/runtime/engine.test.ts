@@ -142,6 +142,36 @@ describe("runtime", () => {
     expect(out.text).toContain("CONSENSUS after layer 1: 9");
   });
 
+  it("ReConcile discusses until the seats agree, showing each seat the others' reasons", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(mock("hasty", ["Half the draws have a red. Answer: 1/2\nConfidence: 0.9", "The others are right. Answer: 1/3\nConfidence: 0.95"]), mock("careful", ["3 of the 9 cases. Answer: 1/3\nConfidence: 0.8"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "claude" ? "hasty" : "careful";
+    const { events } = await run(doc, "Two balls, at least one red: both red?", { mock: false });
+    expect(errors(events)).toEqual([]);
+    expect(usages(events, "claude").length).toBe(2);
+    // round 2's input carries the grouped answers with everyone's reasoning
+    const round2 = events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "claude")[1];
+    expect(round2.text).toContain('Answer "1/2", given by Claude (confidence 0.9)');
+    expect(round2.text).toContain("GPT's reasoning: 3 of the 9 cases.");
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toMatch(/^Answer: 1\/3/);
+    expect(out.text).toContain("Consensus in round 2");
+  });
+
+  it("ReConcile's vote weighs recalibrated confidence, so one sure seat can outvote two unsure ones", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(mock("sure", ["Answer: A\nConfidence: 1.0"]), mock("unsure", ["Answer: B\nConfidence: 0.7"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "claude" ? "sure" : "unsure";
+    const { events } = await run(doc, "A or B?", { mock: false });
+    expect(usages(events, "claude").length).toBe(4);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    // 1.0 → 1.0 against 0.7 → 0.3 twice
+    expect(out.text).toMatch(/^Answer: A/);
+    expect(out.text).toContain("No consensus after 4 rounds. Weighted vote: A 1.0, B 0.6.");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

@@ -66,6 +66,7 @@ who talks to whom, roles, memory, loops — not its prompts or its results.
 | [Werewolf](https://arxiv.org/abs/2309.04658) | Hidden roles: the rules are code, each player is an agent told only what its role allows |
 | [MAD](https://arxiv.org/abs/2305.19118) | An angel and a devil who must disagree; a moderator ends the debate once one side is clearly right, else a judge decides after three rounds |
 | [Chain-of-Agents](https://arxiv.org/abs/2406.02818) | A long input split into chunks; workers pass a note of the evidence down the chain, a manager answers from the last note |
+| [ReConcile](https://arxiv.org/abs/2309.13007) | A round table of different models: answers with confidence, grouped discussion each round, stop at consensus, a confidence-weighted vote |
 
 ## Layout
 

@@ -94,6 +94,10 @@ const DEMOS: Record<string, DemoConfig> = {
     // the paper's own kind of question: a quick answer (2 m/s) that is wrong
     input: "Alice walks up a hill at 1 m/s and comes back down the same path at 3 m/s. What is her average speed for the whole trip?",
   },
+  "paper-reconcile": {
+    // hard enough that the seats tend to disagree at first (it is 48: 100! has 97 factors of 2, so 48 of 4, and 48 of 3)
+    input: "How many trailing zeros does 100! (100 factorial) have when written in base 12?",
+  },
   "paper-chain-of-agents": {
     // the long document is this platform's own server guide; the two answers sit in different parts of it
     input:

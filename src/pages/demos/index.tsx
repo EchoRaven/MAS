@@ -69,6 +69,7 @@ export function DemosPage() {
 const ORDER = [
   "paper-debate",
   "paper-mad",
+  "paper-reconcile",
   "paper-moa",
   "paper-chateval",
   "paper-dylan",
