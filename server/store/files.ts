@@ -68,11 +68,32 @@ export class Store {
   getSystem(id: string): SystemDoc | null {
     return readJson<SystemDoc>(path.join(this.systemsDir, `${safeId(id)}.json`));
   }
-  putSystem(doc: SystemDoc) {
+  /**
+   * Stores a system. A copy no newer than its deletion is refused (false):
+   * that is a browser that has not heard of the deletion yet, and would bring
+   * the system back. A copy edited after the deletion is kept.
+   */
+  putSystem(doc: SystemDoc): boolean {
+    const deleted = this.deletedSystems();
+    const at = deleted[doc.id];
+    if (at && doc.updated_at <= at) return false;
+    if (at) {
+      delete deleted[doc.id];
+      writeJson(this.deletedFile, deleted);
+    }
     writeJson(path.join(this.systemsDir, `${safeId(doc.id)}.json`), doc);
+    return true;
   }
   deleteSystem(id: string) {
     fs.rmSync(path.join(this.systemsDir, `${safeId(id)}.json`), { force: true });
+    writeJson(this.deletedFile, { ...this.deletedSystems(), [safeId(id)]: new Date().toISOString() });
+  }
+  /** Ids of deleted systems and when, so every browser can drop its copy. */
+  deletedSystems(): Record<string, string> {
+    return readJson<Record<string, string>>(this.deletedFile) ?? {};
+  }
+  private get deletedFile() {
+    return path.join(this.dataDir, "deleted-systems.json");
   }
 
   // runs --------------------------------------------------------------------

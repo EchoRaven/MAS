@@ -11,8 +11,9 @@ let timer: ReturnType<typeof setTimeout> | undefined;
 let started = false;
 
 async function pull() {
-  const { systems: remote } = await Api.systems();
-  const local = useSystems.getState().systems;
+  const { systems: remote, deleted = {} } = await Api.systems();
+  // a system deleted on the server goes here too, unless it was changed here after the deletion
+  const local = useSystems.getState().systems.filter((d) => !(deleted[d.id] && d.updated_at <= deleted[d.id]));
   const byId = new Map(local.map((d) => [d.id, d]));
   const merged: SystemDoc[] = [...local];
   synced = new Map(remote.map((d) => [d.id, d.updated_at]));
