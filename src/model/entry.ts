@@ -47,7 +47,13 @@ export function entryPoints(doc: SystemDoc): EntryPoint[] {
       !n.parent &&
       (doc.edges.some((e) => e.source === n.id && e.kind !== "access") || doc.edges.some((e) => e.kind === "access" && e.source === n.id && isRoom(doc, e.target))),
   );
-  if (humans.length) return humans.map((n) => ({ node: n.id, why: "human" as const }));
+  if (humans.length) {
+    // people nothing sends to start the run; a person things are sent to is in the middle of the flow
+    // (a checker, an approver) unless nobody else can start it, and then only the first one does
+    const fed = new Set(doc.edges.filter((e) => e.kind !== "access").map((e) => e.target));
+    const sources = humans.filter((n) => !fed.has(n.id));
+    return (sources.length ? sources : humans.slice(0, 1)).map((n) => ({ node: n.id, why: "human" as const }));
+  }
 
   const onStart = doc.nodes.filter((n) => n.data.kind === "agent" && !n.parent && (n.data as AgentData).triggers.includes("on_start"));
   if (onStart.length) return onStart.map((n) => ({ node: n.id, port: interfaceOf(n.data).inputs[0]?.id, why: "on_start" as const }));

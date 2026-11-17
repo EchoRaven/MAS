@@ -658,6 +658,78 @@ describe("runtime", () => {
     expect(usages(queued.events, "w").length).toBe(2);
   });
 
+  describe("composition", () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const outs = (events: RunEvent[]) => events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text);
+
+    it("a group called like a tool answers with its output", async () => {
+      const b = new Builder("Group call", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("boss", 0, 0, { name: "Boss", model: "c_boss", harness: { ...native(), loop: "react", max_steps: 3, instructions: "" } })
+        .group("team", 0, 0, { name: "Team", interface: { inputs: [port("q", "message")], outputs: [port("a", "text")] } })
+        .node("work", "function", 0, 0, { name: "Work", fn: { lang: "js", code: 'return "answer to " + String(input?.text ?? input);' }, interface: { inputs: [port("in", "message")], outputs: [port("out", "text")] } }, "team")
+        .edge("me", "boss", "message")
+        .edge("boss", "team", "call")
+        .edge("team", "work", "message")
+        .edge("work", "team", "message")
+        .edge("boss", "me", "message");
+      b.doc.models.push(mock("c_boss", [{ tool: "ask_team", input: { request: "the plan" } }, "Boss heard: {{input}}"]));
+      const { events } = await run(b.doc, "go", { mock: false });
+      expect(errors(events)).toEqual([]);
+      const asked = events.find((e): e is Extract<RunEvent, { type: "tool" }> => e.type === "tool" && e.tool === "ask_team");
+      expect(asked?.result).toBe("answer to the plan");
+      expect(outs(events)).toEqual(["Boss heard: answer to the plan"]);
+    });
+
+    it("with several handoffs, the agent's transfer_to choice is the only one that runs", async () => {
+      const b = new Builder("Handoffs", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("router", 0, 0, { name: "Router", model: "c_router", harness: { ...native(), loop: "react", max_steps: 3, instructions: "" } })
+        .agent("billing", 0, 0, { name: "Billing", model: "c_billing", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .agent("tech", 0, 0, { name: "Tech", model: "c_tech", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "router", "message")
+        .edge("router", "billing", "handoff")
+        .edge("router", "tech", "handoff")
+        .edge("billing", "me", "message")
+        .edge("tech", "me", "message");
+      b.doc.models.push(mock("c_router", [{ tool: "transfer_to_tech", input: {} }, "This is for tech."]), mock("c_billing", ["billing here"]), mock("c_tech", ["tech here"]));
+      const { events } = await run(b.doc, "my laptop will not boot", { mock: false });
+      expect(errors(events)).toEqual([]);
+      expect(usages(events, "billing").length).toBe(0);
+      expect(outs(events)).toEqual(["tech here"]);
+    });
+
+    it("an output pipeline that parses JSON asks again when the reply is not JSON", async () => {
+      const b = new Builder("Parse", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "c_json", interface: { inputs: [port("in", "message")], outputs: [port("out", "json")] }, pipeline: { pre: [], post: [{ id: "p1", op: "parse_json", name: "Parse", on_fail: "retry", max_retries: 2 }] }, harness: { ...native(), loop: "single_shot", instructions: "" } } as never)
+        .node("f", "function", 0, 0, { name: "Read ok", fn: { lang: "js", code: 'return "ok is " + input.ok;' }, interface: { inputs: [port("in", "json")], outputs: [port("out", "text")] } })
+        .edge("me", "a", "message")
+        .edge("a", "f", "message")
+        .edge("f", "me", "message");
+      b.doc.models.push(mock("c_json", ["Sure! Here it is: not json at all", '{"ok": true}']));
+      const { events } = await run(b.doc, "go", { mock: false });
+      expect(usages(events, "a").length).toBe(2);
+      expect(outs(events)).toEqual(["ok is true"]);
+    });
+
+    it("a person in the middle is asked, and their reply is what goes on", async () => {
+      const b = new Builder("Person", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "c_a", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .node("checker", "human", 0, 0, { name: "Checker", role: "Checks drafts", approves: false })
+        .agent("b", 0, 0, { name: "B", model: "c_b", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "a", "message")
+        .edge("a", "checker", "message")
+        .edge("checker", "b", "message")
+        .edge("b", "me", "message");
+      b.doc.models.push(mock("c_a", ["draft one"]), mock("c_b", ["B got: {{input}}"]));
+      const { events } = await run(b.doc, "go", { mock: false, answer: () => ({ text: "looks fine, ship it" }) });
+      expect(events.some((e) => e.type === "human_request" && e.request.kind === "input" && e.request.text === "draft one")).toBe(true);
+      expect(outs(events)).toEqual(["B got: looks fine, ship it"]);
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

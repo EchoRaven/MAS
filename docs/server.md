@@ -52,7 +52,8 @@ functions, and Docker sandboxes. Treat the token like a password.
 The scheduler is `server/runtime/engine.ts`.
 
 - **Entry.** The input goes out from every top-level human with an outgoing
-  edge or a room. Without such a human it goes to the `on_start` agents, or
+  edge or a room that nothing sends to; when every such person also receives
+  (a checker or approver in the flow), only the first one starts it. Without such a human it goes to the `on_start` agents, or
   else to the first component with no incoming edge.
 - **Edges.** A value goes through `filter`, then `transform`, then `gate`,
   then coercion to the target port's type. Each step emits an event.
