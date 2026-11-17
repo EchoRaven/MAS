@@ -4,6 +4,7 @@
 // - groups lose entry / output_from / size: that wiring becomes edges on the group's own ports
 // - edges get explicit ports; edges that crossed a group boundary are routed through its ports
 import { DEFAULT_MODELS, defaultAgent, defaultBinding, defaultData } from "./defaults";
+import { defaultDbQuery } from "./pipelines";
 import { defaultInterface, edgeScope, interfaceOf, isResource, usesResources } from "./ports";
 import { defaultPlugin } from "./plugins";
 import type { EnvData, NodeData, PluginPreset, PluginSpec, SysEdge, SysNode, SystemDoc } from "./types";
@@ -16,6 +17,13 @@ export function migrateDoc(input: SystemDoc): SystemDoc {
   doc.schemas ??= [];
   const KEY_ENV: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GEMINI_API_KEY" };
   doc.models = doc.models.map((m) => (m.api ? m : { ...m, api: DEFAULT_MODELS.find((x) => x.id === m.id)?.api ?? (KEY_ENV[m.provider] ? { key_env: KEY_ENV[m.provider] } : {}) }));
+  // 0.3: pipelines refer to embedding / rerank models; add the defaults if the catalog has none
+  for (const kind of ["embedding", "rerank"] as const) {
+    if (!doc.models.some((m) => m.kind === kind)) {
+      const d = DEFAULT_MODELS.find((m) => m.kind === kind)!;
+      if (!doc.models.some((m) => m.id === d.id)) doc.models.push({ ...d });
+    }
+  }
   // 0.1 kept memory/knowledge bindings on the agent; they now live on the access edge
   const legacySources: { agent: string; store: string; mode: "tool" | "auto_inject" | "pinned"; top_k?: number }[] = [];
   const groupWiring: { group: string; entry?: string; output_from?: string }[] = [];
@@ -63,14 +71,20 @@ export function migrateDoc(input: SystemDoc): SystemDoc {
         if (entry || output_from) groupWiring.push({ group: n.id, entry: entry as string, output_from: output_from as string });
         return { ...node, data: { ...defaultData("group"), ...rest, interface: (rest.interface as never) ?? defaultInterface("group") } as NodeData };
       }
-      case "plugin":
-        return { ...node, data: { ...defaultPlugin((d.preset as never) ?? "custom"), ...d } as NodeData };
+      case "plugin": {
+        // 0.2 plugins: give memory / knowledge presets their pipelines
+        const base = defaultPlugin((d.preset as never) ?? "custom");
+        const spec = { ...base.spec, ...((d.spec as object) ?? {}) } as PluginSpec;
+        for (const k of ["retrieval", "index", "memory"] as const) if (spec[k] === undefined && base.spec[k]) (spec as unknown as Record<string, unknown>)[k] = base.spec[k];
+        return { ...node, data: { ...base, ...d, spec } as NodeData };
+      }
       case "model":
       case "function":
         return { ...node, data: { ...defaultData(d.kind), ...d } as NodeData };
       case "env": {
         const e = { ...defaultData("env"), ...d } as EnvData;
         if (e.env_kind === "room" && !e.room) e.room = { policy: "free", history: "persistent" };
+        if (e.env_kind === "database" && e.db === undefined) e.db = defaultDbQuery();
         return { ...node, data: e };
       }
       default:

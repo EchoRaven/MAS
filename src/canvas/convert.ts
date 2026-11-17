@@ -46,6 +46,13 @@ export const EDGE_LABEL: Record<EdgeKind, string> = {
   access: "access · use an env or plugin",
 };
 
+/** Access edges leave from the user's bottom or right and enter the resource's top or left, whichever faces it. */
+function accessHandles(a?: { x: number; y: number }, b?: { x: number; y: number }) {
+  if (!a || !b) return { sourceHandle: "res", targetHandle: "res" };
+  const beside = b.x - a.x > 200 && Math.abs(b.y - a.y) < (b.x - a.x) * 1.2;
+  return beside ? { sourceHandle: "res@r", targetHandle: "res@l" } : { sourceHandle: "res", targetHandle: "res" };
+}
+
 const inScope = (scope: string | undefined) => (n: { parent?: string }) => n.parent === scope;
 
 /** The nodes drawn on one canvas: the root (scope undefined) or a group's own canvas. */
@@ -113,8 +120,7 @@ export function toFlowEdges(
         id: e.id,
         source: fromBoundary ? BOUNDARY_IN : e.source,
         target: toBoundary ? BOUNDARY_OUT : e.target,
-        sourceHandle: e.source_port,
-        targetHandle: e.target_port,
+        ...(e.kind === "access" ? accessHandles(byId.get(e.source)?.position, byId.get(e.target)?.position) : { sourceHandle: e.source_port, targetHandle: e.target_port }),
         type: "sys",
         selected: opts.selected?.has(e.id) ?? false,
         markerEnd: marker,

@@ -75,15 +75,19 @@ export function Ports({ inputs, outputs, wired = [], hidden }: { inputs: PortSpe
 }
 
 /** The access handle: users of resources at the bottom, resources at the top. */
+/** Access handles: users on the bottom and right, resources on the top and left; edges take whichever faces. */
+export const RES_SIDE = { user: { below: RES_PORT, beside: `${RES_PORT}@r` }, resource: { below: RES_PORT, beside: `${RES_PORT}@l` } } as const;
+export const isResHandle = (h: string | null | undefined) => !!h && (h === RES_PORT || h.startsWith(`${RES_PORT}@`));
+
 export function ResHandle({ role, hidden }: { role: "user" | "resource"; hidden?: boolean }) {
+  const cls = cn("!rounded-full !border-2 !border-card !bg-muted-foreground/50", hidden ? "!opacity-0" : "opacity-0 group-hover/node:opacity-100");
+  const user = role === "user";
   return (
-    <Handle
-      id={RES_PORT}
-      type={role === "user" ? "source" : "target"}
-      position={role === "user" ? Position.Bottom : Position.Top}
-      title={role === "user" ? "Drag to an env or plugin to give access" : "Access"}
-      className={cn("!h-2 !w-5 !rounded-full !border-2 !border-card !bg-muted-foreground/50", hidden ? "!opacity-0" : "opacity-0 group-hover/node:opacity-100")}
-    />
+    <>
+      <Handle id={RES_SIDE[role].below} type={user ? "source" : "target"} position={user ? Position.Bottom : Position.Top} title={user ? "Drag to an env or plugin to give access" : "Access"} className={cn("!h-2 !w-5", cls)} />
+      {/* the side handle sits low on the card so it does not collide with data ports */}
+      <Handle id={RES_SIDE[role].beside} type={user ? "source" : "target"} position={user ? Position.Right : Position.Left} style={{ top: "auto", bottom: 4 }} title={user ? "Drag to an env or plugin to give access" : "Access"} className={cn("!h-3 !w-2", cls, user ? "" : "")} />
+    </>
   );
 }
 

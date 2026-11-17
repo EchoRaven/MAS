@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { RUNNERS, runnerById } from "@/model/defaults";
-import type { AgentData, HarnessTier } from "@/model/types";
+import type { AgentData, HarnessTier, SystemDoc } from "@/model/types";
+import { HooksEditor, LoopEditor } from "./AgentLoop";
 import { AreaField, Hint, NumberField, opts, Section, SelectField, TextField } from "../fields";
 
 const LEVEL_TINT = { full: "bg-success/10 text-success", partial: "bg-info/10 text-info", none: "bg-secondary text-muted-foreground" };
@@ -29,7 +30,7 @@ export function CapabilityTable({ a }: { a: AgentData }) {
 }
 
 /** The harness: which loop drives the model, how it is launched, and what it lets the platform control. */
-export function HarnessTab({ a, set }: { a: AgentData; set: (patch: Partial<AgentData>) => void }) {
+export function HarnessTab({ a, doc, set }: { a: AgentData; doc: SystemDoc; set: (patch: Partial<AgentData>) => void }) {
   const runner = runnerById(a.harness.runner);
   const setHarness = (patch: Partial<AgentData["harness"]>) => set({ harness: { ...a.harness, ...patch } });
   const changeTier = (tier: HarnessTier) => {
@@ -58,18 +59,7 @@ export function HarnessTab({ a, set }: { a: AgentData; set: (patch: Partial<Agen
           hint={runner?.hint}
         />
       )}
-      {a.harness.tier === "native" && (
-        <SelectField
-          label="Loop"
-          value={a.harness.loop ?? "react"}
-          onChange={(loop) => setHarness({ loop })}
-          items={opts([
-            ["react", "react · reason-act loop"],
-            ["plan_execute", "plan_execute · plan, then execute"],
-            ["single_shot", "single_shot · one call"],
-          ])}
-        />
-      )}
+      {a.harness.tier === "native" && <LoopEditor a={a} doc={doc} set={set} />}
       {(a.harness.tier === "process" || a.harness.runner === "langgraph") && (
         <TextField label={a.harness.runner === "langgraph" ? "Graph (path:attr)" : "Launch command"} value={a.harness.command ?? ""} onChange={(command) => setHarness({ command })} mono placeholder={a.harness.runner === "claude-code" ? "Default: claude -p --bare" : "./my_agent --json"} />
       )}
@@ -91,6 +81,7 @@ export function HarnessTab({ a, set }: { a: AgentData; set: (patch: Partial<Agen
       <Section title="Capabilities" aside={<Hint>Declared by the adapter. The platform uses them to decide where context, tools and approvals are injected.</Hint>}>
         <CapabilityTable a={a} />
       </Section>
+      <HooksEditor a={a} doc={doc} set={set} />
     </div>
   );
 }

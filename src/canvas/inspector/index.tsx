@@ -1,4 +1,5 @@
-import { Maximize2 } from "lucide-react";
+import { useState } from "react";
+import { Code2, Maximize2 } from "lucide-react";
 import { nodeName } from "@/model/ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, HumanData, ModelNodeData, NodeData, PluginData, SysEdge, SystemDoc } from "@/model/types";
 import type { Issue } from "@/model/validate";
@@ -8,9 +9,11 @@ import { deleteNodes } from "../ops";
 import { AgentInspector, type AgentTab } from "./AgentInspector";
 import { FunctionInspector, GroupInspector, HumanInspector, ModelInspector } from "./ComponentInspectors";
 import { EdgeInspector } from "./EdgeInspector";
-import { EnvInspector, PluginInspector } from "./ResourceInspectors";
+import { EnvInspector } from "./EnvInspector";
+import { PluginInspector } from "./PluginInspector";
 import { Header, IconButton, IssueList, KindIcon, type Update } from "./shared";
 import { SystemInspector } from "./SystemInspector";
+import { YamlTab } from "./YamlTab";
 
 export type { AgentTab } from "./AgentInspector";
 
@@ -51,7 +54,21 @@ function NodeBody({ id, data, p }: { id: string; data: NodeData; p: InspectorPro
 }
 
 export function Inspector(p: InspectorProps) {
+  // keyed by selection so the code view closes when something else is picked
+  return <InspectorBody key={p.nodeId ?? p.edgeId ?? "system"} {...p} />;
+}
+
+function CodeToggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
+  return (
+    <IconButton label={on ? "Back to the form" : "Edit as YAML"} onClick={() => set(!on)}>
+      <Code2 className={on ? "h-3.5 w-3.5 text-foreground" : "h-3.5 w-3.5"} />
+    </IconButton>
+  );
+}
+
+function InspectorBody(p: InspectorProps) {
   const { doc, update, nodeId, edgeId, issues, onClose } = p;
+  const [code, setCode] = useState(false);
   const node = nodeId ? doc.nodes.find((n) => n.id === nodeId) : undefined;
   const edge = edgeId ? doc.edges.find((e) => e.id === edgeId) : undefined;
 
@@ -70,11 +87,14 @@ export function Inspector(p: InspectorProps) {
           }
           icon={<KindIcon icon={KIND_STYLE[node.data.kind].icon} tint={KIND_STYLE[node.data.kind].tint} />}
           actions={
-            openable && (
-              <IconButton label={node.data.kind === "group" ? "Open group canvas" : "Open agent internals"} onClick={() => p.onOpen(node.id)}>
-                <Maximize2 className="h-3.5 w-3.5" />
-              </IconButton>
-            )
+            <>
+              <CodeToggle on={code} set={setCode} />
+              {openable && (
+                <IconButton label={node.data.kind === "group" ? "Open group canvas" : "Open agent internals"} onClick={() => p.onOpen(node.id)}>
+                  <Maximize2 className="h-3.5 w-3.5" />
+                </IconButton>
+              )}
+            </>
           }
           onDelete={() => update((d) => deleteNodes(d, [node.id]))}
           onClose={onClose}
@@ -84,7 +104,15 @@ export function Inspector(p: InspectorProps) {
             <IssueList issues={own} />
           </div>
         )}
-        <NodeBody id={node.id} data={node.data} p={p} />
+        {code ? (
+          <YamlTab
+            value={node.data}
+            guard={(next) => ((next as NodeData).kind !== node.data.kind ? `kind must stay ${node.data.kind}` : null)}
+            onApply={(next) => update((d) => ({ ...d, nodes: d.nodes.map((n) => (n.id === node.id ? { ...n, data: next as NodeData } : n)) }))}
+          />
+        ) : (
+          <NodeBody id={node.id} data={node.data} p={p} />
+        )}
       </div>
     );
   }
@@ -98,6 +126,7 @@ export function Inspector(p: InspectorProps) {
           title={`${nm(edge.source)} → ${nm(edge.target)}`}
           subtitle={EDGE_LABEL[edge.kind]}
           icon={<KindIcon icon={EDGE_STYLE.icon} tint={EDGE_STYLE.tint} />}
+          actions={<CodeToggle on={code} set={setCode} />}
           onDelete={() => update((d) => ({ ...d, edges: d.edges.filter((e) => e.id !== edgeId) }))}
           onClose={onClose}
         />
@@ -107,7 +136,15 @@ export function Inspector(p: InspectorProps) {
           </div>
         )}
         <div className="border-b border-border/60" />
-        <EdgeInspector key={edge.id} e={edge} doc={doc} set={setEdge} scope={p.scope} />
+        {code ? (
+          <YamlTab
+            value={edge}
+            guard={(next) => (next.id !== edge.id ? "id must stay the same" : !doc.nodes.some((n) => n.id === next.source) || !doc.nodes.some((n) => n.id === next.target) ? "source and target must be existing components" : null)}
+            onApply={(next) => update((d) => ({ ...d, edges: d.edges.map((e) => (e.id === edge.id ? next : e)) }))}
+          />
+        ) : (
+          <EdgeInspector key={edge.id} e={edge} doc={doc} set={setEdge} scope={p.scope} />
+        )}
       </div>
     );
   }

@@ -30,7 +30,7 @@ function BasicsTab({ a, doc, set }: { a: AgentData; doc: SystemDoc; set: (patch:
           label="Base model"
           value={a.model}
           onChange={(model) => set({ model })}
-          items={doc.models.map((m) => ({ value: m.id, label: m.model, hint: m.price_in || m.price_out ? `$${m.price_in}/$${m.price_out}` : m.provider }))}
+          items={doc.models.filter((m) => (m.kind ?? "chat") === "chat").map((m) => ({ value: m.id, label: m.model, hint: m.price_in || m.price_out ? `$${m.price_in}/$${m.price_out}` : m.provider }))}
           hint="API endpoint, key and price per model are under Library"
         />
       ) : (
@@ -107,7 +107,7 @@ export function AgentInspector({
           <StagesEditor pipeline={a.pipeline} onChange={(pipeline) => set({ pipeline })} doc={doc} focus={stageFocus} />
         </TabsContent>
         <TabsContent value="harness" className="mt-0">
-          <HarnessTab a={a} set={set} />
+          <HarnessTab a={a} doc={doc} set={set} />
         </TabsContent>
         <TabsContent value="tools" className="mt-0">
           <ToolsTab id={id} a={a} doc={doc} set={set} />

@@ -3,6 +3,7 @@
 // edited into anything else of the same kind.
 import { Bot, Box, Layers, Puzzle, Sparkles, SquareFunction, User, type LucideIcon } from "lucide-react";
 import { defaultAgent, defaultData, defaultRoom, runnerById } from "@/model/defaults";
+import { defaultDbQuery } from "@/model/pipelines";
 import { defaultPlugin, PLUGIN_PRESETS } from "@/model/plugins";
 import type { AgentData, EnvData, EnvKind, NodeData, NodeKind } from "@/model/types";
 
@@ -61,7 +62,7 @@ export const PALETTE: PaletteEntry[] = [
     variants: [
       { id: "sandbox", label: "Sandbox", hint: "Container with a shell and files", make: () => env("sandbox", "Sandbox") },
       { id: "browser", label: "Browser", hint: "Headless browser", make: () => env("browser", "Browser", { image: "" }) },
-      { id: "database", label: "Database", hint: "Managed database", make: () => env("database", "Database", { image: "postgres:16" }) },
+      { id: "database", label: "Database", hint: "Queried by templates, text-to-SQL or code", make: () => env("database", "Database", { image: "postgres:16", db: defaultDbQuery() }) },
       { id: "room", label: "Room", hint: "Shared conversation space", make: () => defaultRoom() },
       { id: "service", label: "Service", hint: "A running service or API", make: () => env("service", "Service", { image: "" }) },
       { id: "external", label: "External system", hint: "Third-party system; actions are logged, not snapshotted", make: () => env("external", "External", { image: "", snapshot: "never" }) },

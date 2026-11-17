@@ -25,7 +25,7 @@ export function FunctionEditor({ label, fn, onChange, doc, rows = 5, hint }: { l
             size="sm"
             value={fn.model ?? doc.models[0]?.id ?? ""}
             onValueChange={(model) => onChange({ ...fn, model })}
-            items={doc.models.map((m) => ({ value: m.id, label: m.id }))}
+            items={doc.models.filter((m) => (m.kind ?? "chat") === "chat").map((m) => ({ value: m.id, label: m.id }))}
             ariaLabel={`${label} model`}
             className="w-auto !bg-transparent hover:!bg-secondary"
           />

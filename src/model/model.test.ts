@@ -146,8 +146,10 @@ describe("simulate", () => {
   }
 
   it("blocks once at a gate, then passes", () => {
-    const doc = TEMPLATES.find((t) => t.id === "coding")!.build();
-    const gates = simulate(doc).events.filter((e) => e.type === "gate");
+    // the walk is seeded by the system id; whether it reaches the gate depends on who speaks in the room
+    const base = TEMPLATES.find((t) => t.id === "coding")!.build();
+    const gates =
+      Array.from({ length: 40 }, (_, i) => simulate({ ...base, id: `seed${i}` }).events.filter((e) => e.type === "gate")).find((g) => g.length > 0) ?? [];
     expect(gates[0]).toMatchObject({ passed: false });
     expect(gates.some((g) => g.type === "gate" && g.passed)).toBe(true);
   });

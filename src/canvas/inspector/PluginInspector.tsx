@@ -1,70 +1,14 @@
 import { Trash2 } from "lucide-react";
 import { Select } from "@/components/ui/select";
-import { checkContract, manifestToYaml } from "@/model/envspec";
-import { nodeName } from "@/model/ports";
-import { PLUGIN_PRESETS, switchPreset } from "@/model/plugins";
-import type { EnvData, PluginData, PluginSpec, SystemDoc, ToolEffect } from "@/model/types";
-import { opts, Section, SelectField, TextField, Toggle } from "../fields";
-import { emptyFn, FunctionEditor } from "./FunctionEditor";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { AddButton, Body, IssueList, Note, RowList } from "./shared";
-
-const SOURCE: Record<string, string> = { dtap: "DT (DecodingTrust)", envgen: "env-gen", compose: "docker compose", "mas-env": "mas-env manifest" };
-
-export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc: SystemDoc; set: (patch: Partial<EnvData>) => void }) {
-  const members = doc.edges.filter((x) => x.kind === "access" && x.target === id).map((x) => doc.nodes.find((n) => n.id === x.source));
-  const m = e.manifest;
-  return (
-    <Body>
-      <TextField label="Name" value={e.name} onChange={(name) => set({ name })} />
-      <SelectField
-        label="Type"
-        value={e.env_kind}
-        onChange={(env_kind) => set({ env_kind, room: env_kind === "room" ? (e.room ?? { policy: "free", history: "persistent" }) : e.room })}
-        items={opts([
-          ["app", "app · imported app stack"],
-          ["sandbox", "sandbox · container / microVM"],
-          ["browser", "browser · headless browser"],
-          ["database", "database · managed database"],
-          ["service", "service · managed service"],
-          ["room", "room · shared conversation space"],
-          ["external", "external · third-party system"],
-        ])}
-      />
-      {e.env_kind === "room" && e.room && (
-        <Section title="Room">
-          <SelectField label="Speaking policy" value={e.room.policy} onChange={(policy) => set({ room: { ...e.room!, policy } })} items={opts([["free", "Free: anyone triggered may reply"], ["round_robin", "Round robin"], ["selector", "A moderator picks who speaks next"], ["mention", "Only @-mentioned members reply"], ["bid", "Bid: the most eager member speaks"]])} />
-          {e.room.policy === "selector" && (
-            <SelectField label="Moderator" value={e.room.selector ?? ""} onChange={(selector) => set({ room: { ...e.room!, selector } })} items={members.filter(Boolean).map((n) => ({ value: n!.id, label: nodeName(n) }))} />
-          )}
-          <SelectField label="History for late joiners" value={e.room.history} onChange={(history) => set({ room: { ...e.room!, history } })} items={opts([["persistent", "Full history"], ["since_join", "Only since joining"]])} />
-          <p className="text-xs text-muted-foreground">Members: {members.length ? members.map(nodeName).join(", ") : "none"}. Connect an agent or human to join.</p>
-        </Section>
-      )}
-      {e.env_kind === "sandbox" && <TextField label="Image" value={e.image} onChange={(image) => set({ image })} mono />}
-      {e.env_kind !== "room" && (
-        <>
-          <SelectField label="Lifecycle" value={e.lifecycle} onChange={(lifecycle) => set({ lifecycle })} items={opts([["per_run", "New for each run"], ["per_session", "Per session"], ["persistent", "Persistent"]])} />
-          <SelectField label="Snapshots" value={e.snapshot} onChange={(snapshot) => set({ snapshot })} items={opts([["never", "Never"], ["on_write", "On every write"], ["on_checkpoint", "At checkpoints"]])} hint={e.env_kind === "external" ? "External envs cannot be snapshotted; actions are only logged" : "Enables replay and forking"} />
-          <TextField label="Egress" hint="Hosts it may reach, comma-separated. Everything else is blocked." placeholder="none" value={e.egress.join(", ")} onChange={(v) => set({ egress: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />
-        </>
-      )}
-      {m && (
-        <Section title="Imported contract">
-          <Note tone="info">
-            {SOURCE[m.source.format] ?? m.source.format}
-            {m.version ? ` · v${m.version}` : ""} · {m.exposes.mcp ? `${m.exposes.mcp.tools.length} MCP tools` : "no MCP"} · {m.lifecycle.reset ? "resettable" : "no reset"}
-          </Note>
-          <IssueList issues={checkContract(m)} />
-          <details className="overflow-hidden rounded-lg bg-secondary/40 ring-1 ring-border/50">
-            <summary className="cursor-pointer px-2.5 py-1.5 text-[12px] text-muted-foreground hover:text-foreground">Manifest · mas-env/1</summary>
-            <pre className="max-h-72 overflow-auto border-t border-border/50 px-2.5 py-2 font-mono text-[10px] leading-relaxed">{manifestToYaml(m)}</pre>
-          </details>
-        </Section>
-      )}
-    </Body>
-  );
-}
+import { defaultIndex, defaultMemoryPolicy, defaultRetrieval } from "@/model/pipelines";
+import { PLUGIN_PRESETS, switchPreset } from "@/model/plugins";
+import type { PluginData, PluginSpec, SystemDoc, ToolEffect } from "@/model/types";
+import { Hint, opts, Section, SelectField, TextField, Toggle } from "../fields";
+import { emptyFn, FunctionEditor } from "./FunctionEditor";
+import { IndexEditor, MemoryPolicyEditor, RetrievalEditor } from "./PipelineEditor";
+import { AddButton, Note, PanelTabs, RowList } from "./shared";
 
 const HOOKS: [keyof PluginSpec["hooks"], string, string][] = [
   ["before_turn", "before_turn", "ctx → text added to the agent's context (or null)"],
@@ -72,12 +16,47 @@ const HOOKS: [keyof PluginSpec["hooks"], string, string][] = [
   ["on_start", "on_start", "runs once when the system starts"],
 ];
 
+/** A pipeline tab: on when the plugin has that pipeline, with a switch to add or drop it. */
+function PipelineTab({ label, on, setOn, children }: { label: string; on: boolean; setOn: (v: boolean) => void; children: React.ReactNode }) {
+  return (
+    <>
+      <Toggle label={label} checked={on} onChange={setOn} />
+      {on && children}
+    </>
+  );
+}
+
 export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc; set: (next: PluginData) => void }) {
   const spec = p.spec;
   const setSpec = (patch: Partial<PluginSpec>) => set({ ...p, preset: p.preset === "custom" ? "custom" : p.preset, spec: { ...spec, ...patch } });
   const setTool = (i: number, patch: Partial<PluginSpec["tools"][number]>) => setSpec({ tools: spec.tools.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
+  const tabs: [string, string][] = [
+    ["settings", "Settings"],
+    ["retrieval", "Retrieval"],
+    ...(p.preset === "knowledge" || spec.index ? ([["index", "Indexing"]] as [string, string][]) : []),
+    ...(p.preset === "memory" || spec.memory ? ([["memory", "Memory"]] as [string, string][]) : []),
+    ["hooks", "Hooks"],
+  ];
   return (
-    <Body>
+    <Tabs defaultValue="settings" className="flex min-h-0 flex-1 flex-col">
+      <PanelTabs tabs={tabs} />
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-3">
+        <TabsContent value="retrieval" className="mt-0 space-y-2">
+          <PipelineTab label="Searchable" on={!!spec.retrieval} setOn={(on) => setSpec({ retrieval: on ? defaultRetrieval(p.preset === "memory" ? "memory" : p.preset === "knowledge" ? "knowledge" : "plain") : null })}>
+            <RetrievalEditor value={spec.retrieval!} onChange={(retrieval) => setSpec({ retrieval })} doc={doc} />
+          </PipelineTab>
+        </TabsContent>
+        <TabsContent value="index" className="mt-0 space-y-2">
+          <PipelineTab label="Index sources" on={!!spec.index} setOn={(on) => setSpec({ index: on ? defaultIndex() : null })}>
+            <IndexEditor value={spec.index!} onChange={(index) => setSpec({ index })} doc={doc} />
+          </PipelineTab>
+        </TabsContent>
+        <TabsContent value="memory" className="mt-0 space-y-2">
+          <PipelineTab label="Manage memory lifecycle" on={!!spec.memory} setOn={(on) => setSpec({ memory: on ? defaultMemoryPolicy() : null })}>
+            <MemoryPolicyEditor value={spec.memory!} onChange={(memory) => setSpec({ memory })} doc={doc} />
+          </PipelineTab>
+        </TabsContent>
+        <TabsContent value="settings" className="mt-0 space-y-2">
       <TextField label="Name" value={p.name} onChange={(name) => set({ ...p, name })} />
       <SelectField label="Preset" value={p.preset} onChange={(preset) => set(switchPreset(p, preset))} items={PLUGIN_PRESETS.map((x) => ({ value: x.id, label: x.label, hint: x.hint }))} hint="A preset fills in its defaults; Custom keeps what is here and makes everything editable" />
       <div className="space-y-2">
@@ -116,7 +95,10 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
           ))}
         </RowList>
       </Section>
-      <Section title="Hooks">
+      <Note>Per-agent settings (which tools, top K, overrides of any retrieval step) live on the access edge to each agent.</Note>
+        </TabsContent>
+        <TabsContent value="hooks" className="mt-0 space-y-2">
+      <Section title="Hooks" aside={<Hint>Hooks run around the pipelines: before_turn can replace retrieval entirely; after_turn can replace the memory lifecycle.</Hint>}>
         {HOOKS.map(([key, label, hint]) => {
           const fn = spec.hooks[key];
           return (
@@ -127,7 +109,8 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
           );
         })}
       </Section>
-      <Note>Per-agent settings (which tools, query, top K, format) live on the access edge to each agent.</Note>
-    </Body>
+        </TabsContent>
+      </div>
+    </Tabs>
   );
 }

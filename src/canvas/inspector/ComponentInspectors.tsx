@@ -44,7 +44,7 @@ export function ModelInspector({ id, m, doc, set, update }: { id: string; m: Mod
   return (
     <WithInterface id={id} ifc={m.interface} doc={doc} update={update}>
       <TextField label="Name" value={m.name} onChange={(name) => set({ name })} />
-      <SelectField label="Model" value={m.model} onChange={(model) => set({ model })} items={doc.models.map((x) => ({ value: x.id, label: x.model, hint: x.provider }))} hint="One call per input: no loop, no tools" />
+      <SelectField label="Model" value={m.model} onChange={(model) => set({ model })} items={doc.models.filter((x) => (x.kind ?? "chat") === "chat").map((x) => ({ value: x.id, label: x.model, hint: x.provider }))} hint="One call per input: no loop, no tools" />
       <AreaField label="System prompt" value={m.system_prompt} onChange={(system_prompt) => set({ system_prompt })} rows={3} />
       <AreaField label="Prompt" value={m.prompt} onChange={(prompt) => set({ prompt })} rows={3} mono hint="{{input}} is the incoming value; {{input.<field>}} for JSON" />
       <NumberField label="Temperature" value={m.temperature} onChange={(temperature) => set({ temperature })} step={0.1} placeholder="Default" />

@@ -1,6 +1,7 @@
 import type { AccessBinding, NodeData, SystemDoc } from "@/model/types";
 import { Chips, NumberField, opts, Section, SelectField, TextField, Toggle } from "../fields";
 import { emptyFn, FunctionEditor } from "./FunctionEditor";
+import { RetrievalOverrides } from "./RetrievalOverrides";
 
 /** Tools the resource offers: an imported env's MCP tools, or a plugin's tools. */
 export function resourceTools(target: NodeData): string[] {
@@ -54,6 +55,9 @@ export function BindingEditor({ binding, onChange, target, access, doc }: { bind
           <Toggle label="Custom format" checked={!!read.format} onChange={(on) => setRead({ format: on ? emptyFn("template", "{{#each results}}- {{this.text}}\n{{/each}}") : null })} hint="Default: a bulleted list with sources" />
           {read.format && <FunctionEditor label="Format (results → context text)" fn={read.format} onChange={(format) => setRead({ format })} doc={doc} rows={3} />}
         </Section>
+      )}
+      {target.kind === "plugin" && target.spec.retrieval && injects && (
+        <RetrievalOverrides base={target.spec.retrieval} value={read.retrieval ?? {}} onChange={(retrieval) => setRead({ retrieval })} doc={doc} />
       )}
       {access === "read_write" && (
         <Section title="Write">

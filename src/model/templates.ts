@@ -241,7 +241,23 @@ function invoices(): SystemDoc {
       fn: { lang: "js", code: "const sum = input.lines.reduce((a, l) => a + l.amount, 0);\nreturn Math.abs(sum - input.total) < 0.01 ? { ok: input } : { mismatch: input };" },
       interface: { inputs: [port("in", "json", { schema: "Invoice" })], outputs: [port("ok", "json", { schema: "Invoice" }), port("mismatch", "json", { schema: "Invoice" })] },
     })
-    .node("ledger", "env", 960, -60, { name: "Ledger DB", env_kind: "database", image: "", lifecycle: "persistent", snapshot: "on_write" })
+    .node("ledger", "env", 960, -60, {
+      name: "Ledger DB",
+      env_kind: "database",
+      image: "postgres:16",
+      lifecycle: "persistent",
+      snapshot: "on_write",
+      db: {
+        mode: "templates",
+        templates: [
+          { name: "find_invoice", description: "An invoice by vendor and number", sql: "SELECT * FROM invoices WHERE vendor = :vendor AND number = :number" },
+          { name: "post_invoice", description: "Record a checked invoice", sql: "INSERT INTO invoices (vendor, number, total) VALUES (:vendor, :number, :total)" },
+        ],
+        tables: ["invoices", "vendors"],
+        read_only: false,
+        row_limit: 100,
+      },
+    })
     .node("clerk", "human", 960, 160, { name: "Clerk", role: "Fixes mismatched invoices" })
     .edge("inbox", "extract", "message", { target_port: "pdf" })
     .edge("extract", "check", "message")
@@ -249,6 +265,67 @@ function invoices(): SystemDoc {
     .edge("clerk", "ledger", "access", { access: "read_write" });
   b.doc.budget = { usd: 1, max_rounds: 20, wallclock_min: 10 };
   b.doc.termination = ["all_idle", "budget_exceeded"];
+  return b.doc;
+}
+
+function supervisor(): SystemDoc {
+  const b = new Builder(
+    "Supervisor and workers",
+    "Hierarchical delegation: a supervisor plans and calls three specialists. The analyst queries a database by text-to-SQL, the researcher and writer share a wiki with hybrid retrieval (the writer overrides how many hits it gets), the writer runs a reflexion loop, and the supervisor keeps a team memory with a full lifecycle.",
+  );
+  b.node("requester", "human", 0, 140, { name: "Requester", role: "Asks for an analysis", approves: false })
+    .agent("supervisor", 260, 130, { name: "Supervisor", role: "Plans, delegates, assembles", model: "opus", harness: { ...native(), loop: "plan_execute", loop_params: { planner: "opus", replan: true, max_steps: 40 }, instructions: "Break the request down, call the right specialist for each part, then assemble one answer." } })
+    .agent("researcher", 640, -60, { name: "Researcher", role: "Finds facts", model: "sonnet", tools: ["web_search", "fetch"], harness: { ...native(), instructions: "Find and cite sources for the question you are given." } })
+    .agent("analyst", 640, 140, { name: "Analyst", role: "Answers with data", model: "sonnet", harness: { ...native(), instructions: "Answer with numbers from the sales database; show the query you used." } })
+    .agent("writer", 640, 340, {
+      name: "Writer",
+      role: "Drafts and self-critiques",
+      model: "sonnet",
+      harness: { ...native(), loop: "reflexion", loop_params: { critic: "opus", max_trials: 3, critique: "Check every claim has a source and every number matches the analyst's." }, instructions: "Write the final report from the findings." },
+      hooks: { after_model: { lang: "js", code: "// strip internal notes before the reply leaves\nreturn { ...event, text: event.text.replace(/<internal>[\\s\\S]*?<\\/internal>/g, '') };" } },
+    })
+    .node("sales", "env", 1010, 160, {
+      name: "Sales DB",
+      env_kind: "database",
+      image: "postgres:16",
+      lifecycle: "persistent",
+      snapshot: "never",
+      db: { mode: "text_to_sql", templates: [], tables: ["orders", "customers", "products"], read_only: true, row_limit: 500, model: "sonnet" },
+    })
+    .plugin("wiki", "knowledge", 1010, -20, { name: "Company wiki", sources: ["./wiki"] })
+    .plugin("team_mem", "memory", 250, 380, { name: "Team memory", scope: "system" })
+    .edge("requester", "supervisor", "message", { label: "Request" })
+    .edge("supervisor", "researcher", "call", { label: "Research" })
+    .edge("supervisor", "analyst", "call", { label: "Numbers" })
+    .edge("supervisor", "writer", "call", { label: "Draft" })
+    .edge("supervisor", "requester", "message", { label: "Answer" })
+    .edge("analyst", "sales", "access", { access: "read" })
+    .edge("researcher", "wiki", "access", { access: "read" })
+    .edge("writer", "wiki", "access", { access: "read", binding: { mode: "auto_inject", read: { budget_tokens: 2000, retrieval: { select: { use: "top_k", params: { k: 3 } } } }, write: { when: "never" } } })
+    .edge("supervisor", "team_mem", "access", { access: "read_write" });
+  b.doc.budget = { usd: 8, max_rounds: 80, wallclock_min: 40 };
+  return b.doc;
+}
+
+function blackboard(): SystemDoc {
+  const b = new Builder(
+    "Blackboard",
+    "No direct messages between agents: a planner posts problems on a shared board, solvers wake on board changes and post partial solutions, a critic marks them done or reopens them. Coordination is entirely through state.",
+  );
+  const onState = { triggers: ["on_state"] as AgentData["triggers"] };
+  b.node("owner", "human", 0, 60, { name: "Owner", role: "Brings the problem", approves: true })
+    .agent("planner", 270, 50, { name: "Planner", role: "Posts sub-problems", model: "opus", harness: { ...native(), loop: "plan_execute", instructions: "Write the problem on the board as independent sub-problems." } })
+    .agent("solver_a", 620, -80, { ...onState, name: "Solver A", role: "Takes open items", model: "sonnet", harness: { ...native(), instructions: "Claim one open item on the board, solve it, post the result." } })
+    .agent("solver_b", 620, 120, { ...onState, name: "Solver B", role: "Takes open items", model: "haiku", harness: { ...native(), instructions: "Claim one open item on the board, solve it, post the result." } })
+    .agent("critic", 620, 320, { ...onState, name: "Critic", role: "Reviews posted solutions", model: "opus", harness: { ...native(), loop: "reflexion", loop_params: { critic: "opus", max_trials: 2, critique: "Is this solution correct and complete?" }, instructions: "Mark posted solutions done, or reopen them with a reason." } })
+    .plugin("board", "board", 300, 330, { name: "Blackboard", scope: "system" })
+    .edge("owner", "planner", "message", { label: "Problem" })
+    .edge("critic", "owner", "message", { label: "All done" })
+    .edge("planner", "board", "access", { access: "read_write" })
+    .edge("solver_a", "board", "access", { access: "read_write" })
+    .edge("solver_b", "board", "access", { access: "read_write" })
+    .edge("critic", "board", "access", { access: "read_write" });
+  b.doc.budget = { usd: 5, max_rounds: 60, wallclock_min: 30 };
   return b.doc;
 }
 
@@ -266,6 +343,8 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "research", name: "Research team", summary: "Group ports · spawn · bare model call", build: research },
   { id: "support", name: "Support triage", summary: "function node · routed handoffs · approval", build: support },
   { id: "invoices", name: "Invoice extraction", summary: "model + function only, no agents", build: invoices },
+  { id: "supervisor", name: "Supervisor and workers", summary: "hierarchy · reflexion · text-to-SQL · hybrid RAG · memory lifecycle", build: supervisor },
+  { id: "blackboard", name: "Blackboard", summary: "coordination through shared state only", build: blackboard },
 ];
 
 /** Names of the templates seeded by earlier versions (0.1, Chinese UI); stored copies are replaced on upgrade. */

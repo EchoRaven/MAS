@@ -85,6 +85,75 @@ ops are `parse_json`, `validate` (against a schema, with an `on_fail`
 policy), `transform`, `filter`, `route` (returns `{ <port>: value }`),
 `redact` and `summarize`.
 
+## The step registry
+
+Every configurable stage in the framework is a **slot** in `src/model/steps.ts`. Each slot offers presets, and each preset declares its parameters (number, text, bool, select, model of a given kind, list, prompt). Every slot also offers `custom`, a function. A configured stage is stored as:
+
+```yaml
+{ use: <preset id> | custom, params: { ... }, fn: <FunctionSpec, custom only> }
+```
+
+The inspector draws its forms from these declarations. To offer a new method everywhere, add a preset to `STEP_CATALOG`.
+
+| Pipeline | Slots, in order | Lives on |
+| --- | --- | --- |
+| Retrieval | rewrite → search (several, run together as hybrid search) → fuse → filter (several) → rerank → select → format | `plugin.spec.retrieval`; per-agent overrides in `binding.read.retrieval` |
+| Indexing | load → chunk → embed → enrich, re-indexed on a schedule | `plugin.spec.index` |
+| Memory lifecycle | extract → classify → merge → retain, plus consolidate | `plugin.spec.memory` |
+| Agent loop | react · plan_execute · reflexion · tree_search · single_shot · custom | `agent.harness.loop`, `loop_params`, `loop_fn` |
+
+What a custom step receives and must return:
+
+| Slot | Signature |
+| --- | --- |
+| rewrite | `(input, ctx) => string \| string[]` |
+| search | `async (query, ctx) => [{ id, text, score, source, meta }]` |
+| fuse | `(lists, ctx) => hits` |
+| filter / select | `(hits, ctx) => hits` |
+| rerank | `async (query, hits, ctx) => hits` |
+| format | `(hits, ctx) => string` |
+| load | `async (source, ctx) => docs` |
+| chunk | `(doc, ctx) => chunks` |
+| embed | `async (texts, ctx) => vectors` |
+| enrich | `async (chunk, ctx) => meta` |
+| extract | `async (turn, ctx) => records` |
+| classify | `async (record, ctx) => type` |
+| merge | `async (record, similar, ctx) => { action, record }` |
+| retain | `(record, ctx) => keep?` |
+| consolidate | `async (records, ctx) => records` |
+| loop | `async (ctx, { model, tools, memory, emit }) => output` |
+
+Model parameters must name a catalog model of the right kind. A model's `kind` is `chat` (the default), `embedding` or `rerank`.
+
+## Agent hooks
+
+`agent.hooks` can hold code for any of these points in a turn:
+
+- `on_start`
+- `before_model` and `after_model`
+- `before_tool` and `after_tool`
+- `on_error`
+- `on_finish`
+
+A hook has the signature `f(event, ctx) -> event | null`. Returning `null` from a `before_*` hook blocks the action. If a harness exposes no step hooks, the model and tool hooks run at the platform boundary, in the MCP proxy.
+
+## Database environments
+
+An `env.db` entry controls how agents may query a database:
+
+| `mode` | What agents can do |
+| --- | --- |
+| `templates` | Run the named parameterised queries. Each one becomes a tool, and its `:params` become the tool's arguments. |
+| `text_to_sql` | Ask a model to write SQL. The model sees only the tables in `tables`. |
+| `tools` | Use the env's own MCP tools. |
+| `custom` | Send the request to `fn`, which receives the connection. |
+
+`read_only` and `row_limit` are enforced on the connection itself, not inside the query.
+
+## Editing any definition directly
+
+Every component and edge has an "Edit as YAML" view in the inspector, which covers everything the forms do not. Applying it replaces the definition, as long as the component's `kind` stays the same (and, for an edge, its ends are existing components).
+
 ## Import contracts
 
 Each contract has its own importer in `src/model/`.

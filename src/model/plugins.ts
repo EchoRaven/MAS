@@ -1,5 +1,6 @@
 // Plugin presets and the mas-plugin/1 manifest importer.
 import YAML from "yaml";
+import { defaultIndex, defaultMemoryPolicy, defaultRetrieval } from "./pipelines";
 import type { PluginData, PluginPreset, PluginSpec } from "./types";
 
 export const PLUGIN_CONTRACT = "mas-plugin/1" as const;
@@ -30,6 +31,8 @@ export const PLUGIN_PRESETS: PresetInfo[] = [
       backend: { kind: "builtin" },
       scope: "agent",
       storage: "builtin",
+      retrieval: defaultRetrieval("memory"),
+      memory: defaultMemoryPolicy(),
     }),
   },
   {
@@ -44,6 +47,8 @@ export const PLUGIN_PRESETS: PresetInfo[] = [
       scope: "system",
       storage: "pgvector",
       sources: ["./docs"],
+      retrieval: defaultRetrieval("knowledge"),
+      index: defaultIndex(),
     }),
   },
   {
@@ -62,6 +67,7 @@ export const PLUGIN_PRESETS: PresetInfo[] = [
       scope: "group",
       storage: "files",
       sources: ["/work"],
+      retrieval: defaultRetrieval("plain"),
     }),
   },
   {

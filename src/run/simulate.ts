@@ -6,6 +6,7 @@ import { runnerById } from "@/model/defaults";
 import { interfaceOf, nodeName } from "@/model/ports";
 import type { AgentData, EnvData, FunctionNodeData, HumanData, ModelNodeData, SysEdge, SysNode, SystemDoc } from "@/model/types";
 import type { RunStatus } from "@/canvas/convert";
+import { memorySummary, retrievalSummary } from "./describe";
 
 export type SimEvent =
   | { t: number; type: "system_started" }
@@ -279,21 +280,35 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
     const resources = access.filter((e) => !isRoom(e.target));
     for (const e of resources.slice(0, 2)) emit({ type: "access", node: node.id, target: e.target, edge: e.id, op: "read" }, 0.3);
     for (const e of resources.filter((x) => x.binding?.mode === "auto_inject" || x.binding?.mode === "pinned")) {
-      emit({ type: "transform", at: node.id, edge: e.id, label: `context · ${nodeName(byId.get(e.target))}`, detail: `${e.binding!.mode === "pinned" ? "pinned" : `top ${e.binding!.read?.top_k ?? 5}`} injected before the turn` }, 0.1);
+      const t = byId.get(e.target)?.data;
+      const retrieval = t?.kind === "plugin" ? t.spec.retrieval : null;
+      const detail = e.binding!.mode === "pinned" ? "pinned in the context" : retrieval ? retrievalSummary(retrieval, e.binding!.read?.retrieval, e.binding!.read?.top_k) : `top ${e.binding!.read?.top_k ?? 5} injected`;
+      emit({ type: "transform", at: node.id, edge: e.id, label: `retrieve · ${nodeName(byId.get(e.target))}`, detail }, 0.1);
     }
     const envTools = resources.flatMap((e) => {
       const d = byId.get(e.target)?.data;
-      const all = d?.kind === "env" ? (d.manifest?.exposes.mcp?.tools ?? []) : d?.kind === "plugin" ? d.spec.tools.map((t) => t.name) : [];
+      const dbTools = d?.kind === "env" && d.db ? (d.db.mode === "templates" ? d.db.templates.map((t) => t.name) : d.db.mode === "text_to_sql" ? ["ask_database"] : []) : [];
+      const all = d?.kind === "env" ? [...(d.manifest?.exposes.mcp?.tools ?? []), ...dbTools] : d?.kind === "plugin" ? d.spec.tools.map((t) => t.name) : [];
       const allowed = e.binding?.tools?.length ? all.filter((t) => e.binding!.tools!.includes(t)) : all;
       return allowed.slice(0, 1);
     });
     for (const tool of [...a.tools.slice(0, 2), ...envTools]) {
       if (rand() < 0.7) emit({ type: "tool", node: node.id, tool, args: "{…}", result: tool === "run_tests" ? "12 passed" : "ok" });
     }
+    for (const h of (["before_model", "after_model"] as const).filter((k) => a.hooks?.[k])) emit({ type: "transform", at: node.id, label: `hook · ${h}`, detail: a.hooks![h]!.lang }, 0.05);
     usage(node.id, a.model, a.context.budget_total, a.harness.runner);
+    if (a.harness.tier === "native" && (a.harness.loop === "reflexion" || a.harness.loop === "tree_search")) {
+      const n = Number(a.harness.loop_params?.[a.harness.loop === "reflexion" ? "max_trials" : "branches"] ?? 2);
+      for (let i = 1; i < Math.min(n, 3); i++) {
+        emit({ type: "transform", at: node.id, label: a.harness.loop === "reflexion" ? `critique ${i}` : `branch ${i + 1}`, detail: a.harness.loop === "reflexion" ? "self-critique, then retry with it" : "candidate scored by the evaluator" }, 0.2);
+        usage(node.id, a.model, a.context.budget_total, a.harness.runner, 0.4);
+      }
+    } else if (a.harness.tier === "native" && a.harness.loop === "custom") emit({ type: "transform", at: node.id, label: "custom loop", detail: a.harness.loop_fn?.lang ?? "code" }, 0.1);
     for (const e of resources.filter((x) => x.access !== "read").slice(0, 1)) emit({ type: "access", node: node.id, target: e.target, edge: e.id, op: "write" }, 0.3);
     for (const e of resources.filter((x) => x.binding?.write?.when === "after_turn")) {
-      emit({ type: "transform", at: node.id, edge: e.id, label: `after turn · ${nodeName(byId.get(e.target))}`, detail: e.binding!.write!.extract ? `${e.binding!.write!.extract.lang} extract → stored` : "turn stored" }, 0.1);
+      const t = byId.get(e.target)?.data;
+      const policy = t?.kind === "plugin" ? t.spec.memory : null;
+      emit({ type: "transform", at: node.id, edge: e.id, label: `remember · ${nodeName(byId.get(e.target))}`, detail: policy ? memorySummary(policy) : e.binding!.write!.extract ? `${e.binding!.write!.extract.lang} extract → stored` : "turn stored" }, 0.1);
     }
 
     // output wrapper

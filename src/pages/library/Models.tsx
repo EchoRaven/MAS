@@ -37,7 +37,7 @@ function ApiRow({ m, set }: { m: ModelSpec; set: (patch: Partial<ModelSpec>) => 
   const setApi = (patch: Partial<ModelSpec["api"]>) => set({ api: { ...api, ...patch } });
   return (
     <tr className="bg-secondary/40">
-      <td colSpan={8} className="px-3 py-2.5">
+      <td colSpan={9} className="px-3 py-2.5">
         <div className="grid gap-2 md:grid-cols-2">
           <label className="space-y-1">
             <span className="text-[11px] text-muted-foreground">Base URL (blank = the provider's default)</span>
@@ -66,7 +66,9 @@ export function Models({ doc, update }: { doc: SystemDoc; update: (fn: (d: Syste
   const set = (i: number, patch: Partial<ModelSpec>) => update((d) => ({ ...d, models: d.models.map((m, j) => (j === i ? { ...m, ...patch } : m)) }));
   const used = (id: string) =>
     doc.nodes.filter((n) => (n.data.kind === "agent" && n.data.model === id) || (n.data.kind === "model" && n.data.model === id)).length +
-    doc.edges.filter((e) => e.transform?.lang === "llm" && e.transform.model === id).length;
+    doc.edges.filter((e) => e.transform?.lang === "llm" && e.transform.model === id).length +
+    // pipeline steps and loops that name it
+    (JSON.stringify(doc.nodes).match(new RegExp(`"(model|embedding|planner|critic|evaluator)":"${id}"`, "g"))?.length ?? 0);
   return (
     <Panel
       title="Models"
@@ -77,11 +79,12 @@ export function Models({ doc, update }: { doc: SystemDoc; update: (fn: (d: Syste
       }
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-xs">
+        <table className="w-full min-w-[800px] text-xs">
           <thead className="text-left text-muted-foreground">
             <tr>
               <th className="w-6" />
               <th className="py-1.5 pr-2 font-medium">Ref id</th>
+              <th className="py-1.5 pr-2 font-medium">Kind</th>
               <th className="py-1.5 pr-2 font-medium">Provider</th>
               <th className="py-1.5 pr-2 font-medium">Model</th>
               <th className="py-1.5 pr-2 font-medium">Input $/M</th>
@@ -100,6 +103,9 @@ export function Models({ doc, update }: { doc: SystemDoc; update: (fn: (d: Syste
                     </button>
                   </td>
                   <td className="py-1.5 pr-2"><input className={`${cell} font-mono`} value={m.id} onChange={(e) => set(i, { id: e.target.value })} aria-label="Ref id" /></td>
+                  <td className="py-1.5 pr-2">
+                    <Select size="sm" value={m.kind ?? "chat"} onValueChange={(kind) => set(i, { kind: kind as ModelSpec["kind"] })} ariaLabel="Kind" items={["chat", "embedding", "rerank"].map((v) => ({ value: v, label: v }))} />
+                  </td>
                   <td className="py-1.5 pr-2">
                     <Select size="sm" value={m.provider} onValueChange={(provider) => set(i, { provider: provider as ModelSpec["provider"] })} ariaLabel="Provider" items={["anthropic", "openai", "google", "openai_compatible", "local"].map((v) => ({ value: v, label: v }))} />
                   </td>

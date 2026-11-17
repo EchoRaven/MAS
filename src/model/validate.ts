@@ -2,6 +2,7 @@ import { runnerById } from "./defaults";
 import { compat, edgeScope, interfaceOf, isResource, nodeName, sourcePort, targetPort, usesResources } from "./ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, ModelNodeData, PortSpec, SysNode, SystemDoc } from "./types";
 import { RES_PORT } from "./types";
+import { validatePipelines } from "./validatePipelines";
 
 export type Severity = "error" | "warning" | "info";
 export interface Issue {
@@ -193,6 +194,8 @@ export function validate(doc: SystemDoc): Issue[] {
       }
     }
   }
+
+  validatePipelines(doc, add);
 
   if (doc.budget.usd == null && doc.budget.max_rounds == null) add("warning", "The system has no budget or round limit and may run forever");
   return issues;

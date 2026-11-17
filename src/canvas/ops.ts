@@ -5,6 +5,7 @@ import { compat, interfaceOf, isResource, usesResources } from "@/model/ports";
 import type { NodeData, NodeKind, SysEdge, SysNode, SystemDoc } from "@/model/types";
 import { RES_PORT } from "@/model/types";
 import { BOUNDARY_IN, BOUNDARY_OUT } from "./convert";
+import { isResHandle } from "./nodes/parts";
 
 /** Nearest spot to `p` on the scope's canvas that does not overlap a node. */
 export function freeSpot(doc: SystemDoc, scope: string | undefined, p: { x: number; y: number }) {
@@ -70,7 +71,7 @@ export function connect(doc: SystemDoc, scope: string | undefined, c: ConnectReq
   const t = doc.nodes.find((n) => n.id === target);
   if (!s || !t) return { doc };
 
-  if (isResource(s.data.kind) || isResource(t.data.kind) || c.sourceHandle === RES_PORT || c.targetHandle === RES_PORT) {
+  if (isResource(s.data.kind) || isResource(t.data.kind) || isResHandle(c.sourceHandle) || isResHandle(c.targetHandle)) {
     if (isResource(s.data.kind) && !isResource(t.data.kind)) [source, target] = [target, source];
     const user = doc.nodes.find((n) => n.id === source)!;
     const res = doc.nodes.find((n) => n.id === target)!;
@@ -94,7 +95,7 @@ export function connectionHint(doc: SystemDoc, scope: string | undefined, c: Con
   const s = doc.nodes.find((n) => n.id === real(c.source));
   const t = doc.nodes.find((n) => n.id === real(c.target));
   if (!s || !t) return "invalid";
-  if (c.sourceHandle === RES_PORT || c.targetHandle === RES_PORT) return c.sourceHandle === c.targetHandle ? "ok" : "invalid";
+  if (isResHandle(c.sourceHandle) || isResHandle(c.targetHandle)) return isResHandle(c.sourceHandle) && isResHandle(c.targetHandle) ? "ok" : "invalid";
   const sIfc = interfaceOf(s.data);
   const tIfc = interfaceOf(t.data);
   const sp = (c.source === BOUNDARY_IN ? sIfc.inputs : sIfc.outputs).find((p) => p.id === c.sourceHandle);

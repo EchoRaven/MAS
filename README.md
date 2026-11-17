@@ -26,7 +26,7 @@ node scripts/import-env.mjs <dir>   # env-gen / DT / compose folder -> mas-env m
 | Systems | List systems, create one from a template, import or export YAML, duplicate, delete |
 | Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. Envs, agents and plugins can be imported. The issues menu jumps to each problem. |
 | Runs | Replay a simulated event stream on the graph: statuses, transforms, gates, approvals, spawning and cost per agent |
-| Templates | Debate, coding team, research team, support triage, invoice extraction |
+| Templates | Debate, coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
 | Library | Models (with API settings), tools, JSON schemas, and the integration contracts |
 
 The interfaces everything plugs into are documented in
@@ -36,6 +36,7 @@ The interfaces everything plugs into are documented in
 
 ```
 src/model/       types.ts (SystemDoc), ports.ts (interfaces, scopes, type compatibility),
+                 steps.ts (the step registry), pipelines.ts (retrieval / indexing / memory / DB query),
                  validate.ts, yaml.ts, migrate.ts, templates.ts, defaults.ts,
                  envspec.ts / agentspec.ts / plugins.ts (import contracts)
 src/canvas/      FlowView + ops.ts (graph edits), convert.ts, edges.tsx, presets.ts, Palette,

@@ -2,7 +2,13 @@
 // (Spec v0). The canvas edits it, the YAML view serialises it, the validator
 // and the simulator read it.
 
-export const SPEC_VERSION = "0.2";
+import type { DbQuerySpec, IndexSpec, MemoryPolicy, RetrievalSpec } from "./pipelines";
+import type { ParamValue } from "./steps";
+
+export type { DbQuerySpec, IndexSpec, MemoryPolicy, RetrievalSpec } from "./pipelines";
+export type { ParamValue, Step } from "./steps";
+
+export const SPEC_VERSION = "0.3";
 
 // ---------------------------------------------------------------------------
 // Interfaces. Every component that exchanges data declares typed ports; an
@@ -91,7 +97,7 @@ export interface Pipeline {
 }
 
 export type HarnessTier = "native" | "sdk" | "process" | "remote";
-export type NativeLoop = "react" | "plan_execute" | "single_shot";
+export type NativeLoop = "react" | "plan_execute" | "reflexion" | "tree_search" | "single_shot" | "custom";
 export type Level = "full" | "partial" | "none";
 
 export interface Capabilities {
@@ -105,8 +111,11 @@ export interface Capabilities {
 
 export interface HarnessSpec {
   tier: HarnessTier;
-  /** native only */
+  /** native only: the agent loop (presets in the step registry, slot "loop") */
   loop?: NativeLoop;
+  loop_params?: Record<string, ParamValue>;
+  /** loop === "custom": the whole turn as code */
+  loop_fn?: FunctionSpec | null;
   /** sdk / process / remote: which adapter drives it */
   runner?: string;
   /** process: launch command; remote: endpoint URL */
@@ -118,6 +127,10 @@ export interface HarnessSpec {
   own_memory?: "keep" | "disable";
   capabilities: Capabilities;
 }
+
+export type AgentHook = "on_start" | "before_model" | "after_model" | "before_tool" | "after_tool" | "on_error" | "on_finish";
+/** f(event, ctx) -> event | null: return a modified event, or null to block it (before_*) */
+export type AgentHooks = Partial<Record<AgentHook, FunctionSpec | null>>;
 
 /**
  * How a component uses an env or plugin, configured on the access edge. One
@@ -137,6 +150,8 @@ export interface AccessBinding {
     format?: FunctionSpec | null;
     /** tokens this source may take in the context */
     budget_tokens?: number | null;
+    /** per-agent overrides of the plugin's retrieval pipeline */
+    retrieval?: Partial<RetrievalSpec> | null;
   } | null;
   write?: {
     /** agent_tool: the agent calls a write tool · after_turn: the platform writes after each turn · never */
@@ -175,6 +190,8 @@ export interface AgentData {
   on_unsupported: "describe" | "extract_text" | "as_file" | "reject";
   spawn?: { template: string; max_instances: number } | null;
   budget_usd?: number | null;
+  /** code run at points of every turn */
+  hooks?: AgentHooks;
   /** positions of parts on the agent's internals canvas (UI only) */
   layout?: Record<string, { x: number; y: number }>;
 }
@@ -202,6 +219,8 @@ export interface EnvData {
   room?: RoomSpec | null;
   /** imported envs: the contract it was imported with */
   manifest?: EnvManifest | null;
+  /** database envs: how agents may query it */
+  db?: DbQuerySpec | null;
 }
 
 /**
@@ -292,6 +311,12 @@ export interface PluginSpec {
   storage?: "builtin" | "pgvector" | "qdrant" | "sqlite" | "files" | "none";
   /** knowledge: documents to index · workspace: directories to mount */
   sources?: string[];
+  /** how reads find things (memory, knowledge, custom) */
+  retrieval?: RetrievalSpec | null;
+  /** knowledge: how sources become an index */
+  index?: IndexSpec | null;
+  /** memory: how turns become records and how long they live */
+  memory?: MemoryPolicy | null;
 }
 
 export interface PluginData {
@@ -388,6 +413,8 @@ export interface SysEdge {
 
 export interface ModelSpec {
   id: string;
+  /** chat (default) · embedding · rerank */
+  kind?: "chat" | "embedding" | "rerank";
   provider: "anthropic" | "openai" | "google" | "openai_compatible" | "local";
   model: string;
   /** how to reach it; the key itself is never stored, only the env var that holds it */
