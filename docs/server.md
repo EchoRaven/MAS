@@ -117,6 +117,16 @@ The scheduler is `server/runtime/engine.ts`.
   - A message to a human who has outgoing edges asks them to reply.
   - A message to a starter, or to a human with no outgoing edges, is the
     run's result.
+- **Policies.** Each has a trigger (`on`), a condition (an expression; empty = always) and an action:
+  - `tool`: checked before every tool call, with `tool`, `args`, `effect` and `agent`. Actions: `block`, `require_approval`, `notify`.
+  - `usage`: checked after every model call, with `usd`, `tokens`, `node`, `node_usd` and `model`. Actions: `terminate` (the run ends with the policy as its reason) and `notify` (warns once per run).
+  - `output`, `output(<component>)` or `output(<component>.<port>)`: checked for every value a component sends on, with `output`, `text`, `node` and `port`. Actions:
+    - `terminate`: that value becomes the run's answer, and the run ends.
+    - `block`: the value is not sent on.
+    - `require_approval`: a person lets it through, or not.
+    - `notify`.
+
+  The validator warns about a policy the runtime would never act on.
 - **Limits.** `budget.usd`, `budget.max_rounds` (component activations),
   `budget.wallclock_min` and each agent's `budget_usd`. A run ends when
   nothing is left to do, a limit is reached, or it is stopped.
