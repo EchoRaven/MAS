@@ -22,7 +22,20 @@ function layoutScope(doc: SystemDoc, scope: string | undefined) {
   // spawn templates sit under the agent that spawns them, like resources under their users
   const templates = spawnTemplates(doc);
   const below = (n: { id: string; data: { kind: string } }) => isResource(n.data.kind) || templates.has(n.id);
-  const actors = nodes.filter((n) => !below(n));
+  // components only spawned copies reach (an expert the copies call, say) follow them into that row
+  const afterTemplates = new Set<string>();
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const n of nodes) {
+      if (below(n) || afterTemplates.has(n.id)) continue;
+      const ins = flow.filter((e) => e.target === n.id);
+      if (ins.length && ins.every((e) => templates.has(e.source) || afterTemplates.has(e.source))) {
+        afterTemplates.add(n.id);
+        grew = true;
+      }
+    }
+  }
+  const actors = nodes.filter((n) => !below(n) && !afterTemplates.has(n.id));
   if (!actors.length && !nodes.length) return;
 
   // roots: the entry first, then whatever nothing feeds, then (for cycles) the rest in order
@@ -78,6 +91,13 @@ function layoutScope(doc: SystemDoc, scope: string | undefined) {
   for (const w of want) {
     const x = Math.max(w.x, last + RESOURCE_GAP);
     pos.set(w.id, { x, y: bottom + ROW + 40 });
+    last = x;
+  }
+  // then what the spawned copies reach, to the right of what reaches it, in the same row
+  for (const n of nodes.filter((m) => afterTemplates.has(m.id))) {
+    const from = flow.filter((e) => e.target === n.id).map((e) => pos.get(e.source)).filter(Boolean) as { x: number }[];
+    const x = Math.max(from.length ? Math.max(...from.map((p) => p.x)) + COL : 0, last + RESOURCE_GAP);
+    pos.set(n.id, { x, y: bottom + ROW + 40 });
     last = x;
   }
 

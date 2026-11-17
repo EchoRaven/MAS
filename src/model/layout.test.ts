@@ -49,4 +49,13 @@ describe("autoLayout", () => {
     // everything is still left to right: the orchestrator before the specialists
     expect(Math.min(...xs)).toBeGreaterThan(at("orchestrator").x);
   });
+
+  it("puts what only spawned copies call next to the template, not back at the start", async () => {
+    const { TEMPLATES } = await import("./templates");
+    const doc = TEMPLATES.find((t) => t.id === "paper-storm")!.build();
+    const at = (id: string) => doc.nodes.find((n) => n.id === id)!.position;
+    expect(at("expert").y).toBe(at("interviewer").y);
+    expect(at("expert").x).toBeGreaterThan(at("interviewer").x);
+    expect(at("expert").x).toBeGreaterThan(at("user").x);
+  });
 });
