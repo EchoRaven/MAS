@@ -8,10 +8,35 @@ import type { RunCtx } from "../../context";
 import { S, schema, type Resource, type RtTool } from "../types";
 import { scopeKey } from "./common";
 
+/**
+ * The real location of a path inside the workspace, or an error when it would
+ * leave it: by "..", or through a symbolic link. Links matter because a
+ * sandbox shares the /work folder and can create them: a relative link that
+ * points nowhere in the container can point at the server's own files here.
+ */
 export function confine(root: string, rel: string): string {
-  const f = path.resolve(root, String(rel ?? "").replace(/^\/+/, ""));
-  if (f !== root && !f.startsWith(root + path.sep)) throw new Error(`path escapes the workspace: ${rel}`);
-  return f;
+  const realRoot = fs.realpathSync(root);
+  const inside = (p: string) => p === realRoot || p.startsWith(realRoot + path.sep);
+  const escape = () => new Error(`path escapes the workspace: ${rel}`);
+  const f = path.resolve(realRoot, String(rel ?? "").replace(/^\/+/, ""));
+  if (!inside(f)) throw escape();
+  // a link at the end: where it points must be inside, even if that does not exist yet (writing would create it)
+  let link: fs.Stats | null = null;
+  try {
+    link = fs.lstatSync(f);
+  } catch {
+    /* does not exist yet */
+  }
+  if (link?.isSymbolicLink()) {
+    const target = path.resolve(path.dirname(f), fs.readlinkSync(f));
+    if (!inside(fs.existsSync(target) ? fs.realpathSync(target) : target)) throw escape();
+  }
+  // the real location of the path, or of the nearest folder above it that exists, must be inside
+  let p = f;
+  while (!fs.existsSync(p) && p !== realRoot) p = path.dirname(p);
+  const real = fs.realpathSync(p);
+  if (!inside(real)) throw escape();
+  return p === f ? real : path.join(real, path.relative(p, f));
 }
 
 export function listFiles(root: string, dir = root, out: string[] = []): string[] {
@@ -51,7 +76,8 @@ export class WorkspacePlugin implements Resource {
     const base = sharedFolder(this.rc, this.node.data.spec.sources?.[0]) ?? this.rc.store.stateDir(this.rc.doc.id, this.node.id, "files");
     const dir = scope === "agent" || scope === "group" ? path.join(base, scopeKey(this.rc, this.node, agent).replace(/[^\w.-]/g, "_")) : base;
     fs.mkdirSync(dir, { recursive: true });
-    return dir;
+    // the real path, so the files listed and the paths checked agree
+    return fs.realpathSync(dir);
   }
 
   async tools(edge: SysEdge): Promise<RtTool[]> {

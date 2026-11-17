@@ -3,6 +3,7 @@
 // under the knowledge root (MAS_KNOWLEDGE_DIR, default <data>/knowledge), or URLs.
 import fs from "node:fs";
 import path from "node:path";
+import { confine } from "./workspace";
 import type { IndexSpec, PluginData, Step, SysEdge, SysNode } from "@/model/types";
 import { defaultIndex, defaultRetrieval } from "@/model/pipelines";
 import type { RunCtx } from "../../context";
@@ -99,13 +100,25 @@ export class KnowledgePlugin implements Resource {
     const globs = String(p(s, "globs") ?? "**/*").split(",").map((g) => g.trim()).filter(Boolean).map(globToRe);
     const docs: Doc[] = [];
     for (const src of sources.filter((x) => !/^https?:/.test(x))) {
-      const base = path.resolve(root, src.replace(/^\/+/, ""));
-      if (!base.startsWith(root) || !fs.existsSync(base)) {
+      // a source (from the system document, which may have been imported) cannot reach outside the knowledge folder
+      let base: string;
+      try {
+        base = confine(root, src);
+      } catch {
+        rc.emit({ type: "log", node: this.id, level: "warn", text: `Source ${src} is outside the knowledge folder; skipped` });
+        continue;
+      }
+      if (!fs.existsSync(base)) {
         rc.emit({ type: "log", node: this.id, level: "warn", text: `Source ${src} not found under the knowledge folder` });
         continue;
       }
       const files = fs.statSync(base).isDirectory() ? walk(base) : [base];
       for (const f of files) {
+        try {
+          confine(root, path.relative(fs.realpathSync(root), f));
+        } catch {
+          continue; // a link inside a source that leads out of the folder
+        }
         const rel = path.relative(base, f) || path.basename(f);
         if (!TEXT_EXT.test(f) || !globs.some((g) => g.test(rel) || g.test(path.basename(f)))) continue;
         if (fs.statSync(f).size > 5_000_000) continue;

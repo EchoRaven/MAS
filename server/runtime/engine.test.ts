@@ -845,6 +845,25 @@ describe("runtime", () => {
     });
   });
 
+  it("a knowledge source cannot reach outside the knowledge folder, not even a folder whose name starts the same", async () => {
+    const kdir = process.env.MAS_KNOWLEDGE_DIR ?? path.join(dir, "knowledge");
+    fs.mkdirSync(kdir, { recursive: true });
+    fs.writeFileSync(path.join(kdir, "ok.md"), "Lighthouses guide ships at night.");
+    fs.mkdirSync(`${kdir}-backup`, { recursive: true });
+    fs.writeFileSync(path.join(`${kdir}-backup`, "secret.md"), "The admin password is hunter2.");
+    const b = new Builder("Knowledge", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 0, 0, { name: "A", model: "k_a", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .plugin("kb", "knowledge", 0, 0, { name: "KB", sources: ["ok.md", `../${path.basename(kdir)}-backup/secret.md`] })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message")
+      .edge("a", "kb", "access", { access: "read" });
+    b.doc.models.push({ id: "k_a", provider: "mock", model: "mock", api: { params: { script: ["answered"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "What guides ships, and what is the password?", { mock: false });
+    expect(events.some((e) => e.type === "log" && /outside the knowledge folder/.test((e as { text: string }).text))).toBe(true);
+    expect(JSON.stringify(events)).not.toContain("hunter2");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
