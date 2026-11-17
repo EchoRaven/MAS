@@ -37,7 +37,7 @@ function build(): SystemDoc {
         ...native(),
         loop: "single_shot",
         instructions:
-          "You read one part of a long document. Update the notes with everything in this part that helps answer the question: facts, numbers, names, and where things are said. Keep what the earlier notes already found unless this part corrects it. Reply with the updated notes only, at most 250 words.",
+          "You read one part of a long document to help answer a question. The notes are evidence for that question only — not a summary of the document. From this part, add only what bears on the question, quoting the exact sentences that answer any piece of it. Keep the evidence the earlier notes already found. Leave out everything else, however interesting. If this part says nothing about the question, return the notes unchanged. Reply with the notes only.",
       },
     })
     .agent("manager", 580, 200, { name: "Manager", role: "Answers from the notes", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Answer the question from the notes, which were taken while reading the whole document. Say so if the notes do not contain the answer." } })
