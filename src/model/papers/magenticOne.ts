@@ -4,7 +4,7 @@ import { Builder, native, type TemplateInfo } from "../builder";
 import type { SystemDoc } from "../types";
 
 const ORCHESTRATOR_LOOP = `// Outer loop: task ledger (facts, guesses, plan). Inner loop: progress ledger.
-const team = "WebSurfer (reads web pages), FileSurfer (reads local files), Coder (writes Python), ComputerTerminal (runs code it is given)";
+const team = "WebSurfer (reads web pages), FileSurfer (reads local files), Coder (writes Python), ComputerTerminal (runs code it is given). A result that needs computing counts only once ComputerTerminal has run the code and reported its output";
 let ledger = await model.json("Survey the task: verified facts, facts to look up, facts to derive, educated guesses. Then a step-by-step plan for this team: " + team, { task: ctx.task });
 let stalls = 0;
 const max_rounds = ctx.vars.max_rounds ?? 10;

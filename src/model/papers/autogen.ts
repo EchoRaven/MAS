@@ -12,8 +12,8 @@ function build(): SystemDoc {
     .room("chat", 420, 300, "group chat", { policy: "selector", selector: "manager", history: "since_join" })
     .agent("manager", 420, 520, { name: "Manager", role: "Chooses the next speaker", model: "haiku", harness: { ...native(), loop: "single_shot", instructions: "You manage a group chat. You only choose who speaks next." } })
     .agent("planner", 260, 0, { name: "Planner", role: "Breaks the task into steps", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Suggest a short plan. Revise it when the critic or the code output shows a problem. Do not write code." } })
-    .agent("coder", 580, 0, { name: "Coder", role: "Writes Python in code blocks", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "Write complete Python in one ```python block that prints its results. Fix it when the executor reports an error. When the task is solved and verified, reply TERMINATE." } })
-    .agent("critic", 900, 120, { name: "Critic", role: "Checks plans and results", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Check the plan, the code and its output for mistakes. Say what must change, or say the result is verified." } })
+    .agent("coder", 580, 0, { name: "Coder", role: "Writes Python in code blocks", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "Write complete Python in one ```python block that prints its results. Fix it when the executor reports an error. Never say TERMINATE yourself: the code has to run first." } })
+    .agent("critic", 900, 120, { name: "Critic", role: "Checks plans and results", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Check the plan, the code and the executor's output for mistakes, and say what must change. Only once the executor has run the code and its output answers the task, reply with the final answer and then TERMINATE." } })
     .agent("executor", 900, 380, {
       name: "User proxy",
       role: "Executes code blocks",
@@ -40,7 +40,7 @@ export const autogen: TemplateInfo = {
     mapped: [
       "The group chat is a room env with the selector policy; the GroupChatManager is the selector agent, which reads the transcript and names the next speaker (never itself).",
       "Every participant pins the shared transcript into its context, as in AutoGen's broadcast of all messages.",
-      "The UserProxyAgent's code execution is an agent with the sandbox's bash tool; TERMINATE in a message ends the chat.",
+      "The UserProxyAgent's code execution is an agent with the sandbox's bash tool. Only the critic may say TERMINATE, and only after the code has run, so the chat cannot end on unexecuted code; its last message is the run's answer.",
     ],
     differs: [
       "AutoGen's user proxy runs code without a model call; here a small model extracts the code block and runs it with bash.",

@@ -43,6 +43,9 @@ function build(): SystemDoc {
   role("project", 860, 0, "Project Manager", "Breaks the design into tasks", "TaskList");
   role("engineer", 860, 600, "Engineer", "Writes the code", null, ["edit_file"]);
   role("qa", 560, 600, "QA Engineer", "Writes and runs tests", null, ["run_tests"]);
+  // the SOP ends with QA: once the tests pass, QA closes the project, and that post is the run's answer
+  const qa = b.doc.nodes.find((n) => n.id === "qa")!.data;
+  if (qa.kind === "agent") qa.harness.instructions += " When the tests pass, post TERMINATE followed by a short report: what was built, the files, and the test results.";
   b.node("repo", "env", 1160, 420, { name: "Workspace", env_kind: "sandbox", image: "python:3.12" })
     .edge("boss", "pool", "access", { access: "read_write", binding: { mode: "tool", write: { when: "agent_tool", tag: "UserRequirement" } } })
     .edge("pm", "pool", "access", { binding: subscribe(["UserRequirement"], "WritePRD") })
