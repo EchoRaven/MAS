@@ -175,6 +175,8 @@ export interface AgentData {
   on_unsupported: "describe" | "extract_text" | "as_file" | "reject";
   spawn?: { template: string; max_instances: number } | null;
   budget_usd?: number | null;
+  /** positions of parts on the agent's internals canvas (UI only) */
+  layout?: Record<string, { x: number; y: number }>;
 }
 
 export interface HumanData {

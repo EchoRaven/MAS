@@ -1,6 +1,6 @@
-import { memo, useMemo } from "react";
-import { Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, type NodeProps } from "@xyflow/react";
-import { Bot, Box, Cpu, Layers3, LogIn, LogOut, Plus, Puzzle, Sparkles, SquareFunction, Wrench } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { applyNodeChanges, Background, BackgroundVariant, Controls, Handle, Position, ReactFlow, type NodeChange, type NodeProps } from "@xyflow/react";
+import { Bot, Box, Cpu, Layers3, LayoutGrid, LogIn, LogOut, Plus, Puzzle, Sparkles, SquareFunction, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AgentData, SystemDoc } from "@/model/types";
@@ -18,7 +18,7 @@ const PartCard = memo(function PartCard({ data, selected }: NodeProps<PartNode>)
   return (
     <div
       className={cn(
-        "relative cursor-pointer rounded-xl bg-card shadow-[var(--ring-shadow)] transition-shadow hover:shadow-[var(--pop-shadow)]",
+        "relative cursor-grab rounded-xl active:cursor-grabbing bg-card shadow-[var(--ring-shadow)] transition-shadow hover:shadow-[var(--pop-shadow)]",
         isPort ? "w-[150px] rounded-full px-3 py-2" : big ? "w-[200px] p-3.5" : "w-[180px] p-3",
         data.dim && "opacity-55",
         (data.icon === "plugin" || data.icon === "env") && "border border-dashed border-border bg-secondary/40",
@@ -46,22 +46,62 @@ const TYPES = { part: PartCard };
 /**
  * An agent opened up: its interface, input and output stages, context and
  * the plugins feeding it, the harness loop with its model and tools. Parts
- * the harness manages itself are dimmed. Click a part to edit it.
+ * the harness manages itself are dimmed. Click a part to edit it, drag to
+ * arrange (saved per agent), Delete removes a selected stage.
  */
-export function AgentView({ doc, id, a, selected, onPart, onAddStage }: { doc: SystemDoc; id: string; a: AgentData; selected?: Part; onPart: (p: Part) => void; onAddStage: (which: "pre" | "post") => void }) {
+export function AgentView({
+  doc,
+  id,
+  a,
+  selected,
+  onPart,
+  onAddStage,
+  onMove,
+  onResetLayout,
+  onDeleteStage,
+}: {
+  doc: SystemDoc;
+  id: string;
+  a: AgentData;
+  selected?: Part;
+  onPart: (p: Part) => void;
+  onAddStage: (which: "pre" | "post") => void;
+  /** save dragged positions, keyed by part id */
+  onMove: (moves: Record<string, { x: number; y: number }>) => void;
+  onResetLayout: () => void;
+  onDeleteStage: (which: "pre" | "post", index: number) => void;
+}) {
   const theme = useUiStore((s) => s.theme);
   const graph = useMemo(() => agentGraph(doc, id, a), [doc, id, a]);
-  const nodes = useMemo(() => graph.nodes.map((n) => ({ ...n, selected: n.data.part === selected, draggable: false, connectable: false })), [graph, selected]);
+  const [nodes, setNodes] = useState<PartNode[]>([]);
+  useEffect(() => {
+    // stages are the only parts that can be deleted here; ports and the harness belong to the agent
+    setNodes(graph.nodes.map((n) => ({ ...n, selected: n.data.part === selected, connectable: false, deletable: n.id.startsWith("pre:") || n.id.startsWith("post:") })));
+  }, [graph, selected]);
+  const onNodesChange = useCallback(
+    (changes: NodeChange<PartNode>[]) => {
+      setNodes((ns) => applyNodeChanges(changes, ns));
+      // delete the highest index first so earlier indices stay valid
+      const removed = changes.flatMap((c) => (c.type === "remove" ? [c.id] : [])).sort((x, y) => Number(y.split(":")[1]) - Number(x.split(":")[1]));
+      for (const r of removed) {
+        const [which, idx] = r.split(":");
+        if (which === "pre" || which === "post") onDeleteStage(which, Number(idx));
+      }
+    },
+    [onDeleteStage],
+  );
   return (
     <div className="relative h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={graph.edges}
         nodeTypes={TYPES}
+        onNodesChange={onNodesChange}
         onNodeClick={(_, n) => onPart((n as PartNode).data.part)}
-        nodesDraggable={false}
+        onNodeDragStop={(_, __, dragged) => onMove(Object.fromEntries(dragged.map((n) => [n.id, { x: Math.round(n.position.x), y: Math.round(n.position.y) }])))}
         nodesConnectable={false}
         elementsSelectable
+        deleteKeyCode={["Backspace", "Delete"]}
         zoomOnDoubleClick={false}
         colorMode={resolveTheme(theme)}
         fitView
@@ -71,7 +111,7 @@ export function AgentView({ doc, id, a, selected, onPart, onAddStage }: { doc: S
         <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
         <Controls showInteractive={false} position="bottom-left" />
       </ReactFlow>
-      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-xl bg-card/90 p-1.5 shadow-[var(--ring-shadow)] backdrop-blur">
+      <div className="absolute right-3 top-3 flex items-center gap-1 rounded-xl bg-card/90 p-1.5 shadow-[var(--ring-shadow)] backdrop-blur">
         <span className="flex items-center gap-1.5 px-2 text-xs text-muted-foreground">
           <Bot className="h-3.5 w-3.5" /> Wrapper
         </span>
@@ -81,6 +121,11 @@ export function AgentView({ doc, id, a, selected, onPart, onAddStage }: { doc: S
         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onAddStage("post")}>
           <Plus className="mr-1 h-3 w-3" /> Output stage
         </Button>
+        {a.layout && Object.keys(a.layout).length > 0 && (
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onResetLayout} title="Put every part back in its default place">
+            <LayoutGrid className="mr-1 h-3 w-3" /> Reset layout
+          </Button>
+        )}
       </div>
     </div>
   );

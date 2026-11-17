@@ -42,6 +42,15 @@ function save(systems: SystemDoc[]) {
   }
 }
 
+/** First visit: seed the templates and save them, so their ids (and links to them) stay stable across reloads. */
+function loadOrSeed(): SystemDoc[] {
+  const loaded = load();
+  if (loaded) return loaded;
+  const docs = seed();
+  save(docs);
+  return docs;
+}
+
 function seed(): SystemDoc[] {
   return TEMPLATES.filter((t) => t.id !== "blank").map((t) => t.build());
 }
@@ -63,7 +72,7 @@ export const useSystems = create<SystemsState>((set, get) => {
     set({ systems });
   };
   return {
-    systems: load() ?? seed(),
+    systems: loadOrSeed(),
     get: (id) => get().systems.find((s) => s.id === id),
     create: (templateId) => {
       const tpl = TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0];

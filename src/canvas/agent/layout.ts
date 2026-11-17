@@ -113,5 +113,7 @@ export function agentGraph(doc: SystemDoc, id: string, a: AgentData): { nodes: P
     nodes.push({ id: `out:${p.id}`, type: "part", position: { x, y: spread(i, outs.length) }, data: { part: `out:${p.id}`, title: p.id, subtitle: `${p.type}${p.schema ? `<${p.schema}>` : ""}`, icon: "port-out", port: p } });
     for (const s of prev) link(s, `out:${p.id}`);
   });
-  return { nodes, edges };
+  // positions the user dragged win over the computed ones
+  const placed = nodes.map((n) => (a.layout?.[n.id] ? { ...n, position: a.layout[n.id] } : n));
+  return { nodes: placed, edges };
 }

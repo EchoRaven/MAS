@@ -97,6 +97,12 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   };
 
   const agentNode = nav.agent ? doc.nodes.find((n) => n.id === nav.agent) : undefined;
+  const setAgent = (fn: (a: AgentData) => AgentData) => update((d) => ({ ...d, nodes: d.nodes.map((n) => (n.id === nav.agent && n.data.kind === "agent" ? { ...n, data: fn(n.data) } : n)) }));
+  const moveParts = (moves: Record<string, { x: number; y: number }>) => setAgent((a) => ({ ...a, layout: { ...(a.layout ?? {}), ...moves } }));
+  const resetLayout = () => setAgent((a) => ({ ...a, layout: undefined }));
+  const deleteStage = (which: "pre" | "post", index: number) =>
+    // stage parts are keyed by index, so saved positions of later stages are dropped
+    setAgent((a) => ({ ...a, pipeline: { ...a.pipeline, [which]: a.pipeline[which].filter((_, i) => i !== index) }, layout: a.layout && Object.fromEntries(Object.entries(a.layout).filter(([k]) => !k.startsWith(`${which}:`))) }));
   const addStage = (which: "pre" | "post") => {
     if (!nav.agent) return;
     const stage: Processor = which === "pre" ? { id: `s${Date.now() % 100000}`, op: "redact", name: "Redact", fn: null } : { id: `s${Date.now() % 100000}`, op: "parse_json", name: "Parse JSON", schema: null, on_fail: "retry", max_retries: 2 };
@@ -141,7 +147,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
                 </div>
               </div>
               {agentNode ? (
-                <AgentView key={agentNode.id} doc={doc} id={agentNode.id} a={agentNode.data as AgentData} selected={nav.part} onPart={(p) => { nav.selectPart(p); setInspectorOpen(true); }} onAddStage={addStage} />
+                <AgentView key={agentNode.id} doc={doc} id={agentNode.id} a={agentNode.data as AgentData} selected={nav.part} onPart={(p) => { nav.selectPart(p); setInspectorOpen(true); }} onAddStage={addStage} onMove={moveParts} onResetLayout={resetLayout} onDeleteStage={deleteStage} />
               ) : (
                 <FlowView
                   doc={doc}
