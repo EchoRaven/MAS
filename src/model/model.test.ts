@@ -159,3 +159,24 @@ describe("simulate", () => {
     expect(r.events.map((e) => e.type)).toEqual(["system_started", "system_finished"]);
   });
 });
+
+describe("policies the runtime cannot act on", () => {
+  it("are flagged by the validator", async () => {
+    const { validate } = await import("./validate");
+    const doc = TEMPLATES.find((t) => t.id === "baseline")!.build();
+    doc.policies = [
+      { id: "ok", on: "output(solo)", condition: 'text.includes("x")', action: "terminate" },
+      { id: "bad_on", on: "whenever", condition: "true", action: "notify" },
+      { id: "bad_action", on: "usage", condition: "usd > 1", action: "block" },
+      { id: "no_node", on: "output(ghost.out)", condition: "true", action: "block" },
+      { id: "no_port", on: "output(solo.nope)", condition: "true", action: "block" },
+    ];
+    const msgs = validate(doc).map((i) => i.message).filter((m) => m.startsWith("policy "));
+    expect(msgs).toEqual([
+      expect.stringMatching(/^policy bad_on: "on: whenever" is not something the runtime checks/),
+      expect.stringMatching(/^policy bad_action: "block" cannot be done on usage/),
+      expect.stringMatching(/^policy no_node: there is no component "ghost"/),
+      expect.stringMatching(/^policy no_port: solo has no output "nope"/),
+    ]);
+  });
+});

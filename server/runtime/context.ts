@@ -21,6 +21,8 @@ export interface RunCtx {
   secrets: Secrets;
   config: Config;
   signal: AbortSignal;
+  /** end the run now, with this reason (a policy that ends it, say) */
+  stop(reason: string): void;
   /** shared variables code can read and write (ctx.vars) */
   vars: Record<string, unknown>;
   emit(e: RunEventBody): void;

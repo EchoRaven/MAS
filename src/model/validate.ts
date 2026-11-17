@@ -1,5 +1,6 @@
 import { runnerById } from "./defaults";
 import { entryPoints, spawnTemplates } from "./entry";
+import { policyProblem } from "./policies";
 import { compat, edgeScope, interfaceOf, isResource, nodeName, sourcePort, targetPort, usesResources } from "./ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, ModelNodeData, PortSpec, SysNode, SystemDoc } from "./types";
 import { RES_PORT } from "./types";
@@ -98,6 +99,12 @@ export function validate(doc: SystemDoc): Issue[] {
   const starts = entryPoints(doc);
   if (doc.nodes.length > 0 && !starts.length) add("warning", "Nothing here can start a run yet: add an agent, model, function or group");
   if (starts.length > 1) add("info", `${starts.length} components start the run at once (${starts.map((s) => nodeName(byId.get(s.node))).join(", ")}). Pick one under System → Start to send the input to just one`);
+
+  // ---- policies the runtime would never act on
+  for (const p of doc.policies) {
+    const why = policyProblem(doc, p);
+    if (why) add("warning", why);
+  }
 
   // ---- agents
   const agents = doc.nodes.filter((n) => n.data.kind === "agent") as SysNode<AgentData>[];

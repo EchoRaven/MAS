@@ -13,6 +13,7 @@ import { AgentState, runAgentTurn, type TurnServices } from "./agent/turn";
 import { BudgetError, nameOf, StopError, type RunCtx } from "./context";
 import { llmCall, runFn } from "./functions";
 import { testExpr } from "./functions/sandbox";
+import { conditionHolds, policiesAt } from "@/model/policies";
 import { renderTemplate } from "./functions/template";
 import { textOf, userText } from "./models";
 import { Hub } from "./resources/hub";
@@ -340,6 +341,7 @@ export class Engine implements TurnServices {
 
   private async afterAgent(n: SysNode<AgentData>, r: { output: unknown; text: string; port?: string; transfers: string[]; conversation?: import("./models").ChatMessage[] }, via?: SysEdge) {
     const ports = r.port ? [r.port] : n.data.interface.outputs.map((p) => p.id);
+    if (!(await this.outputPolicies(n.id, ports[0] ?? "out", r.output))) return;
     const edges = ports.flatMap((p) => this.outEdges(n.id, p));
     const handoffs = edges.filter((e) => e.kind === "handoff");
     const chosen = handoffs.length > 1 ? handoffs.filter((e) => r.transfers.includes(e.id)) : handoffs;
@@ -361,6 +363,7 @@ export class Engine implements TurnServices {
 
   private async emitOutputs(id: string, outputs: Record<string, unknown>) {
     for (const [port, v] of Object.entries(outputs)) {
+      if (!(await this.outputPolicies(id, port, v))) continue;
       const edges = this.outEdges(id, port);
       if (!edges.length) {
         this.outputs++;
@@ -368,6 +371,39 @@ export class Engine implements TurnServices {
       }
       for (const e of edges) this.track(this.deliver(e, v, id));
     }
+  }
+
+  /**
+   * Output policies on a value a component sends on: notify, block it, ask a
+   * person first, or end the run with it as the result. False = do not send it.
+   */
+  private async outputPolicies(id: string, port: string, v: unknown): Promise<boolean> {
+    const rc = this.rc;
+    for (const p of policiesAt(rc.doc, "output", id, port)) {
+      const scope = { output: exprValue(v), text: asText(v), node: id, port, ...(v && typeof v === "object" && !Array.isArray(v) ? (v as object) : {}) };
+      if (!conditionHolds(p, (x) => testExpr(x, scope).ok)) continue;
+      const what = `Policy ${p.id} (${p.condition || "always"}) on ${nameOf(rc, id)}.${port}`;
+      if (p.action === "notify") rc.emit({ type: "log", node: id, level: "warn", text: what });
+      else if (p.action === "block") {
+        rc.emit({ type: "log", node: id, level: "warn", text: `${what}: blocked` });
+        return false;
+      } else if (p.action === "require_approval") {
+        const approver = rc.doc.nodes.find((n) => n.data.kind === "human" && (n.data as HumanData).approves);
+        const a = await rc.ask({ node: approver?.id ?? "", from: id, kind: "approval", text: `${what}. Let this through?\n\n${clip(asText(v), 1500)}` });
+        if (!a.approved) {
+          rc.emit({ type: "log", node: id, level: "warn", text: `${what}: held back by a person` });
+          return false;
+        }
+      } else if (p.action === "terminate") {
+        // the value that met the condition is the run's answer
+        this.outputs++;
+        rc.emit({ type: "output", node: id, port, text: clip(asText(v), 20_000) });
+        rc.emit({ type: "log", node: id, level: "info", text: `${what}: ended the run` });
+        rc.stop(`Policy ${p.id}`);
+        return false;
+      }
+    }
+    return true;
   }
 
   // call edges -------------------------------------------------------------------

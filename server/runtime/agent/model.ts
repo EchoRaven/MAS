@@ -6,6 +6,7 @@ import type { RunCtx } from "../context";
 import { nameOf } from "../context";
 import { runFn } from "../functions";
 import { testExpr } from "../functions/sandbox";
+import { conditionHolds, policiesAt } from "@/model/policies";
 import type { ChatMessage, ChatResponse, Part, ToolDef } from "../models";
 import { textOf } from "../models";
 import type { RtTool } from "../resources/types";
@@ -78,11 +79,11 @@ export class AgentIO {
   }
 
   private async approve(t: RtTool, args: Record<string, unknown>): Promise<boolean> {
-    const policies = this.rc.doc.policies.filter((p) => p.on === "tool_call" || p.on === "tool");
-    for (const p of policies) {
-      if (!testExpr(p.condition, { tool: t.name, args, effect: t.effect, agent: this.node }).ok) continue;
+    for (const p of policiesAt(this.rc.doc, "tool")) {
+      if (!conditionHolds(p, (x) => testExpr(x, { tool: t.name, args, effect: t.effect, agent: this.node }).ok)) continue;
       if (p.action === "block") throw new Error(`blocked by policy ${p.id}`);
       if (p.action === "require_approval") return this.ask(t, args, `policy ${p.id}`);
+      if (p.action === "notify") this.rc.emit({ type: "log", node: this.node, level: "warn", text: `Policy ${p.id}: ${nameOf(this.rc, this.node)} calls ${t.name}` });
     }
     if (t.effect === "irreversible") return this.ask(t, args, "irreversible tool");
     return true;

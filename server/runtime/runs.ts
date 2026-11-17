@@ -4,12 +4,14 @@ import crypto from "node:crypto";
 import type { SystemDoc } from "@/model/types";
 import { migrateDoc } from "@/model/migrate";
 import { modelUses } from "@/model/modelUse";
+import { conditionHolds, policiesAt } from "@/model/policies";
 import type { HumanRequest, RunEvent, RunEventBody, RunRecord } from "@/run/events";
 import type { Config } from "../config";
 import { HttpError, type Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
 import { BudgetError, StopError, type HumanAnswer, type RunCtx } from "./context";
 import { Engine } from "./engine";
+import { testExpr } from "./functions/sandbox";
 import { expose, revokeRun } from "./mcpProxy";
 import { Models } from "./models";
 
@@ -54,6 +56,7 @@ export class RunManager {
     const { rec, ctrl } = act;
     const t0 = Date.now();
     const perNode = new Map<string, number>();
+    const noticed = new Set<string>(); // notify policies already reported in this run
     let activations = 0;
     const emit = (body: RunEventBody) => {
       const e = { ...body, t: Math.round((Date.now() - t0) / 100) / 10 } as RunEvent;
@@ -76,6 +79,7 @@ export class RunManager {
       secrets: this.secrets,
       config: this.config,
       signal: ctrl.signal,
+      stop,
       vars: { ...(opts.vars ?? {}) },
       emit,
       usage: (node, u, estimated = false) => {
@@ -86,6 +90,20 @@ export class RunManager {
         if (doc.budget.usd != null && rec.usd > doc.budget.usd) {
           stop("Over budget");
           throw new BudgetError("Over budget");
+        }
+        // usage policies: notify once, or end the run
+        for (const p of policiesAt(doc, "usage")) {
+          const scope = { usd: rec.usd, tokens: rec.tokens, node, node_usd: perNode.get(node) ?? 0, model: u.model };
+          if (!conditionHolds(p, (x) => testExpr(x, scope).ok)) continue;
+          if (p.action === "terminate") {
+            emit({ type: "log", level: "warn", text: `Policy ${p.id} (${p.condition || "always"}) ended the run` });
+            stop(`Policy ${p.id}`);
+            throw new BudgetError(`Policy ${p.id}`);
+          }
+          if (p.action === "notify" && !noticed.has(p.id)) {
+            noticed.add(p.id);
+            emit({ type: "log", level: "warn", text: `Policy ${p.id}: ${p.condition || "always"} (usage so far ${rec.usd.toFixed(4)} USD, ${rec.tokens} tokens)` });
+          }
         }
         const agent = rc.byId.get(node)?.data;
         if (agent?.kind === "agent" && agent.budget_usd != null && (perNode.get(node) ?? 0) > agent.budget_usd) throw new BudgetError(`${agent.name} is over its budget`);

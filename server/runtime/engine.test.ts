@@ -480,6 +480,58 @@ describe("runtime", () => {
     });
   });
 
+  describe("policies", () => {
+    const mock = (id: string, script: unknown[], price = 0) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: price, price_out: price, modalities: ["text"] });
+    // me -> a -> b -> me, each agent on its own scripted model
+    const chain = (policies: SystemDoc["policies"], scripts: { a: unknown[]; b: unknown[] }, price = 0) => {
+      const b = new Builder("Policies", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: true })
+        .agent("a", 0, 0, { name: "A", model: "p_a", harness: { ...native(), loop: "react", max_steps: 3, instructions: "" } })
+        .agent("b", 0, 0, { name: "B", model: "p_b", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "a", "message")
+        .edge("a", "b", "message")
+        .edge("b", "me", "message");
+      b.doc.models.push(mock("p_a", scripts.a, price), mock("p_b", scripts.b, price));
+      b.doc.policies = policies;
+      return b.doc;
+    };
+    const logs = (events: RunEvent[]) => events.filter((e) => e.type === "log").map((e) => (e as { text: string }).text);
+    const outputs = (events: RunEvent[]) => events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text);
+
+    it("output, terminate: the value that meets the condition ends the run as its answer", async () => {
+      const { rec, events } = await run(chain([{ id: "p1", on: "output(a)", condition: 'text.includes("FINAL")', action: "terminate" }], { a: ["FINAL answer: 42"], b: ["should not run"] }), "go", { mock: false });
+      expect(outputs(events)).toEqual(["FINAL answer: 42"]);
+      expect(usages(events, "b").length).toBe(0);
+      expect(runs.get(rec.id)).toMatchObject({ status: "finished", reason: "Policy p1" });
+    });
+
+    it("output, block: the value is held back; and a policy on one component leaves the others alone", async () => {
+      const { events } = await run(chain([{ id: "p1", on: "output(b)", condition: 'text.includes("secret")', action: "block" }], { a: ["the secret plan"], b: ["the secret plan, reviewed"] }), "go", { mock: false });
+      // a's output (with "secret") still reached b; b's was blocked
+      expect(usages(events, "b").length).toBe(1);
+      expect(outputs(events)).toEqual([]);
+      expect(logs(events).some((t) => /Policy p1 .*blocked/.test(t))).toBe(true);
+    });
+
+    it("usage: notify once, and terminate past a limit", async () => {
+      const notified = await run(chain([{ id: "n1", on: "usage", condition: "tokens > 0", action: "notify" }], { a: ["one"], b: ["two"] }), "go", { mock: false });
+      expect(logs(notified.events).filter((t) => t.startsWith("Policy n1")).length).toBe(1);
+      const stopped = await run(chain([{ id: "t1", on: "usage", condition: "usd > 0", action: "terminate" }], { a: ["one"], b: ["two"] }, 1000), "go", { mock: false });
+      expect(usages(stopped.events, "b").length).toBe(0);
+      expect(runs.get(stopped.rec.id)?.reason).toBe("Policy t1");
+    });
+
+    it("tool, block: the call fails with the policy's name", async () => {
+      const doc = chain([{ id: "nomem", on: "tool", condition: 'tool == "memory_write"', action: "block" }], { a: [{ tool: "memory_write", input: { text: "x" } }, "done"], b: ["ok"] });
+      doc.nodes.push({ id: "mem", position: { x: 0, y: 0 }, data: { ...(TEMPLATES.find((t) => t.id === "supervisor")!.build().nodes.find((n) => n.data.kind === "plugin" && (n.data as { preset?: string }).preset === "memory")!.data) } });
+      doc.edges.push({ id: "e_mem", source: "a", source_port: "res", target: "mem", target_port: "res", kind: "access", access: "read_write", binding: { mode: "tool", read: { top_k: 5, budget_tokens: 2000 }, write: { when: "agent_tool" } } } as never);
+      const { events } = await run(doc, "go", { mock: false });
+      const call = events.find((e): e is Extract<RunEvent, { type: "tool" }> => e.type === "tool" && e.tool === "memory_write");
+      expect(call?.error).toBe(true);
+      expect(call?.result).toContain("blocked by policy nomem");
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
