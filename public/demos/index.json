@@ -168,6 +168,18 @@
   "recorded_at": "2026-11-17T11:54:38.699Z"
  },
  {
+  "id": "paper-tradingagents",
+  "name": "TradingAgents",
+  "input": "Should we trade NVIDIA (NVDA) today? Use what you know up to your training cutoff.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 15,
+  "tokens": 45138,
+  "usd": 0.0329649,
+  "seconds": 95.6,
+  "recorded_at": "2026-11-17T12:27:01.095Z"
+ },
+ {
   "id": "paper-voyager",
   "name": "Voyager",
   "input": "Learn to summarise a list of numbers: build up to a function that reports its mean, median and standard deviation.",
