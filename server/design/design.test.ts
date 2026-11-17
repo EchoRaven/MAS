@@ -145,6 +145,40 @@ describe("the draft the architect edits", () => {
   });
 });
 
+describe("models the design can use", () => {
+  it("swaps a preset's models for ones that can be called here", () => {
+    const d = Draft.blank("X");
+    d.usable = { chat: ["gemini"], embedding: ["gemini_embed"] };
+    const msg = d.add("plugin", "mem", "Memory", { preset: "memory" });
+    expect(msg).toMatch(/haiku → gemini/);
+    expect(msg).toMatch(/embed → gemini_embed/);
+    const used = JSON.stringify(d.doc.nodes[0].data);
+    expect(used).not.toMatch(/"haiku"|"embed"/);
+    d.add("agent", "a", "A");
+    const a = d.doc.nodes.find((n) => n.id === "a")!.data;
+    expect(a.kind === "agent" && a.model).toBe("gemini");
+  });
+
+  it("remembers a model that is out of credit, and prefers one that answered", async () => {
+    const { noteHealth, resetHealth } = await import("../runtime/models");
+    resetHealth();
+    const catalog = [
+      { id: "a", provider: "openai_compatible" as const, model: "a", api: {}, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "b", provider: "openai_compatible" as const, model: "b", api: {}, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "c", provider: "openai_compatible" as const, model: "c", api: {}, price_in: 0, price_out: 0, modalities: ["text"] },
+    ];
+    const m = new Models(catalog, new Secrets(dir));
+    noteHealth(catalog[0], false, new Error("openai 429: credit_balance_exhausted"));
+    noteHealth(catalog[2], true);
+    expect(m.usable().map((x) => x.id)).toEqual(["c", "b"]);
+    expect(m.missingKey(catalog[0])).toMatch(/failed its last call/);
+    // a passing rate limit is not a dead model
+    noteHealth(catalog[1], false, new Error("google 429: rate limit, retry in 30s"));
+    expect(m.usable().map((x) => x.id)).toContain("b");
+    resetHealth();
+  });
+});
+
 describe("the architect's loop", () => {
   it("builds from tool calls and stops when the system is sound", async () => {
     const script = [

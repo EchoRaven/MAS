@@ -51,9 +51,12 @@ export interface DesignResult {
 
 export async function design(opts: { models: Models; model?: string | null; prompt: string; doc?: SystemDoc; signal?: AbortSignal; maxSteps?: number }): Promise<DesignResult> {
   const draft = opts.doc ? new Draft(structuredClone(opts.doc)) : Draft.blank("New system");
+  draft.usable = { chat: opts.models.usable("chat").map((m) => m.id), embedding: opts.models.usable("embedding").map((m) => m.id) };
   const log: DesignResult["log"] = [];
   const usage = { tokens_in: 0, tokens_out: 0, usd: 0 };
-  const catalog = draft.doc.models.map((m) => `${m.id} (${m.model})`).join(", ");
+  // name only the models that can be called here, so the design runs as built
+  const usable = new Set([...draft.usable.chat, ...draft.usable.embedding]);
+  const catalog = draft.doc.models.filter((m) => !usable.size || usable.has(m.id)).map((m) => `${m.id} (${m.model}${m.kind && m.kind !== "chat" ? `, ${m.kind}` : ""})`).join(", ");
   const tools = draft.doc.tools.map((t) => `${t.id}: ${t.description}`).join("\n");
   const task = opts.doc
     ? `Change this system as asked. It is already on the canvas; keep what still fits.\n\nWhat they asked for:\n${opts.prompt}\n\nThe system now:\n${draft.review()}`

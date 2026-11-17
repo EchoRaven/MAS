@@ -27,6 +27,7 @@ export const DEFAULT_MODELS: ModelSpec[] = [
   { id: "local", provider: "openai_compatible", model: "my-vllm-model", api: { base_url: "http://127.0.0.1:8000/v1", key_env: "LOCAL_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },
   // embedding and rerank: prices left at 0 to be filled in with your provider's rates
   { id: "embed", kind: "embedding", provider: "openai", model: "text-embedding-3-large", api: { key_env: "OPENAI_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },
+  { id: "gemini_embed", kind: "embedding", provider: "google", model: "gemini-embedding-001", api: { key_env: "GEMINI_API_KEY" }, price_in: 0.15, price_out: 0, modalities: ["text"] },
   { id: "rerank", kind: "rerank", provider: "local", model: "bge-reranker-v2-m3", api: { base_url: "http://127.0.0.1:8001", key_env: "" }, price_in: 0, price_out: 0, modalities: ["text"] },
 ];
 

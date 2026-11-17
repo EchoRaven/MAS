@@ -36,7 +36,35 @@ function place(doc: SystemDoc, parent?: string) {
 }
 
 export class Draft {
+  /** models that can actually be called here, by kind; empty = no restriction known */
+  usable: { chat: string[]; embedding: string[] } = { chat: [], embedding: [] };
   constructor(public doc: SystemDoc) {}
+
+  /**
+   * Put a component on models that will work. A preset brings its own defaults
+   * (a memory plugin names "haiku" for extraction, "embed" for search); where
+   * those have no key here, they are swapped for one that does.
+   */
+  private onUsableModels(data: NodeData): string[] {
+    const swapped: string[] = [];
+    const kindOf = (id: string) => this.doc.models.find((m) => m.id === id)?.kind ?? "chat";
+    const walk = (v: unknown): void => {
+      if (Array.isArray(v)) return v.forEach(walk);
+      if (!v || typeof v !== "object") return;
+      const o = v as Record<string, unknown>;
+      for (const [k, x] of Object.entries(o)) {
+        if (["model", "embedding", "planner", "critic", "evaluator"].includes(k) && typeof x === "string") {
+          const pool = kindOf(x) === "embedding" ? this.usable.embedding : kindOf(x) === "chat" ? this.usable.chat : [];
+          if (pool.length && !pool.includes(x)) {
+            o[k] = pool[0];
+            swapped.push(`${x} → ${pool[0]}`);
+          }
+        } else walk(x);
+      }
+    };
+    walk(data);
+    return [...new Set(swapped)];
+  }
 
   static blank(name: string) {
     const doc = emptySystem(name);
@@ -114,10 +142,11 @@ export class Draft {
           (data as Extract<NodeData, { kind: "group" }>).iterate = { max_rounds: options.max_rounds, until: options.until ? String(options.until) : null, feed: options.feed === "input_and_output" ? "input_and_output" : "output" };
         }
     }
+    const swapped = this.onUsableModels(data);
     const node: SysNode = { id, position: place(this.doc, parent), data };
     if (parent) node.parent = parent;
     this.doc.nodes.push(node);
-    return `Added ${kind} "${id}"${parent ? ` inside ${parent}` : ""}.`;
+    return `Added ${kind} "${id}"${parent ? ` inside ${parent}` : ""}.${swapped.length ? ` Models with no key here were swapped: ${swapped.join(", ")}.` : ""}`;
   }
 
   /** Change a component in place; its connections stay. Only the keys given change. */
@@ -134,6 +163,7 @@ export class Draft {
         if (str("instructions")) (a.harness.instructions = String(options.instructions), changed.push("instructions"));
         if (str("model")) {
           if (!this.doc.models.some((m) => m.id === options.model)) throw new DraftError(`There is no model "${options.model}". Models: ${this.doc.models.map((m) => m.id).join(", ")}`);
+          if (this.usable.chat.length && !this.usable.chat.includes(String(options.model))) throw new DraftError(`Model "${options.model}" has no API key here. Usable: ${this.usable.chat.join(", ")}`);
           a.model = String(options.model);
           changed.push("model");
         }
@@ -178,7 +208,7 @@ export class Draft {
   }
 
   private defaultModel() {
-    return this.doc.models.find((m) => (m.kind ?? "chat") === "chat")?.id ?? "sonnet";
+    return this.usable.chat[0] ?? this.doc.models.find((m) => (m.kind ?? "chat") === "chat")?.id ?? "sonnet";
   }
 
   /** Give a component its ports. Replaces whatever it had. */

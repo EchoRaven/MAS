@@ -14,7 +14,11 @@ export function designRoutes(r: Router, store: Store, secrets: Secrets) {
     if (!prompt) throw new HttpError(400, "Say what the system should do");
     const doc = b.doc ? checkDoc(b.doc) : b.system_id ? (store.getSystem(b.system_id) ?? undefined) : undefined;
     const models = new Models(doc?.models ?? DEFAULT_MODELS, secrets, !!b.mock);
-    const result = await design({ models, model: b.model ?? null, prompt, doc, signal: AbortSignal.timeout(10 * 60_000) });
+    // learn which models answer before designing with them
+    if (!b.mock) await models.probe();
+    // the architect itself runs on the best model that answered
+    const model = b.model ?? models.usable("chat")[0]?.id ?? null;
+    const result = await design({ models, model, prompt, doc, signal: AbortSignal.timeout(10 * 60_000) });
     return result;
   });
 }

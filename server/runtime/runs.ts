@@ -3,6 +3,7 @@
 import crypto from "node:crypto";
 import type { SystemDoc } from "@/model/types";
 import { migrateDoc } from "@/model/migrate";
+import { modelUses } from "@/model/modelUse";
 import type { HumanRequest, RunEvent, RunEventBody, RunRecord } from "@/run/events";
 import type { Config } from "../config";
 import { HttpError, type Store } from "../store/files";
@@ -115,6 +116,15 @@ export class RunManager {
     const baseUrl = `http://${this.config.host === "0.0.0.0" ? "127.0.0.1" : this.config.host}:${this.config.port}`;
     const engine = new Engine(rc, { expose: (node, tools) => expose(rec.id, node, tools, baseUrl) });
     emit({ type: "system_started", input: opts.input });
+    // a model that has no key fails only when it is first called, deep in the run: say so now, with who needs it
+    if (!opts.mock) {
+      const uses = modelUses(doc);
+      for (const id of [...new Set(uses.map((u) => u.model))]) {
+        const spec = doc.models.find((m) => m.id === id);
+        const why = spec && rc.models.missingKey(spec);
+        if (why) emit({ type: "log", level: "warn", text: `Model "${id}" ${why} (Settings → API keys); it is used by ${[...new Set(uses.filter((u) => u.model === id).map((u) => u.where))].join(", ")}` });
+      }
+    }
     let reason: string;
     try {
       await Promise.race([
