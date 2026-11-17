@@ -59,7 +59,8 @@ export class Router {
 
   private authorized(req: Req): boolean {
     const h = req.headers.authorization ?? "";
-    const given = h.startsWith("Bearer ") ? h.slice(7) : (req.query.get("token") ?? "");
+    // only in the header: a token in the URL ends up in logs and browser history
+    const given = h.startsWith("Bearer ") ? h.slice(7) : "";
     return !!given && sameToken(given, this.token);
   }
 
@@ -88,7 +89,13 @@ export class Router {
       const route = this.routes.find((r) => r.method === req.method && r.re.test(req.path));
       if (!route) throw new HttpError(404, `No route ${req.method} ${req.path}`);
       const m = route.re.exec(req.path)!;
-      route.keys.forEach((k, i) => (req.params[k] = decodeURIComponent(m[i + 1])));
+      route.keys.forEach((k, i) => {
+        try {
+          req.params[k] = decodeURIComponent(m[i + 1]);
+        } catch {
+          throw new HttpError(400, "Malformed path");
+        }
+      });
       if (route.auth && !this.authorized(req)) throw new HttpError(401, "Missing or wrong token");
       const out = await route.handler(req, res);
       if (res.writableEnded || res.headersSent) return;
