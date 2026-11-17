@@ -8,6 +8,9 @@ import type { SystemDoc } from "./types";
 const COL = 340;
 const ROW = 150;
 const RESOURCE_GAP = 300;
+/** at most this many components stacked in one column before it wraps */
+const MAX_STACK = 5;
+const STACK_GAP = 290;
 
 const isResource = (k: string) => k === "env" || k === "plugin";
 
@@ -42,17 +45,25 @@ function layoutScope(doc: SystemDoc, scope: string | undefined) {
   visit(roots);
   for (const n of actors) if (!col.has(n.id)) visit([n.id]);
 
-  // stack each column, centred on y = 0, in the order the components were added
+  // stack each column, centred on y = 0, in the order the components were added;
+  // a long column (nine specialists, say) wraps into stacks side by side, and the columns after it move over
   const columns = new Map<number, string[]>();
   for (const n of actors) columns.set(col.get(n.id)!, [...(columns.get(col.get(n.id)!) ?? []), n.id]);
   const pos = new Map<string, { x: number; y: number }>();
   let bottom = 0;
-  for (const [c, members] of columns) {
+  let x = 0;
+  for (const c of [...columns.keys()].sort((a, b) => a - b)) {
+    const members = columns.get(c)!;
+    const stacks = Math.ceil(members.length / MAX_STACK);
+    const per = Math.ceil(members.length / stacks);
     members.forEach((id, i) => {
-      const y = (i - (members.length - 1) / 2) * ROW;
-      pos.set(id, { x: c * COL, y });
+      const s = Math.floor(i / per);
+      const inStack = Math.min(per, members.length - s * per);
+      const y = ((i % per) - (inStack - 1) / 2) * ROW;
+      pos.set(id, { x: x + s * STACK_GAP, y });
       bottom = Math.max(bottom, y);
     });
+    x += (stacks - 1) * STACK_GAP + COL;
   }
 
   // resources: one row below, each under the mean x of what uses it, pushed apart

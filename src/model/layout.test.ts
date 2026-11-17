@@ -35,4 +35,18 @@ describe("autoLayout", () => {
     expect(entryPoints(doc).map((e) => e.node)).toEqual(["user"]);
     expect(validate(doc).filter((i) => i.nodeId === "generated")).toEqual([]);
   });
+
+  it("wraps a long column into stacks side by side, and moves the next column over", async () => {
+    const { TEMPLATES } = await import("./templates");
+    const doc = TEMPLATES.find((t) => t.id === "paper-agents-room")!.build();
+    const at = (id: string) => doc.nodes.find((n) => n.id === id)!.position;
+    const specialists = ["conflict", "character", "setting", "plot", "exposition", "rising", "climax", "falling", "resolution"];
+    const xs = [...new Set(specialists.map((id) => at(id).x))];
+    expect(xs.length).toBe(2);
+    // at most 5 in a stack, and no two specialists in the same place
+    for (const x of xs) expect(specialists.filter((id) => at(id).x === x).length).toBeLessThanOrEqual(5);
+    expect(new Set(specialists.map((id) => `${at(id).x},${at(id).y}`)).size).toBe(9);
+    // everything is still left to right: the orchestrator before the specialists
+    expect(Math.min(...xs)).toBeGreaterThan(at("orchestrator").x);
+  });
 });
