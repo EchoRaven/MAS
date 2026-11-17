@@ -38,6 +38,16 @@ function run(cmd: string, args: string[], t: HarnessTurn, stdin?: string, env: R
   return { lines: lines(), done };
 }
 
+/** API keys saved in Settings, handed to the CLI's environment (the CLI's own login is used otherwise). */
+function keyEnv(t: HarnessTurn, ...names: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const n of names) {
+    const v = t.rc.secrets.get(n);
+    if (v) out[n] = v;
+  }
+  return out;
+}
+
 const parse = (l: string): Record<string, unknown> | null => {
   try {
     const v = JSON.parse(l);
@@ -58,7 +68,7 @@ export const claudeCode: Adapter = async (t) => {
     args.push("--mcp-config", JSON.stringify({ mcpServers: { mas: { type: "http", url: t.mcp.url, headers: { Authorization: `Bearer ${t.mcp.token}` } } } }));
     args.push("--allowedTools", t.mcp.tools.map((n) => `mcp__mas__${n}`).join(","));
   }
-  const p = run(bin, args, t);
+  const p = run(bin, args, t, undefined, keyEnv(t, "ANTHROPIC_API_KEY"));
   let text = "";
   let session: string | undefined;
   let usage: { tokens_in: number; tokens_out: number; usd: number; estimated: boolean } | undefined;
@@ -88,7 +98,7 @@ export const codex: Adapter = async (t) => {
   const bin = t.agent.harness.command?.trim() || process.env.MAS_CODEX_BIN || "codex";
   const prompt = t.context ? `${t.context}\n\n---\n\n${t.input}` : t.input;
   const args = t.session ? ["exec", "resume", t.session, "--json", prompt] : ["exec", "--json", "--skip-git-repo-check", prompt];
-  const p = run(bin, args, t);
+  const p = run(bin, args, t, undefined, keyEnv(t, "OPENAI_API_KEY", "CODEX_API_KEY"));
   let text = "";
   let session = t.session;
   let usage: { tokens_in: number; tokens_out: number; usd: number; estimated: boolean } | undefined;
