@@ -71,6 +71,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [ReConcile](https://arxiv.org/abs/2309.13007) | A round table of different models: answers with confidence, grouped discussion each round, stop at consensus, a confidence-weighted vote |
 | [MedAgents](https://arxiv.org/abs/2311.10537) | Specialties gathered per question, parallel analyses, a summarised report, a voted consultation that revises the report until every expert agrees |
 | [AutoAgents](https://arxiv.org/abs/2309.17288) | A team drafted per task; an agent observer and a plan observer must both approve the draft; the drafted agents are created (spawned) one plan step at a time |
+| [Exchange-of-Thought](https://arxiv.org/abs/2312.01823) | Four communication paradigms (memory, report, relay, debate) in one system, chosen by a run variable; confidence from each agent's consistency; stop at agreement |
 
 ## Layout
 

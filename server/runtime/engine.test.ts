@@ -8,7 +8,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { TEMPLATES } from "@/model/templates";
 import { Builder, native } from "@/model/builder";
 import type { RunEvent, RunRecord } from "@/run/events";
-import type { SystemDoc } from "@/model/types";
+import type { AgentData, SystemDoc } from "@/model/types";
 import type { Config } from "../config";
 import { Store } from "../store/files";
 import { Secrets } from "../store/secrets";
@@ -22,10 +22,10 @@ const runs = new RunManager(store, new Secrets(dir), config);
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 /** Run to the end, answering every person's request with `answer`. */
-async function run(doc: SystemDoc, input = "Hello", opts: { mock?: boolean; answer?: (r: { kind: string; text: string }) => { approved?: boolean; text?: string } } = {}): Promise<{ rec: RunRecord; events: RunEvent[] }> {
+async function run(doc: SystemDoc, input = "Hello", opts: { mock?: boolean; vars?: Record<string, unknown>; answer?: (r: { kind: string; text: string }) => { approved?: boolean; text?: string } } = {}): Promise<{ rec: RunRecord; events: RunEvent[] }> {
   resetMock();
   store.putSystem(doc);
-  const rec = runs.start(doc, { input, mock: opts.mock ?? true });
+  const rec = runs.start(doc, { input, mock: opts.mock ?? true, vars: opts.vars });
   const answer = opts.answer ?? (() => ({ approved: true, text: "ok" }));
   const seen = new Set<string>();
   for (let i = 0; i < 2000 && runs.isActive(rec.id); i++) {
@@ -262,6 +262,44 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "spawn").length).toBe(2);
     const out = events.find((e) => e.type === "output") as { text: string };
     expect(out.text).toBe("Final: written and tested");
+  });
+
+  describe("Exchange-of-Thought", () => {
+    const eotRun = async (paradigm: string, scripts: Record<string, string[]>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-eot")!.build();
+      for (const a of ["a", "b", "c"]) {
+        doc.models.push({ id: `eot_${a}`, provider: "mock", model: "mock", api: { params: { script: scripts[a] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+        doc.nodes.find((n) => n.id === a)!.data = { ...(doc.nodes.find((n) => n.id === a)!.data as AgentData), model: `eot_${a}` };
+      }
+      const { events } = await run(doc, "Q?", { mock: false, vars: { paradigm } });
+      const to = (id: string) => events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === id).map((e) => e.text);
+      return { events, to, out: (events.find((e) => e.type === "output") as { text: string }).text };
+    };
+
+    it("Report: the spokes see only the hub, and agreement ends the exchange", async () => {
+      const { to, out, events } = await eotRun("report", { a: ["Final: 1"], b: ["Final: 2", "Final: 1"], c: ["Final: 3", "Final: 1"] });
+      expect(errors(events)).toEqual([]);
+      const b2 = to("b")[1];
+      expect(b2).toContain("## Agent A (confidence 1.00)");
+      expect(b2).not.toContain("## Agent C");
+      expect(to("a")[1]).toContain("## Agent B");
+      expect(to("a")[1]).toContain("## Agent C");
+      expect(out).toBe("Paradigm: report. All three agree after round 2.\nFinal: 1");
+    });
+
+    it("Relay: each agent sees only the one before it in the ring", async () => {
+      const { to } = await eotRun("relay", { a: ["Final: 1"], b: ["Final: 2", "Final: 1"], c: ["Final: 3", "Final: 1"] });
+      expect(to("a")[1]).toMatch(/## Agent C[\s\S]*$/);
+      expect(to("a")[1]).not.toContain("## Agent B");
+      expect(to("b")[1]).toContain("## Agent A");
+      expect(to("b")[1]).not.toContain("## Agent C");
+    });
+
+    it("without agreement, four rounds end in a vote weighted by confidence", async () => {
+      // A wavers between 1 and 5, ending on 1; B and C hold 2 throughout
+      const { out } = await eotRun("memory", { a: ["Final: 1", "Final: 5", "Final: 5", "Final: 1"], b: ["Final: 2"], c: ["Final: 2"] });
+      expect(out).toBe("Paradigm: memory. No agreement after round 4; vote weighted by confidence.\nFinal: 2");
+    });
   });
 
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
