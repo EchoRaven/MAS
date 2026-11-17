@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { emptySystem } from "@/model/defaults";
+import { buildSeed, SEED_TEMPLATES } from "@/model/templates";
 import { Store } from "./files";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mas-store-"));
@@ -48,5 +49,18 @@ describe("deleting a system", () => {
     expect(store.putSystem({ ...doc, updated_at: new Date(Date.now() + 1000).toISOString() })).toBe(true);
     expect(store.getSystem("sys_gone")).not.toBeNull();
     expect(store.deletedSystems()).toEqual({});
+  });
+
+  it("a deleted seeded system stays deleted, though a fresh browser builds it with today's date", () => {
+    const store = new Store(fs.mkdtempSync(path.join(dir, "s-")));
+    const t = SEED_TEMPLATES.find((x) => x.id === "paper-debate")!;
+    store.putSystem(buildSeed(t));
+    store.deleteSystem("sys_paper_debate");
+    // a browser that never saw it seeds it now, newer than the deletion, and pushes it
+    expect(store.putSystem({ ...buildSeed(t), updated_at: new Date(Date.now() + 5000).toISOString() })).toBe(false);
+    expect(store.getSystem("sys_paper_debate")).toBeNull();
+    // but a copy someone edited after the deletion is theirs, and is kept
+    const edited = { ...buildSeed(t), name: "My debate", updated_at: new Date(Date.now() + 5000).toISOString() };
+    expect(store.putSystem(edited)).toBe(true);
   });
 });

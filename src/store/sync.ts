@@ -2,6 +2,7 @@
 // on connect, newer copies win in both directions; afterwards every change is
 // pushed (debounced) and deletions are mirrored.
 import { Api } from "@/api/client";
+import { isUneditedSeed } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
 import { useServer } from "./server";
 import { useSystems } from "./systems";
@@ -13,7 +14,8 @@ let started = false;
 async function pull() {
   const { systems: remote, deleted = {} } = await Api.systems();
   // a system deleted on the server goes here too, unless it was changed here after the deletion
-  const local = useSystems.getState().systems.filter((d) => !(deleted[d.id] && d.updated_at <= deleted[d.id]));
+  // (an unedited seed is stamped "now" when a browser builds it, so its date cannot tell: it goes too)
+  const local = useSystems.getState().systems.filter((d) => !(deleted[d.id] && (d.updated_at <= deleted[d.id] || isUneditedSeed(d))));
   const byId = new Map(local.map((d) => [d.id, d]));
   const merged: SystemDoc[] = [...local];
   synced = new Map(remote.map((d) => [d.id, d.updated_at]));

@@ -2,7 +2,7 @@
 // (record.json + events.jsonl). Writes go through a temp file and rename.
 import fs from "node:fs";
 import path from "node:path";
-import { contentHash } from "@/model/templates";
+import { contentHash, isUneditedSeed } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
 import type { EvalRecord } from "@/run/evals";
 import type { RunEvent, RunRecord } from "@/run/events";
@@ -77,7 +77,8 @@ export class Store {
   putSystem(doc: SystemDoc): boolean {
     const deleted = this.deletedSystems();
     const at = deleted[doc.id];
-    if (at && doc.updated_at <= at) return false;
+    // a seeded system nobody edited is stamped "now" whenever a browser builds it, so its date says nothing: it stays deleted
+    if (at && (doc.updated_at <= at || isUneditedSeed(doc))) return false;
     if (at) {
       delete deleted[doc.id];
       writeJson(this.deletedFile, deleted);
