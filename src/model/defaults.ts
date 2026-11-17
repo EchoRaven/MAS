@@ -23,6 +23,7 @@ export const DEFAULT_MODELS: ModelSpec[] = [
   { id: "sonnet", provider: "anthropic", model: "claude-sonnet-5-5", api: { key_env: "ANTHROPIC_API_KEY" }, price_in: 2, price_out: 10, modalities: ["text", "image", "file"] },
   { id: "haiku", provider: "anthropic", model: "claude-haiku-5-5", api: { key_env: "ANTHROPIC_API_KEY" }, price_in: 0.1, price_out: 0.5, modalities: ["text", "image"] },
   { id: "gpt", provider: "openai", model: "gpt-5.4", api: { key_env: "OPENAI_API_KEY" }, price_in: 2.5, price_out: 15, modalities: ["text", "image"] },
+  { id: "gemini", provider: "google", model: "gemini-2.5-flash", api: { key_env: "GEMINI_API_KEY" }, price_in: 0.3, price_out: 2.5, modalities: ["text", "image"] },
   { id: "local", provider: "openai_compatible", model: "my-vllm-model", api: { base_url: "http://127.0.0.1:8000/v1", key_env: "LOCAL_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },
   // embedding and rerank: prices left at 0 to be filled in with your provider's rates
   { id: "embed", kind: "embedding", provider: "openai", model: "text-embedding-3-large", api: { key_env: "OPENAI_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },

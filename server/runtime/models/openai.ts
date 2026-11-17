@@ -11,6 +11,41 @@ const DEFAULT_BASE: Record<string, string> = {
 
 const base = (m: ModelSpec) => (m.api.base_url || DEFAULT_BASE[m.provider] || "").replace(/\/$/, "");
 
+/**
+ * How long to wait before retrying, or null to give up. Rate limits wait as
+ * long as the provider says (Retry-After, or Gemini's retryDelay); overloads
+ * and server errors back off; exhausted credit or a daily quota fail at once.
+ */
+export function retryWait(res: { status: number; headers: Headers }, text: string, attempt: number): number | null {
+  if (res.status !== 429 && res.status < 500) return null;
+  if (/insufficient_quota|credit_balance|PerDay/i.test(text)) return null;
+  if (attempt >= 5) return null;
+  const after = Number(res.headers.get("retry-after"));
+  if (after > 0) return Math.min(after * 1000, 65_000);
+  const delay = /"retryDelay":\s*"(\d+(?:\.\d+)?)s"/.exec(text);
+  if (delay) return Math.min(Number(delay[1]) * 1000 + 500, 65_000);
+  return Math.min(1000 * 2 ** (attempt + 1), 30_000);
+}
+
+/** The provider's error message, not the whole body. */
+function brief(text: string): string {
+  try {
+    const d = JSON.parse(text);
+    const e = Array.isArray(d) ? d[0]?.error : d.error;
+    if (e?.message) return String(e.message).slice(0, 300);
+  } catch {
+    /* not JSON */
+  }
+  return text.slice(0, 300);
+}
+
+function sleep(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => (clearTimeout(t), reject(signal.reason)), { once: true });
+  });
+}
+
 async function post(m: ModelSpec, key: string | undefined, path: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
   const url = `${base(m)}${path}`;
   if (!url.startsWith("http")) throw new Error(`Model ${m.id} has no base URL`);
@@ -23,11 +58,12 @@ async function post(m: ModelSpec, key: string | undefined, path: string, body: u
     });
     if (res.ok) return res.json();
     const text = await res.text();
-    if ((res.status === 429 || res.status >= 500) && attempt < 2) {
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+    const wait = retryWait(res, text, attempt);
+    if (wait != null) {
+      await sleep(wait, signal);
       continue;
     }
-    throw new Error(`${m.provider} ${res.status}: ${text.slice(0, 300)}`);
+    throw new Error(`${m.provider} ${res.status}: ${brief(text)}`);
   }
 }
 
