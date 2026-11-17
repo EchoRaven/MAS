@@ -37,7 +37,10 @@ export async function agentTools(svc: ToolServices, node: SysNode<AgentData>, tr
     try {
       let ts = await hub.get(e.target).tools(e);
       if (e.binding?.tools?.length) ts = ts.filter((t) => e.binding!.tools!.includes(t.name));
-      if (e.binding?.write?.when === "never" || e.access === "read") ts = ts.filter((t) => t.effect === "read" || t.effect === "pure");
+      // the binding decides who writes: "never" and read-only edges write nothing, and "after_turn" means the
+      // platform writes after each turn, so the agent is not also handed a write tool
+      const platformWrites = e.binding?.write?.when === "after_turn" && target.data.kind === "plugin";
+      if (e.binding?.write?.when === "never" || e.access === "read" || platformWrites) ts = ts.filter((t) => t.effect === "read" || t.effect === "pure");
       // a catalog tool an env already serves (bash through the sandbox) is not offered twice
       tools.push(...ts.filter((t) => !tools.some((x) => x.name === t.name && x.source === t.source)));
     } catch (err) {

@@ -106,6 +106,9 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
       rc.emit({ type: "log", node: node.id, level: "warn", text: `${nameOf(rc, e.target)}: ${(err as Error).message}` });
     }
   }
+  // memory the platform writes after each turn: the agent is told, so it does not go looking for a tool to save with
+  const kept = access.filter((e) => e.binding?.write?.when === "after_turn" && e.access !== "read" && rc.byId.get(e.target)?.data.kind === "plugin").map((e) => nameOf(rc, e.target));
+  if (kept.length) blocks.push(`What happens in this conversation is saved to ${kept.join(", ")} for you after each turn; you do not need to store anything yourself.`);
   const outPort = a.interface.outputs[0];
   const stageSchema = a.pipeline.post.find((st) => (st.op === "parse_json" || st.op === "validate") && st.schema)?.schema;
   const wantsJson = outPort?.type === "json" || a.pipeline.post.some((st) => st.op === "parse_json");
@@ -203,8 +206,8 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   await trimHistory(svc, state, node, io).catch((e) => rc.emit({ type: "log", node: node.id, level: "warn", text: `history summary failed: ${(e as Error).message}` }));
   for (const e of access.filter((x) => x.binding?.write?.when === "after_turn" && x.access !== "read")) {
     try {
-      await hub.get(e.target).afterTurn?.({ node: node.id, input: inputText, output: text, messages: [{ role: "user", text: inputText }, { role: "assistant", text }], edge: e, binding: e.binding! });
-      rc.emit({ type: "access", node: node.id, target: e.target, edge: e.id, op: "write" });
+      const r = await hub.get(e.target).afterTurn?.({ node: node.id, input: inputText, output: text, messages: [{ role: "user", text: inputText }, { role: "assistant", text }], edge: e, binding: e.binding! });
+      if (!r || r.wrote) rc.emit({ type: "access", node: node.id, target: e.target, edge: e.id, op: "write" });
     } catch (err) {
       rc.emit({ type: "log", node: node.id, level: "warn", text: `${nameOf(rc, e.target)} write: ${(err as Error).message}` });
     }

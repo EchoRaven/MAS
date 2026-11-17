@@ -183,6 +183,29 @@ describe("runtime", () => {
     expect(toWorker.every((e) => e.text.startsWith("Question: What is it about?") && e.text.length < 4000)).toBe(true);
   });
 
+  it("memory written by the platform: no write tool for the agent, its work shown, its cost its own", async () => {
+    const b = new Builder("Mem", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 300, 0, { name: "Helper", model: "sonnet", harness: { ...native(), instructions: "" } })
+      .plugin("mem", "memory", 300, 200, {})
+      .edge("me", "a", "message")
+      .edge("a", "me", "message")
+      .edge("a", "mem", "access", { access: "read_write" });
+    b.doc.edges.find((e) => e.target === "mem")!.binding = { mode: "auto_inject", read: { top_k: 5 }, write: { when: "after_turn" } };
+    const { agentTools } = await import("./agent/tools");
+    const { Hub } = await import("./resources/hub");
+    const { Models } = await import("./models");
+    const rc = { doc: b.doc, byId: new Map(b.doc.nodes.map((n) => [n.id, n])), models: new Models(b.doc.models, new Secrets(dir), true), emit: () => undefined, store, config, runId: "t", vars: {} } as unknown as import("./context").RunCtx;
+    const { tools } = await agentTools({ rc, hub: new Hub(rc), call: async () => "", spawn: async () => "" }, b.doc.nodes.find((n) => n.id === "a") as never, new Set());
+    expect(tools.map((t) => t.name)).toEqual(["memory_search"]);
+    const { events } = await run(b.doc, "I like tea");
+    expect(errors(events)).toEqual([]);
+    expect(events.some((e) => e.type === "transform" && e.label.startsWith("remember") && /found/.test(e.detail))).toBe(true);
+    // the extraction and classification calls are billed to the memory, not to the agent
+    expect(usages(events, "mem").length).toBeGreaterThan(0);
+    expect(usages(events, "a")).toHaveLength(1);
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

@@ -83,11 +83,13 @@ export class MemoryPlugin implements Resource {
     else if (pol.extract.use === "rules") {
       const pats = String(p(pol.extract, "patterns") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       facts = pats.flatMap((pat) => [...turnText.matchAll(new RegExp(pat, "gi"))].map((m) => ({ text: m[0] })));
-    } else facts = lines(await llmCall(rc, agent, `${p(pol.extract, "prompt") ?? "List durable facts from this turn, one per line."} Reply "none" if there are none.\n\n${turnText}`, model(pol.extract))).map((text) => ({ text }));
-    if (!facts.length) return 0;
+    } else facts = lines(await llmCall(rc, this.id, `${p(pol.extract, "prompt") ?? "List durable facts from this turn, one per line."} Reply "none" if there are none.\n\n${turnText}`, model(pol.extract))).map((text) => ({ text }));
+    if (!facts.length) return { extracted: 0, added: 0, updated: 0, known: 0 };
 
     const mem = this.load(agent);
     let added = 0;
+    let updated = 0;
+    let known = 0;
     for (const f of facts) {
       // classify
       let type = f.type ?? "fact";
@@ -96,7 +98,7 @@ export class MemoryPlugin implements Resource {
       if (pol.classify.use === "custom") type = String(await fn(pol.classify.fn!, { text: f.text, meta }, { record: { text: f.text, meta } })).trim();
       else if (pol.classify.use === "llm") {
         const types = String(p(pol.classify, "types") ?? "event, fact, profile");
-        type = (await llmCall(rc, agent, `Classify this memory as one of: ${types}. Reply with the type only.\n\n${f.text}`, model(pol.classify))).trim().toLowerCase().split(/\s/)[0] || type;
+        type = (await llmCall(rc, this.id, `Classify this memory as one of: ${types}. Reply with the type only.\n\n${f.text}`, model(pol.classify))).trim().toLowerCase().split(/\s/)[0] || type;
       }
       // a numeric class is an importance score (Generative Agents style)
       if (/^\d+(\.\d+)?$/.test(type)) {
@@ -109,22 +111,33 @@ export class MemoryPlugin implements Resource {
       if (pol.merge.use === "custom") {
         const similar = sims.slice(0, 5).map((x) => x.r);
         const d = (await fn(pol.merge.fn!, rec, { record: rec, similar })) as { action: string; record?: Rec } | null;
-        if (d?.action === "skip") continue;
+        if (d?.action === "skip") {
+          known++;
+          continue;
+        }
         if (d?.action === "update" && d.record?.id) {
           const i = mem.records.findIndex((r) => r.id === d.record!.id);
           if (i >= 0) mem.records[i] = { ...mem.records[i], ...d.record, ts: Date.now() };
+          updated++;
           continue;
         }
       } else if (pol.merge.use === "dedupe") {
-        if (sims[0] && sims[0].s >= Number(p(pol.merge, "similarity") ?? 0.92)) continue;
+        if (sims[0] && sims[0].s >= Number(p(pol.merge, "similarity") ?? 0.92)) {
+          known++;
+          continue;
+        }
       } else if (pol.merge.use === "llm_resolve") {
         const close = sims.filter((x) => x.s >= Number(p(pol.merge, "similarity") ?? 0.8) * 0.5).slice(0, 5);
         if (close.length) {
-          const out = await llmCall(rc, agent, `New memory: "${rec.text}"\nExisting:\n${close.map((x, i) => `[${i}] ${x.r.text}`).join("\n")}\nReply ADD, SKIP, or UPDATE <index>: <merged text>.`, model(pol.merge));
-          if (/^\s*SKIP/i.test(out)) continue;
+          const out = await llmCall(rc, this.id, `New memory: "${rec.text}"\nExisting:\n${close.map((x, i) => `[${i}] ${x.r.text}`).join("\n")}\nReply ADD, SKIP, or UPDATE <index>: <merged text>.`, model(pol.merge));
+          if (/^\s*SKIP/i.test(out)) {
+            known++;
+            continue;
+          }
           const up = /UPDATE\s*\[?(\d+)\]?\s*:\s*(.+)/i.exec(out);
           if (up && close[Number(up[1])]) {
             Object.assign(close[Number(up[1])].r, { text: up[2].trim(), ts: Date.now(), strength: 1 });
+            updated++;
             continue;
           }
         }
@@ -136,7 +149,7 @@ export class MemoryPlugin implements Resource {
     mem.records = this.retain(mem.records);
     await this.consolidate(agent, mem);
     this.save(agent, mem);
-    return added;
+    return { extracted: facts.length, added, updated, known };
   }
 
   private retain(recs: Rec[]): Rec[] {
@@ -161,7 +174,7 @@ export class MemoryPlugin implements Resource {
     const s = this.policy.consolidate;
     if (s.use === "reflect" && mem.since_consolidate >= Number(p(s, "every_n") ?? 50)) {
       const recent = mem.records.slice(-Number(p(s, "every_n") ?? 50));
-      const out = await llmCall(this.rc, agent, `What 1-3 high-level insights follow from these memories? One per line.\n\n${recent.map((r) => `- ${r.text}`).join("\n")}`, model(s));
+      const out = await llmCall(this.rc, this.id, `What 1-3 high-level insights follow from these memories? One per line.\n\n${recent.map((r) => `- ${r.text}`).join("\n")}`, model(s));
       for (const text of lines(out)) mem.records.push({ id: uid(), text, type: "reflection", ts: Date.now(), strength: 1 });
       mem.since_consolidate = 0;
       this.rc.emit({ type: "transform", at: agent, label: `reflect · ${this.node.data.name}`, detail: "insights added" });
@@ -169,7 +182,7 @@ export class MemoryPlugin implements Resource {
       const cutoff = Date.now() - Number(p(s, "older_than_days") ?? 7) * 86400_000;
       const old = mem.records.filter((r) => r.ts < cutoff && r.type !== "summary");
       if (old.length >= 5) {
-        const text = await llmCall(this.rc, agent, `Summarise these memories in a short paragraph:\n\n${old.map((r) => `- ${r.text}`).join("\n")}`, model(s));
+        const text = await llmCall(this.rc, this.id, `Summarise these memories in a short paragraph:\n\n${old.map((r) => `- ${r.text}`).join("\n")}`, model(s));
         const ids = new Set(old.map((r) => r.id));
         mem.records = [...mem.records.filter((r) => !ids.has(r.id)), { id: uid(), text, type: "summary", ts: Date.now(), strength: 1 }];
       }
@@ -200,8 +213,11 @@ export class MemoryPlugin implements Resource {
   }
 
   async afterTurn(turn: TurnInfo) {
-    const n = await this.write(turn.node, `Input: ${turn.input}\nReply: ${turn.output}`, turn.binding.write?.extract);
-    if (n) this.rc.emit({ type: "transform", at: turn.node, edge: turn.edge.id, label: `remember · ${this.node.data.name}`, detail: `${n} record${n > 1 ? "s" : ""} stored` });
+    const r = await this.write(turn.node, `Input: ${turn.input}\nReply: ${turn.output}`, turn.binding.write?.extract);
+    // say what the policy did even when it stored nothing, so its work (and cost) is never invisible
+    const parts = [`${r.extracted} found`, r.added && `${r.added} new`, r.updated && `${r.updated} updated`, r.known && `${r.known} already known`].filter(Boolean);
+    this.rc.emit({ type: "transform", at: turn.node, edge: turn.edge.id, label: `remember · ${this.node.data.name}`, detail: parts.join(" · ") });
+    return { wrote: r.added + r.updated > 0 };
   }
 }
 

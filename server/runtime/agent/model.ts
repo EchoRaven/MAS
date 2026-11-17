@@ -104,7 +104,7 @@ export class AgentIO {
         let result: string;
         let error = false;
         try {
-          if (!t) throw new Error(`unknown tool ${c.name}`);
+          if (!t) throw new Error(`there is no tool called ${c.name}. The tools you have: ${this.tools.map((x) => x.name).join(", ") || "none"}`);
           const ev = await this.hook("before_tool", { tool: { name: c.name, effect: t.effect, source: t.source }, args: c.input });
           if (ev === null) throw new Error("blocked by the before_tool hook");
           const args = (ev as { args?: Record<string, unknown> }).args ?? c.input;

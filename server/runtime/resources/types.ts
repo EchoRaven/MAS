@@ -35,7 +35,8 @@ export interface Resource {
   /** context to put in front of the agent's turn (auto_inject / pinned) */
   beforeTurn?(turn: { node: string; input: string; edge: SysEdge }): Promise<string | null>;
   /** after the agent's turn (binding.write.when === "after_turn") */
-  afterTurn?(turn: TurnInfo): Promise<void>;
+  /** may say whether anything was actually written (an access event is shown only then) */
+  afterTurn?(turn: TurnInfo): Promise<void | { wrote: boolean }>;
   /** record an observation for an agent (memory plugins store it through their policy) */
   observe?(node: string, text: string): Promise<void>;
   close?(): Promise<void>;

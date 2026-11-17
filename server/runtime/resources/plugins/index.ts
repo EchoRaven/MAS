@@ -81,7 +81,7 @@ class PluginResource implements Resource {
     return this.inner.beforeTurn ? this.inner.beforeTurn(turn) : null;
   }
 
-  async afterTurn(turn: TurnInfo) {
+  async afterTurn(turn: TurnInfo): Promise<void | { wrote: boolean }> {
     if (this.edited("after_turn") && !(this.inner instanceof MemoryPlugin)) {
       await runHook(this.rc, this.node, "after_turn", { input: turn.input, output: turn.output, messages: turn.messages }, turn.node, this.helpers(turn.node, turn.edge));
       return;
@@ -90,7 +90,7 @@ class PluginResource implements Resource {
       // an edited after_turn on memory is its extraction step
       return this.inner.afterTurn({ ...turn, binding: { ...turn.binding, write: { when: "after_turn", extract: this.node.data.spec.hooks.after_turn } } });
     }
-    await this.inner.afterTurn?.(turn);
+    return this.inner.afterTurn?.(turn);
   }
 
   async observe(node: string, text: string) {
