@@ -25,6 +25,7 @@ export class AgentState {
   history = new Map<string, ChatMessage[]>();
   summary = new Map<string, string>();
   sessions = new Map<string, string>();
+  plans = new Map<string, string>();
   started = new Set<string>();
 }
 
@@ -64,10 +65,15 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   const inputText = asText(inputMsg);
 
   const { tools, server_tools, access } = await agentTools(svc, node, transfers);
-  const io = new AgentIO(rc, node.id, a, tools, server_tools);
+  const observe = async (text: unknown) => {
+    for (const e of access) await hub.get(e.target).observe?.(node.id, typeof text === "string" ? text : JSON.stringify(text));
+  };
+  const io = new AgentIO(rc, node.id, a, tools, server_tools, { observe });
   if (!state.started.has(node.id)) {
     state.started.add(node.id);
-    await io.hook("on_start", { input: inputText });
+    // what on_start returns as text (a plan, a persona) stays in the agent's context for the run
+    const started: unknown = await io.hook<unknown>("on_start", { input: inputText });
+    if (typeof started === "string" && started.trim()) state.plans.set(node.id, started.trim());
   }
 
   // context: instructions, injected resources, room transcripts, output format
@@ -96,9 +102,11 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   const wantsJson = outPort?.type === "json" || a.pipeline.post.some((st) => st.op === "parse_json");
   const schema = schemaById(rc.doc, stageSchema ?? (outPort?.type === "json" ? outPort.schema : null));
   const summary = state.summary.get(node.id);
+  const plan = state.plans.get(node.id);
   const system = [
     `You are ${a.name}${a.role ? `, ${a.role}` : ""}.`,
     a.harness.instructions,
+    plan ? `Your plan:\n${plan}` : "",
     summary ? `Earlier conversation (summary):\n${summary}` : "",
     ...blocks,
     wantsJson ? `Reply with only a JSON value${schema ? ` matching this JSON Schema:\n${JSON.stringify(schema)}` : "."}` : "",

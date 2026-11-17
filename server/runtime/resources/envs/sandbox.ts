@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { EnvData, SysEdge, SysNode } from "@/model/types";
 import type { RunCtx } from "../../context";
-import { confine, listFiles } from "../plugins/workspace";
+import { confine, hasWorkFolder, listFiles, sharedFolder } from "../plugins/workspace";
 import { S, schema, type Resource, type RtTool } from "../types";
 
 function exec(cmd: string, args: string[], opts: { timeout?: number; cwd?: string } = {}): Promise<{ code: number; out: string }> {
@@ -27,7 +27,8 @@ export class SandboxEnv implements Resource {
     private node: SysNode<EnvData>,
   ) {
     const keep = node.data.lifecycle !== "per_run";
-    this.dir = keep ? rc.store.stateDir(rc.doc.id, node.id, "work") : rc.store.stateDir(rc.doc.id, node.id, "runs", rc.runId);
+    // a workspace plugin with source /work is this folder, so agents can write code there and run it here
+    this.dir = hasWorkFolder(rc) ? sharedFolder(rc, "/work")! : keep ? rc.store.stateDir(rc.doc.id, node.id, "work") : rc.store.stateDir(rc.doc.id, node.id, "runs", rc.runId);
   }
   get id() {
     return this.node.id;

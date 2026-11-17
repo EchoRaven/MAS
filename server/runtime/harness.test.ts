@@ -73,6 +73,6 @@ describe("process harness over MCP", () => {
     expect(out.text).toBe("list_files,read_file,write_file | Wrote notes.txt (22 chars)");
     // the call went through the agent's tool path: it is in the event stream
     expect(events.some((e) => e.type === "tool" && e.tool === "write_file" && e.node === "a")).toBe(true);
-    expect(fs.readFileSync(path.join(dir, "state", b.doc.id, "ws", "files", "notes.txt"), "utf8")).toBe("hello from the harness");
+    expect(fs.readFileSync(path.join(dir, "state", b.doc.id, "fs", "work", "notes.txt"), "utf8")).toBe("hello from the harness");
   });
 });

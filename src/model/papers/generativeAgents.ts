@@ -48,7 +48,7 @@ function memoryStream() {
           "const since = records.filter((r) => r.meta.created > ctx.vars.last_reflection);",
           "if (since.reduce((s, r) => s + r.meta.importance, 0) < 150) return records;",
           "const questions = await ctx.llm('Given only the statements below, what are 3 most salient high-level questions we can answer about the subjects?', since.slice(-100));",
-          "const insights = await ctx.llm('What 5 high-level insights can you infer from these statements? Cite the statements.', await ctx.retrieve(questions));",
+          "const insights = (await ctx.llm('What 5 high-level insights can you infer from these statements? One per line.', await ctx.retrieve(questions))).split('\\n').filter(Boolean);",
           "ctx.vars.last_reflection = ctx.now;",
           "return [...records, ...insights.map((text) => ({ text, type: 'reflection', meta: { importance: 8, created: ctx.now } }))];",
         ].join("\n"),
@@ -99,11 +99,11 @@ export const generativeAgents: TemplateInfo = {
     mapped: [
       "The memory stream is one memory plugin with per-agent scope. Its retrieval fuses recency (0.995 decay per hour), importance and relevance with equal weights in a custom fuse step.",
       "Importance is a custom classify step (an LLM rates each memory 1-10); reflection is a custom consolidate step triggered when recent importance sums past 150.",
-      "Planning is an on_start hook; observations are written by an after_tool hook; the town is a shared room env.",
+      "Planning is an on_start hook whose plan stays in the agent's context; observations are written by an after_tool hook (ctx.observe); the town is a shared room env.",
     ],
     differs: [
       "The town's spatial world (sandbox map, objects, movement) is a room env here; the paper's environment tree is not modelled.",
-      "The custom code uses ctx helpers (ctx.llm, ctx.retrieve, ctx.observe) that the runtime has yet to provide.",
+      "Agents act in turns of conversation in the room rather than on a game clock; the day plan from on_start stays in each agent's context for the run.",
     ],
   },
 };

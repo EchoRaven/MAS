@@ -79,7 +79,9 @@ export const mockProvider: Provider = {
         }
       }
       // "Answer as JSON: a, b, c" -> an object with those keys (is_/has_ flags true)
-      const keys = /JSON:\s*([a-z_][\w]*(?:\s*,\s*[a-z_][\w]*)+)/i.exec(lastText)?.[1].split(/\s*,\s*/);
+      const segment = /JSON:([^\n]*)/i.exec(lastText)?.[1] ?? "";
+      const found = [...new Set(segment.match(/\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g) ?? [])];
+      const keys = found.length >= 2 ? found : undefined;
       const fromKeys = keys ? Object.fromEntries(keys.map((k) => [k, /^(is|has|should)_/.test(k) ? true : `${k} (test value)`])) : null;
       const wantsJson = json || /Reply with only a JSON value/.test(lastText);
       content.push({ type: "text", text: wantsJson ? JSON.stringify(schema ? sampleFromSchema(schema) : (fromKeys ?? { summary: gist, from: who })) : `${who}: ${gist ? `on "${gist}" — ` : ""}done.${consensus ? ` ${consensus}` : ""}` });

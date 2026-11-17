@@ -4,21 +4,23 @@ import { Builder, native, type TemplateInfo } from "../builder";
 import type { SystemDoc } from "../types";
 
 const ORCHESTRATOR_LOOP = `// Outer loop: task ledger (facts, guesses, plan). Inner loop: progress ledger.
-let ledger = await model.json("Survey the task: verified facts, facts to look up, facts to derive, educated guesses. Then a step-by-step plan for the team.", ctx.task);
+const team = "WebSurfer (reads web pages), FileSurfer (reads local files), Coder (writes Python), ComputerTerminal (runs code it is given)";
+let ledger = await model.json("Survey the task: verified facts, facts to look up, facts to derive, educated guesses. Then a step-by-step plan for this team: " + team, { task: ctx.task });
 let stalls = 0;
 while (true) {
   const progress = await model.json(
-    "Answer as JSON: is_request_satisfied, is_in_loop, is_progress_being_made, next_speaker, instruction_or_question",
-    { ledger, history: ctx.history },
+    "Update the progress ledger. Answer as JSON: is_request_satisfied (true only if the history already holds the complete answer), is_in_loop, is_progress_being_made, next_speaker (one of WebSurfer, FileSurfer, Coder, ComputerTerminal), instruction_or_question (everything that speaker needs, e.g. the full code to run)",
+    { task: ctx.task, team, ledger, history: ctx.history },
   );
-  if (progress.is_request_satisfied) return model.call("Write the final answer.", ctx.history);
+  if (progress.is_request_satisfied) return model.call("Write the final answer to the task, using only what the team found.", { task: ctx.task, history: ctx.history });
   stalls = progress.is_progress_being_made && !progress.is_in_loop ? 0 : stalls + 1;
   if (stalls >= 3) {
     // re-plan: update facts and guesses from what was learned, write a new plan
-    ledger = await model.json("Update the facts and guesses, then write a new plan.", { ledger, history: ctx.history });
+    ledger = await model.json("Update the facts and guesses from what was learned, then write a new plan.", { task: ctx.task, ledger, history: ctx.history });
     stalls = 0;
     continue;
   }
+  emit("next: " + progress.next_speaker, progress.instruction_or_question);
   await tools.call_agent(progress.next_speaker, progress.instruction_or_question);
 }`;
 

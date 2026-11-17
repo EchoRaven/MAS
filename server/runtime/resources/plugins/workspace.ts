@@ -25,6 +25,19 @@ export function listFiles(root: string, dir = root, out: string[] = []): string[
   return out;
 }
 
+/**
+ * Workspaces that name the same source share one folder (copies of a plugin
+ * in several groups see the same files), and the source "/work" is the folder
+ * a sandbox env mounts at /work.
+ */
+export function sharedFolder(rc: RunCtx, source?: string): string | null {
+  if (!source) return null;
+  const slug = source.replace(/^\/+|\/+$/g, "").replace(/[^\w.-]+/g, "_") || "root";
+  return rc.store.stateDir(rc.doc.id, "fs", slug);
+}
+
+export const hasWorkFolder = (rc: RunCtx) => rc.doc.nodes.some((n) => n.data.kind === "plugin" && n.data.preset === "workspace" && n.data.spec.sources?.[0]?.replace(/\/+$/, "") === "/work");
+
 export class WorkspacePlugin implements Resource {
   constructor(
     private rc: RunCtx,
@@ -35,7 +48,7 @@ export class WorkspacePlugin implements Resource {
   }
   root(agent: string): string {
     const scope = this.node.data.spec.scope;
-    const base = this.rc.store.stateDir(this.rc.doc.id, this.node.id, "files");
+    const base = sharedFolder(this.rc, this.node.data.spec.sources?.[0]) ?? this.rc.store.stateDir(this.rc.doc.id, this.node.id, "files");
     const dir = scope === "agent" || scope === "group" ? path.join(base, scopeKey(this.rc, this.node, agent).replace(/[^\w.-]/g, "_")) : base;
     fs.mkdirSync(dir, { recursive: true });
     return dir;

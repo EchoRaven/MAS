@@ -146,6 +146,6 @@ export async function customLoop(io: AgentIO, li: LoopInput, extra: Record<strin
   };
   const emit = (label: string, detail = "") => io.rc.emit({ type: "transform", at: io.node, label: String(label), detail: String(detail) });
   const ctxExtra = { task: li.input, history, messages: [...li.history, userText(li.input)], system: li.system, ...extra };
-  const out = await runFn(fn, { text: li.input, system: li.system }, io.rc, { node: io.node, helpers: { ...ctxExtra, react: (more = "") => react(io, li, more) }, named: { model, tools, memory, emit } });
+  const out = await runFn(fn, { text: li.input, system: li.system }, io.rc, { node: io.node, helpers: { ...ctxExtra, react: (more = "") => react(io, li, more) }, named: { model, tools, memory, emit }, timeoutMs: 30 * 60_000 });
   return typeof out === "string" ? out : JSON.stringify(out);
 }

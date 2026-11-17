@@ -26,9 +26,13 @@ export function RunPanels({ doc, events, upto = events.length, top, empty, estim
     if (e.type === "transform") return e.at === filter;
     return false;
   });
+  const lastLen = useRef(0);
   useEffect(() => {
     const el = listRef.current;
-    if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 240) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    // follow the end while near it, and after a jump (skip to end)
+    const jumped = shown.length - lastLen.current > 5;
+    lastLen.current = shown.length;
+    if (el && (jumped || el.scrollHeight - el.scrollTop - el.clientHeight < 240)) el.scrollTo({ top: el.scrollHeight, behavior: jumped ? "auto" : "smooth" });
   }, [shown.length]);
   const filterItems = [
     { value: "all", label: "All messages" },

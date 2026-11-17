@@ -158,6 +158,8 @@ export interface AccessBinding {
     when: "agent_tool" | "after_turn" | "never";
     /** after_turn: what to store, from the turn's messages */
     extract?: FunctionSpec | null;
+    /** rooms: the message type posts on this edge carry (msg.cause_by), e.g. "WritePRD" */
+    tag?: string | null;
   } | null;
   /** envs: allowed tools of the env's MCP server (empty = all) */
   tools?: string[];

@@ -93,6 +93,10 @@ class PluginResource implements Resource {
     await this.inner.afterTurn?.(turn);
   }
 
+  async observe(node: string, text: string) {
+    if (this.inner instanceof MemoryPlugin) await this.inner.write(node, text);
+  }
+
   async close() {
     await this.inner.close?.();
   }

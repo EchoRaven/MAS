@@ -16,6 +16,7 @@ const CanvasPage = lazy(() => import("@/pages/canvas").then((m) => ({ default: m
 const RunsPage = lazy(() => import("@/pages/runs").then((m) => ({ default: m.RunsPage })));
 const TemplatesPage = lazy(() => import("@/pages/Templates").then((m) => ({ default: m.TemplatesPage })));
 const LibraryPage = lazy(() => import("@/pages/library").then((m) => ({ default: m.LibraryPage })));
+const DemosPage = lazy(() => import("@/pages/demos").then((m) => ({ default: m.DemosPage })));
 const SettingsPage = lazy(() => import("@/pages/settings").then((m) => ({ default: m.SettingsPage })));
 
 const SERVER_LABEL = { checking: "Server…", offline: "Offline", needs_token: "Connect server", connected: "Server" } as const;
@@ -77,6 +78,8 @@ export function AppLayout() {
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/library/:systemId" element={<LibraryPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/demos" element={<DemosPage />} />
+              <Route path="/demos/:demoId" element={<DemosPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

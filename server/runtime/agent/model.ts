@@ -18,6 +18,8 @@ export class AgentIO {
     readonly agent: AgentData,
     readonly tools: RtTool[],
     readonly serverTools: ("web_search" | "web_fetch")[],
+    /** extra ctx helpers for hooks (observe…) */
+    readonly hookHelpers: Record<string, unknown> = {},
   ) {}
 
   /** f(event, ctx) -> event | null. null from a before_* hook blocks the step. */
@@ -29,7 +31,8 @@ export class AgentIO {
       const a = await this.rc.ask({ node: approver?.id ?? "", from: this.node, kind: "approval", text: `${nameOf(this.rc, this.node)} (${name}):\n${clip(JSON.stringify(ev, null, 1), 1500)}` });
       return a.approved ? ev : null;
     };
-    const out = await runFn(fn, event, this.rc, { node: this.node, vars: { hook: name }, named: { event }, helpers: { ask_human } });
+    const agent = { id: this.node, name: this.agent.name, role: this.agent.role };
+    const out = await runFn(fn, event, this.rc, { node: this.node, vars: { hook: name, agent }, named: { event }, helpers: { ask_human, ...this.hookHelpers } });
     this.rc.emit({ type: "transform", at: this.node, label: `hook · ${name}`, detail: out == null ? "blocked" : fn.lang });
     if (out === undefined) return event;
     return out as T | null;

@@ -24,7 +24,7 @@ function build(): SystemDoc {
   phase(b, "coding", 380, "Coding", ["CTO", "Turn the design into a concrete architecture and ask the programmer to implement it file by file."], ["Programmer", "Write the complete code into the repository."], 10);
   phase(b, "review", 760, "Code review", ["Reviewer", "Review the code in the repository and list concrete defects."], ["Programmer", "Fix every defect the reviewer lists."], 3);
   phase(b, "testing", 1140, "Testing", ["Tester", "Run the program in the sandbox and report the errors."], ["Programmer", "Fix the errors until the program runs."], 3);
-  b.plugin("repo", "workspace", 480, 260, { name: "Codebase", scope: "system", sources: ["/project"] })
+  b.plugin("repo", "workspace", 480, 260, { name: "Codebase", scope: "system", sources: ["/work"] })
     .node("sandbox", "env", 960, 260, { name: "Test sandbox", env_kind: "sandbox", image: "python:3.12" })
     .edge("client", "design", "message", { label: "Task" })
     .edge("design", "coding", "handoff", { carry: "summary", label: "Design" })
@@ -53,12 +53,12 @@ export const chatdev: TemplateInfo = {
     mapped: [
       "Each phase of the chat chain is a Group whose members are the instructor and the assistant.",
       "Group iteration repeats the dialogue until the assistant's reply contains <INFO> (consensus) or the phase's turn limit.",
-      "Phases hand off to each other with a summary; the codebase is a workspace plugin; tests run in a sandbox env.",
+      "Phases hand off to each other with a summary; the codebase is a workspace plugin on /work, the same folder the test sandbox mounts, so the tester runs the code the programmer wrote.",
       "Communicative dehallucination is in the assistant's instructions (ask before answering).",
     ],
     differs: [
       "The paper's documentation phase and its art/GUI options are left out.",
-      "A component belongs to one group, so the Programmer appears once per phase and each phase gets its own copy of the codebase plugin pointing at the same storage, rather than one agent and one store reused across phases.",
+      "A component belongs to one group, so the Programmer appears once per phase and each phase gets its own copy of the codebase plugin; the copies share one folder because they name the same source.",
     ],
   },
 };

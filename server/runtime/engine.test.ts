@@ -158,6 +158,16 @@ describe("runtime", () => {
     expect(r2.events.some((e) => e.type === "transform" && e.label === "rounds done")).toBe(true);
   });
 
+  it("wakes room members only for the message types they subscribe to (MetaGPT)", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-metagpt")!.build();
+    doc.budget = { usd: null, max_rounds: 6, wallclock_min: null };
+    const { events } = await run(doc, "A CLI todo app");
+    const order = events.filter((e) => e.type === "status" && e.status === "working").map((e) => (e as { node: string }).node);
+    expect(order.slice(0, 4)).toEqual(["pm", "architect", "project", "engineer"]);
+    const tags = events.filter((e) => e.type === "message" && e.room === "pool").map((e) => (e as { port?: string }).port);
+    expect(tags.slice(0, 4)).toEqual(["UserRequirement", "WritePRD", "WriteDesign", "WriteTasks"]);
+  });
+
   it("dry-runs every built-in template to the end without errors", async () => {
     for (const t of TEMPLATES.filter((x) => x.id !== "blank")) {
       const { rec, events } = await run(t.build(), "Build a small todo app");

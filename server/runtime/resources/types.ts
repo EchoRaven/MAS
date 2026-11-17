@@ -36,6 +36,8 @@ export interface Resource {
   beforeTurn?(turn: { node: string; input: string; edge: SysEdge }): Promise<string | null>;
   /** after the agent's turn (binding.write.when === "after_turn") */
   afterTurn?(turn: TurnInfo): Promise<void>;
+  /** record an observation for an agent (memory plugins store it through their policy) */
+  observe?(node: string, text: string): Promise<void>;
   close?(): Promise<void>;
 }
 

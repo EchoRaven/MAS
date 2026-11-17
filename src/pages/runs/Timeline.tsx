@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, CheckCircle2, CircleAlert, Database, Flag, Hash, MessageSquareReply, ShieldAlert, ShieldCheck, Sparkles, SquareFunction, UserCheck, Wrench } from "lucide-react";
 import { EntityAvatar } from "@/components/shared/EntityAvatar";
 import { cn } from "@/lib/utils";
+import { Markdown } from "@/lib/markdown";
 import { usd } from "@/lib/format";
 import type { SystemDoc } from "@/model/types";
 import type { SimEvent } from "@/run/simulate";
@@ -23,7 +24,9 @@ export function Clamp({ text, lines = 6, className }: { text: string; lines?: nu
   const long = text.length > 420 || text.split("\n").length > lines;
   return (
     <div className={className}>
-      <p className={cn("whitespace-pre-wrap break-words text-[13px]", !open && long && "line-clamp-6")}>{text}</p>
+      <div className={cn("text-[13px]", !open && long && "max-h-[9.5rem] overflow-hidden [mask-image:linear-gradient(to_bottom,black_70%,transparent)]")}>
+        <Markdown text={text} />
+      </div>
       {long && (
         <button type="button" onClick={() => setOpen(!open)} className="mt-0.5 text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground">
           {open ? "Show less" : "Show all"}

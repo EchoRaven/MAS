@@ -16,6 +16,8 @@ export interface FnScope {
   vars?: Record<string, unknown>;
   /** values bound by name in code, per the slot's signature (lists, hits, records, event…) */
   named?: Record<string, unknown>;
+  /** default time limit when the function sets none */
+  timeoutMs?: number;
 }
 
 /** One model call with a prompt, for llm functions and code (ctx.llm). */
@@ -43,7 +45,8 @@ export function fnContext(rc: RunCtx, scope: FnScope): Record<string, unknown> {
 
 export async function runFn(fn: FunctionSpec, input: unknown, rc: RunCtx, scope: FnScope = {}): Promise<unknown> {
   const ctx = fnContext(rc, scope);
-  const timeout = fn.timeout_ms ?? undefined;
+  // code may call models (ctx.llm), so the default limit is minutes, not seconds
+  const timeout = fn.timeout_ms ?? scope.timeoutMs ?? 120_000;
   switch (fn.lang) {
     case "template":
       return renderTemplate(fn.code, { input, ctx, ...ctx, ...scope.vars, ...scope.named });

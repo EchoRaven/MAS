@@ -11,7 +11,8 @@
     "type-check": "tsc -b --noEmit",
     "test": "vitest run",
     "server": "TSX_TSCONFIG_PATH=tsconfig.server.json node --experimental-sqlite --no-warnings=ExperimentalWarning --import tsx/esm server/index.ts",
-    "server:dev": "TSX_TSCONFIG_PATH=tsconfig.server.json node --experimental-sqlite --no-warnings=ExperimentalWarning --watch --import tsx/esm server/index.ts"
+    "server:dev": "TSX_TSCONFIG_PATH=tsconfig.server.json node --experimental-sqlite --no-warnings=ExperimentalWarning --watch --import tsx/esm server/index.ts",
+    "record-demos": "TSX_TSCONFIG_PATH=tsconfig.server.json tsx scripts/record-demos.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.9.0",

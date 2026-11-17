@@ -301,7 +301,7 @@ export class Engine implements TurnServices {
       }
       case "model": {
         const m = n.data as ModelNodeData;
-        const prompt = await renderTemplate(m.prompt || "{{input}}", { input: item.value });
+        const prompt = await renderTemplate(m.prompt || "{{input}}", { input: item.value, vars: rc.vars });
         const outSpec = m.interface.outputs[0];
         const schema = outSpec?.type === "json" ? schemaById(rc.doc, outSpec.schema) : null;
         const system = [m.system_prompt, outSpec?.type === "json" ? `Reply with only a JSON value${schema ? ` matching this JSON Schema:\n${JSON.stringify(schema)}` : "."}` : ""].filter(Boolean).join("\n\n");
@@ -474,14 +474,17 @@ export class Engine implements TurnServices {
     const rc = this.rc;
     const room = this.hub.room(roomId);
     if (!room) return;
-    room.post(from, text);
     const edge = rc.doc.edges.find((e) => e.kind === "access" && e.source === from && e.target === roomId);
-    rc.emit({ type: "message", from, to: roomId, room: roomId, edge: edge?.id, kind: "message", text: clip(text, 6000) });
+    const tag = edge?.binding?.write?.tag ?? undefined;
+    room.post(from, text, tag);
+    const posted = room.posts[room.posts.length - 1];
+    rc.emit({ type: "message", from, to: roomId, room: roomId, edge: edge?.id, port: tag, kind: "message", text: clip(text, 6000) });
     if (/\bTERMINATE\b/.test(text) || rc.doc.termination.some((t) => testExpr(t, { text, last: text, from, room: roomId }).ok)) {
       rc.emit({ type: "transform", at: roomId, label: "conversation ended", detail: "termination condition" });
       return;
     }
-    const members = room.members().filter((m) => m !== from);
+    // members only hear what their subscription accepts (binding.read.filter over msg)
+    const members = room.members().filter((m) => m !== from && room.accepts(m, posted));
     let next: string[] = [];
     switch (room.policy) {
       case "round_robin":
