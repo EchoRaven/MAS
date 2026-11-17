@@ -109,6 +109,12 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   // memory the platform writes after each turn: the agent is told, so it does not go looking for a tool to save with
   const kept = access.filter((e) => e.binding?.write?.when === "after_turn" && e.access !== "read" && rc.byId.get(e.target)?.data.kind === "plugin").map((e) => nameOf(rc, e.target));
   if (kept.length) blocks.push(`What happens in this conversation is saved to ${kept.join(", ")} for you after each turn; you do not need to store anything yourself.`);
+  // passages put in front of the agent are a first pass; say how to look for what they missed
+  const searchable = access
+    .filter((e) => e.binding?.mode === "auto_inject")
+    .map((e) => ({ name: nameOf(rc, e.target), tools: tools.filter((t) => t.source === e.target && (t.effect === "read" || t.effect === "pure")).map((t) => t.name) }))
+    .filter((x) => x.tools.length);
+  for (const s of searchable) blocks.push(`The passages from ${s.name} above were found for your input as a whole. If part of the question is not covered by them, search ${s.name} for that part with ${s.tools.join(" or ")} before answering.`);
   const outPort = a.interface.outputs[0];
   const stageSchema = a.pipeline.post.find((st) => (st.op === "parse_json" || st.op === "validate") && st.schema)?.schema;
   const wantsJson = outPort?.type === "json" || a.pipeline.post.some((st) => st.op === "parse_json");

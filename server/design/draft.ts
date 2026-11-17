@@ -37,7 +37,9 @@ function place(doc: SystemDoc, parent?: string) {
 
 export class Draft {
   /** models that can actually be called here, by kind; empty = no restriction known */
-  usable: { chat: string[]; embedding: string[] } = { chat: [], embedding: [] };
+  usable: { chat: string[]; embedding: string[]; rerank?: string[] } = { chat: [], embedding: [] };
+  /** what the knowledge base holds (folders end with /); null = unknown, not checked */
+  knowledge: string[] | null = null;
   constructor(public doc: SystemDoc) {}
 
   /**
@@ -52,6 +54,14 @@ export class Draft {
       if (Array.isArray(v)) return v.forEach(walk);
       if (!v || typeof v !== "object") return;
       const o = v as Record<string, unknown>;
+      // a rerank step on a model that cannot be reached would fail every query: rerank nothing instead
+      const params = o.params as Record<string, unknown> | undefined;
+      if (o.use === "model" && params && typeof params.model === "string" && kindOf(params.model) === "rerank" && this.usable.rerank && !this.usable.rerank.includes(params.model)) {
+        swapped.push(`rerank on ${params.model} → no rerank`);
+        o.use = "none";
+        o.params = {};
+        return;
+      }
       for (const [k, x] of Object.entries(o)) {
         if (["model", "embedding", "planner", "critic", "evaluator"].includes(k) && typeof x === "string") {
           const pool = kindOf(x) === "embedding" ? this.usable.embedding : kindOf(x) === "chat" ? this.usable.chat : [];
@@ -196,6 +206,9 @@ export class Draft {
           changed.push("iterate");
         } else if (str("until") && n.data.iterate) (n.data.iterate.until = String(options.until), changed.push("until"));
         break;
+      case "plugin":
+        if (Array.isArray(options.sources)) (n.data.spec.sources = options.sources.map(String), changed.push("sources"));
+        break;
       case "env":
         if (str("policy") && n.data.room) (n.data.room = { ...n.data.room, policy: options.policy as NonNullable<typeof n.data.room>["policy"] }, changed.push("policy"));
         if (str("image")) (n.data.image = String(options.image), changed.push("image"));
@@ -321,6 +334,19 @@ export class Draft {
       const reached = reaches(s);
       const stranded = this.doc.nodes.filter((n) => !n.parent && !isResource(n.data.kind) && !reached.has(n.id) && touched(n.id) && !this.doc.edges.some((e) => e.target === n.id && e.kind !== "access"));
       for (const n of stranded) design.push(`Nothing ever reaches "${"name" in n.data ? n.data.name : n.id}" from ${s}, so it never runs`);
+    }
+    // a knowledge source the knowledge base does not have means an assistant that searches nothing
+    if (this.knowledge) {
+      const have = this.knowledge.map((k) => k.replace(/\/$/, ""));
+      for (const n of this.doc.nodes) {
+        if (n.data.kind !== "plugin" || n.data.preset !== "knowledge") continue;
+        for (const src of n.data.spec.sources ?? []) {
+          if (/^https?:/.test(src)) continue;
+          const s = src.replace(/^\.?\/+/, "").replace(/\/$/, "");
+          if (!have.some((h) => h === s || h.startsWith(s + "/") || s.startsWith(h + "/")))
+            design.push(`${n.id} reads "${src}", which is not in the knowledge base. It has: ${this.knowledge.join(", ") || "nothing yet"}. Set sources with update`);
+        }
+      }
     }
     // inside a repeating group the group already feeds its output back each round, so a member that
     // also sends straight back to another member runs that member twice a round

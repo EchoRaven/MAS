@@ -23,7 +23,7 @@ describe("step registry", () => {
 
   it("summarises a pipeline with per-agent overrides", () => {
     const base = defaultRetrieval("knowledge");
-    expect(retrievalSummary(base)).toBe("vector + keyword (bm25) → reciprocal rank → score threshold → rerank model → mmr 5");
+    expect(retrievalSummary(base)).toBe("decompose → vector + keyword (bm25) → reciprocal rank → score threshold → rerank model → mmr 5");
     expect(retrievalSummary(base, { rerank: { use: "none" }, select: { use: "top_k", params: { k: 2 } } })).toMatch(/top k 2$/);
   });
 });

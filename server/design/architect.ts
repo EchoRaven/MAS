@@ -49,9 +49,10 @@ export interface DesignResult {
   usage: { tokens_in: number; tokens_out: number; usd: number };
 }
 
-export async function design(opts: { models: Models; model?: string | null; prompt: string; doc?: SystemDoc; signal?: AbortSignal; maxSteps?: number }): Promise<DesignResult> {
+export async function design(opts: { models: Models; model?: string | null; prompt: string; doc?: SystemDoc; signal?: AbortSignal; maxSteps?: number; knowledge?: string[] }): Promise<DesignResult> {
   const draft = opts.doc ? new Draft(structuredClone(opts.doc)) : Draft.blank("New system");
-  draft.usable = { chat: opts.models.usable("chat").map((m) => m.id), embedding: opts.models.usable("embedding").map((m) => m.id) };
+  draft.usable = { chat: opts.models.usable("chat").map((m) => m.id), embedding: opts.models.usable("embedding").map((m) => m.id), rerank: opts.models.usable("rerank").map((m) => m.id) };
+  draft.knowledge = opts.knowledge ?? null;
   const log: DesignResult["log"] = [];
   const usage = { tokens_in: 0, tokens_out: 0, usd: 0 };
   // name only the models that can be called here, so the design runs as built
@@ -61,7 +62,8 @@ export async function design(opts: { models: Models; model?: string | null; prom
   const task = opts.doc
     ? `Change this system as asked. It is already on the canvas; keep what still fits.\n\nWhat they asked for:\n${opts.prompt}\n\nThe system now:\n${draft.review()}`
     : `Build a system for this:\n\n${opts.prompt}`;
-  const messages: ChatMessage[] = [userText(`${task}\n\nModels you can name: ${catalog}\nTools an agent can be given:\n${tools}`)];
+  const kb = opts.knowledge ? `\nThe knowledge base holds: ${opts.knowledge.join(", ") || "nothing yet"}` : "";
+  const messages: ChatMessage[] = [userText(`${task}\n\nModels you can name: ${catalog}\nTools an agent can be given:\n${tools}${kb}`)];
   let summary = "";
   const max = opts.maxSteps ?? 32;
 

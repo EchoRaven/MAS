@@ -78,7 +78,8 @@ const step = (slot: Slot, use: string, params: Record<string, string | number | 
 export function defaultRetrieval(kind: "knowledge" | "memory" | "plain"): RetrievalSpec {
   if (kind === "knowledge") {
     return {
-      rewrite: step("rewrite", "none"),
+      // a question with several parts is searched part by part, or its first part crowds out the rest
+      rewrite: step("rewrite", "decompose", { max: 3 }),
       search: [step("search", "vector", { embedding: "embed" }), step("search", "keyword")],
       fuse: step("fuse", "rrf"),
       filters: [step("filter", "threshold", { min: 0.2 })],

@@ -277,9 +277,10 @@ export class Retriever {
       case "template":
         return renderTemplate(String(p(s, "template") ?? ""), { hits, query });
       case "summary":
-        return hits.length ? llmCall(this.rc, this.node, `Condense these passages into what matters for "${query}" (at most ${num(p(s, "max_tokens"), 400)} tokens), keeping sources:\n\n${hits.map((h) => `- ${h.text} [${h.source ?? h.id}]`).join("\n")}`, (p(s, "model") as string) || null) : "";
+        return hits.length ? llmCall(this.rc, this.node, `Condense these passages into what matters for "${query}" (at most ${num(p(s, "max_tokens"), 400)} tokens), keeping sources:\n\n${hits.map((h) => `- [${h.source ?? h.id}] ${h.text}`).join("\n")}`, (p(s, "model") as string) || null) : "";
       default:
-        return hits.map((h) => `- ${h.text}${h.source ? ` [${h.source}]` : ""}`).join("\n");
+        // the source goes first: after a long passage, a label at the end gets attached to the wrong text
+        return hits.map((h) => `- ${h.source ? `[${h.source}] ` : ""}${h.text.replace(/\s*\n\s*/g, " ")}`).join("\n");
     }
   }
 

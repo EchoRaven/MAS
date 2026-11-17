@@ -129,6 +129,17 @@ describe("the draft the architect edits", () => {
     expect(d.problems().errors.join(" ")).toMatch(/has a filter .* every round has to reach its output/);
   });
 
+  it("a knowledge source the knowledge base does not have is an error that lists what it has", async () => {
+    const d = Draft.blank("QA");
+    d.knowledge = ["guides/", "guides/server.md"];
+    d.add("agent", "qa", "QA");
+    d.add("plugin", "kb", "KB", { preset: "knowledge" });
+    d.connect("qa", "kb", "access");
+    expect(d.problems().errors.join(" ")).toMatch(/kb reads "\.\/docs", which is not in the knowledge base. It has: guides\//);
+    expect(await runDesignTool(d, "update", { id: "kb", options: { sources: ["guides"] } })).toMatch(/sources/);
+    expect(d.problems().errors).toEqual([]);
+  });
+
   it("a function added without code still meets its contract", () => {
     const d = Draft.blank("X");
     d.add("function", "f", "F");
@@ -152,6 +163,10 @@ describe("models the design can use", () => {
     const msg = d.add("plugin", "mem", "Memory", { preset: "memory" });
     expect(msg).toMatch(/haiku → gemini/);
     expect(msg).toMatch(/embed → gemini_embed/);
+    const kb = d.add("plugin", "kb", "KB", { preset: "knowledge" });
+    expect(kb).not.toMatch(/no rerank/); // nothing is known about rerank models: leave the step alone
+    d.usable.rerank = [];
+    expect(d.add("plugin", "kb2", "KB2", { preset: "knowledge" })).toMatch(/rerank on rerank → no rerank/);
     const used = JSON.stringify(d.doc.nodes[0].data);
     expect(used).not.toMatch(/"haiku"|"embed"/);
     d.add("agent", "a", "A");

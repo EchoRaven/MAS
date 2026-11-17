@@ -1,6 +1,7 @@
 // MAS Studio server: stores systems, runs them, streams their events.
 //   npm run server        (MAS_PORT, MAS_HOST, MAS_DATA_DIR, MAS_TOKEN…; see docs/server.md)
 import http from "node:http";
+import path from "node:path";
 import { loadConfig } from "./config";
 import { Router, send } from "./http";
 import { designRoutes } from "./routes/design";
@@ -8,6 +9,7 @@ import { runRoutes } from "./routes/runs";
 import { settingsRoutes } from "./routes/settings";
 import { systemRoutes } from "./routes/systems";
 import { handleMcp } from "./runtime/mcpProxy";
+import { persistHealth } from "./runtime/models";
 import { RunManager } from "./runtime/runs";
 import { Store } from "./store/files";
 import { Secrets } from "./store/secrets";
@@ -16,6 +18,7 @@ const config = loadConfig();
 const store = new Store(config.dataDir);
 const secrets = new Secrets(config.dataDir);
 const runs = new RunManager(store, secrets, config);
+persistHealth(path.join(config.dataDir, "model-health.json"));
 runs.recover();
 
 const router = new Router(config.token);
@@ -24,7 +27,7 @@ router.on("GET", "/api/session", () => ({ ok: true, data_dir: config.dataDir, lo
 systemRoutes(router, store);
 runRoutes(router, store, runs);
 settingsRoutes(router, store, secrets, config);
-designRoutes(router, store, secrets);
+designRoutes(router, store, secrets, config);
 
 // MCP for harnesses: authenticated by the per-run exposure token, not the user token
 router.on(
