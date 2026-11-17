@@ -291,9 +291,38 @@ export const SEED_TEMPLATES = TEMPLATES.filter((t) => t.id !== "blank");
  */
 export const seedId = (templateId: string) => `sys_${templateId.replace(/-/g, "_")}`;
 
+/** A hash of a system's content: everything but its id, timestamp and seed record. */
+export function contentHash(doc: SystemDoc): string {
+  const { id: _id, updated_at: _u, seed: _s, ...content } = doc;
+  const text = JSON.stringify(content);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(36) + text.length.toString(36);
+}
+
 /** A seeded copy of a template, ready to store. */
 export function buildSeed(t: TemplateInfo): SystemDoc {
-  return { ...t.build(), id: seedId(t.id), updated_at: new Date().toISOString() };
+  const doc = { ...t.build(), id: seedId(t.id), updated_at: new Date().toISOString() };
+  return { ...doc, seed: { template: t.id, hash: contentHash(doc) } };
+}
+
+/**
+ * Seeded systems nobody has edited follow their template: when the template
+ * changes (a fix, a better layout), the copy is rebuilt. A copy that was
+ * edited is left alone. Returns the same array when nothing changed.
+ */
+export function refreshSeeds(docs: SystemDoc[]): SystemDoc[] {
+  let changed = false;
+  const out = docs.map((d) => {
+    if (!d.seed || contentHash(d) !== d.seed.hash) return d;
+    const t = SEED_TEMPLATES.find((x) => x.id === d.seed!.template);
+    if (!t) return d;
+    const fresh = buildSeed(t);
+    if (fresh.seed!.hash === d.seed.hash) return d;
+    changed = true;
+    return fresh;
+  });
+  return changed ? out : docs;
 }
 
 /** Names of the templates seeded by earlier versions (0.1, Chinese UI); stored copies are replaced on upgrade. */

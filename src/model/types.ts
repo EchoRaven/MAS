@@ -463,6 +463,8 @@ export interface SystemDoc {
   name: string;
   description: string;
   updated_at: string;
+  /** set on a system seeded from a template: which one, and a hash of it as seeded (to tell whether it was edited since) */
+  seed?: { template: string; hash: string };
   budget: { usd: number | null; max_rounds: number | null; wallclock_min: number | null };
   /**
    * Where a run's input arrives. Left out, the entry point is inferred from

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { buildSeed, LEGACY_SEED_NAMES, SEED_TEMPLATES, seedId, TEMPLATES } from "@/model/templates";
+import { buildSeed, LEGACY_SEED_NAMES, refreshSeeds, SEED_TEMPLATES, seedId, TEMPLATES } from "@/model/templates";
 import { newId } from "@/model/defaults";
 import { migrateDoc } from "@/model/migrate";
 import type { SystemDoc } from "@/model/types";
@@ -81,7 +81,11 @@ function save(systems: SystemDoc[]) {
 /** First visit: seed every template. Later visits: seed the ones added since. */
 function loadOrSeed(): SystemDoc[] {
   const loaded = load();
-  if (loaded) return seedNew(loaded);
+  if (loaded) {
+    const docs = refreshSeeds(seedNew(loaded));
+    if (docs !== loaded) save(docs);
+    return docs;
+  }
   const docs = seed();
   save(docs);
   markSeeded(SEED_TEMPLATES.map((t) => seedId(t.id)));
@@ -141,6 +145,6 @@ export const useSystems = create<SystemsState>((set, get) => {
       return copy;
     },
     remove: (id) => commit(get().systems.filter((s) => s.id !== id)),
-    setAll: (systems) => commit(systems.map(migrateDoc)),
+    setAll: (systems) => commit(refreshSeeds(systems.map(migrateDoc))),
   };
 });
