@@ -40,8 +40,8 @@ connections:
   });
 
   it("rejects dangling connections and unknown kinds", () => {
-    expect(() => fromYaml("agents: { a: {} }\nconnections: [{ from: a, to: zz }]")).toThrow(/不存在/);
-    expect(() => fromYaml("agents: { a: {}, b: {} }\nconnections: [{ from: a, to: b, kind: teleport }]")).toThrow(/未知的连线类型/);
+    expect(() => fromYaml("agents: { a: {} }\nconnections: [{ from: a, to: zz }]")).toThrow(/does not exist/);
+    expect(() => fromYaml("agents: { a: {}, b: {} }\nconnections: [{ from: a, to: b, kind: teleport }]")).toThrow(/Unknown connection kind/);
     expect(() => fromYaml("agents: [1, 2]")).toThrow(/agents/);
     expect(() => fromYaml(": : :")).toThrow(/YAML/);
   });
@@ -59,14 +59,14 @@ connections:
   - { from: b, to: a, kind: call }
 `);
     const msgs = validate(doc).map((i) => i.message).join("\n");
-    expect(msgs).toMatch(/「C」没有任何连线/);
-    expect(msgs).toMatch(/call 连线形成了环/);
-    expect(msgs).toMatch(/不可逆动作 merge_pr/);
+    expect(msgs).toMatch(/"C" has no connections/);
+    expect(msgs).toMatch(/call edges form a cycle/);
+    expect(msgs).toMatch(/irreversible action merge_pr/);
   });
 
   it("flags a tool whose env is missing", () => {
     const doc = fromYaml("agents: { a: { name: A, tools: [bash] }, b: { name: B } }\nconnections: [{ from: a, to: b }]");
-    expect(validate(doc).some((i) => /需要一个 sandbox/.test(i.message))).toBe(true);
+    expect(validate(doc).some((i) => /needs a sandbox/.test(i.message))).toBe(true);
   });
 
   it("finds no errors in the bundled templates", () => {

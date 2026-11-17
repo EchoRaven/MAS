@@ -25,16 +25,16 @@ export const DEFAULT_MODELS: ModelSpec[] = [
 ];
 
 export const DEFAULT_TOOLS: ToolSpec[] = [
-  { id: "web_search", description: "搜索网页", adapter: "builtin", effect: "read", needs_env: null },
-  { id: "fetch", description: "抓取网页正文", adapter: "builtin", effect: "read", needs_env: null },
-  { id: "bash", description: "在沙箱里执行 shell 命令", adapter: "cli", effect: "write", needs_env: "sandbox" },
-  { id: "edit_file", description: "读写沙箱里的文件", adapter: "builtin", effect: "write", needs_env: "sandbox" },
-  { id: "run_tests", description: "运行测试并返回结果", adapter: "cli", effect: "read", needs_env: "sandbox" },
-  { id: "browser", description: "操作无头浏览器", adapter: "mcp", effect: "write", needs_env: "browser" },
-  { id: "run_sql", description: "执行只读 SQL", adapter: "http", effect: "read", needs_env: "database" },
-  { id: "merge_pr", description: "合并 Pull Request", adapter: "http", effect: "irreversible", needs_env: "external" },
-  { id: "send_email", description: "发送邮件", adapter: "http", effect: "irreversible", needs_env: "external" },
-  { id: "issue_refund", description: "发起退款", adapter: "http", effect: "irreversible", needs_env: "external" },
+  { id: "web_search", description: "Search the web", adapter: "builtin", effect: "read", needs_env: null },
+  { id: "fetch", description: "Fetch a page's main text", adapter: "builtin", effect: "read", needs_env: null },
+  { id: "bash", description: "Run shell commands in the sandbox", adapter: "cli", effect: "write", needs_env: "sandbox" },
+  { id: "edit_file", description: "Read and write files in the sandbox", adapter: "builtin", effect: "write", needs_env: "sandbox" },
+  { id: "run_tests", description: "Run tests and return results", adapter: "cli", effect: "read", needs_env: "sandbox" },
+  { id: "browser", description: "Drive a headless browser", adapter: "mcp", effect: "write", needs_env: "browser" },
+  { id: "run_sql", description: "Run read-only SQL", adapter: "http", effect: "read", needs_env: "database" },
+  { id: "merge_pr", description: "Merge a pull request", adapter: "http", effect: "irreversible", needs_env: "external" },
+  { id: "send_email", description: "Send an email", adapter: "http", effect: "irreversible", needs_env: "external" },
+  { id: "issue_refund", description: "Issue a refund", adapter: "http", effect: "irreversible", needs_env: "external" },
 ];
 
 export interface RunnerInfo {
@@ -60,36 +60,36 @@ export const RUNNERS: RunnerInfo[] = [
   {
     id: "native",
     tier: "native",
-    label: "平台原生 loop",
-    hint: "上下文、记忆、停止条件全部由平台控制",
+    label: "Platform-native loop",
+    hint: "Context, memory and stop conditions are all controlled by the platform",
     caps: caps({ context_control: "full", tool_injection: ["native"], observable_steps: "full", approval_hook: true, resumable: true, cost_reporting: true }),
   },
   {
     id: "claude-agent-sdk",
     tier: "sdk",
     label: "Claude Agent SDK",
-    hint: "Claude Code 的 harness，以库的形式驱动；有工具审批回调",
+    hint: "Claude Code's harness, driven as a library; has a tool-approval callback",
     caps: caps({ context_control: "partial", tool_injection: ["mcp", "native"], observable_steps: "full", approval_hook: true, resumable: true, cost_reporting: true }),
   },
   {
     id: "openai-agents-sdk",
     tier: "sdk",
     label: "OpenAI Agents SDK",
-    hint: "进程内适配，通过回调做部分控制",
+    hint: "In-process adapter; partial control through callbacks",
     caps: caps({ context_control: "partial", tool_injection: ["mcp", "native"], observable_steps: "full", approval_hook: true, resumable: true, cost_reporting: true }),
   },
   {
     id: "langgraph",
     tier: "sdk",
     label: "LangGraph agent",
-    hint: "把现有 LangGraph 图当作一个 agent",
+    hint: "Wrap an existing LangGraph graph as one agent",
     caps: caps({ context_control: "partial", tool_injection: ["mcp", "native"], observable_steps: "full", approval_hook: true, resumable: true, cost_reporting: false }),
   },
   {
     id: "claude-code",
     tier: "process",
     label: "Claude Code CLI",
-    hint: "claude -p --bare --output-format stream-json --resume；--mcp-config 注入 tool",
+    hint: "claude -p --bare --output-format stream-json --resume; tools injected via --mcp-config",
     caps: caps({ context_control: "none", tool_injection: ["mcp", "cli"], observable_steps: "partial", approval_hook: false, resumable: true, cost_reporting: true }),
   },
   {
@@ -102,29 +102,29 @@ export const RUNNERS: RunnerInfo[] = [
   {
     id: "acp",
     tier: "process",
-    label: "任意 ACP agent",
-    hint: "Agent Client Protocol：Gemini CLI 原生支持，Claude Code / Codex 通过适配器",
+    label: "Any ACP agent",
+    hint: "Agent Client Protocol: native in Gemini CLI; Claude Code / Codex via adapters",
     caps: caps({ context_control: "none", tool_injection: ["mcp"], observable_steps: "partial", approval_hook: true, resumable: true, cost_reporting: false }),
   },
   {
     id: "custom-stdio",
     tier: "process",
-    label: "自定义程序（stdio）",
-    hint: "每行一个 JSON：输入 deliver，输出 status / output / usage；或一次性命令",
+    label: "Custom program (stdio)",
+    hint: "One JSON per line: deliver in; status / output / usage out. Or a one-shot command",
     caps: caps({ context_control: "none", tool_injection: ["cli"], observable_steps: "none", approval_hook: false, resumable: false, cost_reporting: false }),
   },
   {
     id: "a2a",
     tier: "remote",
-    label: "远程 A2A agent",
-    hint: "读取 Agent Card，以 Task 为单位调用",
+    label: "Remote A2A agent",
+    hint: "Reads the Agent Card and calls it one Task at a time",
     caps: caps({ context_control: "none", tool_injection: [], observable_steps: "none", approval_hook: false, resumable: true, cost_reporting: false }),
   },
 ];
 
 export const runnerById = (id?: string) => RUNNERS.find((r) => r.id === id);
 
-export function defaultAgent(name = "新 Agent"): AgentData {
+export function defaultAgent(name = "New agent"): AgentData {
   return {
     kind: "agent",
     name,
@@ -155,11 +155,11 @@ export function defaultData(kind: NodeKind): NodeData {
     case "agent":
       return defaultAgent();
     case "human":
-      return { kind: "human", name: "人工", role: "审批与指导", approves: true } satisfies HumanData;
+      return { kind: "human", name: "Human", role: "Approves and guides", approves: true } satisfies HumanData;
     case "env":
       return {
         kind: "env",
-        name: "沙箱",
+        name: "Sandbox",
         env_kind: "sandbox",
         image: "python:3.12",
         lifecycle: "per_run",
@@ -169,7 +169,7 @@ export function defaultData(kind: NodeKind): NodeData {
     case "store":
       return {
         kind: "store",
-        name: "共享记忆",
+        name: "Shared memory",
         store_kind: "memory",
         backend: "builtin",
         scope: "group",
@@ -179,7 +179,7 @@ export function defaultData(kind: NodeKind): NodeData {
     case "channel":
       return { kind: "channel", name: "room", channel_type: "room", policy: "free", history: "persistent" } satisfies ChannelData;
     case "group":
-      return { kind: "group", name: "子团队", entry: "", output_from: "", budget_usd: null, on_error: "retry_then_fail_up" } satisfies GroupData;
+      return { kind: "group", name: "Sub-team", entry: "", output_from: "", budget_usd: null, on_error: "retry_then_fail_up" } satisfies GroupData;
   }
 }
 
@@ -187,7 +187,7 @@ export function newId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function emptySystem(name = "未命名系统"): SystemDoc {
+export function emptySystem(name = "Untitled system"): SystemDoc {
   return {
     spec_version: SPEC_VERSION,
     id: newId("sys"),
@@ -206,7 +206,7 @@ export function emptySystem(name = "未命名系统"): SystemDoc {
 
 export const KIND_LABEL: Record<NodeKind, string> = {
   agent: "Agent",
-  human: "人",
+  human: "Human",
   env: "Env",
   store: "Store",
   channel: "Room",

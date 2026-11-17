@@ -1,7 +1,7 @@
 # MAS Studio
 
 A canvas for building multi-agent systems, implementing the data model of
-*Multi-Agent 平台 Spec v0*. v0 is frontend-only: systems are stored in the
+*Multi-Agent Platform Spec v0*. v0 is frontend-only: systems are stored in the
 browser, and the run view is a **structural simulation**. No model is called.
 
 ## Run
@@ -18,11 +18,11 @@ npm test             # vitest: YAML round trip, validator, simulator
 
 | Page | What it does |
 | --- | --- |
-| 系统 | List, create from a template, import/export YAML, duplicate, delete |
-| 画布 | Drag agents, humans, rooms, envs, stores and groups onto the canvas; connect them with message / call / handoff / access edges; put gates on edges; edit everything in the right-hand inspector; switch to the YAML view and edit the same definition as text |
-| 运行 | Plays back a simulated event stream on the same graph: node status, active edges, gates blocking and passing, approvals, spawning, per-agent cost |
-| 模板 | Debate, coding team, research team (group + spawn), support triage |
-| 模型与工具 | Per-system model catalog (prices drive cost estimates) and tool catalog |
+| Systems | List, create from a template, import/export YAML, duplicate, delete |
+| Canvas | Drag agents, humans, rooms, envs, stores and groups onto the canvas; connect them with message / call / handoff / access edges; put gates on edges; edit everything in the right-hand inspector; switch to the YAML view and edit the same definition as text |
+| Runs | Plays back a simulated event stream on the same graph: node status, active edges, gates blocking and passing, approvals, spawning, per-agent cost |
+| Templates | Debate, coding team, research team (group + spawn), support triage |
+| Models & Tools | Per-system model catalog (prices drive cost estimates) and tool catalog |
 
 ## Layout
 

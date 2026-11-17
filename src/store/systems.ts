@@ -71,7 +71,7 @@ export const useSystems = create<SystemsState>((set, get) => {
       if (!src) return undefined;
       const copy: SystemDoc = JSON.parse(JSON.stringify(src));
       copy.id = newId("sys");
-      copy.name = `${src.name}（副本）`;
+      copy.name = `${src.name} (copy)`;
       copy.updated_at = new Date().toISOString();
       commit([copy, ...get().systems]);
       return copy;

@@ -22,7 +22,7 @@ function TemplateCard({ t }: { t: TemplateInfo }) {
             </CanvasContext.Provider>
           </ReactFlowProvider>
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">空白画布</div>
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Empty canvas</div>
         )}
       </div>
       <div className="flex flex-1 flex-col p-4">
@@ -31,7 +31,7 @@ function TemplateCard({ t }: { t: TemplateInfo }) {
         {doc.description && <p className="mt-2 text-[13px] text-muted-foreground">{doc.description}</p>}
         <div className="mt-auto pt-4">
           <Button size="sm" onClick={() => navigate(`/canvas/${create(t.id).id}`)}>
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> 用这个模板新建
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> Use this template
           </Button>
         </div>
       </div>

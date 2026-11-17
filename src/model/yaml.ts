@@ -72,9 +72,9 @@ export function fromYaml(text: string, keepId?: string): SystemDoc {
   try {
     raw = YAML.parse(text);
   } catch (err) {
-    throw new YamlError(`YAML 语法错误：${(err as Error).message}`);
+    throw new YamlError(`YAML syntax error: ${(err as Error).message}`);
   }
-  if (!isObj(raw)) throw new YamlError("顶层必须是一个对象");
+  if (!isObj(raw)) throw new YamlError("The top level must be a mapping");
   const base = emptySystem();
   const sys = isObj(raw.system) ? raw.system : {};
   const doc: SystemDoc = {
@@ -97,9 +97,9 @@ export function fromYaml(text: string, keepId?: string): SystemDoc {
   for (const [kind, section] of SECTIONS) {
     const entries = raw[section];
     if (entries == null) continue;
-    if (!isObj(entries)) throw new YamlError(`${section} 必须是以 id 为键的对象`);
+    if (!isObj(entries)) throw new YamlError(`${section} must be a mapping keyed by id`);
     for (const [id, value] of Object.entries(entries)) {
-      if (ids.has(id)) throw new YamlError(`节点 id 重复：${id}`);
+      if (ids.has(id)) throw new YamlError(`Duplicate node id: ${id}`);
       ids.add(id);
       const v = isObj(value) ? { ...value } : {};
       const parent = typeof v.group === "string" ? v.group : undefined;
@@ -127,17 +127,17 @@ export function fromYaml(text: string, keepId?: string): SystemDoc {
     }
   }
   for (const n of doc.nodes) {
-    if (n.parent && !ids.has(n.parent)) throw new YamlError(`节点 ${n.id} 所在的 group ${n.parent} 不存在`);
+    if (n.parent && !ids.has(n.parent)) throw new YamlError(`Node ${n.id} is in group ${n.parent}, which does not exist`);
   }
-  if (raw.connections != null && !Array.isArray(raw.connections)) throw new YamlError("connections 必须是列表");
+  if (raw.connections != null && !Array.isArray(raw.connections)) throw new YamlError("connections must be a list");
   let i = 0;
   for (const c of (raw.connections as unknown[]) ?? []) {
     if (!isObj(c)) continue;
     const { from, to, id, ...rest } = c;
-    if (typeof from !== "string" || typeof to !== "string") throw new YamlError("每条 connection 都需要 from 和 to");
-    if (!ids.has(from) || !ids.has(to)) throw new YamlError(`connection ${from} → ${to} 指向不存在的节点`);
+    if (typeof from !== "string" || typeof to !== "string") throw new YamlError("Every connection needs from and to");
+    if (!ids.has(from) || !ids.has(to)) throw new YamlError(`connection ${from} → ${to} points to a node that does not exist`);
     const kind = (rest.kind ?? "message") as SysEdge["kind"];
-    if (!["message", "call", "handoff", "access"].includes(kind)) throw new YamlError(`未知的连线类型：${String(kind)}`);
+    if (!["message", "call", "handoff", "access"].includes(kind)) throw new YamlError(`Unknown connection kind: ${String(kind)}`);
     doc.edges.push({ ...(rest as object), id: typeof id === "string" ? id : `e${++i}_${Date.now() % 10000}`, source: from, target: to, kind } as SysEdge);
   }
   return doc;

@@ -21,9 +21,9 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
   const text =
     e.kind === "access"
       ? e.access === "read"
-        ? "读"
-        : "读写"
-      : [e.label, e.kind === "handoff" && e.carry ? `携带 ${e.carry}` : null].filter(Boolean).join(" · ") || KIND_SHORT[e.kind];
+        ? "read"
+        : "read/write"
+      : [e.label, e.kind === "handoff" && e.carry ? `carries ${e.carry}` : null].filter(Boolean).join(" · ") || KIND_SHORT[e.kind];
 
   return (
     <>

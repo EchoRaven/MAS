@@ -1,9 +1,9 @@
 export function timeAgo(iso: string): string {
   const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
-  if (s < 60) return "刚刚";
-  if (s < 3600) return `${Math.floor(s / 60)} 分钟前`;
-  if (s < 86400) return `${Math.floor(s / 3600)} 小时前`;
-  return `${Math.floor(s / 86400)} 天前`;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
 export function downloadText(filename: string, text: string, type = "text/yaml") {
@@ -16,7 +16,7 @@ export function downloadText(filename: string, text: string, type = "text/yaml")
 }
 
 export function slug(s: string) {
-  return s.trim().replace(/[^\w一-龥-]+/g, "-").replace(/^-|-$/g, "") || "system";
+  return s.trim().replace(/[^\w\u4e00-\u9fa5-]+/g, "-").replace(/^-|-$/g, "") || "system";
 }
 
 export const usd = (n: number) => (n < 0.01 && n > 0 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`);

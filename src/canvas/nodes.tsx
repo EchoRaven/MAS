@@ -15,7 +15,7 @@ const STATUS_RING: Record<RunStatus, string> = {
   done: "ring-2 ring-success/70",
   blocked: "ring-2 ring-destructive shadow-[0_0_0_6px_hsl(var(--destructive)/0.12)]",
 };
-const STATUS_TEXT: Record<RunStatus, string> = { idle: "空闲", working: "工作中", waiting: "等待", done: "完成", blocked: "被阻塞" };
+const STATUS_TEXT: Record<RunStatus, string> = { idle: "Idle", working: "Working", waiting: "Waiting", done: "Done", blocked: "Blocked" };
 const STATUS_DOT: Record<RunStatus, string> = {
   idle: "bg-muted-foreground/40",
   working: "bg-info animate-pulse",
@@ -48,7 +48,7 @@ function Shell({ selected, status, issues, children, className, readOnly }: { se
     >
       <Handles hidden={readOnly} />
       {!!issues && (
-        <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-semibold text-white" title={`${issues} 条提醒`}>
+        <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-semibold text-white" title={`${issues} warnings`}>
           {issues}
         </span>
       )}
@@ -91,7 +91,7 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: NodePro
             <p className="truncate text-[13px] font-semibold leading-tight">{a.name}</p>
             <StatusLine status={data.status} />
           </div>
-          <p className="truncate text-[11px] text-muted-foreground">{a.role || "未填写角色"}</p>
+          <p className="truncate text-[11px] text-muted-foreground">{a.role || "No role"}</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-1 border-t border-border/70 px-3 py-2">
@@ -100,7 +100,7 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: NodePro
         {a.tools.length > 0 && <Chip>{a.tools.length} tools</Chip>}
         {a.spawn && (
           <Chip className="bg-info/10 text-info">
-            <Sparkles className="h-2.5 w-2.5" /> 招募 ≤{a.spawn.max_instances}
+            <Sparkles className="h-2.5 w-2.5" /> spawns ≤{a.spawn.max_instances}
           </Chip>
         )}
       </div>
@@ -118,7 +118,7 @@ export const HumanNode = memo(function HumanNode({ data, selected }: NodeProps<F
         </span>
         <div className="min-w-0">
           <p className="truncate text-[13px] font-semibold">{h.name}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{h.approves ? `审批 · ${h.role}` : h.role}</p>
+          <p className="truncate text-[11px] text-muted-foreground">{h.approves ? `Approver · ${h.role}` : h.role}</p>
         </div>
       </div>
     </Shell>
@@ -170,7 +170,7 @@ export const StoreNode = memo(function StoreNode({ data, selected }: NodeProps<F
   );
 });
 
-const POLICY_LABEL: Record<string, string> = { free: "自由发言", round_robin: "轮流", selector: "主持人指定", mention: "@ 才回应", bid: "竞价" };
+const POLICY_LABEL: Record<string, string> = { free: "Free", round_robin: "Round robin", selector: "Selector", mention: "On @mention", bid: "Bidding" };
 
 export const ChannelNode = memo(function ChannelNode({ data, selected }: NodeProps<FlowNode>) {
   const c = data.sys as ChannelData;
@@ -208,7 +208,7 @@ export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<F
         <Layers className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-xs font-semibold">{g.name}</span>
         <span className="text-[10px] text-muted-foreground">
-          Group · {data.members ?? 0} 个成员{g.budget_usd != null ? ` · 预算 $${g.budget_usd}` : ""}
+          Group · {data.members ?? 0} members{g.budget_usd != null ? ` · budget $${g.budget_usd}` : ""}
         </span>
         {!!data.issues && <span className="ml-auto rounded-full bg-warning px-1.5 text-[10px] font-semibold text-white">{data.issues}</span>}
       </div>

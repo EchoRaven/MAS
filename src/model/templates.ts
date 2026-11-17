@@ -37,10 +37,10 @@ class Builder {
 }
 
 function debate(): SystemDoc {
-  const b = new Builder("辩论加裁判", "正反方在同一个 room 里轮流发言，裁判每三轮评一次，给出结论即结束。");
-  b.agent("pro", 0, 0, { name: "正方", role: "为命题辩护", model: "sonnet", harness: { ...defaultAgent().harness, instructions: "你是正方。每次发言针对对方上一轮的论点，给出一个新论据。" } })
-    .agent("con", 0, 240, { name: "反方", role: "反驳命题", model: "sonnet", harness: { ...defaultAgent().harness, instructions: "你是反方。指出正方论证中最薄弱的一环。" } })
-    .agent("judge", 560, 120, { name: "裁判", role: "评判并决定何时结束", model: "opus", harness: { ...defaultAgent().harness, loop: "single_shot", instructions: "每三轮评估一次。若一方明显占优，输出 verdict；否则输出 null。" } })
+  const b = new Builder("Debate with a judge", "Pro and con take turns in one room; the judge scores every three rounds and the run ends once there is a verdict.");
+  b.agent("pro", 0, 0, { name: "Pro", role: "Argues for the motion", model: "sonnet", harness: { ...defaultAgent().harness, instructions: "You argue for the motion. Each turn, answer the other side's last point with one new argument." } })
+    .agent("con", 0, 240, { name: "Con", role: "Argues against the motion", model: "sonnet", harness: { ...defaultAgent().harness, instructions: "You argue against the motion. Point out the weakest link in the pro side's case." } })
+    .agent("judge", 560, 120, { name: "Judge", role: "Scores and decides when to stop", model: "opus", harness: { ...defaultAgent().harness, loop: "single_shot", instructions: "Evaluate every three rounds. If one side is clearly ahead, output a verdict; otherwise output null." } })
     .node("arena", "channel", 320, 140, { name: "arena", policy: "round_robin", history: "persistent" })
     .edge("pro", "arena", "message")
     .edge("con", "arena", "message")
@@ -53,30 +53,30 @@ function debate(): SystemDoc {
 
 function codingTeam(): SystemDoc {
   const b = new Builder(
-    "共享仓库的编程团队",
-    "planner 在看板上拆任务；coder（Claude Code）在共享仓库里实现；测试通过才能交给 reviewer（任意 ACP agent）；合并需要 PM 审批。",
+    "Coding team on a shared repo",
+    "The planner splits work into board tasks; the coder (Claude Code) implements them in the shared repo; work reaches the reviewer (any ACP agent) only once tests pass; merging needs PM approval.",
   );
   const native = defaultAgent().harness;
-  b.agent("planner", 0, 20, { name: "Planner", role: "拆分任务、分配到看板", model: "opus", tools: [], harness: { ...native, loop: "plan_execute", instructions: "把需求拆成可独立验证的任务卡，写到看板上并指派。" } })
+  b.agent("planner", 0, 20, { name: "Planner", role: "Splits work into tasks on the board", model: "opus", tools: [], harness: { ...native, loop: "plan_execute", instructions: "Break the request into independently verifiable task cards, post them on the board and assign them." } })
     .agent("coder", 300, 150, {
       name: "Coder",
-      role: "实现任务",
+      role: "Implements tasks",
       model: "opus",
       tools: ["run_tests"],
       triggers: ["on_state", "on_message"],
-      harness: { ...native, tier: "process", runner: "claude-code", loop: undefined, instructions: "认领看板上指派给你的任务，在 /work 中实现并让测试通过。", own_memory: "disable" },
+      harness: { ...native, tier: "process", runner: "claude-code", loop: undefined, instructions: "Pick up the board tasks assigned to you, implement them in /work and make the tests pass.", own_memory: "disable" },
     })
     .agent("reviewer", 600, 20, {
       name: "Reviewer",
-      role: "代码评审",
+      role: "Reviews code",
       model: "sonnet",
       tools: ["merge_pr"],
       triggers: ["on_handoff"],
-      harness: { ...native, tier: "process", runner: "acp", loop: undefined, command: "<任意支持 ACP 的 agent 启动命令>", instructions: "审查改动；通过则提交合并请求。" },
+      harness: { ...native, tier: "process", runner: "acp", loop: undefined, command: "<launch command of any ACP-capable agent>", instructions: "Review the change; if it is good, request a merge." },
     })
-    .node("pm", "human", 620, 320, { name: "PM", role: "批准合并" })
+    .node("pm", "human", 620, 320, { name: "PM", role: "Approves merges" })
     .node("repo", "env", 315, 330, { name: "repo", env_kind: "sandbox", image: "node:22", egress: ["registry.npmjs.org", "github.com"] })
-    .node("board", "store", 20, 250, { name: "看板", store_kind: "board", scope: "system" })
+    .node("board", "store", 20, 250, { name: "Board", store_kind: "board", scope: "system" })
     .node("team", "channel", 640, 190, { name: "team", policy: "mention" })
     .edge("planner", "board", "access", { access: "read_write" })
     .edge("coder", "board", "access", { access: "read_write" })
@@ -84,10 +84,10 @@ function codingTeam(): SystemDoc {
     .edge("reviewer", "repo", "access", { access: "read" })
     .edge("coder", "reviewer", "handoff", {
       carry: "summary",
-      label: "提交评审",
+      label: "Submit for review",
       gate: { name: "tests_pass", condition: "check: npm test", on_fail: "block", escalate_after: 3 },
     })
-    .edge("reviewer", "pm", "call", { label: "请求批准合并" })
+    .edge("reviewer", "pm", "call", { label: "Request merge approval" })
     .edge("planner", "team", "message")
     .edge("coder", "team", "message")
     .edge("reviewer", "team", "message")
@@ -98,18 +98,18 @@ function codingTeam(): SystemDoc {
 
 function research(): SystemDoc {
   const b = new Builder(
-    "动态招募的研究团队",
-    "lead 拆分问题，按需招募 searcher 并行检索，writer 汇总成报告。整个团队封装为一个 Group，对外只暴露问题和报告。",
+    "Research team with spawning",
+    "The lead splits the question and spawns searchers to work in parallel; the writer turns the findings into a report. The team is wrapped in a Group that exposes only the question and the report.",
   );
   const native = defaultAgent().harness;
-  b.group("team", 230, 0, 540, 360, { name: "研究团队", entry: "lead", output_from: "writer", budget_usd: 3 })
-    .agent("lead", 20, 50, { name: "Lead", role: "拆分问题、招募检索员", model: "opus", spawn: { template: "searcher", max_instances: 6 }, harness: { ...native, loop: "plan_execute", instructions: "把问题拆成 3-6 个子问题，每个子问题招募一个 searcher 并行检索。" } }, "team")
-    .agent("searcher", 296, 50, { name: "Searcher（模板）", role: "检索一个子问题", model: "haiku", tools: ["web_search", "fetch"], harness: { ...native, instructions: "只回答分配给你的子问题，附来源。" } }, "team")
-    .agent("writer", 160, 240, { name: "Writer", role: "汇总成报告", model: "sonnet", harness: { ...native, loop: "single_shot", instructions: "把检索结果整合成一份有来源的报告。" } }, "team")
-    .node("asker", "human", 0, 150, { name: "提问者", role: "提出研究问题", approves: false })
-    .node("kb", "store", 410, 420, { name: "知识库", store_kind: "knowledge", backend: "builtin", scope: "system", write: "none", sources: ["./docs"] })
-    .edge("asker", "team", "call", { label: "研究问题 → 报告" })
-    .edge("lead", "searcher", "call", { label: "子问题" })
+  b.group("team", 230, 0, 540, 360, { name: "Research team", entry: "lead", output_from: "writer", budget_usd: 3 })
+    .agent("lead", 20, 50, { name: "Lead", role: "Splits the question, spawns searchers", model: "opus", spawn: { template: "searcher", max_instances: 6 }, harness: { ...native, loop: "plan_execute", instructions: "Split the question into 3-6 sub-questions and spawn one searcher per sub-question to search in parallel." } }, "team")
+    .agent("searcher", 296, 50, { name: "Searcher (template)", role: "Researches one sub-question", model: "haiku", tools: ["web_search", "fetch"], harness: { ...native, instructions: "Answer only the sub-question you were given, with sources." } }, "team")
+    .agent("writer", 160, 240, { name: "Writer", role: "Writes the report", model: "sonnet", harness: { ...native, loop: "single_shot", instructions: "Combine the search results into one sourced report." } }, "team")
+    .node("asker", "human", 0, 150, { name: "Asker", role: "Poses the research question", approves: false })
+    .node("kb", "store", 410, 420, { name: "Knowledge base", store_kind: "knowledge", backend: "builtin", scope: "system", write: "none", sources: ["./docs"] })
+    .edge("asker", "team", "call", { label: "Question → report" })
+    .edge("lead", "searcher", "call", { label: "Sub-question" })
     .edge("lead", "writer", "handoff", { carry: "full" })
     .edge("writer", "kb", "access", { access: "read" });
   const writer = b.doc.nodes.find((n) => n.id === "writer")!.data as AgentData;
@@ -119,18 +119,18 @@ function research(): SystemDoc {
 }
 
 function support(): SystemDoc {
-  const b = new Builder("客服分诊转接", "分诊 agent 判断意图后转接给账单或技术专员；退款需要人工审批；按最终用户记住历史。");
+  const b = new Builder("Support triage", "A triage agent detects intent and hands off to billing or tech support; refunds need human approval; history is remembered per end user.");
   const native = defaultAgent().harness;
-  b.node("customer", "human", 0, 170, { name: "客户", role: "最终用户", approves: false })
-    .agent("triage", 220, 160, { name: "分诊", role: "识别意图并转接", model: "haiku", harness: { ...native, loop: "single_shot", instructions: "判断用户意图：账单、技术、其他。转接给对应专员。" }, modalities_in: ["text", "image"] })
-    .agent("billing", 500, 30, { name: "账单专员", role: "处理账单与退款", model: "sonnet", tools: ["issue_refund"], harness: { ...native, instructions: "核实订单后处理；退款需要审批。" } })
-    .agent("tech", 500, 290, { name: "技术专员", role: "排查技术问题", model: "sonnet", tools: ["web_search"], harness: { ...native, instructions: "按排查手册逐步定位问题。" } })
-    .node("lead", "human", 780, 50, { name: "客服主管", role: "审批退款" })
-    .node("mem", "store", 780, 310, { name: "用户记忆", store_kind: "memory", scope: "end_user", write: "auto_extract" })
+  b.node("customer", "human", 0, 170, { name: "Customer", role: "End user", approves: false })
+    .agent("triage", 220, 160, { name: "Triage", role: "Detects intent and routes", model: "haiku", harness: { ...native, loop: "single_shot", instructions: "Classify the user's intent as billing, technical or other, and hand off to the matching specialist." }, modalities_in: ["text", "image"] })
+    .agent("billing", 500, 30, { name: "Billing", role: "Handles billing and refunds", model: "sonnet", tools: ["issue_refund"], harness: { ...native, instructions: "Verify the order before acting; refunds need approval." } })
+    .agent("tech", 500, 290, { name: "Tech support", role: "Troubleshoots technical issues", model: "sonnet", tools: ["web_search"], harness: { ...native, instructions: "Work through the troubleshooting playbook step by step." } })
+    .node("lead", "human", 780, 50, { name: "Support lead", role: "Approves refunds" })
+    .node("mem", "store", 780, 310, { name: "User memory", store_kind: "memory", scope: "end_user", write: "auto_extract" })
     .edge("customer", "triage", "message")
     .edge("triage", "billing", "handoff", { carry: "summary" })
     .edge("triage", "tech", "handoff", { carry: "summary" })
-    .edge("billing", "lead", "call", { label: "退款审批" })
+    .edge("billing", "lead", "call", { label: "Refund approval" })
     .edge("billing", "mem", "access", { access: "read_write" })
     .edge("tech", "mem", "access", { access: "read_write" });
   for (const id of ["billing", "tech"]) {
@@ -147,9 +147,9 @@ export interface TemplateInfo {
 }
 
 export const TEMPLATES: TemplateInfo[] = [
-  { id: "blank", name: "空白系统", summary: "从零开始搭建", build: () => emptySystem() },
-  { id: "debate", name: "辩论加裁判", summary: "room · round_robin · 终止 policy", build: debate },
-  { id: "coding", name: "编程团队", summary: "共享仓库 · Claude Code · gate · 人工审批", build: codingTeam },
-  { id: "research", name: "研究团队", summary: "Group 封装 · 动态招募 · 知识库", build: research },
-  { id: "support", name: "客服分诊", summary: "handoff · 用户记忆 · 不可逆动作审批", build: support },
+  { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
+  { id: "debate", name: "Debate with a judge", summary: "room · round_robin · termination policy", build: debate },
+  { id: "coding", name: "Coding team", summary: "shared repo · Claude Code · gate · human approval", build: codingTeam },
+  { id: "research", name: "Research team", summary: "Group · spawn · knowledge base", build: research },
+  { id: "support", name: "Support triage", summary: "handoff · user memory · approval for irreversible actions", build: support },
 ];

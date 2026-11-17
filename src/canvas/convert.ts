@@ -29,10 +29,10 @@ export const EDGE_COLOR: Record<EdgeKind, string> = {
 };
 
 export const EDGE_LABEL: Record<EdgeKind, string> = {
-  message: "message · 异步消息",
-  call: "call · 同步调用",
-  handoff: "handoff · 移交控制",
-  access: "access · 读写 env / store",
+  message: "message · async message",
+  call: "call · sync call",
+  handoff: "handoff · hand off control",
+  access: "access · read/write env / store",
 };
 
 export function toFlowNodes(

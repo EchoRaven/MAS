@@ -70,7 +70,7 @@ function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<typeof us
     case "access":
       return (
         <li className="flex items-center gap-2 px-3 py-1 pl-14 text-xs text-muted-foreground">
-          <Database className="h-3.5 w-3.5" /> {nameOf(e.node).name} {e.op === "read" ? "读取" : "写入"} {nameOf(e.target).name}
+          <Database className="h-3.5 w-3.5" /> {nameOf(e.node).name} {e.op === "read" ? "reads" : "writes"} {nameOf(e.target).name}
           <span className="ml-auto">{time}</span>
         </li>
       );
@@ -87,7 +87,7 @@ function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<typeof us
       return (
         <li className="mx-3 my-1 flex items-center gap-2 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
           <UserCheck className="h-4 w-4" />
-          {e.resolved ? `${nameOf(e.node).name} 已批准` : `等待 ${nameOf(e.node).name} 审批（来自 ${nameOf(e.from).name}）`}
+          {e.resolved ? `${nameOf(e.node).name} approved` : `Waiting for ${nameOf(e.node).name} to approve (from ${nameOf(e.from).name})`}
           <span className="ml-auto">{time}</span>
         </li>
       );
@@ -95,14 +95,14 @@ function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<typeof us
       return (
         <li className="mx-3 my-1 flex items-center gap-2 rounded-lg bg-info/10 px-3 py-2 text-xs text-info">
           <Sparkles className="h-4 w-4" />
-          {nameOf(e.node).name} 招募了 {e.count} 个「{nameOf(e.template).name}」实例
+          {nameOf(e.node).name} spawned {e.count} × "{nameOf(e.template).name}"
           <span className="ml-auto">{time}</span>
         </li>
       );
     case "system_finished":
       return (
         <li className="mx-3 my-2 flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-xs">
-          <CheckCircle2 className="h-4 w-4 text-success" /> 系统结束：{e.reason}
+          <CheckCircle2 className="h-4 w-4 text-success" /> System finished: {e.reason}
           <span className="ml-auto">{time}</span>
         </li>
       );
@@ -128,7 +128,7 @@ function describe(e: SimEvent, n: (id: string) => string): string {
     case "approval":
       return `${n(e.node)} ${e.resolved ? "approved" : "requested by " + n(e.from)}`;
     case "usage":
-      return `${n(e.node)} in=${e.tokens_in} out=${e.tokens_out} ${usd(e.usd)}${e.estimated ? " (估算)" : ""}`;
+      return `${n(e.node)} in=${e.tokens_in} out=${e.tokens_out} ${usd(e.usd)}${e.estimated ? " (est.)" : ""}`;
     case "spawn":
       return `${n(e.node)} spawned ${e.count}× ${n(e.template)}`;
     case "system_finished":
@@ -173,7 +173,7 @@ function RunView({ doc }: { doc: SystemDoc }) {
   const done = idx >= total;
   const modelLabel = (id: string) => doc.models.find((m) => m.id === id)?.model ?? id;
   const filterItems = [
-    { value: "all", label: "全部消息" },
+    { value: "all", label: "All messages" },
     ...doc.nodes.filter((n) => n.data.kind === "channel").map((n) => ({ value: n.id, label: `# ${nameOf(n.id).name}` })),
     ...doc.nodes.filter((n) => n.data.kind === "agent" || n.data.kind === "human").map((n) => ({ value: n.id, label: nameOf(n.id).name })),
   ];
@@ -186,23 +186,23 @@ function RunView({ doc }: { doc: SystemDoc }) {
             <EntityAvatar kind="run" id={doc.id} name={doc.name} />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <Select value={doc.id} onValueChange={(id) => navigate(`/runs/${id}`)} items={systems.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="选择系统" className="max-w-56 font-semibold" />
-                <StatusBadge status={done ? "completed" : playing ? "running" : "paused"} label={done ? "已结束" : playing ? "运行中" : "已暂停"} />
+                <Select value={doc.id} onValueChange={(id) => navigate(`/runs/${id}`)} items={systems.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="Select system" className="max-w-56 font-semibold" />
+                <StatusBadge status={done ? "completed" : playing ? "running" : "paused"} label={done ? "Finished" : playing ? "Running" : "Paused"} />
               </div>
               <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <FlaskConical className="h-3 w-3" /> 模拟运行：按系统结构生成事件，没有调用任何模型
+                <FlaskConical className="h-3 w-3" /> Simulated run: events are generated from the system structure; no model is called
               </p>
             </div>
           </div>
           <dl className="flex gap-6 text-xs">
             <div>
-              <dt className="text-muted-foreground">事件</dt>
+              <dt className="text-muted-foreground">Events</dt>
               <dd className="font-medium tabular-nums">
                 {idx}/{total}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">模拟时长</dt>
+              <dt className="text-muted-foreground">Simulated time</dt>
               <dd className="font-medium tabular-nums">{elapsed.toFixed(1)}s</dd>
             </div>
             <div>
@@ -210,7 +210,7 @@ function RunView({ doc }: { doc: SystemDoc }) {
               <dd className="font-medium tabular-nums">{fmtTokens(st.tokens)}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">花费（按单价估算）</dt>
+              <dt className="text-muted-foreground">Spend (estimated from prices)</dt>
               <dd className="font-medium tabular-nums">
                 {usd(st.spent)}
                 {doc.budget.usd != null && <span className="text-muted-foreground"> / ${doc.budget.usd}</span>}
@@ -218,19 +218,19 @@ function RunView({ doc }: { doc: SystemDoc }) {
             </div>
           </dl>
           <div className="ml-auto flex items-center gap-1.5">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlaying(!playing)} disabled={done} aria-label={playing ? "暂停" : "播放"}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlaying(!playing)} disabled={done} aria-label={playing ? "Pause" : "Play"}>
               {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setIdx((i) => Math.min(total, i + 1))} disabled={done} aria-label="下一个事件">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setIdx((i) => Math.min(total, i + 1))} disabled={done} aria-label="Next event">
               <SkipForward className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setIdx(0); setPlaying(true); }} aria-label="重新开始">
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { setIdx(0); setPlaying(true); }} aria-label="Restart">
               <RotateCcw className="h-4 w-4" />
             </Button>
-            <Select value={speed} onValueChange={setSpeed} size="sm" ariaLabel="速度" items={[{ value: "1", label: "1×" }, { value: "2", label: "2×" }, { value: "5", label: "5×" }, { value: "20", label: "20×" }]} />
+            <Select value={speed} onValueChange={setSpeed} size="sm" ariaLabel="Speed" items={[{ value: "1", label: "1×" }, { value: "2", label: "2×" }, { value: "5", label: "5×" }, { value: "20", label: "20×" }]} />
             <Button variant="ghost" size="sm" asChild>
               <Link to={`/canvas/${doc.id}`}>
-                <Workflow className="mr-1.5 h-3.5 w-3.5" /> 编辑
+                <Workflow className="mr-1.5 h-3.5 w-3.5" /> Edit
               </Link>
             </Button>
           </div>
@@ -251,16 +251,16 @@ function RunView({ doc }: { doc: SystemDoc }) {
             <Tabs defaultValue="timeline" className="flex min-h-0 flex-1 flex-col">
               <div className="flex items-center gap-2 px-3 pt-3">
                 <TabsList>
-                  <TabsTrigger value="timeline">消息</TabsTrigger>
-                  <TabsTrigger value="cost">成本</TabsTrigger>
-                  <TabsTrigger value="events">事件流</TabsTrigger>
+                  <TabsTrigger value="timeline">Messages</TabsTrigger>
+                  <TabsTrigger value="cost">Cost</TabsTrigger>
+                  <TabsTrigger value="events">Events</TabsTrigger>
                 </TabsList>
-                <Select value={filter} onValueChange={setFilter} items={filterItems} ariaLabel="筛选" size="sm" className="ml-auto max-w-40" />
+                <Select value={filter} onValueChange={setFilter} items={filterItems} ariaLabel="Filter" size="sm" className="ml-auto max-w-40" />
               </div>
               <TabsContent value="timeline" className="mt-2 min-h-0 flex-1">
                 <div ref={listRef} className="h-full overflow-y-auto pb-3">
                   {shown.length === 0 ? (
-                    <p className="px-4 py-10 text-center text-sm text-muted-foreground">{idx === 0 ? "准备开始…" : "这个筛选下还没有消息"}</p>
+                    <p className="px-4 py-10 text-center text-sm text-muted-foreground">{idx === 0 ? "Starting…" : "No messages for this filter yet"}</p>
                   ) : (
                     <ul>
                       {shown.map((e, i) => (
@@ -275,10 +275,10 @@ function RunView({ doc }: { doc: SystemDoc }) {
                   <thead className="text-left text-muted-foreground">
                     <tr>
                       <th className="py-1.5 font-medium">Agent</th>
-                      <th className="py-1.5 text-right font-medium">调用</th>
-                      <th className="py-1.5 text-right font-medium">输入</th>
-                      <th className="py-1.5 text-right font-medium">输出</th>
-                      <th className="py-1.5 text-right font-medium">美元</th>
+                      <th className="py-1.5 text-right font-medium">Calls</th>
+                      <th className="py-1.5 text-right font-medium">Input</th>
+                      <th className="py-1.5 text-right font-medium">Output</th>
+                      <th className="py-1.5 text-right font-medium">USD</th>
                     </tr>
                   </thead>
                   <tbody className="tabular-nums">
@@ -292,13 +292,13 @@ function RunView({ doc }: { doc: SystemDoc }) {
                           <td className="py-1.5 text-right">{fmtTokens(p.tokens_out)}</td>
                           <td className="py-1.5 text-right">
                             {usd(p.usd)}
-                            {p.estimated && <span className="text-muted-foreground" title="harness 不上报成本，平台按单价估算">*</span>}
+                            {p.estimated && <span className="text-muted-foreground" title="The harness does not report cost; estimated from model prices">*</span>}
                           </td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
-                <p className="mt-3 text-[11px] text-muted-foreground">* 该 harness 不上报成本，由平台按模型单价估算。模拟中的 token 数是随机生成的，只用于展示界面。</p>
+                <p className="mt-3 text-[11px] text-muted-foreground">* This harness does not report cost; the platform estimates it from model prices. Token counts in the simulation are random and only for showing the UI.</p>
               </TabsContent>
               <TabsContent value="events" className="mt-2 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
                 <ol className="space-y-0.5 font-mono text-[11px]">

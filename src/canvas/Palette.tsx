@@ -6,18 +6,18 @@ import { DND_MIME } from "./FlowView";
 
 const ITEMS: { kind: NodeKind; label: string; hint: string; icon: LucideIcon }[] = [
   { kind: "agent", label: "Agent", hint: "model + harness + tools", icon: Bot },
-  { kind: "human", label: "人", hint: "审批、指导、提问", icon: User },
-  { kind: "channel", label: "Room", hint: "多方消息通道", icon: Hash },
-  { kind: "env", label: "Env", hint: "沙箱、浏览器、数据库…", icon: Box },
-  { kind: "store", label: "Store", hint: "记忆、知识库、看板", icon: Database },
-  { kind: "group", label: "Group", hint: "封装成一个子系统", icon: Layers },
+  { kind: "human", label: "Human", hint: "approve, guide, ask", icon: User },
+  { kind: "channel", label: "Room", hint: "multi-party channel", icon: Hash },
+  { kind: "env", label: "Env", hint: "sandbox, browser, database…", icon: Box },
+  { kind: "store", label: "Store", hint: "memory, knowledge, board", icon: Database },
+  { kind: "group", label: "Group", hint: "wrap as a subsystem", icon: Layers },
 ];
 
 export function Palette({ onAdd, className }: { onAdd: (kind: NodeKind) => void; className?: string }) {
   return (
     <div className={cn("flex flex-col gap-4 overflow-y-auto p-3", className)}>
       <div>
-        <p className="px-1 pb-2 text-xs text-muted-foreground">拖到画布上，或点击添加</p>
+        <p className="px-1 pb-2 text-xs text-muted-foreground">Drag onto the canvas, or click to add</p>
         <ul className="space-y-1">
           {ITEMS.map(({ kind, label, hint, icon: Icon }) => (
             <li key={kind}>
@@ -44,7 +44,7 @@ export function Palette({ onAdd, className }: { onAdd: (kind: NodeKind) => void;
         </ul>
       </div>
       <div className="px-1">
-        <p className="pb-2 text-xs text-muted-foreground">连线（从节点边缘拖出）</p>
+        <p className="pb-2 text-xs text-muted-foreground">Edges (drag from a node's edge)</p>
         <ul className="space-y-1.5 text-[11px] text-muted-foreground">
           {(["message", "call", "handoff", "access"] as const).map((k) => (
             <li key={k} className="flex items-center gap-2">
@@ -54,7 +54,7 @@ export function Palette({ onAdd, className }: { onAdd: (kind: NodeKind) => void;
               {EDGE_LABEL[k]}
             </li>
           ))}
-          <li className="pt-1">连到 env / store 自动成为 access，其余默认 message，可在右侧修改。</li>
+          <li className="pt-1">Edges to an env / store become access; others default to message. Change it in the inspector.</li>
         </ul>
       </div>
     </div>

@@ -29,7 +29,7 @@ export function NumberField({ label, value, onChange, hint, placeholder, step }:
         type="number"
         step={step}
         value={value ?? ""}
-        placeholder={placeholder ?? "不限"}
+        placeholder={placeholder ?? "No limit"}
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
         className="h-9 text-[13px]"
       />

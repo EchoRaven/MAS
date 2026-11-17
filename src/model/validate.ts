@@ -21,51 +21,51 @@ export function validate(doc: SystemDoc): Issue[] {
 
   for (const e of doc.edges) {
     if (!byId.has(e.source) || !byId.has(e.target)) {
-      issues.push({ severity: "error", message: `连线 ${e.id} 指向不存在的节点`, edgeId: e.id });
+      issues.push({ severity: "error", message: `Edge ${e.id} points to a node that does not exist`, edgeId: e.id });
     }
   }
 
   const agents = doc.nodes.filter((n) => n.data.kind === "agent") as SysNode<AgentData>[];
-  if (agents.length === 0) issues.push({ severity: "info", message: "系统里还没有 agent。从左侧拖一个进来。" });
+  if (agents.length === 0) issues.push({ severity: "info", message: "There are no agents yet. Drag one in from the left." });
 
   for (const n of agents) {
     const a = n.data;
-    const label = `「${a.name}」`;
+    const label = `"${a.name}"`;
     const runner = runnerById(a.harness.runner);
-    if (!touching(n.id).length) issues.push({ severity: "warning", message: `${label}没有任何连线，不会被唤醒，也无法和别人通信`, nodeId: n.id });
+    if (!touching(n.id).length) issues.push({ severity: "warning", message: `${label} has no connections, so it is never woken and cannot talk to anyone`, nodeId: n.id });
     if ((a.harness.tier === "native" || a.harness.tier === "sdk") && !modelIds.has(a.model)) {
-      issues.push({ severity: "error", message: `${label}引用的模型 ${a.model || "（空）"} 不在模型目录里`, nodeId: n.id });
+      issues.push({ severity: "error", message: `${label} uses model ${a.model || "(empty)"}, which is not in the model catalog`, nodeId: n.id });
     }
-    if (a.harness.tier !== "native" && !runner) issues.push({ severity: "error", message: `${label}没有选择 harness 适配器`, nodeId: n.id });
+    if (a.harness.tier !== "native" && !runner) issues.push({ severity: "error", message: `${label} has no harness adapter selected`, nodeId: n.id });
     if (a.harness.tier === "process" && !a.harness.command && a.harness.runner !== "claude-code" && a.harness.runner !== "codex") {
-      issues.push({ severity: "warning", message: `${label}是 process 级 harness，需要填写启动命令`, nodeId: n.id });
+      issues.push({ severity: "warning", message: `${label} uses a process harness and needs a launch command`, nodeId: n.id });
     }
-    if (a.harness.tier === "remote" && !a.harness.url) issues.push({ severity: "warning", message: `${label}是远程 agent，需要填写 Agent Card 地址`, nodeId: n.id });
+    if (a.harness.tier === "remote" && !a.harness.url) issues.push({ severity: "warning", message: `${label} is a remote agent and needs an Agent Card URL`, nodeId: n.id });
     if (a.harness.capabilities.context_control === "none" && (a.context.sources.some((s) => s.mode === "auto_inject") || a.context.history_strategy !== "window_then_summary")) {
-      issues.push({ severity: "info", message: `${label}的 harness 不开放上下文控制：上下文设置只通过消息前缀和 MCP tool 生效`, nodeId: n.id });
+      issues.push({ severity: "info", message: `${label}'s harness does not expose context control: context settings apply only through message prefixes and MCP tools`, nodeId: n.id });
     }
     if (a.tools.length && a.harness.capabilities.tool_injection.length === 0) {
-      issues.push({ severity: "warning", message: `${label}的 harness 不支持注入 tool，配置的 ${a.tools.length} 个 tool 用不了`, nodeId: n.id });
+      issues.push({ severity: "warning", message: `${label}'s harness cannot inject tools, so its ${a.tools.length} configured tool(s) are unusable`, nodeId: n.id });
     }
     for (const t of a.tools) {
       const tool = toolById.get(t);
       if (!tool) {
-        issues.push({ severity: "error", message: `${label}引用了不存在的 tool：${t}`, nodeId: n.id });
+        issues.push({ severity: "error", message: `${label} uses a tool that does not exist: ${t}`, nodeId: n.id });
         continue;
       }
       if (tool.needs_env && tool.needs_env !== "external") {
         const hasEnv = doc.edges.some((e) => e.kind === "access" && e.source === n.id && byId.get(e.target)?.data.kind === "env" && (byId.get(e.target)!.data as { env_kind: string }).env_kind === tool.needs_env);
-        if (!hasEnv) issues.push({ severity: "warning", message: `${label}的 tool ${t} 需要一个 ${tool.needs_env} 类型的 env，但 ${label}没有连到这样的 env`, nodeId: n.id });
+        if (!hasEnv) issues.push({ severity: "warning", message: `${label}'s tool ${t} needs a ${tool.needs_env} env, but ${label} is not connected to one`, nodeId: n.id });
       }
       if (tool.effect === "irreversible") {
         const approver = doc.edges.some((e) => e.source === n.id && byId.get(e.target)?.data.kind === "human");
-        if (!approver) issues.push({ severity: "warning", message: `${label}有不可逆动作 ${t}，但没有连到任何人做审批（默认需要人工审批）`, nodeId: n.id });
+        if (!approver) issues.push({ severity: "warning", message: `${label} has the irreversible action ${t} but is not connected to a human approver (human approval is required by default)`, nodeId: n.id });
       }
     }
     for (const s of a.context.sources) {
-      if (!byId.has(s.store)) issues.push({ severity: "error", message: `${label}的上下文来源 ${s.store} 不存在`, nodeId: n.id });
+      if (!byId.has(s.store)) issues.push({ severity: "error", message: `${label}'s context source ${s.store} does not exist`, nodeId: n.id });
     }
-    if (a.spawn && !byId.has(a.spawn.template)) issues.push({ severity: "error", message: `${label}的招募模板 ${a.spawn.template} 不存在`, nodeId: n.id });
+    if (a.spawn && !byId.has(a.spawn.template)) issues.push({ severity: "error", message: `${label}'s spawn template ${a.spawn.template} does not exist`, nodeId: n.id });
   }
 
   // modality mismatch on direct message/call/handoff edges
@@ -77,11 +77,11 @@ export function validate(doc: SystemDoc): Issue[] {
       const out = s.data.modalities_in.filter((m) => m !== "text");
       const missing = out.filter((m) => !(t.data as AgentData).modalities_in.includes(m));
       if (missing.length && (t.data as AgentData).on_unsupported === "reject") {
-        issues.push({ severity: "warning", message: `「${s.data.name}」可能转发 ${missing.join("、")}，「${t.data.name}」不支持且设为拒收`, edgeId: e.id });
+        issues.push({ severity: "warning", message: `"${s.data.name}" may forward ${missing.join(", ")}, which "${t.data.name}" does not support and is set to reject`, edgeId: e.id });
       }
     }
     if (t && (t.data.kind === "env" || t.data.kind === "store")) {
-      issues.push({ severity: "error", message: `连到 ${t.data.kind} 的连线必须是 access 类型`, edgeId: e.id });
+      issues.push({ severity: "error", message: `Edges to a ${t.data.kind} must be access edges`, edgeId: e.id });
     }
   }
 
@@ -101,7 +101,7 @@ export function validate(doc: SystemDoc): Issue[] {
   };
   for (const v of callAdj.keys()) {
     if (dfs(v)) {
-      issues.push({ severity: "error", message: "call 连线形成了环：互相同步等待会死锁，至少把一条改成 message" });
+      issues.push({ severity: "error", message: "call edges form a cycle: agents waiting on each other will deadlock. Change at least one to message" });
       break;
     }
   }
@@ -110,26 +110,26 @@ export function validate(doc: SystemDoc): Issue[] {
     if (n.data.kind === "channel") {
       const c = n.data as ChannelData;
       const members = touching(n.id).length;
-      if (members < 2) issues.push({ severity: "warning", message: `Room「${c.name}」只有 ${members} 个成员`, nodeId: n.id });
-      if (c.policy === "selector" && !c.selector) issues.push({ severity: "warning", message: `Room「${c.name}」使用 selector 策略，需要指定主持者`, nodeId: n.id });
+      if (members < 2) issues.push({ severity: "warning", message: `Room "${c.name}" has only ${members} member(s)`, nodeId: n.id });
+      if (c.policy === "selector" && !c.selector) issues.push({ severity: "warning", message: `Room "${c.name}" uses the selector policy and needs a moderator`, nodeId: n.id });
     }
     if (n.data.kind === "group") {
       const g = n.data as GroupData;
       const members = doc.nodes.filter((m) => m.parent === n.id);
-      if (!members.length) issues.push({ severity: "warning", message: `Group「${g.name}」里还没有成员`, nodeId: n.id });
-      else if (!members.some((m) => m.id === g.entry)) issues.push({ severity: "warning", message: `Group「${g.name}」没有设置入口成员`, nodeId: n.id });
+      if (!members.length) issues.push({ severity: "warning", message: `Group "${g.name}" has no members yet`, nodeId: n.id });
+      else if (!members.some((m) => m.id === g.entry)) issues.push({ severity: "warning", message: `Group "${g.name}" has no entry member`, nodeId: n.id });
     }
     if (n.data.kind === "store" || n.data.kind === "env") {
-      if (!touching(n.id).length) issues.push({ severity: "info", message: `「${nameOf(n)}」没有被任何 agent 使用`, nodeId: n.id });
+      if (!touching(n.id).length) issues.push({ severity: "info", message: `"${nameOf(n)}" is not used by any agent`, nodeId: n.id });
     }
   }
 
   for (const e of doc.edges) {
-    if (e.gate && !e.gate.condition.trim()) issues.push({ severity: "warning", message: `Gate「${e.gate.name}」没有填写条件`, edgeId: e.id });
+    if (e.gate && !e.gate.condition.trim()) issues.push({ severity: "warning", message: `Gate "${e.gate.name}" has no condition`, edgeId: e.id });
   }
 
   if (doc.budget.usd == null && doc.budget.max_rounds == null) {
-    issues.push({ severity: "warning", message: "系统没有预算或轮数上限，可能无限运行" });
+    issues.push({ severity: "warning", message: "The system has no budget or round limit and may run forever" });
   }
   return issues;
 }

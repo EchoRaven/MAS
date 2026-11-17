@@ -25,10 +25,10 @@ function YamlView({ doc, onApply }: { doc: SystemDoc; onApply: (d: SystemDoc) =>
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 p-3 md:p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-xs text-muted-foreground">画布和这段 YAML 是同一份定义。在这里修改后点「应用」，画布随之更新。</p>
+        <p className="text-xs text-muted-foreground">The canvas and this YAML are the same definition. Edit here and click Apply to update the canvas.</p>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm" disabled={!dirty} onClick={() => { setText(original); setError(null); }}>
-            还原
+            Revert
           </Button>
           <Button
             size="sm"
@@ -42,12 +42,12 @@ function YamlView({ doc, onApply }: { doc: SystemDoc; onApply: (d: SystemDoc) =>
               }
             }}
           >
-            <Check className="mr-1.5 h-3.5 w-3.5" /> 应用
+            <Check className="mr-1.5 h-3.5 w-3.5" /> Apply
           </Button>
         </div>
       </div>
       {error && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
-      <Textarea value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} aria-label="系统定义 YAML" className="min-h-0 flex-1 resize-none font-mono text-xs leading-relaxed" />
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} aria-label="System YAML" className="min-h-0 flex-1 resize-none font-mono text-xs leading-relaxed" />
     </div>
   );
 }
@@ -104,13 +104,13 @@ function Editor({ doc }: { doc: SystemDoc }) {
             value={doc.id}
             onValueChange={(id) => navigate(`/canvas/${id}`)}
             items={systems.map((s) => ({ value: s.id, label: s.name }))}
-            ariaLabel="选择系统"
+            ariaLabel="Select system"
             className="max-w-64"
           />
-          <div className="flex rounded-full bg-secondary p-0.5" role="tablist" aria-label="视图">
+          <div className="flex rounded-full bg-secondary p-0.5" role="tablist" aria-label="View">
             {(
               [
-                ["canvas", "画布", Workflow],
+                ["canvas", "Canvas", Workflow],
                 ["yaml", "YAML", Code2],
               ] as const
             ).map(([v, label, Icon]) => (
@@ -132,7 +132,7 @@ function Editor({ doc }: { doc: SystemDoc }) {
               setInspectorOpen(true);
             }}
             className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs hover:bg-secondary"
-            title="查看全部检查结果"
+            title="View all check results"
           >
             {errors > 0 && (
               <span className="flex items-center gap-1 text-destructive">
@@ -146,17 +146,17 @@ function Editor({ doc }: { doc: SystemDoc }) {
             )}
             {errors + warnings === 0 && (
               <span className="flex items-center gap-1 text-success">
-                <Check className="h-3.5 w-3.5" /> 检查通过
+                <Check className="h-3.5 w-3.5" /> No issues
               </span>
             )}
           </button>
           <div className="ml-auto flex gap-2">
             <Button variant="outline" size="sm" onClick={() => downloadText(`${slug(doc.name)}.mas.yaml`, toYaml(doc))}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> 导出
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Export
             </Button>
             <Button size="sm" asChild>
               <Link to={`/runs/${doc.id}`}>
-                <PlayCircle className="mr-1.5 h-3.5 w-3.5" /> 模拟运行
+                <PlayCircle className="mr-1.5 h-3.5 w-3.5" /> Simulate
               </Link>
             </Button>
           </div>
@@ -179,7 +179,7 @@ function Editor({ doc }: { doc: SystemDoc }) {
               />
               {!inspectorOpen && (
                 <Button variant="outline" size="sm" className="absolute right-3 top-3" onClick={() => setInspectorOpen(true)}>
-                  打开设置面板
+                  Open inspector
                 </Button>
               )}
             </div>

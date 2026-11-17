@@ -31,10 +31,10 @@ function rng(seed: string) {
 }
 
 const PHRASES = {
-  message: ["同步一下进展", "这一步的结果在这里", "我这边完成了，交给你继续", "发现一个问题，需要你看一下", "补充一点背景"],
-  call: ["请帮我处理这个子任务", "需要你的判断", "请确认后回复"],
-  handoff: ["任务移交，附上摘要", "这一阶段完成，后续由你负责"],
-  reply: ["已处理，结果如下", "完成", "已确认"],
+  message: ["Quick progress update", "Here are the results of this step", "Done on my side, over to you", "Found an issue, please take a look", "Some extra background"],
+  call: ["Please handle this subtask", "I need your judgment", "Please confirm and reply"],
+  handoff: ["Handing off, summary attached", "This phase is done; you own the rest"],
+  reply: ["Handled, results below", "Done", "Confirmed"],
 };
 
 export interface SimResult {
@@ -86,7 +86,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
   for (const h of starters) {
     for (const e of out(h.id).filter((x) => x.kind !== "access")) {
       const isRoom = byId.get(e.target)?.data.kind === "channel";
-      emit({ type: "message", from: h.id, to: e.target, edge: e.id, room: isRoom ? e.target : undefined, kind: e.kind, text: "这是任务说明，请开始。" });
+      emit({ type: "message", from: h.id, to: e.target, edge: e.id, room: isRoom ? e.target : undefined, kind: e.kind, text: "Here is the task brief. Please begin." });
       if (isRoom) {
         // the room's first agent member picks it up
         const first = roomMembers(e.target).find((m) => byId.get(m)?.data.kind === "agent");
@@ -116,11 +116,11 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
   let finished = "";
   while (queue.length) {
     if (rounds >= maxRounds) {
-      finished = "达到轮数上限";
+      finished = "Round limit reached";
       break;
     }
     if (spent >= budgetUsd) {
-      finished = "超出预算";
+      finished = "Over budget";
       break;
     }
     const job = queue.shift()!;
@@ -134,7 +134,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
       emit({ type: "approval", node: node.id, from: job.from ?? "", resolved: true }, 2 + rand() * 2);
       emit({ type: "status", node: node.id, status: "idle" }, 0.1);
       if (job.from && job.via?.kind === "call") {
-        emit({ type: "message", from: node.id, to: job.from, kind: "reply", text: h.approves ? "批准。" : "收到。" });
+        emit({ type: "message", from: node.id, to: job.from, kind: "reply", text: h.approves ? "Approved." : "Noted." });
       }
       continue;
     }
@@ -151,10 +151,10 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
       const tpl = byId.get(a.spawn.template) as SysNode<AgentData>;
       emit({ type: "status", node: tpl.id, status: "working" });
       for (let i = 1; i <= count; i++) {
-        emit({ type: "message", from: node.id, to: tpl.id, kind: "call", text: `子问题 ${i}：请检索并附上来源` }, 0.2);
-        for (const tool of tpl.data.tools.slice(0, 1)) emit({ type: "tool", node: tpl.id, tool, args: `{"query": "子问题 ${i}"}`, result: "3 条结果" }, 0.3);
+        emit({ type: "message", from: node.id, to: tpl.id, kind: "call", text: `Sub-question ${i}: search and cite sources` }, 0.2);
+        for (const tool of tpl.data.tools.slice(0, 1)) emit({ type: "tool", node: tpl.id, tool, args: `{"query": "sub-question ${i}"}`, result: "3 results" }, 0.3);
         usage(tpl, 0.5);
-        emit({ type: "message", from: tpl.id, to: node.id, kind: "reply", text: `子问题 ${i} 的结论与来源` }, 0.3);
+        emit({ type: "message", from: tpl.id, to: node.id, kind: "reply", text: `Findings and sources for sub-question ${i}` }, 0.3);
       }
       emit({ type: "status", node: tpl.id, status: "done" });
     }
@@ -185,7 +185,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
         const tries = (gateTries.get(e.id) ?? 0) + 1;
         gateTries.set(e.id, tries);
         const passed = tries >= 2;
-        emit({ type: "gate", edge: e.id, gate: e.gate.name, passed, reason: passed ? `${e.gate.condition || "条件"} 通过` : `${e.gate.condition || "条件"} 未通过：2 个失败` });
+        emit({ type: "gate", edge: e.id, gate: e.gate.name, passed, reason: passed ? `${e.gate.condition || "condition"} passed` : `${e.gate.condition || "condition"} failed: 2 failures` });
         if (!passed) {
           emit({ type: "status", node: node.id, status: "blocked" }, 0.2);
           queue.push({ node: node.id, from: job.from, via: job.via });
@@ -213,7 +213,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
         continue;
       }
       const to = resolve(e.target);
-      const text = e.kind === "call" ? `${e.label ? e.label + "：" : ""}${pick(PHRASES.call)}` : e.kind === "handoff" ? `${pick(PHRASES.handoff)}（携带 ${e.carry ?? "summary"}）` : pick(PHRASES.message);
+      const text = e.kind === "call" ? `${e.label ? e.label + ": " : ""}${pick(PHRASES.call)}` : e.kind === "handoff" ? `${pick(PHRASES.handoff)} (carrying ${e.carry ?? "summary"})` : pick(PHRASES.message);
       emit({ type: "message", from: node.id, to: e.target, edge: e.id, kind: e.kind, text });
       if (e.kind === "call") {
         emit({ type: "status", node: node.id, status: "waiting" }, 0.1);
@@ -232,7 +232,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
     const last = [...events].reverse().find((x) => x.type === "status" && x.node === node.id);
     if (!handedOff || (last?.type === "status" && last.status === "working")) emit({ type: "status", node: node.id, status: "done" }, 0.2);
   }
-  if (!finished) finished = queue.length ? "停止" : "全部空闲";
+  if (!finished) finished = queue.length ? "Stopped" : "All idle";
   emit({ type: "system_finished", reason: finished });
   return { events, finishedReason: finished };
 }
