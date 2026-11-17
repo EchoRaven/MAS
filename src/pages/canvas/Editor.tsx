@@ -203,7 +203,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           </div>
         )}
       </div>
-      <ImportDialog kind={importing} onClose={() => setImporting(null)} onImport={(items) => { add(items); flash(`Added ${items.length} component${items.length > 1 ? "s" : ""}`); }} />
+      <ImportDialog kind={importing} doc={doc} onClose={() => setImporting(null)} onImport={(items) => { add(items); flash(`Added ${items.length} component${items.length > 1 ? "s" : ""}`); }} />
     </CanvasContext.Provider>
   );
 }

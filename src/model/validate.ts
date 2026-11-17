@@ -189,7 +189,11 @@ export function validate(doc: SystemDoc): Issue[] {
         if (!doc.edges.some((e) => e.source === n.id && e.source_port === p.id)) add("warning", `Group "${g.name}" input "${p.id}" is not wired to anything inside`, { nodeId: n.id });
         if (p.required && !doc.edges.some((e) => e.target === n.id && e.target_port === p.id)) add("warning", `Group "${g.name}" input "${p.id}" is required but nothing outside feeds it`, { nodeId: n.id });
       }
-      for (const p of g.interface.outputs) {
+      if (g.iterate) {
+        if (!(g.iterate.max_rounds >= 1)) add("error", `Group "${g.name}" repeats but its round limit is not a positive number`, { nodeId: n.id });
+        if (g.iterate.max_rounds > 100 && !g.iterate.until) add("warning", `Group "${g.name}" repeats ${g.iterate.max_rounds} times with no stop condition`, { nodeId: n.id });
+      }
+            for (const p of g.interface.outputs) {
         if (!doc.edges.some((e) => e.target === n.id && e.target_port === p.id)) add("warning", `Group "${g.name}" output "${p.id}" is never written from inside`, { nodeId: n.id });
       }
     }

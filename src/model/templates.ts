@@ -1,70 +1,11 @@
-import { defaultAgent, defaultBinding, defaultData, defaultRoom, emptySystem, RUNNERS } from "./defaults";
-import { interfaceOf, isResource, port } from "./ports";
-import { defaultPlugin } from "./plugins";
-import type { AgentData, EdgeKind, NodeData, NodeKind, PluginPreset, PluginSpec, SchemaSpec, SysEdge, SystemDoc } from "./types";
-import { RES_PORT } from "./types";
+import { Builder, native, type TemplateInfo } from "./builder";
+import { emptySystem } from "./defaults";
+import { PAPER_TEMPLATES } from "./papers";
+import { port } from "./ports";
+import type { AgentData, SystemDoc } from "./types";
 
-type Patch<D> = Partial<D> & Record<string, unknown>;
+export type { TemplateInfo } from "./builder";
 
-class Builder {
-  doc: SystemDoc;
-  private n = 0;
-  constructor(name: string, description: string) {
-    this.doc = emptySystem(name);
-    this.doc.description = description;
-  }
-  agent(id: string, x: number, y: number, patch: Patch<AgentData>, parent?: string) {
-    const base = defaultAgent(String(patch.name ?? id));
-    const harness = { ...base.harness, ...(patch.harness ?? {}) };
-    const runner = RUNNERS.find((r) => r.id === harness.runner);
-    if (runner) harness.capabilities = { ...runner.caps };
-    const data: AgentData = { ...base, ...patch, harness } as AgentData;
-    this.doc.nodes.push({ id, position: { x, y }, parent, data });
-    return this;
-  }
-  node(id: string, kind: Exclude<NodeKind, "agent">, x: number, y: number, patch: Record<string, unknown> = {}, parent?: string) {
-    const data = { ...defaultData(kind), ...patch } as NodeData;
-    this.doc.nodes.push({ id, position: { x, y }, parent, data });
-    return this;
-  }
-  room(id: string, x: number, y: number, name: string, room: Partial<NonNullable<ReturnType<typeof defaultRoom>["room"]>>, parent?: string) {
-    const data = defaultRoom(name);
-    data.room = { ...data.room!, ...room };
-    this.doc.nodes.push({ id, position: { x, y }, parent, data });
-    return this;
-  }
-  plugin(id: string, preset: PluginPreset, x: number, y: number, patch: { name?: string } & Partial<PluginSpec> = {}, parent?: string) {
-    const d = defaultPlugin(preset);
-    const { name, ...spec } = patch;
-    this.doc.nodes.push({ id, position: { x, y }, parent, data: { ...d, name: name ?? d.name, spec: { ...d.spec, ...spec } } });
-    return this;
-  }
-  schema(s: SchemaSpec) {
-    this.doc.schemas.push(s);
-    return this;
-  }
-  /** Ports default to the first output / input; inside a group its own ports are used. */
-  edge(source: string, target: string, kind: EdgeKind, extra: Partial<SysEdge> = {}) {
-    const find = (id: string) => this.doc.nodes.find((n) => n.id === id)!;
-    const s = find(source);
-    const t = find(target);
-    let source_port = extra.source_port;
-    let target_port = extra.target_port;
-    if (kind === "access" || isResource(t.data.kind)) {
-      source_port = RES_PORT;
-      target_port = RES_PORT;
-      kind = "access";
-      extra = { binding: defaultBinding(t.data), ...extra };
-    } else {
-      source_port ??= s.data.kind === "group" && t.parent === s.id ? interfaceOf(s.data).inputs[0].id : interfaceOf(s.data).outputs[0].id;
-      target_port ??= t.data.kind === "group" && s.parent === t.id ? interfaceOf(t.data).outputs[0].id : interfaceOf(t.data).inputs[0].id;
-    }
-    this.doc.edges.push({ id: `e${++this.n}`, ...extra, source, target, kind, source_port, target_port });
-    return this;
-  }
-}
-
-const native = () => defaultAgent().harness;
 
 function debate(): SystemDoc {
   const b = new Builder("Debate with a judge", "Pro and con take turns in one room; the judge scores every three rounds. Its output wrapper parses a Verdict and the run ends once there is one.");
@@ -329,13 +270,6 @@ function blackboard(): SystemDoc {
   return b.doc;
 }
 
-export interface TemplateInfo {
-  id: string;
-  name: string;
-  summary: string;
-  build: () => SystemDoc;
-}
-
 export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
@@ -345,7 +279,11 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "invoices", name: "Invoice extraction", summary: "model + function only, no agents", build: invoices },
   { id: "supervisor", name: "Supervisor and workers", summary: "hierarchy · reflexion · text-to-SQL · hybrid RAG · memory lifecycle", build: supervisor },
   { id: "blackboard", name: "Blackboard", summary: "coordination through shared state only", build: blackboard },
+  ...PAPER_TEMPLATES,
 ];
+
+/** The patterns seeded into a new browser; paper reproductions are offered from Templates. */
+export const SEED_TEMPLATES = TEMPLATES.filter((t) => t.id !== "blank" && !t.paper);
 
 /** Names of the templates seeded by earlier versions (0.1, Chinese UI); stored copies are replaced on upgrade. */
 export const LEGACY_SEED_NAMES = ["\u8fa9\u8bba\u52a0\u88c1\u5224", "\u5171\u4eab\u4ed3\u5e93\u7684\u7f16\u7a0b\u56e2\u961f", "\u52a8\u6001\u62db\u52df\u7684\u7814\u7a76\u56e2\u961f", "\u5ba2\u670d\u5206\u8bca\u8f6c\u63a5"];

@@ -95,8 +95,22 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
   const rrIndex = new Map<string, number>();
   const spawned = new Set<string>();
   const groupCaller = new Map<string, { from: string; edge: SysEdge }>();
+  const groupRound = new Map<string, number>();
   const queue: Job[] = [];
+  // a function that joins "all" runs once every required input has arrived
+  const arrived = new Map<string, Set<string>>();
   const enqueue = (j: Job) => {
+    const n = byId.get(j.node);
+    if (n?.data.kind === "function" && n.data.join === "all" && j.port) {
+      const got = arrived.get(j.node) ?? new Set<string>();
+      got.add(j.port);
+      arrived.set(j.node, got);
+      const need = n.data.interface.inputs.filter((p) => p.required).map((p) => p.id);
+      if (need.some((p) => !got.has(p))) return;
+      arrived.delete(j.node);
+      queue.push(j);
+      return;
+    }
     if (!queue.some((q) => q.node === j.node)) queue.push(j);
   };
 
@@ -117,7 +131,25 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
           return deliver(x, g.id, text, depth + 1).map((j) => ({ ...j, via: e.kind === "call" ? x : j.via }));
         });
       }
-      // a member wrote the group's output
+      // a member wrote the group's output: another round, or out
+      const it = g.data.kind === "group" ? g.data.iterate : null;
+      if (it) {
+        const round = (groupRound.get(g.id) ?? 1) + 1;
+        // with no condition it runs every round; with one, the simulation lets it hold after a seeded number of rounds
+        const stopAt = it.until ? Math.min(it.max_rounds, 1 + Math.floor(rand() * 3)) : it.max_rounds;
+        if (round <= stopAt) {
+          groupRound.set(g.id, round);
+          emit({ type: "transform", at: g.id, label: `round ${round} of ≤${it.max_rounds}`, detail: it.until ? `until ${it.until} — not yet` : "next round" }, 0.15);
+          const inputs = interfaceOf(g.data).inputs.map((p) => p.id);
+          const back = doc.edges.filter((x) => x.source === g.id && inputs.includes(x.source_port));
+          return back.flatMap((x) => {
+            emit({ type: "message", from: g.id, to: x.target, edge: x.id, port: x.target_port, kind: x.kind, text: it.feed === "input_and_output" ? "Question and everyone's answers" : text }, 0.1);
+            return deliver(x, g.id, text, depth + 1);
+          });
+        }
+        emit({ type: "transform", at: g.id, label: "rounds done", detail: it.until ? `${it.until} holds` : `${it.max_rounds} rounds` }, 0.1);
+        groupRound.delete(g.id);
+      }
       const next = doc.edges.filter((x) => x.source === g.id && x.source_port === e.target_port);
       const caller = groupCaller.get(g.id);
       if (!next.length && caller) {
@@ -187,7 +219,8 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
     const rooms = accessOf(h.id).filter((e) => isRoom(e.target));
     if (!outs.length && !rooms.length) continue;
     if (doc.edges.some((e) => e.target === h.id && e.kind !== "access") && !outs.length) continue;
-    for (const e of outs.slice(0, 1)) {
+    // a starting human sends on each of their outputs (a broadcast reaches every target)
+    for (const e of outs.slice(0, 6)) {
       markSent(e);
       emit({ type: "message", from: h.id, to: e.target, edge: e.id, port: e.target_port, kind: e.kind, text: "Here is the task brief. Please begin." });
       for (const j of deliver(e, h.id, "brief")) enqueue(j);
@@ -222,9 +255,12 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
 
     if (d.kind === "human") {
       const h = d as HumanData;
-      emit({ type: "status", node: node.id, status: "waiting" });
-      emit({ type: "approval", node: node.id, from: job.from ?? "", resolved: false });
-      emit({ type: "approval", node: node.id, from: job.from ?? "", resolved: true }, 2 + rand() * 2);
+      // only a call to someone who approves is an approval; anything else is just received
+      if (job.via?.kind === "call" && h.approves) {
+        emit({ type: "status", node: node.id, status: "waiting" });
+        emit({ type: "approval", node: node.id, from: job.from ?? "", resolved: false });
+        emit({ type: "approval", node: node.id, from: job.from ?? "", resolved: true }, 2 + rand() * 2);
+      } else emit({ type: "status", node: node.id, status: "done" }, 0.2);
       emit({ type: "status", node: node.id, status: "idle" }, 0.1);
       if (job.from && job.via?.kind === "call") emit({ type: "message", from: node.id, to: job.from, edge: job.via.id, kind: "reply", text: h.approves ? "Approved." : "Noted." });
       continue;

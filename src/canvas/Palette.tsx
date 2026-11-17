@@ -8,7 +8,9 @@ import { DND_MIME, type DragPayload } from "./FlowView";
 import { KIND_STYLE } from "./kinds";
 import { PALETTE, type PaletteEntry } from "./presets";
 
-export type ImportKind = "agent" | "env" | "plugin";
+import type { ImportKind } from "./importers";
+
+export type { ImportKind } from "./importers";
 
 /** Toolbar groups, top to bottom. */
 const GROUPS: NodeKind[][] = [["agent", "model", "function"], ["human"], ["env", "plugin"], ["group"]];

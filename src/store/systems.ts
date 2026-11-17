@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { LEGACY_SEED_NAMES, TEMPLATES } from "@/model/templates";
+import { LEGACY_SEED_NAMES, SEED_TEMPLATES, TEMPLATES } from "@/model/templates";
 import { newId } from "@/model/defaults";
 import { migrateDoc } from "@/model/migrate";
 import type { SystemDoc } from "@/model/types";
@@ -52,7 +52,7 @@ function loadOrSeed(): SystemDoc[] {
 }
 
 function seed(): SystemDoc[] {
-  return TEMPLATES.filter((t) => t.id !== "blank").map((t) => t.build());
+  return SEED_TEMPLATES.map((t) => t.build());
 }
 
 interface SystemsState {

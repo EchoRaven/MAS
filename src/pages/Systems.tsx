@@ -11,6 +11,7 @@ import { downloadText, slug, timeAgo } from "@/lib/format";
 import { TEMPLATES } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
 import { validate } from "@/model/validate";
+import { conformSystem } from "@/model/conformance";
 import { fromYaml, toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
 
@@ -138,7 +139,13 @@ export function SystemsPage() {
 
   const onImport = async (file: File) => {
     try {
-      const doc = importDoc(fromYaml(await file.text()));
+      const parsed = fromYaml(await file.text());
+      // every agent, plugin, function and imported env in the file must meet its contract
+      const failing = conformSystem(parsed)
+        .filter((x) => !x.report.passed)
+        .map((x) => `${x.name} (${x.report.contract}): ${x.report.rules.filter((r) => !r.ok && r.severity === "error").map((r) => r.label + (r.detail ? ` — ${r.detail}` : "")).join("; ")}`);
+      if (failing.length) throw new Error(`Not imported: ${failing.length} component${failing.length > 1 ? "s do" : " does"} not conform. ${failing.join(" | ")}`);
+      const doc = importDoc(parsed);
       setImportError(null);
       navigate(`/canvas/${doc.id}`);
     } catch (err) {

@@ -154,6 +154,51 @@ An `env.db` entry controls how agents may query a database:
 
 Every component and edge has an "Edit as YAML" view in the inspector, which covers everything the forms do not. Applying it replaces the definition, as long as the component's `kind` stays the same (and, for an edge, its ends are existing components).
 
+## Conformance: the gate for every import
+
+Nothing joins a system unless it meets its contract. Every importer first converts its source format to the contract, then checks it against a named list of rules (`src/model/conformance.ts`):
+
+- An **error** rule that fails blocks the import.
+- A **warning** rule that fails is shown but does not block.
+
+This applies to:
+
+- importing a component from the canvas
+- importing a whole system YAML, which is refused if any component fails
+
+| Contract | Error rules (all must pass) | Warning rules |
+| --- | --- | --- |
+| `mas-agent/1` | **Identity:** has a name.<br>**Harness:** known adapter, tier matches the adapter, launch command for process harnesses, endpoint URL for remote ones, `path:attr` for LangGraph.<br>**Capabilities:** declared with valid values.<br>**Interface:** at least one input and one output; ports are lowercase identifiers, unique, of a known type.<br>**Code:** known modalities, valid stages, hooks and loop. | JSON schemas it names exist in the system; tools it names are in the catalog |
+| `mas-plugin/1` | **Identity:** has a name.<br>**Scope and backend:** valid scope; backend with what it needs (an HTTP URL, an MCP URL or command, a code command).<br>**Tools:** identifier names, unique, with a declared effect.<br>**Code:** valid hooks; valid pipeline steps (known method, or custom with code).<br>**Purpose:** provides tools, hooks or a pipeline. | Every tool has a description |
+| `mas-env/1` | **Identity:** id, name, a known kind.<br>**Lifecycle:** a health check.<br>**Exposes:** an MCP server or an HTTP base; HTTP bases are URLs; MCP transport with a URL or start command; unique tool names.<br>**Secrets:** none in the manifest. | Has a reset; says how to start; lists its MCP tools; an OAuth MCP server has a login route |
+| `mas-function/1` | **Identity:** has a name.<br>**Code:** supported language, not empty.<br>**Interface:** valid, as for agents.<br>**Join:** `join` is `any` or `all`. | With `join: all`, the awaited inputs are marked required; with several outputs, the code returns `{ <output>: value }` |
+
+Built-in templates are held to the same contracts; a test fails if any of their components does not conform.
+
+### `mas-function/1`
+
+```yaml
+contract: mas-function/1
+name: Route by priority
+join: any                  # any | all (wait for every required input)
+interface:
+  inputs:  [{ id: ticket, type: json }]
+  outputs: [{ id: urgent, type: json }, { id: normal, type: json }]
+fn: { lang: js, code: "return input.priority >= 3 ? { urgent: input } : { normal: input };" }
+```
+
+A bare source file can be imported too. The language comes from the extension:
+
+| Extension | Language |
+| --- | --- |
+| `.js`, `.mjs`, `.ts` | js |
+| `.py` | python |
+| `.jsonata` | jsonata |
+| `.hbs` | template |
+| `.prompt` | llm |
+
+A bare file gets the default interface (`in` → `out`). It is checked like any other function.
+
 ## Import contracts
 
 Each contract has its own importer in `src/model/`.

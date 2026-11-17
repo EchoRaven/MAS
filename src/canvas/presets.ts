@@ -5,7 +5,12 @@ import { Bot, Box, Layers, Puzzle, Sparkles, SquareFunction, User, type LucideIc
 import { defaultAgent, defaultData, defaultRoom, runnerById } from "@/model/defaults";
 import { defaultDbQuery } from "@/model/pipelines";
 import { defaultPlugin, PLUGIN_PRESETS } from "@/model/plugins";
-import type { AgentData, EnvData, EnvKind, NodeData, NodeKind } from "@/model/types";
+import { port } from "@/model/ports";
+import type { AgentData, EnvData, EnvKind, FunctionNodeData, NodeData, NodeKind, PortSpec } from "@/model/types";
+
+function fnNode(name: string, code: string, inputs: PortSpec[], outputs: PortSpec[]): FunctionNodeData {
+  return { kind: "function", name, fn: { lang: "js", code }, join: "any", interface: { inputs, outputs } };
+}
 
 export interface Variant {
   id: string;
@@ -21,7 +26,7 @@ export interface PaletteEntry {
   icon: LucideIcon;
   variants?: Variant[];
   /** offers "Import…" at the end of its menu */
-  importable?: "agent" | "env" | "plugin";
+  importable?: "agent" | "env" | "plugin" | "function";
 }
 
 function agentWith(runner: string, name: string): AgentData {
@@ -51,7 +56,19 @@ export const PALETTE: PaletteEntry[] = [
     ],
   },
   { kind: "model", label: "Model call", hint: "One model call: no loop, no tools", icon: Sparkles },
-  { kind: "function", label: "Function", hint: "Code between components: transform, route, merge", icon: SquareFunction },
+  {
+    kind: "function",
+    label: "Function",
+    hint: "Code between components: transform, route, merge",
+    icon: SquareFunction,
+    importable: "function",
+    variants: [
+      { id: "transform", label: "Transform", hint: "Map one value to another", make: () => fnNode("Transform", "return input;", [port("in", "any")], [port("out", "any")]) },
+      { id: "router", label: "Router", hint: "Send each value to one of several outputs", make: () => fnNode("Router", "return input.ok ? { yes: input } : { no: input };", [port("in", "json")], [port("yes", "json"), port("no", "json")]) },
+      { id: "merge", label: "Merge", hint: "Wait for every input, then combine", make: () => ({ ...fnNode("Merge", "return { ...input };", [port("a", "any", { required: true }), port("b", "any", { required: true })], [port("out", "json")]), join: "all" as const }) },
+      { id: "filter", label: "Filter", hint: "Pass only what matches; null drops it", make: () => fnNode("Filter", "return input.score > 0.5 ? input : null;", [port("in", "json")], [port("out", "json")]) },
+    ],
+  },
   { kind: "human", label: "Human", hint: "Approves, guides, answers", icon: User },
   {
     kind: "env",

@@ -338,6 +338,12 @@ export interface GroupData {
   interface: Interface;
   budget_usd: number | null;
   on_error: "retry_then_fail_up" | "fail_up" | "ignore";
+  /**
+   * Run the group in rounds: what reaches an output port goes back in through
+   * the inputs until `until` holds (an expression over output, round) or
+   * max_rounds is reached. Debates, multi-turn dialogues, review loops.
+   */
+  iterate?: { max_rounds: number; until?: string | null; feed?: "output" | "input_and_output" } | null;
 }
 
 /** A bare model call as a component: no loop, no tools. One input in, one completion out. */

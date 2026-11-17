@@ -61,7 +61,11 @@ export function EdgeInspector({ e, doc, set, scope }: { e: SysEdge; doc: SystemD
   if (e.kind === "access") {
     return (
       <Body>
-        <SelectField label="Access" value={e.access ?? "read_write"} onChange={(access) => set({ access })} items={opts([["read", "Read-only"], ["read_write", "Read and write"]])} />
+        <SelectField
+          label="Access"
+          value={e.access ?? "read_write"}
+          // read-only also stops write-back, so the two never disagree
+          onChange={(access) => set(access === "read" && e.binding?.write && e.binding.write.when !== "never" ? { access, binding: { ...e.binding, write: { when: "never" } } } : { access })} items={opts([["read", "Read-only"], ["read_write", "Read and write"]])} />
         <BindingEditor binding={e.binding ?? defaultBinding(target.data)} onChange={(binding) => set({ binding })} target={target.data} access={e.access ?? "read_write"} doc={doc} />
         <GateEditor e={e} set={set} />
       </Body>
