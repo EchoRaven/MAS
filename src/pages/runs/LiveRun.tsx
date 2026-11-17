@@ -18,7 +18,8 @@ const STATUS_LABEL: Record<string, string> = { running: "Running", waiting: "Wai
 
 export function LiveRun({ doc, bar }: { doc: SystemDoc; bar: (status: React.ReactNode, controls: React.ReactNode, stats: React.ReactNode) => React.ReactNode }) {
   const live = useLiveRun(doc);
-  const [input, setInput] = useState("");
+  // a demo's "Run it yourself" arrives with its task in ?input=
+  const [input, setInput] = useState(() => new URLSearchParams(window.location.search).get("input") ?? "");
   const [dry, setDry] = useState(false);
   const shownDoc = live.system ?? doc;
   const nameOf = useNames(shownDoc);

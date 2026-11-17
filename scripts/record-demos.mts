@@ -90,6 +90,9 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-tradingagents": {
+    input: "Should we trade NVIDIA (NVDA) today? Use what you know up to your training cutoff.",
+  },
   "paper-dylan": {
     // a question without one right answer, so the first layer disagrees and the selection shows
     // (a question everyone gets right stops after layer 1: the early stop, which the tests cover)

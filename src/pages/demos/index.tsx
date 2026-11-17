@@ -78,6 +78,7 @@ const ORDER = [
   "paper-agentcoder",
   "paper-mapcoder",
   "paper-voyager",
+  "paper-tradingagents",
   "paper-chatdev",
   "paper-metagpt",
   "paper-magentic-one",

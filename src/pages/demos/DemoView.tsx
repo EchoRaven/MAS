@@ -2,7 +2,7 @@
 // canvas and in the log, the result, and how the reproduction maps.
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CopyPlus, ExternalLink } from "lucide-react";
+import { CopyPlus, ExternalLink, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { CanvasContext } from "@/canvas/context";
@@ -112,6 +112,9 @@ export function DemoView({ demo }: { demo: Demo }) {
               <Stat label="Cost">{usd(demo.run.usd)}</Stat>
               <Stat label="Wall time">{Math.round(demo.events[demo.events.length - 1]?.t ?? 0)}s</Stat>
             </dl>
+            <Button size="sm" onClick={() => navigate(`/runs/${importDoc({ ...demo.system, name: `${demo.name} (from demo)` }).id}?input=${encodeURIComponent(demo.input)}`)} title="Copy this system and open it in Runs with the same task: run it, or change the task first">
+              <PlayCircle className="mr-1.5 h-3.5 w-3.5" /> Run it yourself
+            </Button>
             <Button size="sm" variant="outline" onClick={() => navigate(`/canvas/${importDoc({ ...demo.system, name: `${demo.name} (from demo)` }).id}`)}>
               <CopyPlus className="mr-1.5 h-3.5 w-3.5" /> Open a copy on the canvas
             </Button>
