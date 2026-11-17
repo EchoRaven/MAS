@@ -45,6 +45,8 @@ export interface EvalRecord {
   /** chosen models of the system served by others */
   model_map?: Record<string, string>;
   status: "running" | "finished" | "stopped";
+  /** why it stopped on its own, when it did */
+  stop_reason?: string;
   started_at: string;
   finished_at?: string;
   cases: EvalCaseResult[];

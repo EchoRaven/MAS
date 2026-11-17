@@ -298,6 +298,11 @@ function Evals({ systemId }: { systemId: string }) {
                 )}
               </div>
             </div>
+            {ev.stop_reason && (
+              <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive" role="alert">
+                {ev.stop_reason}
+              </p>
+            )}
             <table className="mt-4 w-full table-fixed text-left text-[13px]">
               <thead className="text-xs text-muted-foreground">
                 <tr className="border-b border-border/70">

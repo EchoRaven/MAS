@@ -79,6 +79,24 @@ describe("evaluations", () => {
     expect(st.byCase.get(0)).toEqual({ passed: 1, graded: 2 });
   });
 
+  it("stops early when every run fails with the same account error, and says so", async () => {
+    // a provider with a key that is refused: openai_compatible against a server that answers 401
+    const http = await import("node:http");
+    const server = http.createServer((_q, res) => res.writeHead(401, { "content-type": "application/json" }).end(JSON.stringify({ error: { message: "The bound service account is deleted or disabled." } })));
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const doc = echo();
+    doc.models = [{ id: "echo", provider: "openai_compatible", model: "x", api: { base_url: `http://127.0.0.1:${(server.address() as { port: number }).port}/v1` }, price_in: 0, price_out: 0, modalities: ["text"] }];
+    try {
+      const done = await finish(evals.start(doc, { grader: "number", concurrency: 1, cases: Array.from({ length: 10 }, (_, i) => ({ input: String(i), expected: String(i) })) }).id);
+      expect(done.status).toBe("stopped");
+      expect(done.cases.filter((c) => c.run_id).length).toBe(3);
+      expect(done.cases[0].why).toMatch(/^no output: .*401/);
+      expect(done.stop_reason).toMatch(/same account error/);
+    } finally {
+      server.close();
+    }
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

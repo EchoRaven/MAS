@@ -29,6 +29,8 @@ export interface EvalOptions {
 }
 
 const MAX_CASES = 200;
+/** errors no retry fixes: a rejected or disabled key, no credit, a used-up quota */
+const ACCOUNT_ERROR = /\b(401|403)\b|api key|service account|credit|billing|quota|permission denied/i;
 
 export class EvalManager {
   private stopped = new Set<string>();
@@ -116,6 +118,8 @@ export class EvalManager {
       this.store.putEval(rec);
     };
     let next = 0;
+    // an account problem (a dead key, no credit) fails every case the same way: stop after three in a row instead of running them all
+    let fatalStreak = 0;
     const worker = async () => {
       while (next < rec.cases.length && !this.stopped.has(rec.id)) {
         const c = rec.cases[next++];
@@ -132,7 +136,14 @@ export class EvalManager {
           c.usd = done.usd;
           if (!c.output) {
             c.pass = false;
-            c.why = `no output (${done.status}${done.reason ? `: ${done.reason}` : ""})`;
+            const err = events.find((e): e is Extract<RunEvent, { type: "log" }> => e.type === "log" && e.level === "error")?.text;
+            c.why = err ? `no output: ${err.slice(0, 300)}` : `no output (${done.status}${done.reason ? `: ${done.reason}` : ""})`;
+            if (err && ACCOUNT_ERROR.test(err)) {
+              if (++fatalStreak >= 3 && !rec.passed && !this.stopped.has(rec.id)) {
+                rec.stop_reason = `Stopped: every run fails with the same account error — ${err.slice(0, 300)}`;
+                this.stopped.add(rec.id);
+              }
+            } else fatalStreak = 0;
           } else if (judge) {
             const { usd, ...verdict } = await this.judge(judge, opts.judge, c.input, c.expected, c.output);
             Object.assign(c, verdict);
@@ -140,6 +151,7 @@ export class EvalManager {
           } else {
             Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm">, c.output, c.expected, c.input));
           }
+          if (c.output) fatalStreak = 0;
           c.status = "done";
         } catch (e) {
           c.status = "error";
