@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_MODELS } from "./defaults";
-import { runAllOn } from "./modelUse";
+import { remapModels, runAllOn } from "./modelUse";
 import { TEMPLATES } from "./templates";
 
 describe("runAllOn", () => {
@@ -21,5 +21,14 @@ describe("runAllOn", () => {
     const doc = TEMPLATES.find((t) => t.id === "paper-debate")!.build();
     expect(() => runAllOn(doc, "nope", DEFAULT_MODELS)).toThrow(/Unknown model/);
     expect(() => runAllOn(doc, "embed", DEFAULT_MODELS)).toThrow(/not a chat model/);
+  });
+
+  it("remapModels serves chosen models with different ones, and checks the map", () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
+    const out = remapModels(doc, { sonnet: "gemini", gpt: "gemini_lite", gemini: "gemini_3_flash" }, DEFAULT_MODELS);
+    const model = (id: string) => out.models.find((m) => m.id === id)!.model;
+    expect([model("sonnet"), model("gpt"), model("gemini")]).toEqual(["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"]);
+    expect(() => remapModels(doc, { nope: "gemini" }, DEFAULT_MODELS)).toThrow(/no model "nope"/);
+    expect(() => remapModels(doc, { sonnet: "embed" }, DEFAULT_MODELS)).toThrow(/same kind/);
   });
 });

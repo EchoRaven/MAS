@@ -50,3 +50,18 @@ export function runAllOn(doc: SystemDoc, target: string, defaults: ModelSpec[] =
   if ((spec.kind ?? "chat") !== "chat") throw new Error(`"${target}" is not a chat model`);
   return { ...doc, models: doc.models.map((m) => ((m.kind ?? "chat") === "chat" && m.provider !== "mock" ? { ...spec, id: m.id } : m)) };
 }
+
+/**
+ * The system with chosen catalog models served by other models: { sonnet:
+ * "gemini", gpt: "gemini_lite" }. Ids stay, so every reference follows.
+ */
+export function remapModels(doc: SystemDoc, map: Record<string, string>, defaults: ModelSpec[] = []): SystemDoc {
+  const find = (id: string) => doc.models.find((m) => m.id === id) ?? defaults.find((m) => m.id === id);
+  for (const [from, to] of Object.entries(map)) {
+    if (!doc.models.some((m) => m.id === from)) throw new Error(`The system has no model "${from}"`);
+    const spec = find(to);
+    if (!spec) throw new Error(`Unknown model "${to}"`);
+    if ((spec.kind ?? "chat") !== (doc.models.find((m) => m.id === from)!.kind ?? "chat")) throw new Error(`"${to}" is not the same kind of model as "${from}"`);
+  }
+  return { ...doc, models: doc.models.map((m) => (map[m.id] ? { ...find(map[m.id])!, id: m.id } : m)) };
+}

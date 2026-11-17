@@ -10,7 +10,7 @@ const GRADERS: Grader[] = ["answer", "contains", "number", "llm"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   r.on("POST", "/api/evals", async (req) => {
-    const b = (await req.body()) as { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; repeats?: number; force?: boolean };
+    const b = (await req.body()) as { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; repeats?: number; model_map?: Record<string, string>; force?: boolean };
     // like runs: the browser sends the system as it is now, which also stores it
     const doc = b.doc ? checkDoc(b.doc) : b.system_id ? store.getSystem(b.system_id) : null;
     if (!doc) throw new HttpError(400, "Give a system_id or a doc");
@@ -21,7 +21,7 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     const errors = validate(doc).filter((i) => i.severity === "error");
     if (errors.length && !b.force) throw new HttpError(422, `The system has ${errors.length} error${errors.length > 1 ? "s" : ""}: ${errors.slice(0, 3).map((e) => e.message).join("; ")}`);
     try {
-      return evals.start(doc, { cases: b.cases, grader, mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined, repeats: b.repeats });
+      return evals.start(doc, { cases: b.cases, grader, mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined, repeats: b.repeats, model_map: b.model_map });
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }

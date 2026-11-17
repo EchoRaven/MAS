@@ -3,7 +3,7 @@
 // be replayed like any other.
 import { randomUUID } from "node:crypto";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import { runAllOn } from "@/model/modelUse";
+import { remapModels, runAllOn } from "@/model/modelUse";
 import type { SystemDoc } from "@/model/types";
 import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
@@ -24,6 +24,8 @@ export interface EvalOptions {
   repeats?: number;
   /** serve every chat model of the system with this one (a catalog or default model id) */
   on_model?: string;
+  /** serve chosen models with others, after on_model: { sonnet: "gemini", gpt: "gemini_lite" } */
+  model_map?: Record<string, string>;
 }
 
 const MAX_CASES = 200;
@@ -38,7 +40,8 @@ export class EvalManager {
   ) {}
 
   start(original: SystemDoc, opts: EvalOptions): EvalRecord {
-    const doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
+    let doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
+    if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
     const repeats = Math.max(1, Math.min(Math.floor(opts.repeats ?? 1), 5));
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
     if (!cases.length) throw new Error("No cases: each needs an input");
@@ -50,6 +53,7 @@ export class EvalManager {
       mock: !!opts.mock,
       repeats,
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
+      ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),
       status: "running",
       started_at: new Date().toISOString(),
       // repeat 1 of every question first, then repeat 2…: a stopped evaluation still has whole repeats

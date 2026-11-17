@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo, usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
+import { modelUses } from "@/model/modelUse";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, type Grader, parseCases, repeatStats, SAMPLE_SETS } from "@/run/evals";
 import { useServer } from "@/store/server";
@@ -44,7 +45,10 @@ function Evals({ systemId }: { systemId: string }) {
   const [concurrency, setConcurrency] = useState("2");
   const [repeats, setRepeats] = useState("1");
   const [dry, setDry] = useState(false);
+  // "" = the system's own models, "per" = chosen per model (modelMap), else every chat model on that one
   const [onModel, setOnModel] = useState("");
+  const [modelMap, setModelMap] = useState<Record<string, string>>({});
+  const usedModels = useMemo(() => [...new Set(modelUses(doc).map((u) => u.model))].filter((id) => (doc.models.find((m) => m.id === id)?.kind ?? "chat") === "chat"), [doc]);
   // chat models the system could be run on instead of its own: its catalog, then the defaults
   const chatModels = useMemo(() => {
     const seen = new Map<string, string>();
@@ -96,7 +100,7 @@ function Evals({ systemId }: { systemId: string }) {
   const start = async (force = false) => {
     setError("");
     try {
-      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel || undefined, repeats: Number(repeats), force });
+      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), force });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -166,8 +170,27 @@ function Evals({ systemId }: { systemId: string }) {
           <p className="text-[11px] leading-snug text-muted-foreground">{GRADERS.find((g) => g.value === grader)?.hint}</p>
           <label className="block space-y-1 text-xs text-muted-foreground">
             Models
-            <Select value={onModel || "own"} onValueChange={(v) => setOnModel(v === "own" ? "" : v)} items={[{ value: "own", label: "As the system says" }, ...chatModels.map((m) => ({ value: m.value, label: `Everything on ${m.label}` }))]} ariaLabel="Models" />
+            <Select value={onModel || "own"} onValueChange={(v) => setOnModel(v === "own" ? "" : v)} items={[{ value: "own", label: "As the system says" }, ...chatModels.map((m) => ({ value: m.value, label: `Everything on ${m.label}` })), { value: "per", label: "Choose per model…" }]} ariaLabel="Models" />
           </label>
+          {onModel === "per" && (
+            <div className="space-y-1.5 rounded-lg bg-secondary/50 p-2">
+              {usedModels.map((id) => (
+                <label key={id} className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span className="truncate">
+                    {id} <span className="opacity-70">({doc.models.find((m) => m.id === id)?.model})</span>
+                  </span>
+                  <Select
+                    value={modelMap[id] ?? "same"}
+                    onValueChange={(v) => setModelMap(({ [id]: _old, ...rest }) => (v === "same" ? rest : { ...rest, [id]: v }))}
+                    items={[{ value: "same", label: "as it is" }, ...chatModels.filter((m) => m.value !== id).map((m) => ({ value: m.value, label: m.label }))]}
+                    ariaLabel={`Serve ${id} with`}
+                    size="sm"
+                    className="max-w-48"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">
               <input type="checkbox" checked={dry} onChange={(e) => setDry(e.target.checked)} />
@@ -204,6 +227,7 @@ function Evals({ systemId }: { systemId: string }) {
                   {(e.repeats ?? 1) > 1 ? ` (×${e.repeats})` : ""} · {GRADERS.find((g) => g.value === e.grader)?.label}
                   {e.mock ? " · dry run" : ""}
                   {e.on_model ? ` · on ${e.on_model}` : ""}
+                  {e.model_map ? ` · ${Object.values(e.model_map).join(" / ")}` : ""}
                 </span>
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">{e.status === "running" ? "running…" : timeAgo(e.started_at)}</span>
@@ -232,7 +256,7 @@ function Evals({ systemId }: { systemId: string }) {
               <Stat label="Cost" value={usd(ev.usd)} />
               <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : "–"} />
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />
-              {ev.on_model && <Stat label="Models" value={`all on ${ev.on_model}`} />}
+              {(ev.on_model || ev.model_map) && <Stat label="Models" value={[ev.on_model && `all on ${ev.on_model}`, ...Object.entries(ev.model_map ?? {}).map(([a, b]) => `${a} → ${b}`)].filter(Boolean).join(", ")} />}
               <Stat label="Status" value={record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}` : ev.status} />
               <div className="ml-auto flex gap-1.5">
                 {record?.active ? (
