@@ -32,6 +32,7 @@ functions, and Docker sandboxes. Treat the token like a password.
 | --- | --- |
 | `GET /api/health` | Liveness (no token) |
 | `GET/PUT/DELETE /api/systems[/:id]` | Systems (the browser syncs automatically) |
+| `GET /api/systems/:id/versions` · `GET …/versions/:version` · `POST …/versions/:version/restore` | Earlier versions of a system. One is kept when a save changes the system, at most one every 5 minutes, the newest 50. A restore keeps the current version first |
 | `POST /api/validate` | Issues and conformance failures of a document |
 | `POST /api/runs` `{doc \| system_id, input, mock?, force?, vars?, save?}` | Start a run. `mock` = dry run on the test model. Validation errors refuse the run unless `force` is set. A `doc` is also stored as a system unless `save` is false |
 | `GET /api/runs?system=` · `GET /api/runs/:id` | History, and one run with its events |

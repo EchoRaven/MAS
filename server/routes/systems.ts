@@ -30,6 +30,18 @@ export function systemRoutes(r: Router, store: Store) {
     store.deleteSystem(req.params.id);
     return { ok: true };
   });
+  // earlier versions of a system, and putting one back
+  r.on("GET", "/api/systems/:id/versions", (req) => ({ versions: store.listVersions(req.params.id) }));
+  r.on("GET", "/api/systems/:id/versions/:version", (req) => {
+    const d = store.getVersion(req.params.id, req.params.version);
+    if (!d) throw new HttpError(404, "No such version");
+    return d;
+  });
+  r.on("POST", "/api/systems/:id/versions/:version/restore", (req) => {
+    const d = store.restoreVersion(req.params.id, req.params.version);
+    if (!d) throw new HttpError(404, "No such version");
+    return d;
+  });
   r.on("POST", "/api/validate", async (req) => {
     const doc = checkDoc(await req.body());
     return { issues: validate(doc), conformance: conformSystem(doc).filter((c) => !c.report.passed) };

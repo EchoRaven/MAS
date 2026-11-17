@@ -35,6 +35,15 @@ export class ApiError extends Error {
 
 export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; set: string; questions: number; first_question: string };
 
+export interface SystemVersion {
+  version: string;
+  saved_at: number;
+  updated_at: string;
+  name: string;
+  nodes: number;
+  edges: number;
+}
+
 export interface ModelHealth {
   id: string;
   model: string;
@@ -67,6 +76,8 @@ export const Api = {
   session: (token?: string) => api<{ ok: boolean; local_exec: boolean }>("GET", "/session", undefined, { token }),
   systems: () => api<{ systems: SystemDoc[]; deleted?: Record<string, string> }>("GET", "/systems"),
   putSystem: (doc: SystemDoc) => api("PUT", `/systems/${encodeURIComponent(doc.id)}`, doc),
+  versions: (id: string) => api<{ versions: SystemVersion[] }>("GET", `/systems/${encodeURIComponent(id)}/versions`),
+  restoreVersion: (id: string, version: string) => api<SystemDoc>("POST", `/systems/${encodeURIComponent(id)}/versions/${version}/restore`),
   deleteSystem: (id: string) => api("DELETE", `/systems/${encodeURIComponent(id)}`),
   startRun: (body: { doc: SystemDoc; input: string; mock?: boolean; force?: boolean; vars?: Record<string, unknown> }) => api<RunRecord>("POST", "/runs", body),
   runs: (systemId?: string) => api<{ runs: RunRecord[] }>("GET", `/runs${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),

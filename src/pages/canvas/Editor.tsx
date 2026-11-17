@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
-import { Code2, Download, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Wand2, Workflow } from "lucide-react";
+import { Code2, Download, History, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Wand2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AgentView } from "@/canvas/agent/AgentView";
@@ -19,7 +19,9 @@ import { autoLayout } from "@/model/layout";
 import { validate } from "@/model/validate";
 import { toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
+import { useServer } from "@/store/server";
 import { ArchitectDialog } from "./ArchitectDialog";
+import { HistoryDialog } from "./HistoryDialog";
 import { Breadcrumb } from "./Breadcrumb";
 import { IssuesMenu } from "./IssuesMenu";
 import { useEditorNav } from "./useEditorNav";
@@ -58,6 +60,8 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [importing, setImporting] = useState<ImportKind | null>(null);
   const [architect, setArchitect] = useState(false);
+  const [history, setHistory] = useState(false);
+  const connected = useServer((s) => s.status === "connected");
   const [toast, setToast] = useState<string | null>(null);
   // positions before the last tidy, so it can be undone for a few seconds
   const [beforeTidy, setBeforeTidy] = useState<Record<string, { x: number; y: number }> | null>(null);
@@ -167,6 +171,11 @@ export function Editor({ doc }: { doc: SystemDoc }) {
                   <LayoutGrid className="mr-1.5 h-3.5 w-3.5" /> Tidy
                 </Button>
               ))}
+            {connected && (
+              <Button variant="ghost" size="sm" onClick={() => setHistory(true)} title="Earlier versions of this system, to look back at or restore">
+                <History className="mr-1.5 h-3.5 w-3.5" /> History
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setArchitect(true)} title="Describe a change and let the architect make it">
               <Wand2 className="mr-1.5 h-3.5 w-3.5" /> Architect
             </Button>
@@ -236,6 +245,16 @@ export function Editor({ doc }: { doc: SystemDoc }) {
         )}
       </div>
       <ImportDialog kind={importing} doc={doc} onClose={() => setImporting(null)} onImport={(items) => { add(items); flash(`Added ${items.length} component${items.length > 1 ? "s" : ""}`); }} />
+      <HistoryDialog
+        open={history}
+        doc={doc}
+        onClose={() => setHistory(false)}
+        onRestore={(d) => {
+          replace({ ...d, id: doc.id });
+          nav.setSel({});
+          flash("Restored the earlier version");
+        }}
+      />
       <ArchitectDialog
         open={architect}
         doc={doc}
