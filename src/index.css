@@ -1,0 +1,214 @@
+/*
+ * Copied from the EnvGen monitor (forgingground-gen, monitor_ui/src/index.css).
+ * Theme tokens and base styles adapted from MindRoom's dashboard
+ * (https://github.com/mindroom-ai/mindroom, frontend/src/index.css and
+ * frontend/tailwind.config.js), licensed under the Apache License 2.0.
+ * Modified: ported to Tailwind v4 @theme syntax, added status colors.
+ * Re-skinned after affectUI (https://www.affectui.com/): Inter, neutral grays,
+ * near-black ink and primary, hairline ring shadows instead of borders, pill
+ * controls, and its run / warn / danger / ok status hues (light + dark sets).
+ */
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Inter Variable", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-active: hsl(var(--active));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-info: hsl(var(--info));
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 240 4% 12%;
+    --primary-foreground: 0 0% 99%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 95%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 10 100% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 91%;
+    --input: 0 0% 87%;
+    --ring: 214 100% 44%;
+    --active: 0 0% 94%;
+    --success: 152 64% 30%;
+    --warning: 23 100% 40%;
+    --info: 208 100% 40%;
+    --radius: 0.625rem;
+    --ring-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.07), 0 1px 1px -1px rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --pop-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.08), 0 12px 28px -10px rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.05);
+    /* chart series: dataviz reference palette slots 1-2 (validated vs the card surface) */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+  }
+
+  .dark {
+    --background: 240 5% 7%;
+    --foreground: 0 0% 93%;
+    --card: 240 5% 11.5%;
+    --card-foreground: 0 0% 93%;
+    --popover: 240 5% 13%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 0 0% 92%;
+    --primary-foreground: 240 5% 8%;
+    --secondary: 240 4% 15%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 240 4% 15%;
+    --muted-foreground: 240 3% 55%;
+    --accent: 240 4% 17%;
+    --accent-foreground: 0 0% 93%;
+    --destructive: 12 100% 75%;
+    --destructive-foreground: 240 5% 8%;
+    --border: 240 6% 18%;
+    --input: 240 5% 26%;
+    --ring: 217 100% 68%;
+    --active: 240 4% 17%;
+    --success: 151 66% 54%;
+    --warning: 27 100% 67%;
+    --info: 210 100% 72%;
+    --ring-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.4);
+    --pop-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.12), 0 12px 28px -10px rgb(0 0 0 / 0.6);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.28);
+  }
+
+  * {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.28) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+@layer components {
+  /* Surfaces are hairline-ringed cards (affectUI), not bordered boxes. */
+  .glass-panel {
+    border: 0;
+    background: hsl(var(--card));
+    box-shadow: var(--ring-shadow);
+  }
+
+  .glass-panel .glass-panel {
+    background: transparent;
+    box-shadow: 0 0 0 0.5px hsl(var(--border));
+  }
+
+  .glass-control,
+  .glass-input {
+    border: 0;
+    border-radius: 9999px;
+    background: hsl(var(--card));
+    box-shadow: 0 0 0 1px hsl(var(--border)), 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transition: background-color 150ms ease, box-shadow 150ms ease, color 150ms ease;
+  }
+
+  .glass-input {
+    border-radius: var(--radius);
+  }
+
+  .glass-control:hover {
+    background: hsl(var(--secondary));
+  }
+
+  .glass-input:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 1px hsl(var(--ring)), 0 0 0 4px hsl(var(--ring) / 0.18);
+  }
+
+  .glass-overlay {
+    border: 0;
+    background: hsl(var(--popover));
+    box-shadow: var(--pop-shadow);
+  }
+}
+
+/* React Flow themed with the same tokens (light + dark follow .dark). */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-background-pattern-dots-color-default: hsl(var(--muted-foreground) / 0.28);
+  --xy-minimap-background-color-default: hsl(var(--card));
+  --xy-minimap-mask-background-color-default: hsl(var(--background) / 0.7);
+  --xy-minimap-node-background-color-default: hsl(var(--muted-foreground) / 0.25);
+  --xy-controls-button-background-color-default: hsl(var(--card));
+  --xy-controls-button-background-color-hover-default: hsl(var(--secondary));
+  --xy-controls-button-color-default: hsl(var(--foreground));
+  --xy-controls-button-border-color-default: hsl(var(--border));
+  --xy-connectionline-stroke-default: hsl(var(--ring));
+  --xy-selection-background-color-default: hsl(var(--ring) / 0.08);
+  --xy-selection-border-default: 1px dashed hsl(var(--ring));
+  --xy-attribution-background-color-default: transparent;
+}
+.react-flow__node.selectable:focus-visible { outline: none; }
+.react-flow__node-group { background: transparent; border: 0; padding: 0; }
+.react-flow__controls, .react-flow__minimap { box-shadow: var(--ring-shadow); border-radius: 0.75rem; overflow: hidden; }
+@keyframes mas-dash { to { stroke-dashoffset: -10; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
