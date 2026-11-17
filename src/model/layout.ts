@@ -1,8 +1,8 @@
 // A readable layout for a system: each canvas (the root, and each group's own
 // canvas) is laid out on its own. Components that pass work along go left to
-// right by how far they are from where the input arrives; envs and plugins sit
-// in a row underneath, under the components that use them.
-import { entryPoints } from "./entry";
+// right by how far they are from where the input arrives; envs, plugins and
+// spawn templates sit in a row underneath, under the components that use them.
+import { entryPoints, spawnTemplates } from "./entry";
 import type { SystemDoc } from "./types";
 
 const COL = 340;
@@ -16,7 +16,10 @@ function layoutScope(doc: SystemDoc, scope: string | undefined) {
   const ids = new Set(nodes.map((n) => n.id));
   const kind = new Map(nodes.map((n) => [n.id, n.data.kind]));
   const flow = doc.edges.filter((e) => e.kind !== "access" && ids.has(e.source) && ids.has(e.target));
-  const actors = nodes.filter((n) => !isResource(n.data.kind));
+  // spawn templates sit under the agent that spawns them, like resources under their users
+  const templates = spawnTemplates(doc);
+  const below = (n: { id: string; data: { kind: string } }) => isResource(n.data.kind) || templates.has(n.id);
+  const actors = nodes.filter((n) => !below(n));
   if (!actors.length && !nodes.length) return;
 
   // roots: the entry first, then whatever nothing feeds, then (for cycles) the rest in order
@@ -53,9 +56,10 @@ function layoutScope(doc: SystemDoc, scope: string | undefined) {
   }
 
   // resources: one row below, each under the mean x of what uses it, pushed apart
-  const resources = nodes.filter((n) => isResource(n.data.kind));
+  const resources = nodes.filter(below);
   const want = resources.map((r) => {
-    const users = doc.edges.filter((e) => e.kind === "access" && (e.target === r.id || e.source === r.id)).map((e) => pos.get(e.target === r.id ? e.source : e.target)).filter(Boolean) as { x: number }[];
+    const spawners = doc.nodes.filter((n) => n.data.kind === "agent" && (n.data as { spawn?: { template?: string } }).spawn?.template === r.id).map((n) => pos.get(n.id));
+    const users = [...doc.edges.filter((e) => e.kind === "access" && (e.target === r.id || e.source === r.id)).map((e) => pos.get(e.target === r.id ? e.source : e.target)), ...spawners].filter(Boolean) as { x: number }[];
     return { id: r.id, x: users.length ? users.reduce((s, p) => s + p.x, 0) / users.length : 0 };
   });
   want.sort((a, b) => a.x - b.x);

@@ -23,4 +23,16 @@ describe("autoLayout", () => {
     expect(at("mem").x).toBe(at("e").x);
     expect(at("mem").y).toBeGreaterThan(at("e").y);
   });
+
+  it("puts a spawn template under the agent that spawns it, and never makes it the entry", async () => {
+    const { TEMPLATES } = await import("./templates");
+    const { entryPoints } = await import("./entry");
+    const { validate } = await import("./validate");
+    const doc = TEMPLATES.find((t) => t.id === "paper-autoagents")!.build();
+    const at = (id: string) => doc.nodes.find((n) => n.id === id)!.position;
+    expect(at("generated").x).toBe(at("action_observer").x);
+    expect(at("generated").y).toBeGreaterThan(at("action_observer").y);
+    expect(entryPoints(doc).map((e) => e.node)).toEqual(["user"]);
+    expect(validate(doc).filter((i) => i.nodeId === "generated")).toEqual([]);
+  });
 });

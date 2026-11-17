@@ -238,6 +238,32 @@ describe("runtime", () => {
     expect(out.text).toContain("Weighted vote: 9 0.3.");
   });
 
+  it("AutoAgents redrafts until both observers approve, then creates one agent per step", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-autoagents")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(
+      mock("aa_planner", ["Agents: Coder. Plan: 1. Coder writes it.", "Agents: Coder, Tester. Plan: 1. Coder writes it. 2. Tester tests it."]),
+      mock("aa_agents", ["Missing a tester.", "APPROVED"]),
+      mock("aa_plan", ["APPROVED"]),
+      mock("aa_action", [{ tool: "spawn_subagents", input: { tasks: ["You are Coder. Write it."] } }, { tool: "spawn_subagents", input: { tasks: ["You are Tester. Test it."] } }, "Final: written and tested"]),
+      mock("aa_generated", ["done: {{input}}"]),
+    );
+    const use: Record<string, string> = { planner: "aa_planner", agent_observer: "aa_agents", plan_observer: "aa_plan", action_observer: "aa_action", generated: "aa_generated" };
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = use[n.id];
+    const { events } = await run(doc, "Build a CLI calculator", { mock: false });
+    expect(errors(events)).toEqual([]);
+    expect([usages(events, "planner").length, usages(events, "agent_observer").length]).toEqual([2, 2]);
+    // the second draft was written with the agent observer's feedback in view
+    const toPlanner = events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "planner");
+    expect(toPlanner[1].text).toContain("Agent observer: Missing a tester.");
+    // the approved draft reaches the action observer, which creates an agent per step
+    const toAction = events.find((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "action_observer")!;
+    expect(toAction.text).toMatch(/^APPROVED DRAFT:\nAgents: Coder, Tester/);
+    expect(events.filter((e) => e.type === "spawn").length).toBe(2);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("Final: written and tested");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

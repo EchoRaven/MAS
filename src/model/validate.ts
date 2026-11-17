@@ -1,5 +1,5 @@
 import { runnerById } from "./defaults";
-import { entryPoints } from "./entry";
+import { entryPoints, spawnTemplates } from "./entry";
 import { compat, edgeScope, interfaceOf, isResource, nodeName, sourcePort, targetPort, usesResources } from "./ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, ModelNodeData, PortSpec, SysNode, SystemDoc } from "./types";
 import { RES_PORT } from "./types";
@@ -103,11 +103,12 @@ export function validate(doc: SystemDoc): Issue[] {
   const agents = doc.nodes.filter((n) => n.data.kind === "agent") as SysNode<AgentData>[];
   if (doc.nodes.length === 0) add("info", "The canvas is empty. Add components from the toolbar on the left.");
 
+  const spawned = spawnTemplates(doc);
   for (const n of agents) {
     const a = n.data;
     const label = q(n);
     const runner = runnerById(a.harness.runner);
-    if (!touching(n.id).length) add("warning", `${label} has no connections, so it is never woken and cannot talk to anyone`, { nodeId: n.id });
+    if (!touching(n.id).length && !spawned.has(n.id)) add("warning", `${label} has no connections, so it is never woken and cannot talk to anyone`, { nodeId: n.id });
     if ((a.harness.tier === "native" || a.harness.tier === "sdk") && !modelIds.has(a.model)) add("error", `${label} uses model ${a.model || "(empty)"}, which is not in the model catalog`, { nodeId: n.id });
     if (a.harness.tier !== "native" && !runner) add("error", `${label} has no harness adapter selected`, { nodeId: n.id });
     if (a.harness.tier === "process" && !a.harness.command && a.harness.runner !== "claude-code" && a.harness.runner !== "codex") add("warning", `${label} uses a process harness and needs a launch command`, { nodeId: n.id });

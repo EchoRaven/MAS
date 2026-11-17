@@ -53,10 +53,17 @@ export function entryPoints(doc: SystemDoc): EntryPoint[] {
   if (onStart.length) return onStart.map((n) => ({ node: n.id, port: interfaceOf(n.data).inputs[0]?.id, why: "on_start" as const }));
 
   const fed = new Set(doc.edges.filter((e) => e.kind !== "access").map((e) => e.target));
-  const startable = doc.nodes.filter((n) => !n.parent && STARTABLE.includes(n.data.kind));
+  // a spawn template is run by its spawner, never by the run's input
+  const templates = spawnTemplates(doc);
+  const startable = doc.nodes.filter((n) => !n.parent && STARTABLE.includes(n.data.kind) && !templates.has(n.id));
   const unfed = startable.find((n) => !fed.has(n.id));
   const first = unfed ?? startable[0];
   return first ? [{ node: first.id, port: interfaceOf(first.data).inputs[0]?.id, why: unfed ? "no_input" : "only" }] : [];
+}
+
+/** Agents that other agents spawn copies of: they need no edges of their own. */
+export function spawnTemplates(doc: SystemDoc): Set<string> {
+  return new Set(doc.nodes.flatMap((n) => (n.data.kind === "agent" && (n.data as AgentData).spawn?.template ? [(n.data as AgentData).spawn!.template] : [])));
 }
 
 export const ENTRY_REASON: Record<EntryPoint["why"], string> = {
