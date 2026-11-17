@@ -57,7 +57,7 @@ export function Select({
         <span className="min-w-0 flex-1 truncate">
           <SelectPrimitive.Value placeholder={placeholder}>{current?.label}</SelectPrimitive.Value>
         </span>
-        {current?.hint && size === "md" && <span className="shrink-0 font-normal text-muted-foreground">{current.hint}</span>}
+        {current?.hint && size === "md" && current.hint.length <= 18 && <span className="shrink-0 font-normal text-muted-foreground">{current.hint}</span>}
         <SelectPrimitive.Icon asChild>
           <ChevronsUpDown aria-hidden="true" className={cn("shrink-0 text-muted-foreground", size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5")} />
         </SelectPrimitive.Icon>
@@ -84,8 +84,17 @@ export function Select({
                 )}
               >
                 {it.leading && <span className="flex shrink-0 items-center">{it.leading}</span>}
-                <SelectPrimitive.ItemText>{it.label}</SelectPrimitive.ItemText>
-                {it.hint && <span className="ml-auto pl-3 text-muted-foreground">{it.hint}</span>}
+                {it.hint && it.hint.length > 18 ? (
+                  <span className="flex min-w-0 flex-col">
+                    <SelectPrimitive.ItemText>{it.label}</SelectPrimitive.ItemText>
+                    <span className="max-w-[22rem] text-[11px] font-normal text-muted-foreground">{it.hint}</span>
+                  </span>
+                ) : (
+                  <>
+                    <SelectPrimitive.ItemText>{it.label}</SelectPrimitive.ItemText>
+                    {it.hint && <span className="ml-auto pl-3 text-muted-foreground">{it.hint}</span>}
+                  </>
+                )}
                 <SelectPrimitive.ItemIndicator className="absolute right-2.5 flex items-center">
                   <Check aria-hidden="true" className="h-3.5 w-3.5" />
                 </SelectPrimitive.ItemIndicator>

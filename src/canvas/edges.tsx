@@ -1,8 +1,15 @@
 import { memo } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { Filter, ShieldAlert, ShieldCheck, SquareFunction } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EDGE_COLOR, type FlowEdge } from "./convert";
+
+/** A feedback edge: out of the right side, up, back over both nodes, into the left side (access edges run below). */
+function loopPath(sx: number, sy: number, tx: number, ty: number): [string, number, number] {
+  const drop = Math.min(sy, ty) - 80;
+  const path = `M ${sx} ${sy} C ${sx + 70} ${sy}, ${sx + 70} ${drop}, ${sx} ${drop} L ${tx} ${drop} C ${tx - 70} ${drop}, ${tx - 70} ${ty}, ${tx} ${ty}`;
+  return [path, (sx + tx) / 2, drop];
+}
 
 const KIND_SHORT = { message: "msg", call: "call", handoff: "handoff", access: "" } as const;
 
@@ -15,7 +22,9 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
     rf.setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n)));
     rf.setEdges((es) => es.map((x) => (x.selected !== (x.id === id) ? { ...x, selected: x.id === id } : x)));
   };
-  const [path, lx, ly] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
+  // an output that feeds back to an earlier input loops underneath instead of cutting across
+  const backward = sourcePosition === Position.Right && targetPosition === Position.Left && targetX < sourceX - 20;
+  const [path, lx, ly] = backward ? loopPath(sourceX, sourceY, targetX, targetY) : getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   const color = data?.blocked ? "hsl(var(--destructive))" : EDGE_COLOR[e.kind];
   const width = e.kind === "handoff" ? 2.25 : 1.5;
   const ports = data?.showPorts;

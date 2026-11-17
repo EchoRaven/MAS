@@ -17,7 +17,7 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: NodePro
   const runner = runnerById(a.harness.runner);
   const stages = a.pipeline.pre.length + a.pipeline.post.length;
   return (
-    <Shell selected={selected} status={data.status} issues={data.issues} className="min-w-[230px]">
+    <Shell selected={selected} status={data.status} issues={data.issues} className="w-[250px]">
       <Ports inputs={a.interface.inputs} outputs={a.interface.outputs} wired={data.wired} hidden={data.readOnly} />
       <ResHandle role="user" hidden={data.readOnly} />
       {!data.readOnly && <OpenHint />}

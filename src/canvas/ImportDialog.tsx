@@ -65,7 +65,8 @@ function parse(kind: ImportKind, text: string, filename: string): Parsed {
 export function ImportDialog({ kind, onClose, onImport }: { kind: ImportKind | null; onClose: () => void; onImport: (items: { kind: NodeKind; data: NodeData }[]) => void }) {
   const [text, setText] = useState("");
   const [filename, setFilename] = useState("pasted");
-  const [chosen, setChosen] = useState<Set<number>>(new Set([0]));
+  /** null = everything importable is chosen */
+  const [chosen, setChosen] = useState<Set<number> | null>(null);
   const copy = kind ? COPY[kind] : null;
 
   const result = useMemo((): { ok: Parsed } | { error: string } | null => {
@@ -79,11 +80,12 @@ export function ImportDialog({ kind, onClose, onImport }: { kind: ImportKind | n
 
   const close = () => {
     setText("");
-    setChosen(new Set([0]));
+    setChosen(null);
     onClose();
   };
   const blocked = (c: Candidate) => c.issues.some((i) => i.severity === "error");
-  const picks = result && "ok" in result ? result.ok.candidates.filter((c, i) => chosen.has(i) && !blocked(c)) : [];
+  const isChosen = (i: number) => chosen === null || chosen.has(i);
+  const picks = result && "ok" in result ? result.ok.candidates.filter((c, i) => isChosen(i) && !blocked(c)) : [];
 
   return (
     <Dialog open={!!kind} onOpenChange={(o) => !o && close()}>
@@ -104,7 +106,7 @@ export function ImportDialog({ kind, onClose, onImport }: { kind: ImportKind | n
                 if (!f) return;
                 setFilename(f.name);
                 setText(await f.text());
-                setChosen(new Set([0]));
+                setChosen(null);
               }}
             />
           </label>
@@ -130,7 +132,19 @@ export function ImportDialog({ kind, onClose, onImport }: { kind: ImportKind | n
                 <li key={i} className="space-y-1.5 rounded-lg p-2.5 shadow-[0_0_0_1px_hsl(var(--border))]">
                   <label className="flex items-center gap-2 text-sm font-medium">
                     {result.ok.candidates.length > 1 && (
-                      <input type="checkbox" checked={chosen.has(i)} disabled={blocked(c)} onChange={(e) => setChosen((s) => { const n = new Set(s); if (e.target.checked) n.add(i); else n.delete(i); return n; })} />
+                      <input
+                        type="checkbox"
+                        checked={isChosen(i) && !blocked(c)}
+                        disabled={blocked(c)}
+                        onChange={(e) =>
+                          setChosen((s) => {
+                            const n = new Set(s ?? result.ok.candidates.map((_, j) => j));
+                            if (e.target.checked) n.add(i);
+                            else n.delete(i);
+                            return n;
+                          })
+                        }
+                      />
                     )}
                     {c.label}
                   </label>

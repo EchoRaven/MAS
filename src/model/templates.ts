@@ -152,9 +152,9 @@ function research(): SystemDoc {
     .node("team", "group", 280, 0, { name: "Research team", budget_usd: 3, interface: { inputs: [port("question", "message", { required: true })], outputs: [port("report", "message")] } })
     .node("abstract", "model", 580, 0, { name: "Abstract writer", model: "haiku", system_prompt: "You write 3-sentence abstracts.", prompt: "Write the abstract of this report:\n\n{{input}}", interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
     .agent("lead", 0, 40, { name: "Lead", role: "Splits the question, spawns searchers", model: "opus", spawn: { template: "searcher", max_instances: 6 }, harness: { ...native(), loop: "plan_execute", instructions: "Split the question into 3-6 sub-questions and spawn one searcher per sub-question to search in parallel." } }, "team")
-    .agent("searcher", 300, -80, { name: "Searcher (template)", role: "Researches one sub-question", model: "haiku", tools: ["web_search", "fetch"], harness: { ...native(), instructions: "Answer only the sub-question you were given, with sources." } }, "team")
-    .agent("writer", 300, 160, { name: "Writer", role: "Writes the report", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Combine the search results into one sourced report." } }, "team")
-    .plugin("kb", "knowledge", 310, 360, { scope: "group", sources: ["./docs"] }, "team")
+    .agent("searcher", 380, -90, { name: "Searcher (template)", role: "Researches one sub-question", model: "haiku", tools: ["web_search", "fetch"], harness: { ...native(), instructions: "Answer only the sub-question you were given, with sources." } }, "team")
+    .agent("writer", 380, 150, { name: "Writer", role: "Writes the report", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Combine the search results into one sourced report." } }, "team")
+    .plugin("kb", "knowledge", 410, 330, { scope: "group", sources: ["./docs"] }, "team")
     .edge("asker", "team", "message", { label: "Question" })
     .edge("team", "lead", "message")
     .edge("lead", "searcher", "call", { label: "Sub-question" })
@@ -181,8 +181,8 @@ function support(): SystemDoc {
   );
   b.schema({ id: "Refund", description: "A refund request", json_schema: '{\n  "type": "object",\n  "required": ["order_id", "amount"],\n  "properties": {\n    "order_id": { "type": "string" },\n    "amount": { "type": "number" }\n  }\n}' })
     .node("customer", "human", 0, 140, { name: "Customer", role: "End user", approves: false })
-    .node("redact", "function", 230, 140, { name: "Redact card numbers", fn: { lang: "js", code: 'return { ...input, content: input.content.replace(/\\b\\d{13,19}\\b/g, "[card]") };' }, interface: { inputs: [port("in", "message")], outputs: [port("out", "message")] } })
-    .agent("triage", 470, 130, {
+    .node("redact", "function", 250, 140, { name: "Redact card numbers", fn: { lang: "js", code: 'return { ...input, content: input.content.replace(/\\b\\d{13,19}\\b/g, "[card]") };' }, interface: { inputs: [port("in", "message")], outputs: [port("out", "message")] } })
+    .agent("triage", 590, 130, {
       name: "Triage",
       role: "Detects intent and routes",
       model: "haiku",
@@ -191,17 +191,18 @@ function support(): SystemDoc {
       pipeline: { pre: [], post: [{ id: "p1", op: "route", name: "Route by intent", fn: { lang: "llm", code: "Answer billing or tech for this request: {{input}}", model: "haiku" } }] },
       harness: { ...native(), loop: "single_shot", instructions: "Summarise the request in one paragraph for the specialist." },
     })
-    .agent("billing", 790, 0, {
+    .agent("billing", 940, 0, {
       name: "Billing",
       role: "Handles billing and refunds",
       model: "sonnet",
       tools: ["issue_refund"],
       interface: { inputs: [port("in", "message")], outputs: [port("out", "message"), port("refund", "json", { schema: "Refund" })] },
-      harness: { ...native(), instructions: "Verify the order before acting; refunds need approval." },
+      pipeline: { pre: [], post: [{ id: "p1", op: "route", name: "Reply or ask for a refund", fn: { lang: "js", code: "return input.refund ? { refund: input.refund } : { out: input };" } }] },
+      harness: { ...native(), instructions: 'Verify the order before acting. To refund, reply with {"refund": {"order_id": ..., "amount": ...}}.' },
     })
-    .agent("tech", 790, 260, { name: "Tech support", role: "Troubleshoots technical issues", model: "sonnet", tools: ["web_search"], harness: { ...native(), instructions: "Work through the troubleshooting playbook step by step." } })
-    .node("lead", "human", 1110, 20, { name: "Support lead", role: "Approves refunds" })
-    .plugin("mem", "memory", 1110, 290, { name: "User memory", scope: "end_user" })
+    .agent("tech", 940, 270, { name: "Tech support", role: "Troubleshoots technical issues", model: "sonnet", tools: ["web_search"], harness: { ...native(), instructions: "Work through the troubleshooting playbook step by step." } })
+    .node("lead", "human", 1300, 20, { name: "Support lead", role: "Approves refunds" })
+    .plugin("mem", "memory", 1300, 420, { name: "User memory", scope: "end_user" })
     .edge("customer", "redact", "message")
     .edge("redact", "triage", "message")
     .edge("triage", "billing", "handoff", { source_port: "billing", carry: "summary" })
@@ -227,7 +228,7 @@ function invoices(): SystemDoc {
   );
   b.schema({ id: "Invoice", description: "Fields pulled from an invoice", json_schema: '{\n  "type": "object",\n  "required": ["vendor", "total", "lines"],\n  "properties": {\n    "vendor": { "type": "string" },\n    "total": { "type": "number" },\n    "lines": { "type": "array", "items": { "type": "object", "properties": { "amount": { "type": "number" } } } }\n  }\n}' })
     .node("inbox", "human", 0, 60, { name: "Accounts inbox", role: "Drops invoice PDFs", approves: false })
-    .node("extract", "model", 250, 50, {
+    .node("extract", "model", 270, 50, {
       name: "Extract fields",
       model: "sonnet",
       system_prompt: "Extract invoice fields. Reply with JSON only.",
@@ -235,13 +236,13 @@ function invoices(): SystemDoc {
       temperature: 0,
       interface: { inputs: [port("pdf", "file")], outputs: [port("fields", "json", { schema: "Invoice" })] },
     })
-    .node("check", "function", 550, 50, {
+    .node("check", "function", 600, 50, {
       name: "Check totals",
       fn: { lang: "js", code: "const sum = input.lines.reduce((a, l) => a + l.amount, 0);\nreturn Math.abs(sum - input.total) < 0.01 ? { ok: input } : { mismatch: input };" },
       interface: { inputs: [port("in", "json", { schema: "Invoice" })], outputs: [port("ok", "json", { schema: "Invoice" }), port("mismatch", "json", { schema: "Invoice" })] },
     })
-    .node("ledger", "env", 860, -40, { name: "Ledger DB", env_kind: "database", image: "", lifecycle: "persistent", snapshot: "on_write" })
-    .node("clerk", "human", 860, 160, { name: "Clerk", role: "Fixes mismatched invoices" })
+    .node("ledger", "env", 960, -60, { name: "Ledger DB", env_kind: "database", image: "", lifecycle: "persistent", snapshot: "on_write" })
+    .node("clerk", "human", 960, 160, { name: "Clerk", role: "Fixes mismatched invoices" })
     .edge("inbox", "extract", "message", { target_port: "pdf" })
     .edge("extract", "check", "message")
     .edge("check", "clerk", "message", { source_port: "mismatch", label: "Totals do not add up", transform: { lang: "template", code: "{{input.vendor}}: lines sum differs from total {{input.total}}" } })
@@ -268,4 +269,4 @@ export const TEMPLATES: TemplateInfo[] = [
 ];
 
 /** Names of the templates seeded by earlier versions (0.1, Chinese UI); stored copies are replaced on upgrade. */
-export const LEGACY_SEED_NAMES = ["辩论加裁判", "共享仓库的编程团队", "动态招募的研究团队", "客服分诊转接"];
+export const LEGACY_SEED_NAMES = ["\u8fa9\u8bba\u52a0\u88c1\u5224", "\u5171\u4eab\u4ed3\u5e93\u7684\u7f16\u7a0b\u56e2\u961f", "\u52a8\u6001\u62db\u52df\u7684\u7814\u7a76\u56e2\u961f", "\u5ba2\u670d\u5206\u8bca\u8f6c\u63a5"];

@@ -1,8 +1,12 @@
 # MAS Studio
 
-A canvas for building multi-agent systems, implementing the data model of
-*Multi-Agent Platform Spec v0*. v0 is frontend-only: systems are stored in the
-browser, and the run view is a **structural simulation**. No model is called.
+MAS Studio is a canvas for designing multi-agent systems. You define a
+system from typed components and the edges between them, and edit it either
+on the canvas or as YAML. Both views edit the same document.
+
+v0.2 runs in the browser only. Systems are saved in the browser's local
+storage, and the run view is a structural simulation that never calls a
+model.
 
 ## Run
 
@@ -11,31 +15,42 @@ export PATH=/data/common/haibotong/.tools/node/bin:$PATH
 npm install
 npm run dev          # http://127.0.0.1:5180
 npm run build        # type-check + production build into dist/
-npm test             # vitest: YAML round trip, validator, simulator
+npm test             # vitest: model, YAML, migration, importers, simulator
+node scripts/import-env.mjs <dir>   # env-gen / DT / compose folder -> mas-env manifest
 ```
 
-## What is here
+## Pages
 
 | Page | What it does |
 | --- | --- |
-| Systems | List, create from a template, import/export YAML, duplicate, delete |
-| Canvas | Drag agents, humans, rooms, envs, stores and groups onto the canvas; connect them with message / call / handoff / access edges; put gates on edges; edit everything in the right-hand inspector; switch to the YAML view and edit the same definition as text |
-| Runs | Plays back a simulated event stream on the same graph: node status, active edges, gates blocking and passing, approvals, spawning, per-agent cost |
-| Templates | Debate, coding team, research team (group + spawn), support triage |
-| Models & Tools | Per-system model catalog (prices drive cost estimates) and tool catalog |
+| Systems | List systems, create one from a template, import or export YAML, duplicate, delete |
+| Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. Envs, agents and plugins can be imported. The issues menu jumps to each problem. |
+| Runs | Replay a simulated event stream on the graph: statuses, transforms, gates, approvals, spawning and cost per agent |
+| Templates | Debate, coding team, research team, support triage, invoice extraction |
+| Library | Models (with API settings), tools, JSON schemas, and the integration contracts |
+
+The interfaces everything plugs into are documented in
+[docs/contracts.md](docs/contracts.md).
 
 ## Layout
 
 ```
-src/model/     types.ts (SystemDoc), defaults.ts (harness adapters, catalogs),
-               templates.ts, validate.ts, yaml.ts
-src/canvas/    FlowView (React Flow), nodes, edges, Inspector, Palette
-src/run/       simulate.ts (event stream + state folding)
-src/pages/     route pages
-src/components shared UI, copied from the EnvGen monitor (MindRoom-derived, Apache-2.0)
+src/model/       types.ts (SystemDoc), ports.ts (interfaces, scopes, type compatibility),
+                 validate.ts, yaml.ts, migrate.ts, templates.ts, defaults.ts,
+                 envspec.ts / agentspec.ts / plugins.ts (import contracts)
+src/canvas/      FlowView + ops.ts (graph edits), convert.ts, edges.tsx, presets.ts, Palette,
+                 ImportDialog, nodes/ (one file per node family),
+                 inspector/ (one editor per file), agent/ (agent internals view)
+src/pages/       systems, templates; canvas/, runs/, library/ (one folder per page)
+src/run/         simulate.ts (event stream + state folding)
+src/components/  shared UI, copied from the EnvGen monitor (MindRoom-derived, Apache-2.0)
+scripts/         import-env.mjs
+examples/        envs/ and agents/ files for the import dialogs
 ```
 
-## Not in v0
+## Not in v0.2
 
-A real runtime (actor scheduler, harness adapters, MCP tool proxy, event
-store), a backend and accounts, undo/redo, and live collaboration.
+- A real runtime: actor scheduler, harness adapters, MCP tool proxy and event store
+- A backend and user accounts
+- Undo / redo
+- Live collaboration

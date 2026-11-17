@@ -71,7 +71,7 @@ export function AgentView({ doc, id, a, selected, onPart, onAddStage }: { doc: S
         <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
         <Controls showInteractive={false} position="bottom-left" />
       </ReactFlow>
-      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-xl bg-card/90 p-1.5 shadow-[var(--ring-shadow)] backdrop-blur">
+      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-xl bg-card/90 p-1.5 shadow-[var(--ring-shadow)] backdrop-blur">
         <span className="flex items-center gap-1.5 px-2 text-xs text-muted-foreground">
           <Bot className="h-3.5 w-3.5" /> Wrapper
         </span>
