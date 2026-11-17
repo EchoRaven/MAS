@@ -303,6 +303,26 @@ describe("runtime", () => {
     });
   });
 
+  it("Agents' Room: a planner's notes in the scratchpad are what the writer reads", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-agents-room")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(
+      mock("ar_orch", [{ tool: "ask_conflict", input: { request: "a lighthouse story" } }, { tool: "ask_exposition", input: { request: "a lighthouse story" } }, "Final story: The keeper kept the light."]),
+      mock("ar_conflict", [{ tool: "write_file", input: { path: "notes/conflict.md", content: "The keeper must choose between the light and his brother." } }, "Conflict noted."]),
+      mock("ar_exposition", [{ tool: "read_file", input: { path: "notes/conflict.md" } }, { tool: "write_file", input: { path: "story/1-exposition.md", content: "The keeper kept the light." } }, "The keeper kept the light."]),
+    );
+    const use: Record<string, string> = { orchestrator: "ar_orch", conflict: "ar_conflict", exposition: "ar_exposition" };
+    for (const n of doc.nodes) if (n.data.kind === "agent" && use[n.id]) n.data.model = use[n.id];
+    const { events } = await run(doc, "Write a short story about a lighthouse keeper.", { mock: false });
+    expect(errors(events)).toEqual([]);
+    const tools = events.filter((e): e is Extract<RunEvent, { type: "tool" }> => e.type === "tool");
+    const read = tools.find((t) => t.tool === "read_file")!;
+    expect(read.result).toContain("choose between the light and his brother");
+    expect(tools.filter((t) => t.tool === "write_file").length).toBe(2);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("Final story: The keeper kept the light.");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

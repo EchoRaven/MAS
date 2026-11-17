@@ -2,6 +2,7 @@
 import type { TemplateInfo } from "../builder";
 import { agentcoder } from "./agentcoder";
 import { autoagents } from "./autoagents";
+import { agentsroom } from "./agentsroom";
 import { agentverse } from "./agentverse";
 import { autogen } from "./autogen";
 import { camel } from "./camel";
@@ -24,4 +25,4 @@ import { tradingagents } from "./tradingagents";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom];
