@@ -49,7 +49,10 @@ export class McpEnv implements Resource {
       if (!mcp) return;
       const token = mcp.auth === "bearer_env" ? this.rc.secrets.get(Object.values(mcp.env ?? {})[0] ?? `${this.id.toUpperCase()}_TOKEN`) : undefined;
       if (mcp.transport === "http" && mcp.url) this.client = new McpClient({ url: mcp.url, headers: token ? { authorization: `Bearer ${token}` } : {} });
-      else if (mcp.start) this.client = new McpClient({ command: mcp.start, env: Object.fromEntries(Object.entries(mcp.env ?? {}).map(([k, v]) => [k, this.rc.secrets.get(v) ?? v])) });
+      else if (mcp.start) {
+        if (!this.rc.config.allowLocalExec) throw new Error(`${this.node.data.name} starts its MCP server as a command on the server (${mcp.start}); set MAS_ALLOW_LOCAL_EXEC=1 to allow it`);
+        this.client = new McpClient({ command: mcp.start, env: Object.fromEntries(Object.entries(mcp.env ?? {}).map(([k, v]) => [k, this.rc.secrets.get(v) ?? v])) });
+      }
     })();
     return this.ready;
   }

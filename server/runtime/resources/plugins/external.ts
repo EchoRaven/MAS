@@ -46,6 +46,8 @@ export class ExternalPlugin implements Resource {
   }
   private client(): McpClient {
     const b = this.backend;
+    // an MCP server started as a command runs on this machine: the same opt-in as every other host command
+    if (!b.url && !this.rc.config.allowLocalExec) throw new Error(`${this.node.data.name} starts its MCP server as a command on the server (${b.command}); set MAS_ALLOW_LOCAL_EXEC=1 to allow it, or give the plugin an MCP URL`);
     this.mcp ??= b.url ? new McpClient({ url: b.url, headers: secretHeaders(this.rc, b.config) }) : new McpClient({ command: b.command!, env: Object.fromEntries(Object.entries(b.config ?? {}).filter(([k]) => k.endsWith("_env")).map(([, v]) => [v, this.rc.secrets.get(v) ?? ""])) });
     return this.mcp;
   }

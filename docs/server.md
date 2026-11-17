@@ -13,7 +13,7 @@ and runs are simulated.
 | `MAS_PORT` / `MAS_HOST` | `5190` / `127.0.0.1` | Where the API listens |
 | `MAS_DATA_DIR` | `<repo>/.data` | Systems, runs, plugin state, secrets, the token |
 | `MAS_TOKEN` | random, saved in `.data/token` | Bearer token that every `/api` call needs (the browser asks for it in Settings) |
-| `MAS_ALLOW_LOCAL_EXEC` | off | Allow commands on the host: custom stdio / ACP harnesses, `cli` tools, env start commands, and sandboxes when Docker is missing |
+| `MAS_ALLOW_LOCAL_EXEC` | off | Allow commands on the host: custom stdio / ACP harnesses, `cli` tools, MCP servers started as a command (plugins and envs), env start commands, and sandboxes when Docker is missing. An MCP server reached by URL needs no opt-in |
 | `MAS_DOCKER` | `docker` | Docker binary for sandbox envs |
 | `MAS_PARALLELISM` | `4` | Component turns that run at once in a run |
 | `MAS_KNOWLEDGE_DIR` | `<data>/knowledge` | Where knowledge plugins read their sources |
@@ -163,7 +163,7 @@ instead.
 | Knowledge | Sources are folders, files or URLs under the knowledge folder, indexed per run: load → chunk (recursive, fixed, headings, whole) → enrich. Search goes through the retrieval pipeline: BM25, vector (embedding model; falls back to BM25 with a warning), RRF or weighted fusion, filters, rerank (model or LLM), top-k, MMR or budget, format |
 | Workspace | A folder per plugin (or per agent or group for those scopes). `list_files`, `read_file` and `write_file` are confined to it. Workspaces that name the same first source share one folder, so copies of a plugin in different groups see the same files; the source `/work` is the folder a sandbox env mounts at `/work`, so one agent can write code and another run it |
 | Board | Tasks with owner and state: `task_list`, `task_create`, `task_update` |
-| Custom plugin backends | `mcp` (tools from the server), `http` (`POST {url}/tools/{name}`, hooks at `{url}/hooks/{hook}`), `code` (a command, JSON on stdin) |
+| Custom plugin backends | `mcp` (tools from the server; `examples/mcp/notes-server.mjs` is a minimal stdio server to start from), `http` (`POST {url}/tools/{name}`, hooks at `{url}/hooks/{hook}`), `code` (a command, JSON on stdin) |
 | Room env | A shared transcript (kept across runs when `history: persistent`) and speaking policies |
 | Sandbox env | A Docker container per run (or kept, for other lifecycles) with `/work` mounted. No network unless `egress` is set. Tools: `bash`, `edit_file`, `run_tests`, `list_work` |
 | Database env | SQLite (`image: sqlite:<path>`, or its own file). Named templates become tools; `text_to_sql` adds `ask_database`. Read-only envs only run SELECTs |
