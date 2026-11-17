@@ -82,10 +82,10 @@ export function useLiveRun(doc: SystemDoc) {
     return () => ctrl.abort();
   }, [selected, refreshList]);
 
-  const start = async (input: string, mock: boolean, force = false) => {
+  const start = async (input: string, mock: boolean, force = false, vars?: Record<string, unknown>) => {
     setError("");
     try {
-      const rec = await Api.startRun({ doc, input, mock, force });
+      const rec = await Api.startRun({ doc, input, mock, force, ...(vars && Object.keys(vars).length ? { vars } : {}) });
       setRuns((rs) => [rec, ...rs]);
       setSelected(rec.id);
     } catch (e) {

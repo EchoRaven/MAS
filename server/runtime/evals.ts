@@ -20,6 +20,8 @@ export interface EvalOptions {
   concurrency?: number;
   /** the model that judges, for the llm grader */
   judge?: string;
+  /** run variables every case starts with (ctx.vars) */
+  vars?: Record<string, unknown>;
   /** run every question this many times (1-5), to see how much the score moves */
   repeats?: number;
   /** serve every chat model of the system with this one (a catalog or default model id) */
@@ -54,6 +56,7 @@ export class EvalManager {
       grader: opts.grader,
       mock: !!opts.mock,
       repeats,
+      ...(opts.vars && Object.keys(opts.vars).length ? { vars: opts.vars } : {}),
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
       ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),
       status: "running",
@@ -126,7 +129,7 @@ export class EvalManager {
         const t0 = Date.now();
         c.status = "running";
         try {
-          const run = this.runs.start(doc, { input: c.input, mock: opts.mock });
+          const run = this.runs.start(doc, { input: c.input, mock: opts.mock, vars: opts.vars });
           c.run_id = run.id;
           save();
           await this.settle(run.id);

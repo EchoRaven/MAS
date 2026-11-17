@@ -13,6 +13,8 @@ import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, type Grader, parseCases, repeatStats, SAMPLE_SETS } from "@/run/evals";
+import { formatVars, parseVars, readVars } from "@/run/vars";
+import { Input } from "@/components/ui/input";
 import { useServer } from "@/store/server";
 import { useSystems } from "@/store/systems";
 
@@ -46,6 +48,9 @@ function Evals({ systemId }: { systemId: string }) {
   const [concurrency, setConcurrency] = useState("2");
   const [repeats, setRepeats] = useState("1");
   const [dry, setDry] = useState(false);
+  const [varsText, setVarsText] = useState("");
+  const wanted = useMemo(() => readVars(doc), [doc]);
+  const vars = parseVars(varsText);
   // "" = the system's own models, "per" = chosen per model (modelMap), else every chat model on that one
   const [onModel, setOnModel] = useState("");
   const [modelMap, setModelMap] = useState<Record<string, string>>({});
@@ -110,7 +115,7 @@ function Evals({ systemId }: { systemId: string }) {
   const start = async (force = false) => {
     setError("");
     try {
-      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), force });
+      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -206,6 +211,13 @@ function Evals({ systemId }: { systemId: string }) {
               ))}
             </div>
           )}
+          {(wanted.length > 0 || varsText) && (
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Values every run starts with; the system's code reads them as ctx.vars">
+              Variables
+              <Input value={varsText} onChange={(e) => setVarsText(e.target.value)} placeholder={wanted.map((w) => `${w}=…`).join(", ")} aria-label="Run variables" className="h-8 text-xs" />
+              {vars.bad.length > 0 && <span className="text-destructive">not name=value: {vars.bad[0]}</span>}
+            </label>
+          )}
           <ModelWarnings doc={effective} skip={dry} hint="or pick other models above" />
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">
@@ -249,6 +261,7 @@ function Evals({ systemId }: { systemId: string }) {
                   {e.mock ? " · dry run" : ""}
                   {e.on_model ? ` · on ${e.on_model}` : ""}
                   {e.model_map ? ` · ${Object.values(e.model_map).join(" / ")}` : ""}
+                  {e.vars ? ` · ${formatVars(e.vars)}` : ""}
                 </span>
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">{e.status === "running" ? "running…" : timeAgo(e.started_at)}</span>
@@ -277,6 +290,7 @@ function Evals({ systemId }: { systemId: string }) {
               <Stat label="Cost" value={usd(ev.usd)} />
               <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : "–"} />
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />
+              {ev.vars && <Stat label="Variables" value={formatVars(ev.vars)} />}
               {(ev.on_model || ev.model_map) && <Stat label="Models" value={[ev.on_model && `all on ${ev.on_model}`, ...Object.entries(ev.model_map ?? {}).map(([a, b]) => `${a} → ${b}`)].filter(Boolean).join(", ")} />}
               <Stat label="Status" value={record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}` : ev.status} />
               <div className="ml-auto flex gap-1.5">

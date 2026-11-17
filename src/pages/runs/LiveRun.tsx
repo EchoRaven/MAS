@@ -13,6 +13,8 @@ import { HumanRequests } from "./HumanRequests";
 import { RunPanels, Stat } from "./RunPanels";
 import { useNames } from "./Timeline";
 import { ModelWarnings } from "@/components/shared/ModelWarnings";
+import { Input } from "@/components/ui/input";
+import { parseVars, readVars } from "@/run/vars";
 import { useLiveRun } from "./useLiveRun";
 
 const STATUS_LABEL: Record<string, string> = { running: "Running", waiting: "Waiting for you", finished: "Finished", failed: "Failed", stopped: "Stopped" };
@@ -22,6 +24,9 @@ export function LiveRun({ doc, bar }: { doc: SystemDoc; bar: (status: React.Reac
   // a demo's "Run it yourself" arrives with its task in ?input=
   const [input, setInput] = useState(() => new URLSearchParams(window.location.search).get("input") ?? "");
   const [dry, setDry] = useState(false);
+  const [varsText, setVarsText] = useState("");
+  const wanted = useMemo(() => readVars(doc), [doc]);
+  const vars = parseVars(varsText);
   const shownDoc = live.system ?? doc;
   const nameOf = useNames(shownDoc);
   const st = useMemo(() => stateAt(live.events, live.events.length, shownDoc), [live.events, shownDoc]);
@@ -33,11 +38,18 @@ export function LiveRun({ doc, bar }: { doc: SystemDoc; bar: (status: React.Reac
       className="space-y-2 border-b border-border/70 p-3"
       onSubmit={(e) => {
         e.preventDefault();
-        void live.start(input, dry);
+        void live.start(input, dry, false, vars.vars);
       }}
     >
-      <Textarea value={input} onChange={(e) => setInput(e.target.value)} rows={3} placeholder="The task or message the run starts with" aria-label="Run input" className="text-[13px]" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && (e.preventDefault(), void live.start(input, dry))} />
+      <Textarea value={input} onChange={(e) => setInput(e.target.value)} rows={3} placeholder="The task or message the run starts with" aria-label="Run input" className="text-[13px]" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && (e.preventDefault(), void live.start(input, dry, false, vars.vars))} />
       <ModelWarnings doc={doc} skip={dry} hint="change the model in the system's catalog, or tick Dry run" />
+      {(wanted.length > 0 || varsText) && (
+        <label className="flex items-center gap-2 text-xs text-muted-foreground" title="Values the run starts with; the system's code reads them as ctx.vars">
+          Variables
+          <Input value={varsText} onChange={(e) => setVarsText(e.target.value)} placeholder={wanted.map((w) => `${w}=…`).join(", ")} aria-label="Run variables" className="h-7 text-xs" />
+          {vars.bad.length > 0 && <span className="shrink-0 text-destructive">not name=value: {vars.bad[0]}</span>}
+        </label>
+      )}
       <div className="flex items-center gap-2">
         <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: edges, tools, gates and loops run for real, with canned text and no cost">
           <input type="checkbox" checked={dry} onChange={(e) => setDry(e.target.checked)} />
@@ -51,7 +63,7 @@ export function LiveRun({ doc, bar }: { doc: SystemDoc; bar: (status: React.Reac
         <p className="text-[12px] text-destructive">
           {live.error}
           {wantsForce && (
-            <button type="button" className="ml-2 underline underline-offset-2" onClick={() => void live.start(input, dry, true)}>
+            <button type="button" className="ml-2 underline underline-offset-2" onClick={() => void live.start(input, dry, true, vars.vars)}>
               Run anyway
             </button>
           )}

@@ -8,10 +8,13 @@ import { Select } from "@/components/ui/select";
 import { timeAgo, usd } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, repeatStats } from "@/run/evals";
+import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
 
-const modelsLabel = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock">) =>
-  e.mock ? "dry run" : [e.on_model && `all on ${e.on_model}`, ...Object.entries(e.model_map ?? {}).map(([a, b]) => `${a}→${b}`)].filter(Boolean).join(", ") || "its own models";
+const modelsLabel = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock" | "vars">) =>
+  [e.mock ? "dry run" : [e.on_model && `all on ${e.on_model}`, ...Object.entries(e.model_map ?? {}).map(([a, b]) => `${a}→${b}`)].filter(Boolean).join(", ") || "its own models", e.vars && formatVars(e.vars)]
+    .filter(Boolean)
+    .join(" · ");
 
 export function ComparePage() {
   const connected = useServer((s) => s.status === "connected");
@@ -106,7 +109,7 @@ export function ComparePage() {
             <tr className="border-b border-border/70">
               <th className="w-8 py-1.5" />
               <th>System</th>
-              <th>Models</th>
+              <th>Models · variables</th>
               <th className="text-right">Accuracy</th>
               <th className="hidden text-right sm:table-cell">Per repeat</th>
               <th className="text-right">Cost</th>

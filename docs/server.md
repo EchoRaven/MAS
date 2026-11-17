@@ -33,12 +33,12 @@ functions, and Docker sandboxes. Treat the token like a password.
 | `GET /api/health` | Liveness (no token) |
 | `GET/PUT/DELETE /api/systems[/:id]` | Systems (the browser syncs automatically) |
 | `POST /api/validate` | Issues and conformance failures of a document |
-| `POST /api/runs` `{doc \| system_id, input, mock?, force?}` | Start a run. `mock` = dry run on the test model. Validation errors refuse the run unless `force` is set |
+| `POST /api/runs` `{doc \| system_id, input, mock?, force?, vars?}` | Start a run. `mock` = dry run on the test model. Validation errors refuse the run unless `force` is set |
 | `GET /api/runs?system=` · `GET /api/runs/:id` | History, and one run with its events |
 | `GET /api/runs/:id/events` | Server-sent events: replay, then live until the end |
 | `POST /api/runs/:id/answer` `{request, approved?, text?}` | Answer an approval or a request for input |
 | `POST /api/runs/:id/stop` · `DELETE /api/runs/:id` | Stop a run · delete a finished one |
-| `POST /api/evals` `{system_id, cases: [{input, expected}], grader, concurrency?, judge?, mock?}` | Evaluate a system: every case is a run, graded by `answer` (the final answer matches; an option letter matches "B. …"), `contains`, `number` (fractions and percentages too) or `llm` (a judge model) |
+| `POST /api/evals` `{system_id \| doc, cases: [{input, expected}], grader, concurrency?, repeats?, on_model?, model_map?, vars?, judge?, mock?}` | Evaluate a system: every case is a run, graded by `answer` (the final answer matches; an option letter matches "B. …"), `contains`, `number` (fractions and percentages too) or `llm` (a judge model) |
 | `GET /api/evals?system=` (summaries, each with `set`: an id for its question set, the same for the same questions) · `GET /api/evals/:id` · `POST /api/evals/:id/stop` · `DELETE /api/evals/:id` | Evaluations so far, one with its graded cases, stop one, delete a finished one |
 | `GET/PUT/DELETE /api/secrets[/:name]` | Which secrets are set; set or remove one |
 | `POST /api/models/test` `{model}` | Call a model once (chat, embedding or rerank) |

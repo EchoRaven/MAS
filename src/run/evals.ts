@@ -42,6 +42,8 @@ export interface EvalRecord {
   mock: boolean;
   /** every chat model of the system was served by this one */
   on_model?: string;
+  /** run variables every case started with */
+  vars?: Record<string, unknown>;
   /** chosen models of the system served by others */
   model_map?: Record<string, string>;
   status: "running" | "finished" | "stopped";

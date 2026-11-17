@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { Builder, native } from "@/model/builder";
+import { port } from "@/model/ports";
 import { type EvalRecord, repeatStats } from "@/run/evals";
 import type { Config } from "../config";
 import { Store } from "../store/files";
@@ -95,6 +96,17 @@ describe("evaluations", () => {
     } finally {
       server.close();
     }
+  });
+
+  it("starts every run with the evaluation's variables", async () => {
+    const b = new Builder("Vars", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("f", "function", 200, 0, { name: "Reads x", fn: { lang: "js", code: 'return "Answer: " + ctx.vars.x;' }, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
+      .edge("me", "f", "message")
+      .edge("f", "me", "message");
+    const done = await finish(evals.start({ ...b.doc, id: "sys_vars" }, { grader: "number", vars: { x: 7 }, cases: [{ input: "?", expected: "7" }] }).id);
+    expect(done.vars).toEqual({ x: 7 });
+    expect(done.cases[0]).toMatchObject({ pass: true, output: "Answer: 7" });
   });
 
   it("marks evaluations a restart cut off as stopped", () => {
