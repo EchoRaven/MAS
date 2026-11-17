@@ -76,10 +76,28 @@ export async function reflexion(io: AgentIO, li: LoopInput): Promise<string> {
     if (i === trials) break;
     const crit = textOf((await io.model({ system: "You review answers strictly.", messages: [userText(`Task:\n${li.input}\n\nAnswer:\n${answer}\n\n${prompt} If the answer is complete and correct, reply exactly OK.`)], tools: false, model: critic })).content).trim();
     io.rc.emit({ type: "transform", at: io.node, label: `critique ${i}`, detail: crit.slice(0, 300) });
-    if (/^OK\.?$/i.test(crit)) break;
+    if (/^["'`*]*ok["'`*]*[.!]?$/i.test(crit)) break;
     reflections += `- Attempt ${i}: ${crit}\n`;
   }
   return answer;
+}
+
+/**
+ * Scores per candidate from an evaluator's reply, however it writes them:
+ * "0 7", "[0] 7", "Candidate 0: 7/10", "0=7, 1=9". The first score given for
+ * an index counts; a candidate with none scores 0.
+ */
+export function parseScores(text: string, n: number): number[] {
+  const scores: number[] = Array(n).fill(0);
+  const seen = new Set<number>();
+  for (const m of text.matchAll(/(?:candidate\s*)?\[?(\d+)\]?\s*(?:[:=)\-–]\s*|\s+)(\d+(?:\.\d+)?)(?:\s*\/\s*\d+)?/gi)) {
+    const i = Number(m[1]);
+    if (i < n && !seen.has(i)) {
+      seen.add(i);
+      scores[i] = Number(m[2]);
+    }
+  }
+  return scores;
 }
 
 /** Branch into candidate answers, score them, expand the best, for `depth` levels. */
@@ -94,7 +112,7 @@ export async function treeSearch(io: AgentIO, li: LoopInput): Promise<string> {
       Array.from({ length: branches }, async (_, i) => textOf((await io.model({ system: `${li.system}\n\n(Candidate ${i + 1} of ${branches}: think independently.)`, messages: [...li.history, userText(prompt)], tools: false, temperature: 1 })).content)),
     );
     const scoring = textOf((await io.model({ system: "You score candidate answers.", messages: [userText(`Task:\n${li.input}\n\n${cands.map((c, i) => `[${i}]\n${c}`).join("\n\n")}\n\nScore each candidate 0-10. Reply one line per candidate: index score.`)], tools: false, model: evaluator })).content);
-    const scores = cands.map((_, i) => Number(new RegExp(`\\[?${i}\\]?\\s*[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`).exec(scoring)?.[1] ?? 0));
+    const scores = parseScores(scoring, cands.length);
     const top = scores.indexOf(Math.max(...scores));
     best = cands[top];
     io.rc.emit({ type: "transform", at: io.node, label: `level ${d + 1}`, detail: `${branches} candidates, best scored ${scores[top]}` });

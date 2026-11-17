@@ -730,6 +730,44 @@ describe("runtime", () => {
     });
   });
 
+  describe("agent loops", () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const loopDoc = (loop: string, loop_params: Record<string, string | number | boolean>, models: ReturnType<typeof mock>[]) => {
+      const b = new Builder("Loop", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: models[0].id, harness: { ...native(), loop: loop as never, max_steps: 3, loop_params, instructions: "Do the task." } })
+        .edge("me", "a", "message")
+        .edge("a", "me", "message");
+      b.doc.models.push(...models);
+      return b.doc;
+    };
+    const out = (events: RunEvent[]) => (events.find((e) => e.type === "output") as { text: string }).text;
+    const labels = (events: RunEvent[]) => events.filter((e) => e.type === "transform" && (e as { at?: string }).at === "a").map((e) => `${(e as { label: string }).label}: ${(e as { detail: string }).detail}`);
+
+    it("tree search keeps the candidate the evaluator scores highest, however it writes the scores", async () => {
+      for (const scoring of ["0 3\n1 9\n2 4", "[0] 3\n[1] 9\n[2] 4", "Candidate 0: 3/10\nCandidate 1: 9/10\nCandidate 2: 4/10", "0=3, 1=9, 2=4"]) {
+        const doc = loopDoc("tree_search", { branches: 3, depth: 1, evaluator: "ev" }, [mock("cands", ["first idea", "second idea", "third idea"]), mock("ev", [scoring])]);
+        const { events } = await run(doc, "go", { mock: false });
+        expect(out(events), scoring).toBe("second idea");
+      }
+    });
+
+    it("reflexion retries with the critic's lessons until the critic says OK", async () => {
+      const doc = loopDoc("reflexion", { max_trials: 3, critic: "crit" }, [mock("actor", ["answer v1", "answer v2"]), mock("crit", ["It misses the edge case.", '"OK"'])]);
+      const { events } = await run(doc, "go", { mock: false });
+      expect(out(events)).toBe("answer v2");
+      expect(usages(events, "a").length).toBe(4); // two answers, two critiques
+      expect(labels(events)).toEqual(["critique 1: It misses the edge case.", 'critique 2: "OK"']);
+    });
+
+    it("plan and execute writes a plan, follows it, and re-plans once when the result reports a failure", async () => {
+      const doc = loopDoc("plan_execute", { planner: "planner" }, [mock("doer", ["I was unable to finish.", "Done, all steps."]), mock("planner", ["1. Try it.", "1. Try it another way."])]);
+      const { events } = await run(doc, "go", { mock: false });
+      expect(out(events)).toBe("Done, all steps.");
+      expect(labels(events)).toEqual(["plan: 1. Try it.", "re-plan: 1. Try it another way."]);
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
