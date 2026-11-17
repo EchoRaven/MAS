@@ -43,6 +43,12 @@ export const DESIGN_TOOLS: ToolDef[] = [
     // "source"/"target", not "from"/"to": some providers rename a parameter called `from`
     input_schema: { type: "object", properties: { source: S, target: S, kind: S, options: { type: "object" } }, required: ["source", "target", "kind"] },
   },
+  {
+    name: "update",
+    description:
+      "Change a component in place; its connections stay. Give only what changes. Agent: name, role, instructions, model, loop, tools. Function: code, lang, join. Model: prompt, system_prompt, model. Human: role, approves. Group: max_rounds, until, feed. Room: policy. Prefer this to remove and add.",
+    input_schema: { type: "object", properties: { id: S, options: { type: "object" } }, required: ["id", "options"] },
+  },
   { name: "remove", description: "Remove a component and everything connected to it.", input_schema: { type: "object", properties: { id: S }, required: ["id"] } },
   { name: "set_entry", description: "Choose where a run's input arrives. Use it when more than one component could start the run.", input_schema: { type: "object", properties: { id: S }, required: ["id"] } },
   { name: "describe", description: "Name the system and say in one or two sentences what it does.", input_schema: { type: "object", properties: { name: S, description: S }, required: ["name", "description"] } },
@@ -66,6 +72,8 @@ export async function runDesignTool(draft: Draft, name: string, args: Record<str
         if (!source || !target) return `Not done: connect needs source and target. It was given ${JSON.stringify(args).slice(0, 200)}`;
         return draft.connect(String(source), String(target), String(args.kind ?? "message"), options);
       }
+      case "update":
+        return draft.update(String(args.id), options);
       case "remove":
         return draft.remove(String(args.id));
       case "set_entry":

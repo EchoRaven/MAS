@@ -109,6 +109,63 @@ export class Draft {
     return `Added ${kind} "${id}"${parent ? ` inside ${parent}` : ""}.`;
   }
 
+  /** Change a component in place; its connections stay. Only the keys given change. */
+  update(id: string, options: Record<string, unknown>): string {
+    const n = this.node(id);
+    const d = n.data as unknown as Record<string, unknown>;
+    const changed: string[] = [];
+    const str = (k: string) => typeof options[k] === "string";
+    if (str("name")) (d.name = options.name, changed.push("name"));
+    switch (n.data.kind) {
+      case "agent": {
+        const a = n.data;
+        if (str("role")) (a.role = String(options.role), changed.push("role"));
+        if (str("instructions")) (a.harness.instructions = String(options.instructions), changed.push("instructions"));
+        if (str("model")) {
+          if (!this.doc.models.some((m) => m.id === options.model)) throw new DraftError(`There is no model "${options.model}". Models: ${this.doc.models.map((m) => m.id).join(", ")}`);
+          a.model = String(options.model);
+          changed.push("model");
+        }
+        if (str("loop")) (a.harness.loop = options.loop as AgentData["harness"]["loop"], changed.push("loop"));
+        if (Array.isArray(options.tools)) {
+          const unknown = options.tools.map(String).filter((t) => !this.doc.tools.some((x) => x.id === t));
+          if (unknown.length) throw new DraftError(`Unknown tools: ${unknown.join(", ")}. Tools: ${this.doc.tools.map((t) => t.id).join(", ")}`);
+          a.tools = options.tools.map(String);
+          changed.push("tools");
+        }
+        break;
+      }
+      case "function":
+        if (str("code")) (n.data.fn = { ...n.data.fn, code: String(options.code) }, changed.push("code"));
+        if (str("lang")) (n.data.fn = { ...n.data.fn, lang: options.lang as typeof n.data.fn.lang }, changed.push("lang"));
+        if (options.join === "all" || options.join === "any") (n.data.join = options.join, changed.push("join"));
+        break;
+      case "model":
+        if (str("prompt")) (n.data.prompt = String(options.prompt), changed.push("prompt"));
+        if (str("system_prompt")) (n.data.system_prompt = String(options.system_prompt), changed.push("system_prompt"));
+        if (str("model")) (n.data.model = String(options.model), changed.push("model"));
+        break;
+      case "human":
+        if (str("role")) (n.data.role = String(options.role), changed.push("role"));
+        if (typeof options.approves === "boolean") (n.data.approves = options.approves, changed.push("approves"));
+        break;
+      case "group":
+        if (typeof options.max_rounds === "number") {
+          n.data.iterate = { max_rounds: options.max_rounds, until: str("until") ? String(options.until) : (n.data.iterate?.until ?? null), feed: options.feed === "input_and_output" ? "input_and_output" : (n.data.iterate?.feed ?? "output") };
+          changed.push("iterate");
+        } else if (str("until") && n.data.iterate) (n.data.iterate.until = String(options.until), changed.push("until"));
+        break;
+      case "env":
+        if (str("policy") && n.data.room) (n.data.room = { ...n.data.room, policy: options.policy as NonNullable<typeof n.data.room>["policy"] }, changed.push("policy"));
+        if (str("image")) (n.data.image = String(options.image), changed.push("image"));
+        break;
+      default:
+        break;
+    }
+    if (!changed.length) throw new DraftError(`Nothing to change on ${id} (a ${n.data.kind}) from ${JSON.stringify(options).slice(0, 160)}`);
+    return `Updated ${id}: ${changed.join(", ")}.`;
+  }
+
   private defaultModel() {
     return this.doc.models.find((m) => (m.kind ?? "chat") === "chat")?.id ?? "sonnet";
   }

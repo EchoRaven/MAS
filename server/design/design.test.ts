@@ -70,6 +70,20 @@ describe("the draft the architect edits", () => {
     expect(d.problems().errors).toEqual([]);
   });
 
+  it("updates a component in place and keeps its connections", async () => {
+    const d = Draft.blank("X");
+    d.add("agent", "a", "A");
+    d.add("function", "f", "F");
+    d.connect("a", "f", "message");
+    expect(await runDesignTool(d, "update", { id: "a", options: { instructions: "Be brief.", model: "haiku" } })).toMatch(/instructions, model/);
+    expect(await runDesignTool(d, "update", { id: "f", options: { code: "return 1;" } })).toMatch(/code/);
+    expect(await runDesignTool(d, "update", { id: "a", options: { model: "nope" } })).toMatch(/no model "nope"/);
+    expect(await runDesignTool(d, "update", { id: "a", options: {} })).toMatch(/Nothing to change/);
+    expect(d.doc.edges).toHaveLength(1);
+    const a = d.doc.nodes.find((n) => n.id === "a")!.data;
+    expect(a.kind === "agent" && a.harness.instructions).toBe("Be brief.");
+  });
+
   it("a function added without code still meets its contract", () => {
     const d = Draft.blank("X");
     d.add("function", "f", "F");

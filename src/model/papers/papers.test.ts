@@ -43,6 +43,17 @@ describe("paper reproductions", () => {
     }
   });
 
+  it("Voyager's skill library takes only programs the critic verified", () => {
+    const doc = PAPER_TEMPLATES.find((x) => x.id === "paper-voyager")!.build();
+    const code = doc.edges.find((e) => e.target === "skills")!.binding!.write!.extract!.code;
+    const extract = new Function("input", code) as (s: string) => unknown;
+    expect(extract("Input: SUCCESS\ndef mean(xs): return sum(xs) / len(xs)\nReply: Next, compute the median.")).toEqual([{ text: "def mean(xs): return sum(xs) / len(xs)", type: "skill" }]);
+    expect(extract("Input: The output is wrong: it divides by zero.\nReply: Try again.")).toEqual([]);
+    // the curriculum's two ways out are mutually exclusive
+    const out = doc.edges.filter((e) => e.source === "curriculum" && e.kind === "message");
+    expect(out.map((e) => e.filter)).toEqual(['!text.includes("GOAL REACHED")', 'text.includes("GOAL REACHED")']);
+  });
+
   it("role-play and phase groups loop and stop", () => {
     for (const id of ["paper-camel", "paper-chatdev"]) {
       const ev = simulate({ ...PAPER_TEMPLATES.find((x) => x.id === id)!.build(), id: "fixed" }).events;

@@ -90,6 +90,15 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-voyager": {
+    input: "Learn to summarise a list of numbers: build up to a function that reports its mean, median and standard deviation.",
+    adapt: (doc) => {
+      capRounds(doc, 24);
+      const g = node(doc, "attempt").data;
+      if (g.kind === "group" && g.iterate) g.iterate.max_rounds = 2;
+      return ["Each task gets at most 2 attempts (the template allows 4), and the run 24 activations."];
+    },
+  },
   "paper-chatdev": {
     input: "A command-line tic-tac-toe game in Python for two players on one keyboard.",
     adapt: (doc) => {
