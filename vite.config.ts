@@ -26,5 +26,11 @@ export default defineConfig({
       },
     },
   },
-  test: { environment: "jsdom", globals: true, include: ["src/**/*.test.{ts,tsx}"] },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    include: ["src/**/*.test.{ts,tsx}", "server/**/*.test.ts"],
+    pool: "forks",
+    poolOptions: { forks: { execArgv: ["--experimental-sqlite", "--no-warnings=ExperimentalWarning"] } },
+  },
 });

@@ -2,7 +2,8 @@ import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import { edgeScope, interfaceOf } from "@/model/ports";
 import type { EdgeKind, NodeData, PortSpec, SysEdge, SystemDoc } from "@/model/types";
 
-export type RunStatus = "idle" | "working" | "waiting" | "done" | "blocked";
+import type { RunStatus } from "@/run/events";
+export type { RunStatus } from "@/run/events";
 
 /** Virtual nodes for a group's own ports on its inner canvas. */
 export const BOUNDARY_IN = "__in";

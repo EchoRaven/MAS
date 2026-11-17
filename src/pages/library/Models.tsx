@@ -6,7 +6,7 @@ import { Panel } from "@/components/shared/Panel";
 import type { ModelSpec, SystemDoc } from "@/model/types";
 import { cell } from "./cell";
 
-const KEY_ENV: Record<ModelSpec["provider"], string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GEMINI_API_KEY", openai_compatible: "OPENAI_API_KEY", local: "" };
+const KEY_ENV: Record<ModelSpec["provider"], string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GEMINI_API_KEY", openai_compatible: "OPENAI_API_KEY", local: "", mock: "" };
 
 /** A JSON object field that only commits when the text parses. */
 function JsonCell({ value, onChange, label }: { value: Record<string, unknown> | undefined; onChange: (v: Record<string, unknown> | undefined) => void; label: string }) {
@@ -107,7 +107,7 @@ export function Models({ doc, update }: { doc: SystemDoc; update: (fn: (d: Syste
                     <Select size="sm" value={m.kind ?? "chat"} onValueChange={(kind) => set(i, { kind: kind as ModelSpec["kind"] })} ariaLabel="Kind" items={["chat", "embedding", "rerank"].map((v) => ({ value: v, label: v }))} />
                   </td>
                   <td className="py-1.5 pr-2">
-                    <Select size="sm" value={m.provider} onValueChange={(provider) => set(i, { provider: provider as ModelSpec["provider"] })} ariaLabel="Provider" items={["anthropic", "openai", "google", "openai_compatible", "local"].map((v) => ({ value: v, label: v }))} />
+                    <Select size="sm" value={m.provider} onValueChange={(provider) => set(i, { provider: provider as ModelSpec["provider"] })} ariaLabel="Provider" items={["anthropic", "openai", "google", "openai_compatible", "local", "mock"].map((v) => ({ value: v, label: v }))} />
                   </td>
                   <td className="py-1.5 pr-2"><input className={`${cell} font-mono`} value={m.model} onChange={(e) => set(i, { model: e.target.value })} aria-label="Model" /></td>
                   <td className="py-1.5 pr-2"><input type="number" step="0.01" className={cell} value={m.price_in} onChange={(e) => set(i, { price_in: Number(e.target.value) })} aria-label="Input price" /></td>

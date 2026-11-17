@@ -5,23 +5,10 @@
 import { runnerById } from "@/model/defaults";
 import { interfaceOf, nodeName } from "@/model/ports";
 import type { AgentData, EnvData, FunctionNodeData, HumanData, ModelNodeData, SysEdge, SysNode, SystemDoc } from "@/model/types";
-import type { RunStatus } from "@/canvas/convert";
+import type { DistOmit, RunEvent, RunStatus } from "./events";
 import { memorySummary, retrievalSummary } from "./describe";
 
-export type SimEvent =
-  | { t: number; type: "system_started" }
-  | { t: number; type: "status"; node: string; status: RunStatus }
-  | { t: number; type: "message"; from: string; to: string; edge?: string; room?: string; port?: string; kind: SysEdge["kind"] | "reply"; text: string }
-  | { t: number; type: "tool"; node: string; tool: string; args: string; result: string }
-  | { t: number; type: "access"; node: string; target: string; edge: string; op: "read" | "write" }
-  | { t: number; type: "gate"; edge: string; gate: string; passed: boolean; reason: string }
-  | { t: number; type: "transform"; at: string; edge?: string; label: string; detail: string }
-  | { t: number; type: "approval"; node: string; from: string; resolved: boolean }
-  | { t: number; type: "usage"; node: string; tokens_in: number; tokens_out: number; usd: number; estimated: boolean }
-  | { t: number; type: "spawn"; node: string; template: string; count: number }
-  | { t: number; type: "system_finished"; reason: string };
-
-type DistOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+export type SimEvent = RunEvent;
 
 function rng(seed: string) {
   let h = 1779033703 ^ seed.length;

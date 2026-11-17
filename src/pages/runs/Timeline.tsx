@@ -137,6 +137,14 @@ export function describe(e: SimEvent, n: (id: string) => string): string {
       return `${n(e.node)} spawned ${e.count}× ${n(e.template)}`;
     case "transform":
       return `${n(e.at)} ${e.label}: ${e.detail}`;
+    case "human_request":
+      return `${e.request.kind === "approval" ? "Approval" : "Input"} requested of ${n(e.request.node) || "you"} by ${n(e.request.from)}: ${e.request.text}`;
+    case "human_response":
+      return e.approved === undefined ? `Answered: ${e.text ?? ""}` : `${e.approved ? "Approved" : "Rejected"}${e.text ? `: ${e.text}` : ""}`;
+    case "output":
+      return `Output from ${n(e.node)}: ${e.text}`;
+    case "log":
+      return `${e.level}: ${e.node ? n(e.node) + ": " : ""}${e.text}`;
     case "system_finished":
       return e.reason;
   }

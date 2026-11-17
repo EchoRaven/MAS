@@ -421,7 +421,8 @@ export interface ModelSpec {
   id: string;
   /** chat (default) · embedding · rerank */
   kind?: "chat" | "embedding" | "rerank";
-  provider: "anthropic" | "openai" | "google" | "openai_compatible" | "local";
+  /** mock: the built-in test model (no key, canned replies) for dry runs */
+  provider: "anthropic" | "openai" | "google" | "openai_compatible" | "local" | "mock";
   model: string;
   /** how to reach it; the key itself is never stored, only the env var that holds it */
   api: { base_url?: string; key_env?: string; headers?: Record<string, string>; params?: Record<string, unknown> };
@@ -439,6 +440,12 @@ export interface ToolSpec {
   effect: ToolEffect;
   /** this tool acts on an env of this kind */
   needs_env?: EnvKind | null;
+  /** how the runtime calls it: http POSTs the arguments to url · mcp calls the tool on the server at url · cli runs command (arguments as JSON on stdin) · code runs fn(args, ctx) */
+  url?: string;
+  command?: string;
+  fn?: FunctionSpec | null;
+  /** JSON Schema of the arguments, as text; default { input: string } */
+  input_schema?: string;
 }
 
 export interface SystemPolicy {

@@ -1,0 +1,169 @@
+// @vitest-environment node
+// End-to-end runs on the built-in test model: real scheduling, edges,
+// functions, plugins, people and budgets; only the model text is canned.
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
+import { TEMPLATES } from "@/model/templates";
+import { Builder, native } from "@/model/builder";
+import type { RunEvent, RunRecord } from "@/run/events";
+import type { SystemDoc } from "@/model/types";
+import type { Config } from "../config";
+import { Store } from "../store/files";
+import { Secrets } from "../store/secrets";
+import { resetMock } from "./models/mock";
+import { RunManager } from "./runs";
+
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mas-test-"));
+const config: Config = { host: "127.0.0.1", port: 0, dataDir: dir, token: "t", allowLocalExec: false, docker: "/nonexistent/docker", parallelism: 4 };
+const store = new Store(dir);
+const runs = new RunManager(store, new Secrets(dir), config);
+afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+/** Run to the end, answering every person's request with `answer`. */
+async function run(doc: SystemDoc, input = "Hello", opts: { mock?: boolean; answer?: (r: { kind: string; text: string }) => { approved?: boolean; text?: string } } = {}): Promise<{ rec: RunRecord; events: RunEvent[] }> {
+  resetMock();
+  store.putSystem(doc);
+  const rec = runs.start(doc, { input, mock: opts.mock ?? true });
+  const answer = opts.answer ?? (() => ({ approved: true, text: "ok" }));
+  const seen = new Set<string>();
+  for (let i = 0; i < 2000 && runs.isActive(rec.id); i++) {
+    for (const e of store.events(rec.id)) {
+      if (e.type === "human_request" && !seen.has(e.request.id)) {
+        seen.add(e.request.id);
+        runs.answer(rec.id, e.request.id, answer(e.request));
+      }
+    }
+    await new Promise((r) => setTimeout(r, 5));
+  }
+  return { rec: runs.get(rec.id)!, events: store.events(rec.id) };
+}
+
+const errors = (events: RunEvent[]) => events.filter((e) => e.type === "log" && e.level === "error").map((e) => (e as { text: string }).text);
+const usages = (events: RunEvent[], node?: string) => events.filter((e) => e.type === "usage" && (!node || e.node === node));
+
+describe("runtime", () => {
+  it("runs human -> agent -> human and returns the reply", async () => {
+    const b = new Builder("Echo", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 300, 0, { name: "Helper", role: "assistant", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Help." } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    const { rec, events } = await run(b.doc, "What is 2+2?");
+    expect(errors(events)).toEqual([]);
+    expect(rec.status).toBe("finished");
+    const out = events.find((e) => e.type === "output");
+    expect(out && "text" in out && out.text).toContain("Helper");
+    expect(out && "text" in out && out.text).toContain("2+2");
+  });
+
+  it("calls another agent through a call edge, as a tool", async () => {
+    const b = new Builder("Call", "");
+    b.agent("boss", 0, 0, { name: "Boss", model: "boss_m", harness: { ...native(), instructions: "" } })
+      .agent("w", 300, 0, { name: "Worker", model: "w_m", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("boss", "w", "call");
+    b.doc.models.push({ id: "w_m", provider: "mock", model: "mock", api: {}, price_in: 0, price_out: 0, modalities: ["text"] });
+    b.doc.models.push({ id: "boss_m", provider: "mock", model: "mock", api: { params: { script: [{ tool: "ask_w", input: { request: "compute" } }, "Final: {{input}}"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    expect(errors(events)).toEqual([]);
+    expect(events.some((e) => e.type === "message" && e.kind === "call" && e.to === "w")).toBe(true);
+    expect(events.some((e) => e.type === "message" && e.kind === "reply" && e.from === "w")).toBe(true);
+    expect(events.some((e) => e.type === "tool" && e.tool === "ask_w" && !e.error)).toBe(true);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("Worker");
+  });
+
+  it("asks an approver and continues with the answer", async () => {
+    const b = new Builder("Approve", "");
+    b.agent("a", 0, 0, { name: "Agent", model: "m", harness: { ...native(), instructions: "" } })
+      .node("boss", "human", 300, 0, { name: "Boss", role: "", approves: true })
+      .edge("a", "boss", "call");
+    b.doc.models.push({ id: "m", provider: "mock", model: "mock", api: { params: { script: [{ tool: "ask_boss", input: { request: "may I?" } }, "Got: {{input}}"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false, answer: () => ({ approved: false, text: "not today" }) });
+    expect(events.some((e) => e.type === "human_request" && e.request.kind === "approval")).toBe(true);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("Rejected. not today");
+  });
+
+  it("routes a function's output by the keys it returns", async () => {
+    const b = new Builder("Route", "");
+    b.node("f", "function", 0, 0, { name: "Router", join: "any", fn: { lang: "js", code: "return input.text.includes('bill') ? { billing: input } : { tech: input };" }, interface: { inputs: [{ id: "in", type: "message" }], outputs: [{ id: "billing", type: "message" }, { id: "tech", type: "message" }] } })
+      .agent("bill", 300, 0, { name: "Billing", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .agent("tech", 300, 200, { name: "Tech", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("f", "bill", "message", { source_port: "billing" })
+      .edge("f", "tech", "message", { source_port: "tech" });
+    const { events } = await run(b.doc, "my bill is wrong");
+    expect(errors(events)).toEqual([]);
+    expect(usages(events, "bill")).toHaveLength(1);
+    expect(usages(events, "tech")).toHaveLength(0);
+  });
+
+  it("runs template, jsonata and python transforms on edges", async () => {
+    const b = new Builder("Fns", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("f1", "function", 200, 0, { name: "Upper", join: "any", fn: { lang: "jsonata", code: "$uppercase(text)" }, interface: { inputs: [{ id: "in", type: "message" }], outputs: [{ id: "out", type: "text" }] } })
+      .node("f2", "function", 400, 0, { name: "Py", join: "any", fn: { lang: "python", code: "return input + '!'" }, interface: { inputs: [{ id: "in", type: "text" }], outputs: [{ id: "out", type: "text" }] } })
+      .node("sink", "human", 600, 0, { name: "Sink", role: "", approves: false })
+      .edge("me", "f1", "message")
+      .edge("f1", "f2", "message", { transform: { lang: "template", code: "<{{input}}>" } })
+      .edge("f2", "sink", "message");
+    const { events } = await run(b.doc, "hi");
+    expect(errors(events)).toEqual([]);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("<HI>!");
+  });
+
+  it("stops at the round limit", async () => {
+    const b = new Builder("Loop", "");
+    b.agent("a", 0, 0, { name: "A", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .agent("b", 300, 0, { name: "B", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("a", "b", "message")
+      .edge("b", "a", "message");
+    b.doc.budget = { usd: null, max_rounds: 5, wallclock_min: null };
+    const { rec } = await run(b.doc);
+    expect(rec.reason).toBe("Round limit reached");
+    expect(usages(store.events(rec.id))).toHaveLength(5);
+  });
+
+  it("remembers across runs through a memory plugin", async () => {
+    const b = new Builder("Mem", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 300, 0, { name: "Helper", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .plugin("mem", "memory", 300, 200, {})
+      .edge("me", "a", "message")
+      .edge("a", "me", "message")
+      .edge("a", "mem", "access", { access: "read_write" });
+    const memNode = b.doc.nodes.find((n) => n.id === "mem")!;
+    if (memNode.data.kind === "plugin") memNode.data.spec.memory = { ...memNode.data.spec.memory!, extract: { use: "whole_turn" }, classify: { use: "none" }, merge: { use: "append" } };
+    const edge = b.doc.edges.find((e) => e.target === "mem")!;
+    edge.binding = { mode: "auto_inject", read: { top_k: 5 }, write: { when: "after_turn" } };
+    await run(b.doc, "My favourite colour is teal");
+    const { events } = await run(b.doc, "What is my favourite colour?");
+    expect(errors(events)).toEqual([]);
+    expect(events.some((e) => e.type === "transform" && e.label.startsWith("retrieve"))).toBe(true);
+    expect(events.some((e) => e.type === "transform" && e.label.startsWith("remember"))).toBe(true);
+  });
+
+  it("reproduces the paper templates' call counts", async () => {
+    const moa = TEMPLATES.find((t) => t.id === "paper-moa")!.build();
+    const r1 = await run(moa, "Explain tides");
+    expect(errors(r1.events)).toEqual([]);
+    expect(usages(r1.events)).toHaveLength(7);
+    const debate = TEMPLATES.find((t) => t.id === "paper-debate")!.build();
+    const r2 = await run(debate, "What is 17*23?");
+    expect(errors(r2.events)).toEqual([]);
+    // three debaters, two rounds
+    expect(usages(r2.events)).toHaveLength(6);
+    expect(r2.events.some((e) => e.type === "transform" && e.label === "rounds done")).toBe(true);
+  });
+
+  it("dry-runs every built-in template to the end without errors", async () => {
+    for (const t of TEMPLATES.filter((x) => x.id !== "blank")) {
+      const { rec, events } = await run(t.build(), "Build a small todo app");
+      expect({ template: t.id, errors: errors(events) }).toEqual({ template: t.id, errors: [] });
+      expect({ template: t.id, status: rec.status }).toEqual({ template: t.id, status: "finished" });
+      expect(usages(events).length, t.id).toBeGreaterThan(0);
+    }
+  }, 60_000);
+});
