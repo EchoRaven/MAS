@@ -54,6 +54,18 @@ describe("evaluations", () => {
     expect(done.cases[0]).toMatchObject({ pass: true, why: "judge: PASS: same answer" });
   });
 
+  it("regrades stored outputs without running anything again", async () => {
+    const done = await finish(evals.start(echo(), { grader: "answer", cases: [{ input: "Paris", expected: "the capital is Paris" }] }).id);
+    expect(done.cases[0].pass).toBe(false);
+    const runsBefore = store.listRuns().length;
+    const again = evals.regrade(done.id, "contains");
+    expect(again.grader).toBe("contains");
+    expect(again.cases[0].pass).toBe(false);
+    expect(evals.regrade(done.id, "answer").passed).toBe(0);
+    expect(store.listRuns().length).toBe(runsBefore);
+    expect(() => evals.regrade(done.id, "llm" as never)).toThrow(/would call a model/);
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

@@ -35,6 +35,8 @@ export interface EvalRecord {
   system_name: string;
   grader: Grader;
   mock: boolean;
+  /** every chat model of the system was served by this one */
+  on_model?: string;
   status: "running" | "finished" | "stopped";
   started_at: string;
   finished_at?: string;
@@ -46,12 +48,36 @@ export interface EvalRecord {
 
 const ANSWER_LINE = /(?:^|\n)\s*(?:\*\*)?(?:final answer|answer|final)(?:\*\*)?\s*[:：]\s*(?:\*\*)?([^\n]+)/gi;
 
-/** The final answer in an output: the last "Answer:" / "Final:" line, else the last non-empty line. */
+/**
+ * The final answer in an output: the last "Answer:" / "Final:" line (or the
+ * line after it, when the marker stands alone as in "**Final Answer:**"),
+ * else the last non-empty line. Bold markers are kept: they say which part
+ * is the answer.
+ */
 export function finalAnswer(output: string): string {
-  const marked = [...output.matchAll(ANSWER_LINE)].map((m) => m[1]);
-  if (marked.length) return marked[marked.length - 1].replace(/\*+/g, "").trim();
+  const marked = [...output.matchAll(ANSWER_LINE)];
+  if (marked.length) {
+    const m = marked[marked.length - 1];
+    const same = m[1].replace(/^\*+|\*+$/g, "").trim();
+    if (same) return m[1].trim();
+    const after = output.slice((m.index ?? 0) + m[0].length).split("\n").map((l) => l.trim()).find(Boolean);
+    if (after) return after;
+  }
   const lines = output.split("\n").map((l) => l.trim()).filter(Boolean);
   return lines[lines.length - 1] ?? "";
+}
+
+/** The number an answer gives: \boxed{…} first, then bold text, then the first number in it. */
+export function answerNumber(answer: string): number | null {
+  const boxed = /\\boxed\{([^}]*)\}/.exec(answer);
+  if (boxed && parseNumber(boxed[1]) !== null) return parseNumber(boxed[1]);
+  for (const b of answer.matchAll(/\*\*([^*]+)\*\*/g)) if (parseNumber(b[1]) !== null) return firstNumber(b[1]);
+  return firstNumber(answer);
+}
+
+function firstNumber(s: string): number | null {
+  const m = /-?\d[\d,]*(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?%?/.exec(s);
+  return m ? parseNumber(m[0]) : null;
 }
 
 export const normalize = (s: string) =>
@@ -84,14 +110,14 @@ export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expe
     return { pass, answer, why: pass ? "the output contains the expected answer" : "the expected answer is not in the output" };
   }
   if (grader === "number") {
-    const got = parseNumber(answer) ?? parseNumber(output);
+    const got = answerNumber(answer) ?? parseNumber(output);
     const want = parseNumber(expected);
     if (want === null) return { pass: false, answer, why: `the expected answer "${expected}" is not a number` };
     if (got === null) return { pass: false, answer, why: "no number in the answer" };
     const pass = Math.abs(got - want) <= 1e-6 * Math.max(1, Math.abs(want));
     return { pass, answer, why: pass ? `${got} = ${want}` : `${got} ≠ ${want}` };
   }
-  const a = normalize(answer);
+  const a = normalize(answer.replace(/\*+/g, ""));
   const e = normalize(expected);
   // an option letter alone ("B") matches an answer that starts with it ("B. Hyperkalaemia", "(B)")
   const letter = /^[a-z]$/.test(e) && new RegExp(`^\\(?${e}\\)?(\\s|$)`).test(a);

@@ -270,8 +270,20 @@ function blackboard(): SystemDoc {
   return b.doc;
 }
 
+/** One agent, one call: what the papers compare their systems against. */
+function baseline(): SystemDoc {
+  const b = new Builder("Single agent (baseline)", "One agent answers in one model call, thinking step by step. The baseline the multi-agent papers compare against: evaluate it next to a paper system on the same cases and models.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks the question", approves: false })
+    .agent("solo", 340, 0, { name: "Solver", role: "Answers alone", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Think step by step, then give the answer. End with one line: Final: <the answer alone>" } })
+    .edge("asker", "solo", "message", { label: "Question" })
+    .edge("solo", "asker", "message", { label: "Answer" });
+  b.doc.budget = { usd: 0.5, max_rounds: 5, wallclock_min: 5 };
+  return b.doc;
+}
+
 export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
+  { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
   { id: "coding", name: "Coding team", summary: "Claude Code · gate · routed outputs · edge transform", build: codingTeam },
   { id: "research", name: "Research team", summary: "Group ports · spawn · bare model call", build: research },

@@ -10,7 +10,7 @@ const GRADERS: Grader[] = ["answer", "contains", "number", "llm"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   r.on("POST", "/api/evals", async (req) => {
-    const b = (await req.body()) as { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; force?: boolean };
+    const b = (await req.body()) as { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; force?: boolean };
     // like runs: the browser sends the system as it is now, which also stores it
     const doc = b.doc ? checkDoc(b.doc) : b.system_id ? store.getSystem(b.system_id) : null;
     if (!doc) throw new HttpError(400, "Give a system_id or a doc");
@@ -21,7 +21,7 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     const errors = validate(doc).filter((i) => i.severity === "error");
     if (errors.length && !b.force) throw new HttpError(422, `The system has ${errors.length} error${errors.length > 1 ? "s" : ""}: ${errors.slice(0, 3).map((e) => e.message).join("; ")}`);
     try {
-      return evals.start(doc, { cases: b.cases, grader, mock: !!b.mock, concurrency: b.concurrency, judge: b.judge });
+      return evals.start(doc, { cases: b.cases, grader, mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined });
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }
@@ -31,6 +31,15 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     const rec = evals.get(req.params.id);
     if (!rec) throw new HttpError(404, "No such evaluation");
     return { eval: rec, active: evals.isActive(rec.id) };
+  });
+  r.on("POST", "/api/evals/:id/regrade", async (req) => {
+    const b = ((await req.body()) ?? {}) as { grader?: Grader };
+    if (b.grader && !GRADERS.includes(b.grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);
+    try {
+      return evals.regrade(req.params.id, b.grader as Exclude<Grader, "llm"> | undefined);
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
   });
   r.on("POST", "/api/evals/:id/stop", (req) => ({ stopped: evals.stop(req.params.id) }));
   r.on("DELETE", "/api/evals/:id", (req) => {

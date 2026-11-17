@@ -3,6 +3,7 @@
 // be replayed like any other.
 import { randomUUID } from "node:crypto";
 import { DEFAULT_MODELS } from "@/model/defaults";
+import { runAllOn } from "@/model/modelUse";
 import type { SystemDoc } from "@/model/types";
 import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
@@ -19,6 +20,8 @@ export interface EvalOptions {
   concurrency?: number;
   /** the model that judges, for the llm grader */
   judge?: string;
+  /** serve every chat model of the system with this one (a catalog or default model id) */
+  on_model?: string;
 }
 
 const MAX_CASES = 200;
@@ -32,7 +35,8 @@ export class EvalManager {
     private secrets: Secrets,
   ) {}
 
-  start(doc: SystemDoc, opts: EvalOptions): EvalRecord {
+  start(original: SystemDoc, opts: EvalOptions): EvalRecord {
+    const doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, MAX_CASES);
     if (!cases.length) throw new Error("No cases: each needs an input");
     const rec: EvalRecord = {
@@ -41,6 +45,7 @@ export class EvalManager {
       system_name: doc.name,
       grader: opts.grader,
       mock: !!opts.mock,
+      ...(opts.on_model ? { on_model: opts.on_model } : {}),
       status: "running",
       started_at: new Date().toISOString(),
       cases: cases.map((c) => ({ input: String(c.input), expected: String(c.expected ?? ""), status: "pending" })),
@@ -63,6 +68,21 @@ export class EvalManager {
       for (const c of rec.cases) if (c.status === "pending" || c.status === "running") Object.assign(c, { status: "error", why: "the server restarted" });
       this.store.putEval(rec);
     }
+  }
+
+  /** Grades the stored outputs again, by a rule (the given one, or the evaluation's own); no run is repeated. */
+  regrade(id: string, grader?: Exclude<Grader, "llm">): EvalRecord {
+    const rec = this.store.getEval(id);
+    if (!rec) throw new Error("No such evaluation");
+    if (this.active.has(id)) throw new Error("The evaluation is still running");
+    const g = grader ?? rec.grader;
+    if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
+    for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g, c.output, c.expected));
+    rec.grader = g;
+    rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
+    rec.passed = rec.cases.filter((c) => c.pass).length;
+    this.store.putEval(rec);
+    return rec;
   }
 
   get(id: string) {

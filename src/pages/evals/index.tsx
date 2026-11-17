@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo, usd } from "@/lib/format";
+import { DEFAULT_MODELS } from "@/model/defaults";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, type Grader, parseCases, SAMPLE_SETS } from "@/run/evals";
 import { useServer } from "@/store/server";
@@ -42,6 +43,13 @@ function Evals({ systemId }: { systemId: string }) {
   const [grader, setGrader] = useState<Grader>("number");
   const [concurrency, setConcurrency] = useState("2");
   const [dry, setDry] = useState(false);
+  const [onModel, setOnModel] = useState("");
+  // chat models the system could be run on instead of its own: its catalog, then the defaults
+  const chatModels = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const m of [...doc.models, ...DEFAULT_MODELS]) if ((m.kind ?? "chat") === "chat" && m.provider !== "mock" && !seen.has(m.id)) seen.set(m.id, `${m.id} · ${m.model}`);
+    return [...seen].map(([value, label]) => ({ value, label }));
+  }, [doc.models]);
   const [list, setList] = useState<Summary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
@@ -87,7 +95,7 @@ function Evals({ systemId }: { systemId: string }) {
   const start = async (force = false) => {
     setError("");
     try {
-      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), force });
+      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel || undefined, force });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -147,6 +155,10 @@ function Evals({ systemId }: { systemId: string }) {
             </label>
           </div>
           <p className="text-[11px] leading-snug text-muted-foreground">{GRADERS.find((g) => g.value === grader)?.hint}</p>
+          <label className="block space-y-1 text-xs text-muted-foreground">
+            Models
+            <Select value={onModel || "own"} onValueChange={(v) => setOnModel(v === "own" ? "" : v)} items={[{ value: "own", label: "As the system says" }, ...chatModels.map((m) => ({ value: m.value, label: `Everything on ${m.label}` }))]} ariaLabel="Models" />
+          </label>
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">
               <input type="checkbox" checked={dry} onChange={(e) => setDry(e.target.checked)} />
@@ -181,6 +193,7 @@ function Evals({ systemId }: { systemId: string }) {
                 <span className="ml-2 text-xs text-muted-foreground">
                   {e.passed}/{e.total} · {GRADERS.find((g) => g.value === e.grader)?.label}
                   {e.mock ? " · dry run" : ""}
+                  {e.on_model ? ` · on ${e.on_model}` : ""}
                 </span>
               </span>
               <span className="shrink-0 text-xs text-muted-foreground">{e.status === "running" ? "running…" : timeAgo(e.started_at)}</span>
@@ -203,6 +216,7 @@ function Evals({ systemId }: { systemId: string }) {
               <Stat label="Cost" value={usd(ev.usd)} />
               <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : "–"} />
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />
+              {ev.on_model && <Stat label="Models" value={`all on ${ev.on_model}`} />}
               <Stat label="Status" value={record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}` : ev.status} />
               <div className="ml-auto flex gap-1.5">
                 {record?.active ? (
@@ -210,7 +224,23 @@ function Evals({ systemId }: { systemId: string }) {
                     <Square className="mr-1.5 h-3.5 w-3.5" /> Stop
                   </Button>
                 ) : (
-                  <Button
+                  <>
+                    {grader !== "llm" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title="Grade the stored outputs again with the grader chosen on the left; nothing is run again"
+                        onClick={() =>
+                          void Api.regradeEval(ev.id, grader)
+                            .then((r) => setRecord({ eval: r, active: false }))
+                            .then(refresh)
+                            .catch((e) => setError(e.message))
+                        }
+                      >
+                        Regrade as {GRADERS.find((g) => g.value === grader)?.label}
+                      </Button>
+                    )}
+                    <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
@@ -224,6 +254,7 @@ function Evals({ systemId }: { systemId: string }) {
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
+                  </>
                 )}
               </div>
             </div>

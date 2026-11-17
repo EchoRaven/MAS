@@ -5,6 +5,7 @@ describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
     expect(finalAnswer("Reasoning…\nAnswer: 1/3\nConfidence: 0.9")).toBe("1/3");
     expect(finalAnswer("first\nFinal: 12\nmore\n**Final Answer:** 13")).toBe("13");
+    expect(finalAnswer("work…\n\n**Final Answer:**\nThere are **3,600** ways for 8 people.")).toBe("There are **3,600** ways for 8 people.");
     expect(finalAnswer("B. Hyperkalaemia\n\nbecause potassium")).toBe("because potassium");
     expect(finalAnswer("")).toBe("");
   });
@@ -24,6 +25,11 @@ describe("grading", () => {
     expect(gradeByRule("number", "Answer: 1/3", "0.3333333333333").pass).toBe(true);
     expect(gradeByRule("number", "Answer: 2 m/s", "1.5").why).toBe("2 ≠ 1.5");
     expect(gradeByRule("answer", "Answer: **Paris.**", "paris").pass).toBe(true);
+    // real outputs that a last-number rule got wrong
+    expect(gradeByRule("number", "…\n**Final Answer:**\nThere are **3,600** ways for 8 people to sit.", "3600").pass).toBe(true);
+    expect(gradeByRule("number", "Summing: 1 + 12 + 36 = 49\n\nThere are **49 ways** to make 50 cents.", "49").pass).toBe(true);
+    expect(gradeByRule("number", "There are 54 three-digit numbers whose digits add up to 10.", "54").pass).toBe(true);
+    expect(gradeByRule("number", "The final answer is $\\boxed{9368}$.", "9368").pass).toBe(true);
     expect(gradeByRule("answer", "Answer: B. Hyperkalaemia", "B").pass).toBe(true);
     expect(gradeByRule("answer", "Answer: Because of B", "B").pass).toBe(false);
     expect(gradeByRule("contains", "It is hyperkalaemia, clearly.", "Hyperkalaemia").pass).toBe(true);

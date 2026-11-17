@@ -2,7 +2,7 @@
 // functions, and every pipeline step and loop setting that names one. The
 // Library counts these, a run checks their keys before it starts, and the
 // architect rewires a preset's models to ones that will work.
-import type { SystemDoc } from "./types";
+import type { ModelSpec, SystemDoc } from "./types";
 
 const MODEL_KEYS = ["model", "embedding", "planner", "critic", "evaluator"];
 
@@ -37,4 +37,16 @@ export function replaceModel(doc: SystemDoc, from: string, to: string): SystemDo
     return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, MODEL_KEYS.includes(k) && x === from ? to : swap(x)]));
   };
   return { ...doc, nodes: doc.nodes.map((n) => ({ ...n, data: swap(n.data) as typeof n.data })), edges: doc.edges.map((e) => swap(e) as typeof e) };
+}
+
+/**
+ * The system with every chat model in its catalog served by one model instead
+ * (looked up in the system's catalog, then the defaults). Ids stay as they
+ * are, so every reference follows, even one in function code.
+ */
+export function runAllOn(doc: SystemDoc, target: string, defaults: ModelSpec[] = []): SystemDoc {
+  const spec = doc.models.find((m) => m.id === target) ?? defaults.find((m) => m.id === target);
+  if (!spec) throw new Error(`Unknown model "${target}"`);
+  if ((spec.kind ?? "chat") !== "chat") throw new Error(`"${target}" is not a chat model`);
+  return { ...doc, models: doc.models.map((m) => ((m.kind ?? "chat") === "chat" && m.provider !== "mock" ? { ...spec, id: m.id } : m)) };
 }
