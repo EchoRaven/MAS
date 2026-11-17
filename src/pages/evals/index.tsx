@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { timeAgo, usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, type Grader, parseCases, SAMPLE_SETS } from "@/run/evals";
+import { type EvalRecord, type Grader, parseCases, repeatStats, SAMPLE_SETS } from "@/run/evals";
 import { useServer } from "@/store/server";
 import { useSystems } from "@/store/systems";
 
@@ -42,6 +42,7 @@ function Evals({ systemId }: { systemId: string }) {
   const [text, setText] = useState("");
   const [grader, setGrader] = useState<Grader>("number");
   const [concurrency, setConcurrency] = useState("2");
+  const [repeats, setRepeats] = useState("1");
   const [dry, setDry] = useState(false);
   const [onModel, setOnModel] = useState("");
   // chat models the system could be run on instead of its own: its catalog, then the defaults
@@ -95,7 +96,7 @@ function Evals({ systemId }: { systemId: string }) {
   const start = async (force = false) => {
     setError("");
     try {
-      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel || undefined, force });
+      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel || undefined, repeats: Number(repeats), force });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -111,6 +112,9 @@ function Evals({ systemId }: { systemId: string }) {
     );
 
   const ev = record?.eval;
+  const stats = ev ? repeatStats(ev) : null;
+  // a question's repeats sit together
+  const rows = ev ? ev.cases.map((c, i) => ({ c, i })).sort((a, b) => (a.c.case ?? a.i) - (b.c.case ?? b.i) || (a.c.repeat ?? 0) - (b.c.repeat ?? 0)) : [];
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 md:flex-row md:overflow-hidden md:p-4">
       <aside className="flex w-full shrink-0 flex-col gap-3 md:w-[380px] md:overflow-y-auto">
@@ -142,9 +146,10 @@ function Evals({ systemId }: { systemId: string }) {
           />
           <p className="text-xs text-muted-foreground">
             {parsed.cases.length} case{parsed.cases.length === 1 ? "" : "s"}
+            {Number(repeats) > 1 ? ` × ${repeats} repeats = ${parsed.cases.length * Number(repeats)} runs` : ""}
             {parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <label className="space-y-1 text-xs text-muted-foreground">
               Grader
               <Select value={grader} onValueChange={(v) => setGrader(v as Grader)} items={GRADERS.map((g) => ({ value: g.value, label: g.label }))} ariaLabel="Grader" />
@@ -152,6 +157,10 @@ function Evals({ systemId }: { systemId: string }) {
             <label className="space-y-1 text-xs text-muted-foreground">
               Runs at once
               <Select value={concurrency} onValueChange={setConcurrency} items={["1", "2", "3", "4"].map((v) => ({ value: v, label: v }))} ariaLabel="Runs at once" />
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground" title="Run every question this many times: scores move between runs, and the spread says how much">
+              Repeats
+              <Select value={repeats} onValueChange={setRepeats} items={["1", "2", "3", "5"].map((v) => ({ value: v, label: v }))} ariaLabel="Repeats" />
             </label>
           </div>
           <p className="text-[11px] leading-snug text-muted-foreground">{GRADERS.find((g) => g.value === grader)?.hint}</p>
@@ -191,7 +200,8 @@ function Evals({ systemId }: { systemId: string }) {
               <span className="min-w-0">
                 <span className="font-medium tabular-nums">{pct(e.passed, e.graded)}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {e.passed}/{e.total} · {GRADERS.find((g) => g.value === e.grader)?.label}
+                  {e.passed}/{e.total}
+                  {(e.repeats ?? 1) > 1 ? ` (×${e.repeats})` : ""} · {GRADERS.find((g) => g.value === e.grader)?.label}
                   {e.mock ? " · dry run" : ""}
                   {e.on_model ? ` · on ${e.on_model}` : ""}
                 </span>
@@ -211,6 +221,12 @@ function Evals({ systemId }: { systemId: string }) {
               <div>
                 <p className="text-xs text-muted-foreground">Accuracy</p>
                 <p className="text-3xl font-semibold tabular-nums">{pct(ev.passed, ev.graded)}</p>
+                {stats && stats.per.length > 1 && (
+                  <p className="text-xs tabular-nums text-muted-foreground" title="Accuracy of each repeat, and their standard deviation">
+                    {stats.per.map((p) => `${Math.round(p * 100)}%`).join(" · ")}
+                    {stats.sd !== null ? ` (sd ${Math.round(stats.sd * 1000) / 10} pts)` : ""}
+                  </p>
+                )}
               </div>
               <Stat label="Passed" value={`${ev.passed} of ${ev.cases.length}`} />
               <Stat label="Cost" value={usd(ev.usd)} />
@@ -270,15 +286,25 @@ function Evals({ systemId }: { systemId: string }) {
                 </tr>
               </thead>
               <tbody>
-                {ev.cases.map((c, i) => (
-                  <tr key={i} className="border-b border-border/40 align-top">
+                {rows.map(({ c, i }) => {
+                  const first = (c.repeat ?? 0) === 0;
+                  const q = stats?.byCase.get(c.case ?? i);
+                  return (
+                  <tr key={i} className={cn("align-top", (ev.repeats ?? 1) > 1 && !first ? "border-b border-border/20" : "border-b border-border/40")}>
                     <td className="py-2 text-muted-foreground">
-                      {c.pass === true ? <Check className="h-4 w-4 text-emerald-600" aria-label="passed" /> : c.pass === false ? <X className="h-4 w-4 text-destructive" aria-label="failed" /> : <span className="text-xs">{i + 1}</span>}
+                      {c.pass === true ? <Check className="h-4 w-4 text-emerald-600" aria-label="passed" /> : c.pass === false ? <X className="h-4 w-4 text-destructive" aria-label="failed" /> : <span className="text-xs">{(c.case ?? i) + 1}</span>}
                     </td>
                     <td className="py-2 pr-3" title={c.input}>
-                      <span className="line-clamp-3">{c.input}</span>
+                      {first ? (
+                        <>
+                          <span className="line-clamp-3">{c.input}</span>
+                          {(ev.repeats ?? 1) > 1 && q && <span className="text-xs text-muted-foreground">passed {q.passed} of {q.graded}</span>}
+                        </>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">repeat {(c.repeat ?? 0) + 1}</span>
+                      )}
                     </td>
-                    <td className="py-2 pr-3 font-medium">{c.expected}</td>
+                    <td className="py-2 pr-3 font-medium">{first ? c.expected : ""}</td>
                     <td className="py-2 pr-3">
                       {c.status === "pending" ? (
                         <span className="text-muted-foreground">{c.why ?? "waiting"}</span>
@@ -306,7 +332,8 @@ function Evals({ systemId }: { systemId: string }) {
                     <td className="py-2 text-right tabular-nums text-muted-foreground">{c.usd !== undefined ? usd(c.usd) : ""}</td>
                     <td className="py-2 text-right tabular-nums text-muted-foreground">{c.seconds !== undefined ? `${c.seconds}s` : ""}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </>

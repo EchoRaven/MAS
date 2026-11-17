@@ -16,6 +16,9 @@ export interface EvalCase {
 export type Grader = "answer" | "contains" | "number" | "llm";
 
 export interface EvalCaseResult {
+  /** which question (index into the set) and which repeat of it (0-based) */
+  case?: number;
+  repeat?: number;
   input: string;
   expected: string;
   status: "pending" | "running" | "done" | "error";
@@ -34,6 +37,8 @@ export interface EvalRecord {
   system_id: string;
   system_name: string;
   grader: Grader;
+  /** how many times every question was run */
+  repeats?: number;
   mock: boolean;
   /** every chat model of the system was served by this one */
   on_model?: string;
@@ -44,6 +49,26 @@ export interface EvalRecord {
   passed: number;
   graded: number;
   usd: number;
+}
+
+/** Accuracy of each repeat, their mean and standard deviation, and how often each question passed. */
+export function repeatStats(rec: Pick<EvalRecord, "cases" | "repeats">) {
+  const n = rec.repeats ?? 1;
+  const per = Array.from({ length: n }, (_, r) => {
+    const cs = rec.cases.filter((c) => (c.repeat ?? 0) === r && c.pass !== undefined);
+    return cs.length ? cs.filter((c) => c.pass).length / cs.length : null;
+  }).filter((x): x is number => x !== null);
+  const mean = per.length ? per.reduce((a, b) => a + b, 0) / per.length : null;
+  const sd = per.length > 1 && mean !== null ? Math.sqrt(per.reduce((a, b) => a + (b - mean) ** 2, 0) / (per.length - 1)) : null;
+  const byCase = new Map<number, { passed: number; graded: number }>();
+  rec.cases.forEach((c, i) => {
+    const k = c.case ?? i;
+    const e = byCase.get(k) ?? { passed: 0, graded: 0 };
+    if (c.pass !== undefined) e.graded++;
+    if (c.pass) e.passed++;
+    byCase.set(k, e);
+  });
+  return { per, mean, sd, byCase };
 }
 
 const ANSWER_LINE = /(?:^|\n)\s*(?:\*\*)?(?:final answer|answer|final)(?:\*\*)?\s*[:：]\s*(?:\*\*)?([^\n]+)/gi;

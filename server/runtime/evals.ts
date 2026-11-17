@@ -20,6 +20,8 @@ export interface EvalOptions {
   concurrency?: number;
   /** the model that judges, for the llm grader */
   judge?: string;
+  /** run every question this many times (1-5), to see how much the score moves */
+  repeats?: number;
   /** serve every chat model of the system with this one (a catalog or default model id) */
   on_model?: string;
 }
@@ -37,7 +39,8 @@ export class EvalManager {
 
   start(original: SystemDoc, opts: EvalOptions): EvalRecord {
     const doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
-    const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, MAX_CASES);
+    const repeats = Math.max(1, Math.min(Math.floor(opts.repeats ?? 1), 5));
+    const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
     if (!cases.length) throw new Error("No cases: each needs an input");
     const rec: EvalRecord = {
       id: `eval_${Date.now().toString(36)}_${randomUUID().slice(0, 6)}`,
@@ -45,10 +48,12 @@ export class EvalManager {
       system_name: doc.name,
       grader: opts.grader,
       mock: !!opts.mock,
+      repeats,
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
       status: "running",
       started_at: new Date().toISOString(),
-      cases: cases.map((c) => ({ input: String(c.input), expected: String(c.expected ?? ""), status: "pending" })),
+      // repeat 1 of every question first, then repeat 2…: a stopped evaluation still has whole repeats
+      cases: Array.from({ length: repeats }, (_, r) => cases.map((c, i) => ({ case: i, repeat: r, input: String(c.input), expected: String(c.expected ?? ""), status: "pending" as const }))).flat(),
       passed: 0,
       graded: 0,
       usd: 0,

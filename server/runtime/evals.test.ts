@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { Builder, native } from "@/model/builder";
-import type { EvalRecord } from "@/run/evals";
+import { type EvalRecord, repeatStats } from "@/run/evals";
 import type { Config } from "../config";
 import { Store } from "../store/files";
 import { Secrets } from "../store/secrets";
@@ -19,13 +19,13 @@ const runs = new RunManager(store, new Secrets(dir), config);
 const evals = new EvalManager(store, runs, new Secrets(dir));
 
 // an agent that answers with its input: the grades are known in advance
-function echo(script: unknown[] = ["Answer: {{input}}"]) {
+function echo(script: unknown[] = ["Answer: {{input}}"], model = "echo") {
   const b = new Builder("Echo", "");
   b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
-    .agent("a", 200, 0, { name: "Echo", model: "echo", harness: { ...native(), loop: "single_shot", instructions: "" } })
+    .agent("a", 200, 0, { name: "Echo", model, harness: { ...native(), loop: "single_shot", instructions: "" } })
     .edge("me", "a", "message")
     .edge("a", "me", "message");
-  b.doc.models.push({ id: "echo", provider: "mock", model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+  b.doc.models.push({ id: model, provider: "mock", model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
   return { ...b.doc, id: "sys_echo" };
 }
 
@@ -64,6 +64,19 @@ describe("evaluations", () => {
     expect(evals.regrade(done.id, "answer").passed).toBe(0);
     expect(store.listRuns().length).toBe(runsBefore);
     expect(() => evals.regrade(done.id, "llm" as never)).toThrow(/would call a model/);
+  });
+
+  it("repeats every question, and reports each repeat's accuracy and their spread", async () => {
+    // the echo alternates right and wrong across calls: repeat 1 and repeat 2 differ
+    // its own model id: a mock's place in its script is kept per model across runs
+    const doc = echo(["Answer: 1", "Answer: 2"], "alternating");
+    const done = await finish(evals.start(doc, { grader: "number", repeats: 2, concurrency: 1, cases: [{ input: "q", expected: "1" }] }).id);
+    expect(done.repeats).toBe(2);
+    expect(done.cases.map((c) => [c.case, c.repeat])).toEqual([[0, 0], [0, 1]]);
+    const st = repeatStats(done);
+    expect(st.per.length).toBe(2);
+    expect(st.mean).toBe(0.5);
+    expect(st.byCase.get(0)).toEqual({ passed: 1, graded: 2 });
   });
 
   it("marks evaluations a restart cut off as stopped", () => {
