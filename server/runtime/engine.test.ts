@@ -624,6 +624,40 @@ describe("runtime", () => {
     expect(own.events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text)).toContain("b done");
   });
 
+  it("concurrency: interrupt cuts the turn short and starts over with both messages", async () => {
+    const doc = (concurrency: "interrupt" | "queue") => {
+      const b = new Builder("Interrupt", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("fan", "function", 0, 0, { name: "Fan out", fn: { lang: "js", code: "return { now: 'first news', later: 'second news' };" }, interface: { inputs: [port("in", "text")], outputs: [port("now", "text"), port("later", "text")] } })
+        .node("relay", "model", 0, 0, { name: "Slow relay", model: "relay", system_prompt: "", prompt: "{{input}}", temperature: null, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
+        .agent("w", 0, 0, { name: "Worker", model: "slow_w", concurrency, harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "fan", "message")
+        .edge("fan", "w", "message", { source_port: "now" })
+        .edge("fan", "relay", "message", { source_port: "later" })
+        .edge("relay", "w", "message")
+        .edge("w", "me", "message");
+      b.doc.models.push(
+        { id: "relay", provider: "mock", model: "mock", api: { params: { script: ["{{input}}"], delay_ms: 50 } }, price_in: 0, price_out: 0, modalities: ["text"] },
+        { id: "slow_w", provider: "mock", model: "mock", api: { params: { script: ["handled: {{input}}"], delay_ms: 200 } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      );
+      return b.doc;
+    };
+    const cut = await run(doc("interrupt"), "go", { mock: false });
+    expect(errors(cut.events)).toEqual([]);
+    expect(cut.events.some((e) => e.type === "log" && /interrupted by a new message/.test((e as { text: string }).text))).toBe(true);
+    // the cut-short turn never finished its model call; one turn read both messages
+    expect(usages(cut.events, "w").length).toBe(1);
+    const toW = cut.events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "w");
+    expect(toW.length).toBe(2);
+    const outs = cut.events.filter((e) => e.type === "output").map((e) => (e as { text: string }).text);
+    expect(outs.length).toBe(1);
+    expect(outs[0]).toContain("first news");
+    expect(outs[0]).toContain("second news");
+    // queue, for contrast: two full turns, one per message
+    const queued = await run(doc("queue"), "go", { mock: false });
+    expect(usages(queued.events, "w").length).toBe(2);
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

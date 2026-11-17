@@ -126,8 +126,7 @@ export function AgentInspector({
               ["coalesce", "Coalesce: wake once after this turn"],
               ["queue", "Queue"],
               ["parallel", "Parallel: start a new instance"],
-              // interrupting a turn is not implemented: offered only to show what an older system has
-              ...(a.concurrency === "interrupt" ? ([["interrupt", "Interrupt (works like coalesce for now)"]] as [string, string][]) : []),
+              ["interrupt", "Interrupt: stop the turn, start over with both"],
             ])}
           />
         </TabsContent>

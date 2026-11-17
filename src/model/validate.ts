@@ -117,7 +117,6 @@ export function validate(doc: SystemDoc): Issue[] {
     const a = n.data;
     const label = q(n);
     const runner = runnerById(a.harness.runner);
-    if (a.concurrency === "interrupt") add("info", `${label} is set to interrupt its turn on a new message; that is not implemented yet, so it coalesces (the new message waits and is merged into the next turn)`, { nodeId: n.id });
     if (!touching(n.id).length && !spawned.has(n.id)) add("warning", `${label} has no connections, so it is never woken and cannot talk to anyone`, { nodeId: n.id });
     if ((a.harness.tier === "native" || a.harness.tier === "sdk") && !modelIds.has(a.model)) add("error", `${label} uses model ${a.model || "(empty)"}, which is not in the model catalog`, { nodeId: n.id });
     if (a.harness.tier !== "native" && !runner) add("error", `${label} has no harness adapter selected`, { nodeId: n.id });

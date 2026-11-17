@@ -32,6 +32,8 @@ export class Engine implements TurnServices {
   private queues = new Map<string, Item[]>();
   private draining = new Set<string>();
   private locks = new Map<string, Promise<unknown>>();
+  /** the running turn of each agent set to interrupt, so a new message can cut it short */
+  private turns = new Map<string, AbortController>();
   private chain = new AsyncLocalStorage<string[]>();
   private joinBuf = new Map<string, Record<string, unknown>>();
   private groups = new Map<string, { round: number; input: unknown }>();
@@ -271,6 +273,8 @@ export class Engine implements TurnServices {
     const q = this.queues.get(id) ?? [];
     q.push(item);
     this.queues.set(id, q);
+    // interrupt: the turn under way stops, and the next one takes its message and this one together
+    if (mode === "interrupt") this.turns.get(id)?.abort(new Error("interrupted by a new message"));
     if (!this.draining.has(id)) this.track(this.drain(n, mode === "coalesce" || mode === "interrupt"));
   }
 
@@ -307,7 +311,26 @@ export class Engine implements TurnServices {
     let reply = "";
     switch (n.data.kind) {
       case "agent": {
-        const r = await runAgentTurn(this, this.state, n as SysNode<AgentData>, item.value, item.via);
+        const interruptible = !direct && (n.data as AgentData).concurrency === "interrupt";
+        const ctrl = interruptible ? new AbortController() : null;
+        // an interruptible turn sees a signal that also fires when a new message arrives
+        const svc: Engine = ctrl ? (Object.create(this, { rc: { value: { ...this.rc, signal: AbortSignal.any([this.rc.signal, ctrl.signal]) } } }) as Engine) : this;
+        if (ctrl) this.turns.set(n.id, ctrl);
+        let r: Awaited<ReturnType<typeof runAgentTurn>>;
+        try {
+          r = await runAgentTurn(svc, this.state, n as SysNode<AgentData>, item.value, item.via);
+        } catch (e) {
+          if (ctrl?.signal.aborted && !rc.signal.aborted) {
+            // put its message back first in line: the next turn reads it with the new one
+            this.queues.set(n.id, [item, ...(this.queues.get(n.id) ?? [])]);
+            rc.emit({ type: "log", node: n.id, level: "info", text: `${nameOf(rc, n.id)} was interrupted by a new message and starts over with both` });
+            this.status(n.id, "idle");
+            return "";
+          }
+          throw e;
+        } finally {
+          if (ctrl && this.turns.get(n.id) === ctrl) this.turns.delete(n.id);
+        }
         reply = r.text;
         if (!direct && !r.dropped) await this.afterAgent(n as SysNode<AgentData>, r, item.via);
         break;

@@ -62,7 +62,7 @@ The scheduler is `server/runtime/engine.ts`.
     (`route_back`, escalating after `escalate_after` failures).
 - **Agents.** Each agent runs a turn per input. With `coalesce` (the default),
   inputs that arrive while the agent is busy are merged into one turn.
-  `queue` runs them one by one; `parallel` runs them at once. A turn has
+  `queue` runs them one by one; `parallel` runs them at once; `interrupt` stops the turn under way and starts a new one with its message and the new ones together. A turn has
   these stages:
   1. The input stages run.
   2. Context is added: instructions, then `auto_inject` / `pinned` reads
