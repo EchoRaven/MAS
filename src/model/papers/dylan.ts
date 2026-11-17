@@ -29,9 +29,10 @@ ctx.vars.last = got;
 // "The farmer has 9 sheep left." and "9" are the same answer: compare the number when there is one, else the words
 const WORDS = { zero: 0, none: 0, one: 1, once: 1, two: 2, twice: 2, three: 3, thrice: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 const norm = (s) => {
-  const w = s.toLowerCase().replace(/[^a-z0-9. -]/g, " ").replace(/\\s+/g, " ").trim();
-  const n = w.match(/-?\\d+(?:\\.\\d+)?/);
-  if (n) return n[0];
+  // "1,098,240" is one number, and "1/221" one fraction
+  const w = s.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./ -]/g, " ").replace(/\\s+/g, " ").trim();
+  const n = w.match(/-?\\d+(?:\\.\\d+)?(?:\\s*\\/\\s*\\d+)?/);
+  if (n) return n[0].replace(/\\s/g, "");
   const word = w.split(" ").find((x) => x in WORDS);
   return word ? String(WORDS[word]) : w;
 };
@@ -40,7 +41,7 @@ const counts = {};
 for (const f of finals) counts[f] = (counts[f] ?? 0) + 1;
 const [top, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
 if (n >= Math.ceil((2 / 3) * Object.keys(got).length) && Object.keys(got).length > 1) {
-  return { done: "CONSENSUS after layer " + ctx.vars.layer + ": " + top + "\\nAgent importance: " + JSON.stringify(ctx.vars.importance ?? {}) };
+  return { done: "CONSENSUS after layer " + ctx.vars.layer + ": " + top + "\\nAgent importance: " + JSON.stringify(ctx.vars.importance ?? {}) + "\\nFinal: " + top };
 }
 return { rank: got };`;
 
@@ -51,7 +52,7 @@ for (const [a, s] of Object.entries(scores)) ctx.vars.importance[a] = (ctx.vars.
 ctx.vars.selected = Object.entries(scores).sort((x, y) => Number(y[1]) - Number(x[1])).slice(0, 2).map(([a]) => a);
 const best = ctx.vars.selected[0];
 const answer = ((String(ctx.vars.last?.[best] ?? "").match(/Final:\\s*(.+)/) ?? [])[1] ?? "").trim();
-return "Layer " + ctx.vars.layer + " answers, ranked:\\n" + (input.summary ?? "") + "\\nGoing on: " + ctx.vars.selected.join(", ") + "\\nBest answer so far (" + best + "): " + answer;`;
+return "Layer " + ctx.vars.layer + " answers, ranked:\\n" + (input.summary ?? "") + "\\nGoing on: " + ctx.vars.selected.join(", ") + "\\nBest answer so far (" + best + "): " + answer + "\\nFinal: " + answer;`;
 
 function build(): SystemDoc {
   const b = new Builder(

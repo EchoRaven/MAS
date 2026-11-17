@@ -201,6 +201,21 @@ describe("runtime", () => {
     expect(out.text).toBe("B: hyperkalaemia");
   });
 
+  it("DyLAN counts \"1,098,240\" and \"1/221\" as themselves, not as 1", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-dylan")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(mock("big", ["Final: 1,098,240"]), mock("frac", ["Final: 1/221"]), mock("rank", [JSON.stringify({ scores: { a1: 5, a2: 5, a3: 1, a4: 1 }, summary: "" })]));
+    for (const n of doc.nodes) {
+      if (n.data.kind === "agent") n.data.model = n.id === "a1" || n.id === "a2" ? "big" : "frac";
+      if (n.id === "ranker" && n.data.kind === "model") n.data.model = "rank";
+    }
+    const { events } = await run(doc, "?", { mock: false });
+    const out = events.find((e) => e.type === "output") as { text: string };
+    // two against two is no consensus in layer 1; the two "big" agents agree in layer 2
+    expect(out.text).toContain("CONSENSUS after layer 2: 1098240");
+    expect(out.text).toMatch(/\nFinal: 1098240$/);
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

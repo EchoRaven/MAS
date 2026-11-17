@@ -67,17 +67,33 @@ export function finalAnswer(output: string): string {
   return lines[lines.length - 1] ?? "";
 }
 
-/** The number an answer gives: \boxed{…} first, then bold text, then the first number in it. */
-export function answerNumber(answer: string): number | null {
-  const boxed = /\\boxed\{([^}]*)\}/.exec(answer);
-  if (boxed && parseNumber(boxed[1]) !== null) return parseNumber(boxed[1]);
-  for (const b of answer.matchAll(/\*\*([^*]+)\*\*/g)) if (parseNumber(b[1]) !== null) return firstNumber(b[1]);
-  return firstNumber(answer);
+/** Every number in a text, in order: 12, -3.5, 1,234, 1/3, 40%. */
+export function numbersIn(s: string): number[] {
+  const out: number[] = [];
+  for (const m of s.matchAll(/-?\d[\d,]*(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?%?/g)) {
+    const v = parseNumber(m[0]);
+    if (v !== null && Number.isFinite(v)) out.push(v);
+  }
+  return out;
 }
 
-function firstNumber(s: string): number | null {
-  const m = /-?\d[\d,]*(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?%?/.exec(s);
-  return m ? parseNumber(m[0]) : null;
+/**
+ * The number an answer gives. \boxed{…} wins; then a short bold value; then
+ * the first number in the answer that the question does not already contain
+ * ("There are 49 ways to make 50 cents": 50 is from the question); then the
+ * first number at all.
+ */
+export function answerNumber(answer: string, question = ""): number | null {
+  const boxed = /\\boxed\{([^}]*)\}/.exec(answer);
+  if (boxed && parseNumber(boxed[1]) !== null) return parseNumber(boxed[1]);
+  for (const b of answer.matchAll(/\*\*([^*]+)\*\*/g)) {
+    const words = b[1].trim().split(/\s+/).length;
+    const n = numbersIn(b[1]);
+    if (words <= 4 && n.length) return n[0];
+  }
+  const given = new Set(numbersIn(question));
+  const all = numbersIn(answer);
+  return all.find((v) => !given.has(v)) ?? all[0] ?? null;
 }
 
 export const normalize = (s: string) =>
@@ -103,14 +119,14 @@ export function parseNumber(s: string): number | null {
 }
 
 /** Grades an output by a rule (every grader but llm). */
-export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expected: string): { pass: boolean; answer: string; why: string } {
+export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expected: string, question = ""): { pass: boolean; answer: string; why: string } {
   const answer = finalAnswer(output);
   if (grader === "contains") {
     const pass = normalize(output).includes(normalize(expected));
     return { pass, answer, why: pass ? "the output contains the expected answer" : "the expected answer is not in the output" };
   }
   if (grader === "number") {
-    const got = answerNumber(answer) ?? parseNumber(output);
+    const got = answerNumber(answer, question) ?? parseNumber(output);
     const want = parseNumber(expected);
     if (want === null) return { pass: false, answer, why: `the expected answer "${expected}" is not a number` };
     if (got === null) return { pass: false, answer, why: "no number in the answer" };
@@ -190,6 +206,33 @@ export const SAMPLE_SETS: { name: string; grader: Grader; text: string }[] = [
       "A clock shows 3:15. What is the smaller angle between the hour and minute hands, in degrees? | 7.5",
       "How many positive divisors does 360 have? | 24",
       "What is 17 × 24 − 13 × 19? | 161",
+    ].join("\n"),
+  },
+  {
+    name: "Competition (20)",
+    grader: "number",
+    // answers computed by program, not by hand
+    text: [
+      "How many integers from 1 to 1000 are divisible by none of 2, 3 and 5? | 266",
+      "What is the sum of the decimal digits of 2^50? | 76",
+      "How many trailing zeros does 1000! have? | 249",
+      "How many shortest lattice paths go from (0,0) to (10,10), moving one step right or up at a time, without passing through the point (5,5)? | 121252",
+      "How many integers from 1 to 10000 are perfect squares or perfect cubes (or both)? | 117",
+      "What are the last two digits of 7^2024? Give them as a number. | 1",
+      "In how many ways can a 2 × 12 strip be tiled with 1 × 2 dominoes? | 233",
+      "How many 5-card poker hands (from a standard 52-card deck) contain exactly one pair and nothing better? | 1098240",
+      "How many solutions in positive integers does a + b + c + d = 20 have, if each of a, b, c, d is at most 8? | 315",
+      "What is the sum of all prime numbers below 100? | 1060",
+      "In how many ways can 7 letters be put into their 7 addressed envelopes so that no letter is in its own envelope? | 1854",
+      "What is the expected number of rolls of a fair six-sided die until every face has appeared at least once? | 14.7",
+      "How many squares of all sizes are there on an 8 × 8 chessboard? | 204",
+      "What is the greatest common divisor of 2^60 − 1 and 2^42 − 1? | 63",
+      "How many four-digit numbers have digits that are strictly increasing from left to right? | 126",
+      "Two cards are drawn from a standard 52-card deck without replacement. What is the probability that both are aces? Give it as a fraction. | 1/221",
+      "In how many ways can 10 identical balls be placed into 4 distinct boxes so that no box is empty? | 84",
+      "How many diagonals does a convex 20-sided polygon have? | 170",
+      "What is the smallest positive integer with exactly 24 positive divisors? | 360",
+      "What is the remainder when 3^200 is divided by 13? | 9",
     ].join("\n"),
   },
 ];

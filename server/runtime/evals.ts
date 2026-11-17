@@ -77,7 +77,7 @@ export class EvalManager {
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
-    for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g, c.output, c.expected));
+    for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g, c.output, c.expected, c.input));
     rec.grader = g;
     rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
     rec.passed = rec.cases.filter((c) => c.pass).length;
@@ -129,7 +129,7 @@ export class EvalManager {
             Object.assign(c, verdict);
             c.usd = (c.usd ?? 0) + usd;
           } else {
-            Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm">, c.output, c.expected));
+            Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm">, c.output, c.expected, c.input));
           }
           c.status = "done";
         } catch (e) {

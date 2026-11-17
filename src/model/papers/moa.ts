@@ -33,7 +33,7 @@ function build(): SystemDoc {
   }
   join("join1", 560, "Layer 1 answers");
   join("join2", 1120, "Layer 2 answers");
-  b.node("aggregator", "model", 1380, 150, { name: "Aggregator", model: "opus", prompt: AGGREGATE, interface: { inputs: [port("in", "json")], outputs: [port("out", "text")] } });
+  b.node("aggregator", "model", 1380, 150, { name: "Aggregator", model: "opus", prompt: AGGREGATE + "\n\nIf the query has a short answer (a number, a name, an option), end with one line: Final: <the answer alone>.", interface: { inputs: [port("in", "json")], outputs: [port("out", "text")] } });
   for (let i = 1; i <= 3; i++) {
     b.edge("user", `l1_${i}`, "message", { label: i === 2 ? "Query" : undefined })
       .edge(`l1_${i}`, "join1", "message", { target_port: `p${i}` })
