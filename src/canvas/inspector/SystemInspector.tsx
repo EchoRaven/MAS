@@ -17,7 +17,7 @@ const TERMINATION = [
 
 export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDoc; update: Update; issues: Issue[]; onPick: (i: Issue) => void }) {
   const set = (patch: Partial<SystemDoc>) => update((d) => ({ ...d, ...patch }));
-  const auto = doc.entry ? undefined : entryPoints(doc)[0];
+  const auto = entryPoints({ ...doc, entry: null })[0];
   const chosen = doc.entry && doc.nodes.find((n) => n.id === doc.entry!.node);
   const entryPorts = chosen ? interfaceOf(chosen.data).inputs : [];
   return (
