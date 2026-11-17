@@ -91,6 +91,37 @@ describe("runtime", () => {
     expect(out.text).toContain("Third");
   });
 
+  it("an agent that runs out of steps still answers", async () => {
+    const b = new Builder("Steps", "");
+    // it calls a tool every step and never answers on its own; the forced final answer comes back empty
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Busy", model: "busy", tools: ["fetch"], harness: { ...native(), max_steps: 2, instructions: "" } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    b.doc.models.push({ id: "busy", provider: "mock", model: "mock", api: { params: { script: [{ text: "Looking it up.", tool: "fetch", input: { url: "https://example.invalid" } }, { tool: "fetch", input: { url: "https://example.invalid" } }, ""] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("Looking it up.");
+  });
+
+  it("a tool an env already serves is offered once", async () => {
+    const b = new Builder("Tools", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Coder", model: "sonnet", tools: ["bash"], harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .node("box", "env", 200, 200, { name: "Box", env_kind: "sandbox", image: "python:3.12-slim" })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message")
+      .edge("a", "box", "access", { access: "read_write" });
+    const { agentTools } = await import("./agent/tools");
+    const { Hub } = await import("./resources/hub");
+    const { Models } = await import("./models");
+    const rc = { doc: b.doc, byId: new Map(b.doc.nodes.map((n) => [n.id, n])), models: new Models(b.doc.models, new Secrets(dir), true), emit: () => undefined, store, config, runId: "t", vars: {} } as unknown as import("./context").RunCtx;
+    const hub = new Hub(rc);
+    const { tools } = await agentTools({ rc, hub, call: async () => "", spawn: async () => "" }, b.doc.nodes.find((n) => n.id === "a") as never, new Set());
+    const names = tools.map((t) => t.name);
+    expect(names.filter((n) => n.startsWith("bash"))).toEqual(["bash"]);
+  });
+
   it("asks an approver and continues with the answer", async () => {
     const b = new Builder("Approve", "");
     b.agent("a", 0, 0, { name: "Agent", model: "m", harness: { ...native(), instructions: "" } })

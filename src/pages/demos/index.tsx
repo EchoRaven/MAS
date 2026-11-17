@@ -70,6 +70,7 @@ const ORDER = [
   "paper-debate",
   "paper-moa",
   "paper-chateval",
+  "paper-reflexion",
   "paper-camel",
   "paper-autogen",
   "paper-agentverse",

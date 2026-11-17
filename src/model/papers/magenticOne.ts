@@ -11,7 +11,7 @@ const max_rounds = ctx.vars.max_rounds ?? 10;
 for (let round = 1; ; round++) {
   if (round > max_rounds) return model.call("You are out of rounds. Write the best final answer you can from what the team found.", { task: ctx.task, history: ctx.history });
   const progress = await model.json(
-    "Update the progress ledger. Answer as JSON: is_request_satisfied (true only if the history already holds the complete answer), is_in_loop, is_progress_being_made, next_speaker (one of WebSurfer, FileSurfer, Coder, ComputerTerminal), instruction_or_question (everything that speaker needs, e.g. the full code to run)",
+    "Update the progress ledger. Answer as JSON: is_request_satisfied (true only if the history already holds the complete answer), is_in_loop, is_progress_being_made, next_speaker (one of WebSurfer, FileSurfer, Coder, ComputerTerminal), instruction_or_question (everything that speaker needs). Coder cannot run anything: once Coder has written code, the next speaker is ComputerTerminal, with the full code in instruction_or_question.",
     { task: ctx.task, team, ledger, history: ctx.history },
   );
   if (progress.is_request_satisfied) return model.call("Write the final answer to the task, using only what the team found.", { task: ctx.task, history: ctx.history });

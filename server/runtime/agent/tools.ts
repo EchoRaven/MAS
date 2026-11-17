@@ -38,7 +38,8 @@ export async function agentTools(svc: ToolServices, node: SysNode<AgentData>, tr
       let ts = await hub.get(e.target).tools(e);
       if (e.binding?.tools?.length) ts = ts.filter((t) => e.binding!.tools!.includes(t.name));
       if (e.binding?.write?.when === "never" || e.access === "read") ts = ts.filter((t) => t.effect === "read" || t.effect === "pure");
-      tools.push(...ts);
+      // a catalog tool an env already serves (bash through the sandbox) is not offered twice
+      tools.push(...ts.filter((t) => !tools.some((x) => x.name === t.name && x.source === t.source)));
     } catch (err) {
       rc.emit({ type: "log", node: node.id, level: "warn", text: `${nameOf(rc, e.target)}: ${(err as Error).message}` });
     }

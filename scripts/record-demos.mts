@@ -90,6 +90,10 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-reflexion": {
+    input:
+      "Write a function is_valid_parens(s) that returns True when every bracket in s — (), [] and {} — is closed in the right order, and False otherwise.\n\nTests:\nassert is_valid_parens('()[]{}')\nassert is_valid_parens('{[()]}')\nassert not is_valid_parens('(]')\nassert not is_valid_parens('([)]')\nassert not is_valid_parens('((')\nassert is_valid_parens('')\nassert is_valid_parens('a(b)c')",
+  },
   "paper-voyager": {
     input: "Learn to summarise a list of numbers: build up to a function that reports its mean, median and standard deviation.",
     adapt: (doc) => {
@@ -113,7 +117,8 @@ const DEMOS: Record<string, DemoConfig> = {
       capRounds(doc, 8);
       // each role plans and executes with up to 30 steps and pins the whole pool: left alone this recording
       // costs a dollar in re-sent context
-      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.harness.max_steps = 3;
+      // QA writes the tests and runs them, so it needs a few more steps than the others
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.harness.max_steps = n.id === "qa" ? 6 : 3;
       for (const e of doc.edges) if (e.binding?.read?.budget_tokens) e.binding.read.budget_tokens = 2000;
       return ["Each role takes at most 3 steps per turn and sees 2000 tokens of the message pool, and the run is capped at 8 activations."];
     },

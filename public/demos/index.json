@@ -28,12 +28,12 @@
   "name": "AutoGen group chat",
   "input": "Compute how many prime numbers there are below 10000, and the sum of their digits. Verify the result.",
   "status": "finished",
-  "reason": "All idle (no output)",
-  "calls": 4,
-  "tokens": 1148,
-  "usd": 0.0017085,
-  "seconds": 12.8,
-  "recorded_at": "2026-11-17T10:59:27.535Z"
+  "reason": "All idle",
+  "calls": 9,
+  "tokens": 8826,
+  "usd": 0.0036446,
+  "seconds": 18.6,
+  "recorded_at": "2026-11-17T11:44:23.015Z"
  },
  {
   "id": "paper-camel",
@@ -96,6 +96,18 @@
   "recorded_at": "2026-11-17T11:12:48.495Z"
  },
  {
+  "id": "paper-magentic-one",
+  "name": "Magentic-One",
+  "input": "Using Python, compute the 25th Fibonacci number and the sum of the first 100 prime numbers. Report both numbers.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 12,
+  "tokens": 11401,
+  "usd": 0.013893,
+  "seconds": 41.9,
+  "recorded_at": "2026-11-17T11:45:05.137Z"
+ },
+ {
   "id": "paper-mapcoder",
   "name": "MapCoder",
   "input": "Given a list of integers, return the length of the longest strictly increasing subsequence. Example: [10, 9, 2, 5, 3, 7, 101, 18] → 4.",
@@ -113,11 +125,11 @@
   "input": "A Python command-line tool that converts temperatures between Celsius and Fahrenheit, with unit tests.",
   "status": "finished",
   "reason": "Round limit reached",
-  "calls": 191,
-  "tokens": 2350752,
-  "usd": 1.2417733000000002,
-  "seconds": 623.4,
-  "recorded_at": "2026-11-17T11:12:06.401Z"
+  "calls": 52,
+  "tokens": 307019,
+  "usd": 0.21806839999999997,
+  "seconds": 381.9,
+  "recorded_at": "2026-11-17T11:52:20.255Z"
  },
  {
   "id": "paper-moa",
@@ -130,5 +142,17 @@
   "usd": 0.0025567000000000003,
   "seconds": 25.4,
   "recorded_at": "2026-11-17T09:58:23.865Z"
+ },
+ {
+  "id": "paper-voyager",
+  "name": "Voyager",
+  "input": "Learn to summarise a list of numbers: build up to a function that reports its mean, median and standard deviation.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 21,
+  "tokens": 41987,
+  "usd": 0.0333527,
+  "seconds": 51,
+  "recorded_at": "2026-11-17T11:45:57.282Z"
  }
 ]

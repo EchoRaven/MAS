@@ -12,6 +12,7 @@ import { magenticOne } from "./magenticOne";
 import { mapcoder } from "./mapcoder";
 import { metagpt } from "./metagpt";
 import { moa } from "./moa";
+import { reflexion } from "./reflexion";
 import { voyager } from "./voyager";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion];

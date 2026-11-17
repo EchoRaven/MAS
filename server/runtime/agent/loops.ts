@@ -35,7 +35,13 @@ export async function react(io: AgentIO, li: LoopInput, extraUser = ""): Promise
     messages.push({ role: "user", content: await io.runTools(calls) });
   }
   const final = await io.model({ system: li.system, messages: [...messages, userText("You have used all your steps. Give your final answer now.")], tools: false });
-  return textOf(final.content);
+  const answer = textOf(final.content).trim();
+  if (answer) return answer;
+  // an agent that runs out of steps still has to say something: its last words, or what its tools found
+  const said = [...messages].reverse().map((m) => (m.role === "assistant" ? textOf(m.content).trim() : "")).find(Boolean);
+  if (said) return said;
+  const found = [...messages].reverse().flatMap((m) => m.content.filter((p): p is Extract<Part, { type: "tool_result" }> => p.type === "tool_result")).map((p) => p.content)[0];
+  return `I ran out of steps before finishing.${found ? ` The last thing I found:\n${found.slice(0, 2000)}` : ""}`;
 }
 
 export async function singleShot(io: AgentIO, li: LoopInput): Promise<string> {
