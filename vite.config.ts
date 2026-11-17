@@ -8,6 +8,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
   server: { port: parseInt(process.env.STUDIO_PORT || "5180"), strictPort: true, host: "127.0.0.1" },
+  // `vite preview` serves the built app for the public ngrok domain; the dev server stays local-only
+  preview: { port: 5181, strictPort: true, host: "127.0.0.1", allowedHosts: ["mas-studio.ngrok.app"] },
   build: {
     outDir: "dist",
     emptyOutDir: true,

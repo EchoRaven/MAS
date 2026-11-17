@@ -17,6 +17,7 @@ npm run dev          # http://127.0.0.1:5180
 npm run build        # type-check + production build into dist/
 npm test             # vitest: model, YAML, migration, importers, simulator
 node scripts/import-env.mjs <dir>   # env-gen / DT / compose folder -> mas-env manifest
+npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public ngrok domain points here)
 ```
 
 ## Pages
