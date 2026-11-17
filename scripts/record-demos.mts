@@ -98,6 +98,10 @@ const DEMOS: Record<string, DemoConfig> = {
     // hard enough that the seats tend to disagree at first (it is 48: 100! has 97 factors of 2, so 48 of 4, and 48 of 3)
     input: "How many trailing zeros does 100! (100 factorial) have when written in base 12?",
   },
+  "paper-medagents": {
+    // a USMLE-style item, the kind of question the paper evaluates on (MedQA)
+    input: "A 68-year-old man with heart failure takes lisinopril and furosemide. Spironolactone is added. Two weeks later he reports muscle weakness, and his ECG shows peaked T waves. Which is the most likely cause? A) Hyponatraemia B) Hyperkalaemia C) Hypocalcaemia D) Digoxin toxicity",
+  },
   "paper-chain-of-agents": {
     // the long document is this platform's own server guide; the two answers sit in different parts of it
     input:

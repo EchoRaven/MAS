@@ -156,6 +156,18 @@
   "recorded_at": "2026-11-17T10:58:43.423Z"
  },
  {
+  "id": "paper-medagents",
+  "name": "MedAgents",
+  "input": "A 68-year-old man with heart failure takes lisinopril and furosemide. Spironolactone is added. Two weeks later he reports muscle weakness, and his ECG shows peaked T waves. Which is the most likely cause? A) Hyponatraemia B) Hyperkalaemia C) Hypocalcaemia D) Digoxin toxicity",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 9,
+  "tokens": 5633,
+  "usd": 0.0061383,
+  "seconds": 23.2,
+  "recorded_at": "2026-11-17T15:24:05.927Z"
+ },
+ {
   "id": "paper-metagpt",
   "name": "MetaGPT",
   "input": "A Python command-line tool that converts temperatures between Celsius and Fahrenheit, with unit tests.",

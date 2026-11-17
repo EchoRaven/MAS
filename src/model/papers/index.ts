@@ -13,6 +13,7 @@ import { generativeAgents } from "./generativeAgents";
 import { mad } from "./mad";
 import { magenticOne } from "./magenticOne";
 import { mapcoder } from "./mapcoder";
+import { medagents } from "./medagents";
 import { metagpt } from "./metagpt";
 import { moa } from "./moa";
 import { reconcile } from "./reconcile";
@@ -21,4 +22,4 @@ import { tradingagents } from "./tradingagents";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents];

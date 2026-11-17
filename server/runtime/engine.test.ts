@@ -172,6 +172,35 @@ describe("runtime", () => {
     expect(out.text).toContain("No consensus after 4 rounds. Weighted vote: A 1.0, B 0.6.");
   });
 
+  it("MedAgents gathers specialties, then revises the report until every expert votes yes", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-medagents")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models = doc.models.filter((m) => m.id !== "sonnet");
+    doc.models.push(
+      mock("sonnet", ['{"domains": ["Cardiology", "Nephrology", "Pharmacology"]}']),
+      mock("analyst", ["Analysis: {{input}}"]),
+      mock("writer", ["REPORT v1"]),
+      mock("agree", ["Vote: yes"]),
+      mock("doubter", ["Vote: no. Mention the potassium.", "Vote: yes"]),
+      mock("fixer", ["REVISED REPORT: REPORT v2 with potassium"]),
+      mock("judge", ["B: hyperkalaemia"]),
+    );
+    const use: Record<string, string> = { e1: "analyst", e2: "analyst", e3: "analyst", summariser: "writer", r1: "agree", r2: "doubter", r3: "agree", reviser: "fixer", decider: "judge" };
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = use[n.id];
+    const { events } = await run(doc, "ACE inhibitor plus spironolactone: what to watch?", { mock: false });
+    expect(errors(events)).toEqual([]);
+    // each expert is told its specialty
+    const toE2 = events.find((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "e2")!;
+    expect(toE2.text).toMatch(/^You are an expert in Nephrology/);
+    // round 1: the doubter says no, the reviser fixes it; round 2: all yes
+    expect(usages(events, "r2").length).toBe(2);
+    expect(usages(events, "reviser").length).toBe(1);
+    const toDecider = events.find((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "decider")!;
+    expect(toDecider.text).toBe("AGREED REPORT:\nREPORT v2 with potassium");
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("B: hyperkalaemia");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
