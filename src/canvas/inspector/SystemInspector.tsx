@@ -2,6 +2,7 @@ import { Trash2 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { entryCandidates, entryPoints } from "@/model/entry";
 import { interfaceOf, nodeName } from "@/model/ports";
+import { seedId, TEMPLATES } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
 import type { Issue } from "@/model/validate";
 import { AreaField, Chips, FIELD, NumberField, Section, SelectField, TextField } from "../fields";
@@ -17,6 +18,8 @@ const TERMINATION = [
 
 export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDoc; update: Update; issues: Issue[]; onPick: (i: Issue) => void }) {
   const set = (patch: Partial<SystemDoc>) => update((d) => ({ ...d, ...patch }));
+  // a system seeded from a paper's template: its citation and how the reproduction maps to the paper
+  const paper = TEMPLATES.find((t) => t.paper && (doc.seed?.template === t.id || seedId(t.id) === doc.id));
   const auto = entryPoints({ ...doc, entry: null })[0];
   const chosen = doc.entry && doc.nodes.find((n) => n.id === doc.entry!.node);
   const entryPorts = chosen ? interfaceOf(chosen.data).inputs : [];
@@ -29,6 +32,36 @@ export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDo
       <Body>
         <TextField label="Name" value={doc.name} onChange={(name) => set({ name })} />
         <AreaField label="Description" value={doc.description} onChange={(description) => set({ description })} rows={3} />
+        {paper?.paper && (
+          <Section title="Paper">
+            <a href={paper.paper.url} target="_blank" rel="noreferrer" className="block text-[12px] font-medium text-info hover:underline">
+              {paper.paper.title}
+            </a>
+            <p className="text-[11px] text-muted-foreground">
+              {paper.paper.authors}, {paper.paper.year}
+            </p>
+            {paper.notes && (
+              <div className="mt-2 space-y-2 text-[12px] leading-snug">
+                <div>
+                  <p className="font-medium">How it is built here</p>
+                  <ul className="mt-0.5 list-disc space-y-1 pl-4 text-muted-foreground">
+                    {paper.notes.mapped.map((m, i) => (
+                      <li key={i}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium">Where it differs from the paper</p>
+                  <ul className="mt-0.5 list-disc space-y-1 pl-4 text-muted-foreground">
+                    {paper.notes.differs.map((m, i) => (
+                      <li key={i}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </Section>
+        )}
         <Section title="Start">
           <SelectField
             label="Entry point"
