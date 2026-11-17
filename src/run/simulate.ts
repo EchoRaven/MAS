@@ -69,6 +69,12 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
   let spent = 0;
   let rounds = 0;
   const gateTries = new Map<string, number>();
+  // per-edge send caps keep the walk finite: a call is answered once, a room
+  // or direct message edge carries a couple of rounds, a handoff can retry once
+  const sent = new Map<string, number>();
+  const CAP: Record<SysEdge["kind"], number> = { call: 1, message: 2, handoff: 2, access: Infinity };
+  const canSend = (e: SysEdge) => (sent.get(e.id) ?? 0) < CAP[e.kind];
+  const markSent = (e: SysEdge) => sent.set(e.id, (sent.get(e.id) ?? 0) + 1);
   const rrIndex = new Map<string, number>();
   const spawned = new Set<string>();
   const queue: { node: string; from?: string; via?: SysEdge; room?: string }[] = [];
@@ -170,7 +176,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
     }
 
     // outgoing interactions
-    const outs = out(node.id).filter((e) => e.kind !== "access" && e.target !== job.from);
+    const outs = out(node.id).filter((e) => e.kind !== "access" && e.target !== job.from && canSend(e));
     let handedOff = false;
     for (const e of outs) {
       const target = byId.get(e.target);
@@ -187,6 +193,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
           break;
         }
       }
+      markSent(e);
       if (target.data.kind === "channel") {
         const c = target.data as ChannelData;
         emit({ type: "message", from: node.id, to: target.id, room: target.id, edge: e.id, kind: "message", text: pick(PHRASES.message) });

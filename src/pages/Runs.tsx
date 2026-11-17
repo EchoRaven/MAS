@@ -26,7 +26,7 @@ function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<typeof us
   const time = <span className="text-[11px] text-muted-foreground">t+{e.t.toFixed(1)}s</span>;
   const who = (id: string) => {
     const n = nameOf(id);
-    return <EntityAvatar kind={n.kind === "agent" ? "agent" : "system"} id={id} name={n.name} className="h-8 w-8 text-[11px]" />;
+    return <EntityAvatar kind={n.kind === "agent" || n.kind === "human" ? "agent" : "system"} id={id} name={n.name} className="h-8 w-8 text-[11px]" />;
   };
   switch (e.type) {
     case "message": {

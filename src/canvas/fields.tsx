@@ -99,7 +99,7 @@ export function Toggle({ label, checked, onChange, hint }: { label: string; chec
         onClick={() => onChange(!checked)}
         className={cn("relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", checked ? "bg-foreground" : "bg-input")}
       >
-        <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-background shadow transition-transform", checked ? "translate-x-4" : "translate-x-0.5")} />
+        <span className={cn("absolute left-0 top-0.5 h-4 w-4 rounded-full bg-background shadow transition-transform", checked ? "translate-x-4" : "translate-x-0.5")} />
       </button>
     </div>
   );

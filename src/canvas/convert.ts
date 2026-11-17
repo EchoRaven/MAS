@@ -63,6 +63,34 @@ export function toFlowNodes(
   });
 }
 
+const SIZE: Record<string, { w: number; h: number }> = {
+  agent: { w: 220, h: 92 },
+  human: { w: 180, h: 58 },
+  env: { w: 190, h: 58 },
+  store: { w: 180, h: 58 },
+  channel: { w: 140, h: 46 },
+};
+
+function box(doc: SystemDoc, id: string) {
+  const n = doc.nodes.find((x) => x.id === id);
+  const p = absolutePosition(doc, id);
+  const s = n?.size ? { w: n.size.width, h: n.size.height } : (SIZE[n?.data.kind ?? "agent"] ?? SIZE.agent);
+  return { cx: p.x + s.w / 2, cy: p.y + s.h / 2, w: s.w, h: s.h };
+}
+
+/** Pick the facing sides so edges leave and enter where they point. */
+export function handlesFor(doc: SystemDoc, source: string, target: string): { sourceHandle: string; targetHandle: string } {
+  const a = box(doc, source);
+  const b = box(doc, target);
+  const dx = b.cx - a.cx;
+  const dy = b.cy - a.cy;
+  // compare against the boxes' aspect so wide nodes prefer left/right
+  if (Math.abs(dx) / ((a.w + b.w) / 2) >= Math.abs(dy) / ((a.h + b.h) / 2)) {
+    return dx >= 0 ? { sourceHandle: "r", targetHandle: "l" } : { sourceHandle: "l", targetHandle: "r" };
+  }
+  return dy >= 0 ? { sourceHandle: "b", targetHandle: "t" } : { sourceHandle: "t", targetHandle: "b" };
+}
+
 export function toFlowEdges(
   doc: SystemDoc,
   opts: { selected?: Set<string>; active?: Set<string>; blocked?: Set<string>; issues?: Record<string, number> } = {},
@@ -74,6 +102,7 @@ export function toFlowEdges(
       id: e.id,
       source: e.source,
       target: e.target,
+      ...handlesFor(doc, e.source, e.target),
       type: "sys",
       selected: opts.selected?.has(e.id) ?? false,
       markerEnd: marker,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -26,6 +26,19 @@ export const DND_MIME = "application/x-mas-kind";
 /** Groups first: a parent must precede its children. */
 function ordered(nodes: SysNode[]) {
   return [...nodes.filter((n) => n.data.kind === "group"), ...nodes.filter((n) => n.data.kind !== "group")];
+}
+
+/** Nearest spot to `p` that does not overlap an existing top-level node. */
+export function freeSpot(doc: SystemDoc, p: { x: number; y: number }) {
+  const taken = doc.nodes.filter((n) => !n.parent && n.data.kind !== "group");
+  const hits = (q: { x: number; y: number }) => taken.some((n) => Math.abs(n.position.x - q.x) < 230 && Math.abs(n.position.y - q.y) < 110);
+  for (let r = 0; r < 8; r++) {
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      const q = { x: Math.round(p.x + dx * 250 * r), y: Math.round(p.y + dy * 130 * r) };
+      if (!hits(q)) return q;
+    }
+  }
+  return p;
 }
 
 export function addNode(doc: SystemDoc, kind: NodeKind, position: { x: number; y: number }): { doc: SystemDoc; id: string } {
@@ -171,15 +184,20 @@ export function FlowView({
     [update, rf],
   );
 
-  const onSelectionChange = useCallback(
-    ({ nodes: ns, edges: es }: OnSelectionChangeParams) => {
-      setSelected({ nodes: new Set(ns.map((n) => n.id)), edges: new Set(es.map((e) => e.id)) });
-      if (ns.length === 1 && es.length === 0) onSelect?.({ nodeId: ns[0].id });
-      else if (es.length === 1 && ns.length === 0) onSelect?.({ edgeId: es[0].id });
-      else if (ns.length === 0 && es.length === 0) onSelect?.({});
-    },
-    [onSelect],
-  );
+  // React Flow re-registers this handler whenever its identity changes and may
+  // fire it again, so it must be stable and must not set state when nothing changed.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+  const lastSel = useRef("");
+  const onSelectionChange = useCallback(({ nodes: ns, edges: es }: OnSelectionChangeParams) => {
+    const key = `${ns.map((n) => n.id).sort().join(",")}|${es.map((e) => e.id).sort().join(",")}`;
+    if (key === lastSel.current) return;
+    lastSel.current = key;
+    setSelected({ nodes: new Set(ns.map((n) => n.id)), edges: new Set(es.map((e) => e.id)) });
+    if (ns.length === 1 && es.length === 0) onSelectRef.current?.({ nodeId: ns[0].id });
+    else if (es.length === 1 && ns.length === 0) onSelectRef.current?.({ edgeId: es[0].id });
+    else if (ns.length === 0 && es.length === 0) onSelectRef.current?.({});
+  }, []);
 
   const onDrop = useCallback(
     (e: DragEvent) => {
@@ -189,13 +207,13 @@ export function FlowView({
       const p = rf.screenToFlowPosition({ x: e.clientX, y: e.clientY });
       let createdId = "";
       update((d) => {
-        const r = addNode(d, kind, { x: Math.round(p.x - 90), y: Math.round(p.y - 30) });
+        const r = addNode(d, kind, kind === "group" ? { x: Math.round(p.x - 90), y: Math.round(p.y - 30) } : freeSpot(d, { x: p.x - 90, y: p.y - 30 }));
         createdId = r.id;
         return r.doc;
       });
-      if (createdId) onSelect?.({ nodeId: createdId });
+      if (createdId) onSelectRef.current?.({ nodeId: createdId });
     },
-    [rf, update, onSelect],
+    [rf, update],
   );
 
   return (
@@ -220,13 +238,13 @@ export function FlowView({
       deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
       colorMode={resolveTheme(theme)}
       fitView
-      fitViewOptions={{ padding: 0.2, maxZoom: 1.1 }}
+      fitViewOptions={{ padding: 0.12, maxZoom: 1, minZoom: 0.55 }}
       minZoom={0.2}
       proOptions={{ hideAttribution: true }}
     >
       <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
       <Controls showInteractive={false} position="bottom-left" />
-      <MiniMap pannable zoomable position="bottom-right" className="hidden md:block" />
+      <MiniMap pannable zoomable position="bottom-right" className="hidden md:block" style={{ width: 140, height: 96 }} />
     </ReactFlow>
   );
 }

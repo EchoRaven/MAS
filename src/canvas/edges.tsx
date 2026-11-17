@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, useReactFlow, type EdgeProps } from "@xyflow/react";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EDGE_COLOR, type FlowEdge } from "./convert";
@@ -9,6 +9,12 @@ const KIND_SHORT = { message: "msg", call: "call", handoff: "handoff", access: "
 export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>) {
   const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, markerStart, selected, data } = props;
   const e = data!.sys;
+  const rf = useReactFlow();
+  // the label lives in its own layer: clicking it selects this edge
+  const selectSelf = () => {
+    rf.setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n)));
+    rf.setEdges((es) => es.map((x) => (x.selected !== (x.id === id) ? { ...x, selected: x.id === id } : x)));
+  };
   const [path, lx, ly] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
   const color = data?.blocked ? "hsl(var(--destructive))" : EDGE_COLOR[e.kind];
   const width = e.kind === "handoff" ? 2.25 : 1.5;
@@ -37,7 +43,9 @@ export const SysEdgeView = memo(function SysEdgeView(props: EdgeProps<FlowEdge>)
       />
       <EdgeLabelRenderer>
         <div
-          className="nodrag nopan pointer-events-auto absolute flex items-center gap-1"
+          className="nodrag nopan pointer-events-auto absolute flex cursor-pointer items-center gap-1"
+          onClick={selectSelf}
+          data-testid={`edge-label-${id}`}
           style={{ transform: `translate(-50%, -50%) translate(${lx}px, ${ly}px)` }}
         >
           {e.gate && (

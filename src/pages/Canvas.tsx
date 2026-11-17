@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { downloadText, slug } from "@/lib/format";
 import { CanvasContext } from "@/canvas/context";
-import { FlowView, addNode } from "@/canvas/FlowView";
+import { FlowView, addNode, freeSpot } from "@/canvas/FlowView";
 import { Inspector } from "@/canvas/Inspector";
 import { Palette } from "@/canvas/Palette";
 import type { NodeKind, SystemDoc } from "@/model/types";
@@ -84,7 +84,7 @@ function Editor({ doc }: { doc: SystemDoc }) {
     const p = r ? rf.screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 }) : { x: 100, y: 100 };
     let id = "";
     update((d) => {
-      const res = addNode(d, kind, { x: Math.round(p.x - 100 + Math.random() * 40), y: Math.round(p.y - 40 + Math.random() * 40) });
+      const res = addNode(d, kind, kind === "group" ? { x: Math.round(p.x - 240), y: Math.round(p.y - 150) } : freeSpot(d, { x: p.x - 110, y: p.y - 45 }));
       id = res.id;
       return res.doc;
     });
@@ -166,7 +166,7 @@ function Editor({ doc }: { doc: SystemDoc }) {
           <YamlView doc={doc} onApply={(d) => replace(d)} />
         ) : (
           <div className="flex min-h-0 flex-1">
-            <Palette onAdd={onAdd} className="hidden w-52 shrink-0 border-r border-border/70 lg:flex" />
+            <Palette onAdd={onAdd} className="hidden w-48 shrink-0 border-r border-border/70 xl:flex" />
             <div className="relative min-w-0 flex-1">
               <FlowView
                 doc={doc}
@@ -184,7 +184,7 @@ function Editor({ doc }: { doc: SystemDoc }) {
               )}
             </div>
             {inspectorOpen && (
-              <aside className="w-[340px] shrink-0 border-l border-border/70 max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-10 max-md:w-[min(340px,92vw)] max-md:bg-card max-md:shadow-[var(--pop-shadow)]">
+              <aside className="w-[330px] shrink-0 border-l border-border/70 max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-10 max-md:w-[min(340px,92vw)] max-md:bg-card max-md:shadow-[var(--pop-shadow)]">
                 <Inspector doc={doc} update={update} nodeId={current.nodeId} edgeId={current.edgeId} issues={issues} onClose={() => (current.nodeId || current.edgeId ? setSel({}) : setInspectorOpen(false))} />
               </aside>
             )}
