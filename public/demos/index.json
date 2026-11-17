@@ -180,6 +180,18 @@
   "recorded_at": "2026-11-17T09:58:23.865Z"
  },
  {
+  "id": "paper-reconcile",
+  "name": "ReConcile",
+  "input": "How many trailing zeros does 100! (100 factorial) have when written in base 12?",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 3,
+  "tokens": 2001,
+  "usd": 0.0035006,
+  "seconds": 18.1,
+  "recorded_at": "2026-11-17T15:09:52.393Z"
+ },
+ {
   "id": "paper-reflexion",
   "name": "Reflexion",
   "input": "Write a function is_valid_parens(s) that returns True when every bracket in s — (), [] and {} — is closed in the right order, and False otherwise.\n\nTests:\nassert is_valid_parens('()[]{}')\nassert is_valid_parens('{[()]}')\nassert not is_valid_parens('(]')\nassert not is_valid_parens('([)]')\nassert not is_valid_parens('((')\nassert is_valid_parens('')\nassert is_valid_parens('a(b)c')",
