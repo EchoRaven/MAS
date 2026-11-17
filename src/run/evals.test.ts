@@ -61,6 +61,19 @@ describe("cases from text", () => {
     expect(skipped).toBe(2);
   });
 
+  it("reads a CSV with a header naming the question and answer columns", () => {
+    const csv = 'id,question,answer,notes\r\n1,"What is 2+2, roughly?",4,easy\n2,"Say ""hi""",hi,\n3,"A question\nover two lines",x,\n4,,missing,\n';
+    const { cases, skipped } = parseCases(csv);
+    expect(cases).toEqual([
+      { input: "What is 2+2, roughly?", expected: "4" },
+      { input: 'Say "hi"', expected: "hi" },
+      { input: "A question\nover two lines", expected: "x" },
+    ]);
+    expect(skipped).toBe(1);
+    // a plain "q | a" line with a comma is not mistaken for a CSV
+    expect(parseCases("Is 1,000 > 999? | yes").cases).toEqual([{ input: "Is 1,000 > 999?", expected: "yes" }]);
+  });
+
   it("the sample sets parse completely", () => {
     for (const s of SAMPLE_SETS) expect(parseCases(s.text).skipped, s.name).toBe(0);
   });

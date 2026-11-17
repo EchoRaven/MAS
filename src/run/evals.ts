@@ -204,11 +204,63 @@ export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expe
   return { pass, answer, why: pass ? "the final answer matches" : `"${answer}" is not "${expected}"` };
 }
 
+const INPUT_COLS = ["input", "question", "prompt", "problem"];
+const EXPECTED_COLS = ["expected", "answer", "target", "solution", "label"];
+
+/** CSV rows (RFC 4180: quoted fields, "" for a quote, newlines inside quotes). */
+export function csvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"' && text[i + 1] === '"') (field += '"'), i++;
+      else if (ch === '"') quoted = false;
+      else field += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ",") row.push(field), (field = "");
+    else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      row.push(field);
+      if (row.some((f) => f.trim())) rows.push(row);
+      (row = []), (field = "");
+    } else field += ch;
+  }
+  row.push(field);
+  if (row.some((f) => f.trim())) rows.push(row);
+  return rows;
+}
+
+/** A CSV whose header names an input column and an answer column (question/answer, input/expected, …), or null. */
+function parseCsvCases(text: string): { cases: EvalCase[]; skipped: number } | null {
+  const first = text.split(/\r?\n/, 1)[0].toLowerCase();
+  if (!first.includes(",")) return null;
+  const rows = csvRows(text);
+  const head = rows[0].map((h) => h.trim().toLowerCase());
+  const qi = head.findIndex((h) => INPUT_COLS.includes(h));
+  const ai = head.findIndex((h) => EXPECTED_COLS.includes(h));
+  if (qi < 0 || ai < 0) return null;
+  const cases: EvalCase[] = [];
+  let skipped = 0;
+  for (const r of rows.slice(1)) {
+    const input = (r[qi] ?? "").trim();
+    const expected = (r[ai] ?? "").trim();
+    if (input && expected) cases.push({ input, expected });
+    else skipped++;
+  }
+  return { cases, skipped };
+}
+
 /**
- * Cases from pasted text: JSON lines ({input, expected}, or question/answer),
- * or one case per line as "question | expected" (a tab works as well).
+ * Cases from text: a CSV with a header (question,answer / input,expected / …),
+ * JSON lines ({input, expected}, or question/answer), or one case per line as
+ * "question | expected" (a tab works as well).
  */
 export function parseCases(text: string): { cases: EvalCase[]; skipped: number } {
+  const csv = parseCsvCases(text);
+  if (csv) return csv;
   const cases: EvalCase[] = [];
   let skipped = 0;
   for (const raw of text.split("\n")) {

@@ -2,7 +2,7 @@
 // output against its expected answer, and compare runs of the same system.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { Check, Download, FlaskConical, Play, Square, Trash2, X } from "lucide-react";
+import { Check, Download, FlaskConical, Play, Square, Trash2, Upload, X } from "lucide-react";
 import { Api } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -26,6 +26,9 @@ const GRADERS: { value: Grader; label: string; hint: string }[] = [
   { value: "contains", label: "Contains", hint: "The expected answer appears anywhere in the output" },
   { value: "llm", label: "LLM judge", hint: "A model reads the output and decides whether it gives the expected answer" },
 ];
+
+/** the server runs at most this many cases × repeats per evaluation */
+const MAX_RUNS = 200;
 
 const pct = (passed: number, graded: number) => (graded ? `${Math.round((100 * passed) / graded)}%` : "–");
 
@@ -161,9 +164,23 @@ function Evals({ systemId }: { systemId: string }) {
               items={SAMPLE_SETS.map((x) => ({ value: x.name, label: x.name }))}
               ariaLabel="Load a sample set"
               size="sm"
-              className="w-44"
+              className="w-40"
             />
           </div>
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground" title="A CSV with question and answer columns, JSON lines, or one 'question | answer' per line">
+            <Upload className="h-3.5 w-3.5" /> Load cases from a file…
+            <input
+              type="file"
+              accept=".csv,.jsonl,.json,.txt,.tsv"
+              className="sr-only"
+              aria-label="Load cases from a file"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void f.text().then(setText);
+                e.target.value = "";
+              }}
+            />
+          </label>
           <Textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -175,6 +192,7 @@ function Evals({ systemId }: { systemId: string }) {
           <p className="text-xs text-muted-foreground">
             {parsed.cases.length} case{parsed.cases.length === 1 ? "" : "s"}
             {Number(repeats) > 1 ? ` × ${repeats} repeats = ${parsed.cases.length * Number(repeats)} runs` : ""}
+            {parsed.cases.length * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
             {parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
           <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-2">
