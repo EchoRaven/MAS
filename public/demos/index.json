@@ -120,6 +120,18 @@
   "recorded_at": "2026-11-17T11:12:48.495Z"
  },
  {
+  "id": "paper-mad",
+  "name": "MAD",
+  "input": "Alice walks up a hill at 1 m/s and comes back down the same path at 3 m/s. What is her average speed for the whole trip?",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 4,
+  "tokens": 2960,
+  "usd": 0.0035776999999999996,
+  "seconds": 19.2,
+  "recorded_at": "2026-11-17T13:23:07.711Z"
+ },
+ {
   "id": "paper-magentic-one",
   "name": "Magentic-One",
   "input": "Using Python, compute the 25th Fibonacci number and the sum of the first 100 prime numbers. Report both numbers.",
