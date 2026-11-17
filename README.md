@@ -45,6 +45,8 @@ Each one is a template with its citation, how it maps onto the components,
 and where it departs from the paper. They rebuild each paper's architecture —
 who talks to whom, roles, memory, loops — not its prompts or its results.
 
+Results of running these systems against a single agent and self-consistency on the same model: [docs/benchmarks.md](docs/benchmarks.md).
+
 | Paper | What it exercises |
 | --- | --- |
 | [ChatDev](https://arxiv.org/abs/2307.07924) | A phase per group, instructor/assistant dialogues repeating until consensus, a shared codebase |

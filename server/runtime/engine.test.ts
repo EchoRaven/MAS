@@ -216,6 +216,17 @@ describe("runtime", () => {
     expect(out.text).toMatch(/\nFinal: 1098240$/);
   });
 
+  it("self-consistency samples five times and takes the majority", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "self-consistency")!.build();
+    doc.models = doc.models.filter((m) => m.id !== "sonnet");
+    doc.models.push({ id: "sonnet", provider: "mock", model: "mock", api: { params: { script: ["so… Final: 7", "Final: 8", "Final: **7**", "Final: 8", "Final: 7"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(doc, "?", { mock: false });
+    expect(errors(events)).toEqual([]);
+    expect(events.filter((e) => e.type === "usage").length).toBe(5);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("Votes: 7 ×3, 8 ×2\nFinal: 7");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

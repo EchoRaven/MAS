@@ -1,5 +1,6 @@
 import { Builder, native, type TemplateInfo } from "./builder";
 import { emptySystem } from "./defaults";
+import { autoLayout } from "./layout";
 import { PAPER_TEMPLATES } from "./papers";
 import { port } from "./ports";
 import type { AgentData, SystemDoc } from "./types";
@@ -281,9 +282,37 @@ function baseline(): SystemDoc {
   return b.doc;
 }
 
+/**
+ * Self-consistency: the same model sampled several times, majority vote.
+ * The equal-compute baseline a multi-agent system should beat.
+ */
+function selfConsistency(): SystemDoc {
+  const N = 5;
+  const b = new Builder("Self-consistency (baseline)", `One model sampled ${N} times at temperature 0.8, then a majority vote over the final answers. It spends about as much as a small multi-agent system, so it is the baseline such a system has to beat, not just a single call.`);
+  const ports = Array.from({ length: N }, (_, i) => port(`s${i + 1}`, "text", { required: true }));
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks the question", approves: false })
+    .node("vote", "function", 0, 0, {
+      name: "Majority vote",
+      join: "all",
+      fn: {
+        lang: "js",
+        code: 'const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? String(t).trim().split("\\n").pop() ?? "").replace(/\\*+/g, "").trim();\nconst norm = (a) => a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim();\nconst counts = {}, shown = {};\nfor (const t of Object.values(input)) { const f = finalOf(t); if (!f) continue; const k = norm(f); counts[k] = (counts[k] ?? 0) + 1; shown[k] ??= f; }\nconst ranked = Object.entries(counts).sort((x, y) => y[1] - x[1]);\nif (!ranked.length) return "No sample gave an answer.";\nreturn "Votes: " + ranked.map(([k, n]) => shown[k] + " ×" + n).join(", ") + "\\nFinal: " + shown[ranked[0][0]];',
+      },
+      interface: { inputs: ports, outputs: [port("out", "text")] },
+    });
+  for (let i = 1; i <= N; i++) {
+    b.node(`s${i}`, "model", 0, 0, { name: `Sample ${i}`, model: "sonnet", system_prompt: "", prompt: "{{input}}\n\nThink step by step, then end with one line: Final: <the answer alone>", temperature: 0.8, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } });
+    b.edge("asker", `s${i}`, "message", i === 1 ? { label: "Question" } : {}).edge(`s${i}`, "vote", "message", { target_port: `s${i}` });
+  }
+  b.edge("vote", "asker", "message", { label: "Answer" });
+  b.doc.budget = { usd: 0.5, max_rounds: 20, wallclock_min: 5 };
+  return autoLayout(b.doc);
+}
+
 export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
   { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
+  { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
   { id: "coding", name: "Coding team", summary: "Claude Code · gate · routed outputs · edge transform", build: codingTeam },
   { id: "research", name: "Research team", summary: "Group ports · spawn · bare model call", build: research },
