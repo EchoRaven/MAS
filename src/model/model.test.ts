@@ -180,3 +180,17 @@ describe("policies the runtime cannot act on", () => {
     ]);
   });
 });
+
+describe("local addresses", () => {
+  it("a component or tool that reaches this machine or a private network is pointed out", async () => {
+    const { validate } = await import("./validate");
+    const { localUrl } = await import("./net");
+    expect([localUrl("http://127.0.0.1:4311/x"), localUrl("http://localhost:5190"), localUrl("https://[::1]/"), localUrl("http://printer.local/"), localUrl("https://api.example.com/v1")]).toEqual(["127.0.0.1", "localhost", "::1", "printer.local", null]);
+    const doc = TEMPLATES.find((t) => t.id === "baseline")!.build();
+    doc.tools.push({ id: "peek", description: "", adapter: "http", effect: "read", needs_env: null, url: "http://127.0.0.1:4311/data" } as never);
+    const msgs = validate(doc).map((i) => i.message);
+    expect(msgs.some((m) => m.startsWith("Tool peek reaches http://127.0.0.1:4311/data"))).toBe(true);
+    // the model catalog's local entries (a local model server) are not counted
+    expect(validate(TEMPLATES.find((t) => t.id === "baseline")!.build()).some((i) => /private network/.test(i.message))).toBe(false);
+  });
+});

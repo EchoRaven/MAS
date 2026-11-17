@@ -1,5 +1,6 @@
 import { runnerById } from "./defaults";
 import { entryPoints, spawnTemplates } from "./entry";
+import { localUrl } from "./net";
 import { policyProblem } from "./policies";
 import { compat, edgeScope, interfaceOf, isResource, nodeName, sourcePort, targetPort, usesResources } from "./ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, ModelNodeData, PortSpec, SysNode, SystemDoc } from "./types";
@@ -101,6 +102,24 @@ export function validate(doc: SystemDoc): Issue[] {
   if (starts.length > 1) add("info", `${starts.length} components start the run at once (${starts.map((s) => nodeName(byId.get(s.node))).join(", ")}). Pick one under System → Start to send the input to just one`);
 
   if (doc.termination.includes("judge_outputs_verdict")) add("info", "“Judge returns a verdict” does not end a run by itself: add a policy on the judge's output (on: output(<judge>), action: terminate)");
+
+  // ---- addresses on this machine or a private network (an imported system could aim an agent at a local service)
+  const urlsIn = (v: unknown, out: string[] = []): string[] => {
+    if (typeof v === "string") {
+      if (/^(https?|wss?):\/\//i.test(v)) out.push(v);
+    } else if (Array.isArray(v)) v.forEach((x) => urlsIn(x, out));
+    else if (v && typeof v === "object") Object.values(v).forEach((x) => urlsIn(x, out));
+    return out;
+  };
+  for (const n of doc.nodes) {
+    for (const u of new Set(urlsIn(n.data))) {
+      const host = localUrl(u);
+      if (host) add("info", `${q(n)} reaches ${u}, an address on this machine or a private network. Fine for your own services; for a system from someone else, check what is there first`, { nodeId: n.id });
+    }
+  }
+  for (const t of doc.tools) {
+    for (const u of new Set(urlsIn(t))) if (localUrl(u)) add("info", `Tool ${t.id} reaches ${u}, an address on this machine or a private network`);
+  }
 
   // ---- policies the runtime would never act on
   for (const p of doc.policies) {

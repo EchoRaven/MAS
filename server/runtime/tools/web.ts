@@ -2,16 +2,9 @@
 // refused so an agent cannot reach services on the server's own network.
 import dns from "node:dns/promises";
 import net from "node:net";
+import { privateIp } from "@/model/net";
 
-function privateIp(ip: string): boolean {
-  if (net.isIPv6(ip)) {
-    const v = ip.toLowerCase();
-    if (v.startsWith("::ffff:")) return privateIp(v.slice(7));
-    return v === "::1" || v === "::" || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80");
-  }
-  const [a, b] = ip.split(".").map(Number);
-  return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
-}
+export { privateIp };
 
 export async function assertPublicUrl(raw: string): Promise<URL> {
   const url = new URL(raw);
