@@ -190,5 +190,17 @@
   "usd": 0.0333527,
   "seconds": 51,
   "recorded_at": "2026-11-17T11:45:57.282Z"
+ },
+ {
+  "id": "paper-werewolf",
+  "name": "Werewolf",
+  "input": "Begin the game.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 18,
+  "tokens": 6216,
+  "usd": 0.0006861,
+  "seconds": 12.7,
+  "recorded_at": "2026-11-17T12:39:48.050Z"
  }
 ]

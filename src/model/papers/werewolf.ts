@@ -10,6 +10,8 @@ const PLAYERS: [string, string, string][] = [
   ["carol", "Carol", "seer"],
   ["dave", "Dave", "villager"],
   ["eve", "Eve", "villager"],
+  ["frank", "Frank", "villager"],
+  ["grace", "Grace", "villager"],
 ];
 
 const ROLE_BRIEF: Record<string, string> = {
@@ -25,9 +27,11 @@ const wolves = () => alive.filter((p) => players[p] === "werewolf");
 const others = () => alive.filter((p) => players[p] !== "werewolf");
 const pick = (reply, from) => from.find((p) => reply.includes(p));
 const tally = (votes) => Object.entries(votes).sort((a, b) => b[1] - a[1])[0]?.[0];
+// the village's vote: a tie for the most votes eliminates nobody
+const verdict = (votes) => { const [first, second] = Object.entries(votes).sort((a, b) => b[1] - a[1]); return first && (!second || first[1] > second[1]) ? first[0] : null; };
 const over = () => (!wolves().length ? "The villagers win: every werewolf is gone." : wolves().length >= others().length ? "The werewolves win: they are as many as everyone else." : "");
 const story = [];
-for (let day = 1; day <= (ctx.vars.days ?? 3); day++) {
+for (let day = 1; day <= (ctx.vars.days ?? 4); day++) {
   // night: the werewolves choose a victim, privately
   const votes = {};
   for (const w of wolves()) {
@@ -59,7 +63,11 @@ for (let day = 1; day <= (ctx.vars.days ?? 3); day++) {
     const t = pick(r, alive.filter((x) => x !== p));
     if (t) ballots[t] = (ballots[t] ?? 0) + 1;
   }
-  const out = tally(ballots);
+  const out = verdict(ballots);
+  if (!out) {
+    story.push("Day " + day + ": the vote was tied, so nobody was voted out. (" + JSON.stringify(ballots) + ")");
+    emit("vote " + day, "tied — nobody voted out");
+  }
   if (out) {
     alive = alive.filter((p) => p !== out);
     story.push("Day " + day + ": the village voted out " + out + ", who was a " + players[out] + ". (" + JSON.stringify(ballots) + ")");
@@ -67,12 +75,12 @@ for (let day = 1; day <= (ctx.vars.days ?? 3); day++) {
   }
   if (over()) break;
 }
-return story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 3) + " days. Still alive: " + alive.join(", ") + ".") + "\\nRoles: " + JSON.stringify(players);`;
+return story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 4) + " days. Still alive: " + alive.join(", ") + ".") + "\\nRoles: " + JSON.stringify(players);`;
 
 function build(): SystemDoc {
   const b = new Builder(
     "Werewolf",
-    "Five players, two of them secretly werewolves and one a seer. The moderator runs the game as code: at night the werewolves choose a victim and the seer inspects someone, privately; by day everyone speaks in turn and votes someone out. Each player only ever learns what its role allows, and remembers its own game.",
+    "Seven players, two of them secretly werewolves and one a seer. The moderator runs the game as code: at night the werewolves choose a victim and the seer inspects someone, privately; by day everyone speaks in turn and votes someone out. Each player only ever learns what its role allows, and remembers its own game.",
   );
   b.node("host", "human", 0, 160, { name: "Host", role: "Starts the game and reads the outcome", approves: false })
     .agent("moderator", 280, 140, {
@@ -90,7 +98,7 @@ function build(): SystemDoc {
       role: "Player",
       model: "haiku",
       // each player's secret lives in its own instructions; nobody else can read it
-      harness: { ...native(), loop: "single_shot", instructions: `You are ${name}, a player in a game of Werewolf with Alice, Bob, Carol, Dave and Eve. ${ROLE_BRIEF[role].replace("{mates}", mates)} Answer exactly what the moderator asks.` },
+      harness: { ...native(), loop: "single_shot", instructions: `You are ${name}, a player in a game of Werewolf with ${PLAYERS.map(([, n]) => n).filter((n) => n !== name).join(", ")}. ${ROLE_BRIEF[role].replace("{mates}", mates)} Answer exactly what the moderator asks.` },
       context: { budget_total: 60000, history_strategy: "window", history_window: 60, mask_tool_output: false },
     });
     b.edge("moderator", id, "call");
@@ -113,7 +121,7 @@ export const werewolf: TemplateInfo = {
     ],
     differs: [
       "The paper's players also retrieve lessons from past games (an experience pool) and reflect before speaking; here each player plays from its own memory of this game only. A memory plugin per player would add the experience pool.",
-      "Fewer roles: no witch or guard, and five players instead of seven.",
+      "Seven players as in the paper, but fewer roles: the witch and the guard are villagers here.",
     ],
   },
 };

@@ -92,7 +92,7 @@ const DEMOS: Record<string, DemoConfig> = {
   },
   "paper-werewolf": {
     input: "Begin the game.",
-    vars: { days: 3 },
+    vars: { days: 4 },
   },
   "paper-tradingagents": {
     input: "Should we trade NVIDIA (NVDA) today? Use what you know up to your training cutoff.",
