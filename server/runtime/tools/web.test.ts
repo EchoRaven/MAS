@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { assertPublicUrl, privateIp } from "./web";
+import http from "node:http";
+import zlib from "node:zlib";
+import { assertPublicUrl, pinnedGet, privateIp } from "./web";
 
 describe("private addresses", () => {
   it("are recognised in all their usual forms", () => {
@@ -18,5 +20,27 @@ describe("private addresses", () => {
     await expect(assertPublicUrl("http://localhost:5190/")).rejects.toThrow(/private address/);
     await expect(assertPublicUrl("http://169.254.169.254/latest/meta-data/")).rejects.toThrow(/private address/);
     await expect(assertPublicUrl("file:///etc/passwd")).rejects.toThrow(/only http/);
+  });
+});
+
+describe("pinned fetching", () => {
+  it("connects to the address that was checked, not whatever the name resolves to later", async () => {
+    const server = http.createServer((req, res) => {
+      if (req.url === "/zipped") {
+        res.writeHead(200, { "content-type": "text/plain", "content-encoding": "gzip" });
+        res.end(zlib.gzipSync("unzipped fine"));
+      } else res.writeHead(200, { "content-type": "text/plain" }).end(`host header: ${req.headers.host}`);
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const port = (server.address() as { port: number }).port;
+    try {
+      // .invalid never resolves: an answer proves the connection went to the pinned address
+      const r = await pinnedGet(new URL(`http://pinned.invalid:${port}/`), "127.0.0.1");
+      expect(r.status).toBe(200);
+      expect(r.body).toBe(`host header: pinned.invalid:${port}`);
+      expect((await pinnedGet(new URL(`http://pinned.invalid:${port}/zipped`), "127.0.0.1")).body).toBe("unzipped fine");
+    } finally {
+      server.close();
+    }
   });
 });

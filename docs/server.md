@@ -26,6 +26,11 @@ as a model's `api.key_env`. The browser never receives the value.
 Anyone holding the token can run code on the server: JS and Python
 functions, and Docker sandboxes. Treat the token like a password.
 
+What agents reach is limited:
+- **Web pages:** the `fetch` tool, and knowledge sources that are web pages, only reach public addresses. Each address, including every redirect, is checked, and the connection is made to the address that was checked, so a name cannot be re-pointed at this machine between the check and the request.
+- **Files:** workspace and sandbox file tools stay inside their folder, symbolic links included, and knowledge sources stay inside the knowledge folder.
+- **Addresses in a system:** URLs written into a system (HTTP tools, MCP servers, remote agents) are used as given. The validator points out any that are on this machine or a private network.
+
 ## API
 
 | Method and path | Purpose |
