@@ -211,7 +211,8 @@ async function record(id: string, cfg: DemoConfig) {
   const models = onGemini(doc);
   const changes = cfg.adapt?.(doc) ?? [];
   console.log(`\n▶ ${tpl.name}: ${cfg.input.slice(0, 70)}`);
-  const rec = await call<RunRecord>("POST", "/runs", { doc, input: cfg.input, vars: cfg.vars });
+  // save: false — a recording should not leave a copy of the system in the workspace
+  const rec = await call<RunRecord>("POST", "/runs", { doc, input: cfg.input, vars: cfg.vars, save: false });
   const answered = new Set<string>();
   for (;;) {
     await new Promise((r) => setTimeout(r, 2000));

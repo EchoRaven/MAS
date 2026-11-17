@@ -137,23 +137,6 @@ function SystemCard({ doc }: { doc: SystemDoc }) {
 /** The paper a seeded system came from, if any. */
 const paperOf = (id: string) => TEMPLATES.find((t) => t.paper && seedId(t.id) === id);
 
-function Section({ title, subtitle, docs }: { title: string; subtitle?: string; docs: SystemDoc[] }) {
-  if (!docs.length) return null;
-  return (
-    <section className="mt-4">
-      <h2 className="text-[13px] font-medium text-muted-foreground">
-        {title} <span className="tabular-nums">({docs.length})</span>
-      </h2>
-      {subtitle && <p className="text-[12px] text-muted-foreground">{subtitle}</p>}
-      <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {docs.map((doc) => (
-          <SystemCard key={doc.id} doc={doc} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function SystemsPage() {
   const systems = useSystems((s) => s.systems);
   const create = useSystems((s) => s.create);
@@ -219,9 +202,10 @@ export function SystemsPage() {
             <EmptyState icon={Boxes} title={q ? "No matching systems" : "No systems yet"} subtitle="Create one from the top right, or import YAML" />
           </div>
         ) : (
-          <div className="space-y-6">
-            <Section title="Your systems" docs={shown.filter((d) => !paperOf(d.id))} />
-            <Section title="Papers rebuilt on the canvas" subtitle="Each is a working system: open the canvas to see how the paper is put together, or change it and run it." docs={shown.filter((d) => paperOf(d.id))} />
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {shown.map((doc) => (
+              <SystemCard key={doc.id} doc={doc} />
+            ))}
           </div>
         )}
       </div>

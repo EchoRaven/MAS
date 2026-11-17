@@ -8,10 +8,11 @@ import { checkDoc } from "./systems";
 
 export function runRoutes(r: Router, store: Store, runs: RunManager) {
   r.on("POST", "/api/runs", async (req) => {
-    const body = (await req.body()) as { system_id?: string; doc?: unknown; input?: string; mock?: boolean; force?: boolean; vars?: Record<string, unknown> };
+    const body = (await req.body()) as { system_id?: string; doc?: unknown; input?: string; mock?: boolean; force?: boolean; vars?: Record<string, unknown>; save?: boolean };
     const doc = body.doc ? checkDoc(body.doc) : body.system_id ? store.getSystem(body.system_id) : null;
     if (!doc) throw new HttpError(400, "Give a system_id or a doc");
-    if (body.doc) store.putSystem(doc);
+    // the browser sends the system as it is and it is stored; a script can say save: false (the run keeps its own copy either way)
+    if (body.doc && body.save !== false) store.putSystem(doc);
     const errors = validate(doc).filter((i) => i.severity === "error");
     if (errors.length && !body.force) throw new HttpError(422, `The system has ${errors.length} error${errors.length > 1 ? "s" : ""}: ${errors.slice(0, 3).map((e) => e.message).join("; ")}`);
     return runs.start(doc, { input: String(body.input ?? ""), mock: !!body.mock, vars: body.vars });

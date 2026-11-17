@@ -33,7 +33,7 @@ functions, and Docker sandboxes. Treat the token like a password.
 | `GET /api/health` | Liveness (no token) |
 | `GET/PUT/DELETE /api/systems[/:id]` | Systems (the browser syncs automatically) |
 | `POST /api/validate` | Issues and conformance failures of a document |
-| `POST /api/runs` `{doc \| system_id, input, mock?, force?, vars?}` | Start a run. `mock` = dry run on the test model. Validation errors refuse the run unless `force` is set |
+| `POST /api/runs` `{doc \| system_id, input, mock?, force?, vars?, save?}` | Start a run. `mock` = dry run on the test model. Validation errors refuse the run unless `force` is set. A `doc` is also stored as a system unless `save` is false |
 | `GET /api/runs?system=` · `GET /api/runs/:id` | History, and one run with its events |
 | `GET /api/runs/:id/events` | Server-sent events: replay, then live until the end |
 | `POST /api/runs/:id/answer` `{request, approved?, text?}` | Answer an approval or a request for input |
