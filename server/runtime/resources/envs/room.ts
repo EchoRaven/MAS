@@ -19,7 +19,6 @@ export interface RoomPost {
 
 export class RoomEnv implements Resource {
   posts: RoomPost[];
-  private rr = 0;
   constructor(
     private rc: RunCtx,
     readonly node: SysNode<EnvData>,
@@ -48,12 +47,21 @@ export class RoomEnv implements Resource {
     if (this.persistent) writeState(this.file, this.posts.slice(-500));
   }
 
-  /** Round robin over members other than the last speaker. */
+  /**
+   * Round robin: the agent after `after` in the order members joined. When a
+   * person posts, the turn goes on after the last agent who spoke (the first
+   * agent, at the start).
+   */
   nextRoundRobin(after: string): string | undefined {
-    const ms = this.members().filter((m) => m !== after && this.rc.byId.get(m)?.data.kind === "agent");
-    if (!ms.length) return undefined;
-    return ms[this.rr++ % ms.length];
+    const agents = this.members().filter((m) => this.rc.byId.get(m)?.data.kind === "agent");
+    if (!agents.length) return undefined;
+    const at = agents.indexOf(after);
+    if (at >= 0) this.lastAgent = after;
+    const from = at >= 0 ? at : this.lastAgent ? agents.indexOf(this.lastAgent) : -1;
+    const next = agents[(from + 1) % agents.length];
+    return next === after && agents.length === 1 ? undefined : next;
   }
+  private lastAgent?: string;
 
   /** Members named with @ in the text. */
   mentioned(text: string): string[] {

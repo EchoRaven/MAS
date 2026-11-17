@@ -54,7 +54,9 @@ export const mockProvider: Provider = {
     const content: Part[] = [];
     let stop: ChatResponse["stop"] = "end";
     if (script?.length) {
-      const key = `${model.id}|${req.system ?? ""}`;
+      // keyed by the agent's own instructions (the system prompt's first paragraph), not the whole prompt:
+      // context that changes every turn (a room's transcript, say) must not send the script back to its start
+      const key = `${model.id}|${(req.system ?? "").split("\n\n")[0]}`;
       const n = counters.get(key) ?? 0;
       counters.set(key, n + 1);
       const s = script[Math.min(n, script.length - 1)];
