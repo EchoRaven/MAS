@@ -5,11 +5,13 @@ import path from "node:path";
 import { loadConfig } from "./config";
 import { Router, send } from "./http";
 import { designRoutes } from "./routes/design";
+import { evalRoutes } from "./routes/evals";
 import { runRoutes } from "./routes/runs";
 import { settingsRoutes } from "./routes/settings";
 import { systemRoutes } from "./routes/systems";
 import { handleMcp } from "./runtime/mcpProxy";
 import { persistHealth } from "./runtime/models";
+import { EvalManager } from "./runtime/evals";
 import { RunManager } from "./runtime/runs";
 import { Store } from "./store/files";
 import { Secrets } from "./store/secrets";
@@ -20,6 +22,8 @@ const secrets = new Secrets(config.dataDir);
 const runs = new RunManager(store, secrets, config);
 persistHealth(path.join(config.dataDir, "model-health.json"));
 runs.recover();
+const evals = new EvalManager(store, runs, secrets);
+evals.recover();
 
 const router = new Router(config.token);
 router.on("GET", "/api/health", () => ({ ok: true, server: "mas-studio", version: "0.1.0" }), { auth: false });
@@ -28,6 +32,7 @@ systemRoutes(router, store);
 runRoutes(router, store, runs);
 settingsRoutes(router, store, secrets, config);
 designRoutes(router, store, secrets, config);
+evalRoutes(router, store, evals);
 
 // MCP for harnesses: authenticated by the per-run exposure token, not the user token
 router.on(

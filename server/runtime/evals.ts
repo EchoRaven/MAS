@@ -1,0 +1,149 @@
+// Runs a system over a set of cases and grades each output: the evaluation a
+// paper reports. Cases run a few at a time as ordinary runs, so each one can
+// be replayed like any other.
+import { randomUUID } from "node:crypto";
+import { DEFAULT_MODELS } from "@/model/defaults";
+import type { SystemDoc } from "@/model/types";
+import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule } from "@/run/evals";
+import type { RunEvent } from "@/run/events";
+import type { Store } from "../store/files";
+import type { Secrets } from "../store/secrets";
+import { Models, textOf, userText } from "./models";
+import type { RunManager } from "./runs";
+
+export interface EvalOptions {
+  cases: EvalCase[];
+  grader: Grader;
+  mock?: boolean;
+  /** runs at once */
+  concurrency?: number;
+  /** the model that judges, for the llm grader */
+  judge?: string;
+}
+
+const MAX_CASES = 200;
+
+export class EvalManager {
+  private stopped = new Set<string>();
+  private active = new Set<string>();
+  constructor(
+    private store: Store,
+    private runs: RunManager,
+    private secrets: Secrets,
+  ) {}
+
+  start(doc: SystemDoc, opts: EvalOptions): EvalRecord {
+    const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, MAX_CASES);
+    if (!cases.length) throw new Error("No cases: each needs an input");
+    const rec: EvalRecord = {
+      id: `eval_${Date.now().toString(36)}_${randomUUID().slice(0, 6)}`,
+      system_id: doc.id,
+      system_name: doc.name,
+      grader: opts.grader,
+      mock: !!opts.mock,
+      status: "running",
+      started_at: new Date().toISOString(),
+      cases: cases.map((c) => ({ input: String(c.input), expected: String(c.expected ?? ""), status: "pending" })),
+      passed: 0,
+      graded: 0,
+      usd: 0,
+    };
+    this.store.putEval(rec);
+    this.active.add(rec.id);
+    void this.execute(rec, doc, opts).finally(() => this.active.delete(rec.id));
+    return rec;
+  }
+
+  /** Evaluations cut off by a restart are marked stopped, with what they finished. */
+  recover() {
+    for (const rec of this.store.listEvals()) {
+      if (rec.status !== "running") continue;
+      rec.status = "stopped";
+      rec.finished_at = new Date().toISOString();
+      for (const c of rec.cases) if (c.status === "pending" || c.status === "running") Object.assign(c, { status: "error", why: "the server restarted" });
+      this.store.putEval(rec);
+    }
+  }
+
+  get(id: string) {
+    return this.store.getEval(id);
+  }
+  isActive(id: string) {
+    return this.active.has(id);
+  }
+  stop(id: string) {
+    if (!this.active.has(id)) return false;
+    this.stopped.add(id);
+    for (const c of this.store.getEval(id)?.cases ?? []) if (c.status === "running" && c.run_id) this.runs.stop(c.run_id);
+    return true;
+  }
+
+  private async execute(rec: EvalRecord, doc: SystemDoc, opts: EvalOptions) {
+    const judge = opts.grader === "llm" ? new Models(doc.models.length ? doc.models : DEFAULT_MODELS, this.secrets, !!opts.mock) : null;
+    const save = () => {
+      rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
+      rec.passed = rec.cases.filter((c) => c.pass).length;
+      rec.usd = rec.cases.reduce((s, c) => s + (c.usd ?? 0), 0);
+      this.store.putEval(rec);
+    };
+    let next = 0;
+    const worker = async () => {
+      while (next < rec.cases.length && !this.stopped.has(rec.id)) {
+        const c = rec.cases[next++];
+        const t0 = Date.now();
+        c.status = "running";
+        try {
+          const run = this.runs.start(doc, { input: c.input, mock: opts.mock });
+          c.run_id = run.id;
+          save();
+          await this.settle(run.id);
+          const done = this.runs.get(run.id)!;
+          const events = this.store.events(run.id) as RunEvent[];
+          c.output = events.filter((e): e is Extract<RunEvent, { type: "output" }> => e.type === "output").map((e) => e.text).join("\n\n");
+          c.usd = done.usd;
+          if (!c.output) {
+            c.pass = false;
+            c.why = `no output (${done.status}${done.reason ? `: ${done.reason}` : ""})`;
+          } else if (judge) {
+            const { usd, ...verdict } = await this.judge(judge, opts.judge, c.input, c.expected, c.output);
+            Object.assign(c, verdict);
+            c.usd = (c.usd ?? 0) + usd;
+          } else {
+            Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm">, c.output, c.expected));
+          }
+          c.status = "done";
+        } catch (e) {
+          c.status = "error";
+          c.pass = false;
+          c.why = (e as Error).message;
+        }
+        c.seconds = Math.round((Date.now() - t0) / 100) / 10;
+        save();
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.concurrency ?? 2, 8)) }, worker));
+    rec.status = this.stopped.has(rec.id) ? "stopped" : "finished";
+    rec.finished_at = new Date().toISOString();
+    for (const c of rec.cases) if (c.status === "pending") c.why = "not run (stopped)";
+    this.stopped.delete(rec.id);
+    save();
+  }
+
+  /** Waits for a run to end. A run that waits for a person cannot be graded unattended: it is stopped. */
+  private async settle(runId: string) {
+    while (this.runs.isActive(runId)) {
+      if (this.runs.get(runId)?.status === "waiting") {
+        this.runs.stop(runId);
+        throw new Error("the run asked a person for input; evaluations run unattended");
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  private async judge(models: Models, model: string | undefined, input: string, expected: string, output: string) {
+    const prompt = `Grade a system's answer.\n\nQuestion:\n${input}\n\nExpected answer:\n${expected}\n\nThe system's output:\n${output.slice(-4000)}\n\nDoes the output's final answer agree with the expected answer? Wording may differ; the substance must match. Reply with one line: PASS or FAIL, then a short reason.`;
+    const { res, usage } = await models.chat(model ?? null, { messages: [userText(prompt)], max_tokens: 200 });
+    const verdict = textOf(res.content).trim();
+    return { pass: /^\W*pass\b/i.test(verdict), answer: finalAnswer(output), why: `judge: ${verdict.slice(0, 300)}`, usd: usage.usd };
+  }
+}

@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { SystemDoc } from "@/model/types";
+import type { EvalRecord } from "@/run/evals";
 import type { RunEvent, RunRecord } from "@/run/events";
 
 const SAFE_ID = /^[A-Za-z0-9_.-]{1,128}$/;
@@ -39,7 +40,9 @@ function readJson<T>(file: string): T | null {
 export class Store {
   readonly systemsDir: string;
   readonly runsDir: string;
+  readonly evalsDir: string;
   constructor(readonly dataDir: string) {
+    this.evalsDir = path.join(dataDir, "evals");
     this.systemsDir = path.join(dataDir, "systems");
     this.runsDir = path.join(dataDir, "runs");
     fs.mkdirSync(this.systemsDir, { recursive: true });
@@ -86,6 +89,25 @@ export class Store {
   getRunSystem(id: string): SystemDoc | null {
     return readJson<SystemDoc>(path.join(this.runDir(id), "system.json"));
   }
+  putEval(rec: EvalRecord) {
+    writeJson(path.join(this.evalsDir, `${safeId(rec.id)}.json`), rec);
+  }
+  getEval(id: string): EvalRecord | null {
+    return readJson<EvalRecord>(path.join(this.evalsDir, `${safeId(id)}.json`));
+  }
+  listEvals(systemId?: string): EvalRecord[] {
+    if (!fs.existsSync(this.evalsDir)) return [];
+    return fs
+      .readdirSync(this.evalsDir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => readJson<EvalRecord>(path.join(this.evalsDir, f)))
+      .filter((r): r is EvalRecord => !!r && (!systemId || r.system_id === systemId))
+      .sort((a, b) => b.started_at.localeCompare(a.started_at));
+  }
+  deleteEval(id: string) {
+    fs.rmSync(path.join(this.evalsDir, `${safeId(id)}.json`), { force: true });
+  }
+
   listRuns(systemId?: string): RunRecord[] {
     return fs
       .readdirSync(this.runsDir)
