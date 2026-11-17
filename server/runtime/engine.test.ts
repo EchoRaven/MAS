@@ -346,6 +346,25 @@ describe("runtime", () => {
     expect(out.text).toMatch(/^Tea was first drunk in China \[1\]/);
   });
 
+  it("Virtual Lab: the PI opens, scientists then the critic speak each round, and the PI's summary ends the meeting", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-virtual-lab")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(
+      mock("vl_pi", ["Agenda: pick a nanobody design approach.", "Round 1: ESM scoring is settled.", "Round 2: add AlphaFold checks.", "Summary: ESM + AlphaFold + Rosetta pipeline; next, design 92 candidates. TERMINATE"]),
+      mock("vl_sci", ["My proposal."]),
+      mock("vl_critic", ["The controls are missing."]),
+    );
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "pi" ? "vl_pi" : n.id === "critic" ? "vl_critic" : "vl_sci";
+    const { events } = await run(doc, "Design nanobodies that bind the newest SARS-CoV-2 variant.", { mock: false });
+    const speakers = events.filter((e) => e.type === "usage").map((e) => (e as { node: string }).node);
+    expect(errors(events)).toEqual([]);
+    // the PI opens and closes, and synthesises after each of the 3 rounds; everyone else speaks once a round
+    expect([usages(events, "pi").length, usages(events, "immunologist").length, usages(events, "ml").length, usages(events, "compbio").length, usages(events, "critic").length]).toEqual([4, 3, 3, 3, 3]);
+    expect(speakers.slice(0, 6)).toEqual(["pi", "immunologist", "ml", "compbio", "critic", "pi"]);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toMatch(/^Summary: ESM \+ AlphaFold/);
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

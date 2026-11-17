@@ -74,6 +74,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [Exchange-of-Thought](https://arxiv.org/abs/2312.01823) | Four communication paradigms (memory, report, relay, debate) in one system, chosen by a run variable; confidence from each agent's consistency; stop at agreement |
 | [Agents' Room](https://arxiv.org/abs/2410.02603) | Story writing: planning agents (conflict, characters, setting, plot) and one writing agent per part of the narrative arc share a scratchpad; an orchestrator calls them in turn |
 | [STORM](https://arxiv.org/abs/2402.14207) | Article writing by research: one spawned interviewer per perspective questions a search-grounded expert through a call edge; outline, then a cited article |
+| [Virtual Lab](https://www.biorxiv.org/content/10.1101/2024.11.11.623004v1) | A PI-led team meeting in a room: scientists of different fields answer in turn, a scientific critic speaks last each round, the PI's summary ends it |
 
 ## Layout
 

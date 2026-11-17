@@ -23,7 +23,8 @@ import { reconcile } from "./reconcile";
 import { reflexion } from "./reflexion";
 import { storm } from "./storm";
 import { tradingagents } from "./tradingagents";
+import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab];
