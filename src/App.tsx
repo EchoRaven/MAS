@@ -9,10 +9,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SystemsPage = lazy(() => import("@/pages/Systems").then((m) => ({ default: m.SystemsPage })));
-const CanvasPage = lazy(() => import("@/pages/Canvas").then((m) => ({ default: m.CanvasPage })));
-const RunsPage = lazy(() => import("@/pages/Runs").then((m) => ({ default: m.RunsPage })));
+const CanvasPage = lazy(() => import("@/pages/canvas").then((m) => ({ default: m.CanvasPage })));
+const RunsPage = lazy(() => import("@/pages/runs").then((m) => ({ default: m.RunsPage })));
 const TemplatesPage = lazy(() => import("@/pages/Templates").then((m) => ({ default: m.TemplatesPage })));
-const LibraryPage = lazy(() => import("@/pages/Library").then((m) => ({ default: m.LibraryPage })));
+const LibraryPage = lazy(() => import("@/pages/library").then((m) => ({ default: m.LibraryPage })));
 
 function PageFallback() {
   return (

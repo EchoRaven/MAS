@@ -1,21 +1,32 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
-import type { EdgeKind, NodeData, SysEdge, SystemDoc } from "@/model/types";
+import { edgeScope, interfaceOf } from "@/model/ports";
+import type { EdgeKind, NodeData, PortSpec, SysEdge, SystemDoc } from "@/model/types";
 
 export type RunStatus = "idle" | "working" | "waiting" | "done" | "blocked";
+
+/** Virtual nodes for a group's own ports on its inner canvas. */
+export const BOUNDARY_IN = "__in";
+export const BOUNDARY_OUT = "__out";
 
 export interface FlowNodeData extends Record<string, unknown> {
   sys: NodeData;
   status?: RunStatus;
   issues?: number;
   readOnly?: boolean;
-  /** group: member count, for the header */
+  /** group: member count */
   members?: number;
+  /** boundary nodes */
+  boundary?: { dir: "in" | "out"; ports: PortSpec[]; group: string };
+  /** names of ports that have an edge, for handle styling */
+  wired?: string[];
 }
 export interface FlowEdgeData extends Record<string, unknown> {
   sys: SysEdge;
   active?: boolean;
   blocked?: boolean;
   issues?: number;
+  /** label ports when the ends have more than one */
+  showPorts?: { source: boolean; target: boolean };
 }
 
 export type FlowNode = Node<FlowNodeData>;
@@ -29,94 +40,92 @@ export const EDGE_COLOR: Record<EdgeKind, string> = {
 };
 
 export const EDGE_LABEL: Record<EdgeKind, string> = {
-  message: "message · async message",
-  call: "call · sync call",
-  handoff: "handoff · hand off control",
-  access: "access · read/write env / store",
+  message: "message · async",
+  call: "call · request / reply",
+  handoff: "handoff · pass control",
+  access: "access · use an env or plugin",
 };
 
+const inScope = (scope: string | undefined) => (n: { parent?: string }) => n.parent === scope;
+
+/** The nodes drawn on one canvas: the root (scope undefined) or a group's own canvas. */
 export function toFlowNodes(
   doc: SystemDoc,
+  scope: string | undefined,
   opts: { selected?: Set<string>; status?: Record<string, RunStatus>; issues?: Record<string, number>; readOnly?: boolean } = {},
 ): FlowNode[] {
-  return doc.nodes.map((n) => {
-    const isGroup = n.data.kind === "group";
-    return {
-      id: n.id,
-      type: n.data.kind,
-      position: n.position,
-      parentId: n.parent,
-      extent: undefined,
-      selected: opts.selected?.has(n.id) ?? false,
-      draggable: !opts.readOnly,
-      connectable: !opts.readOnly,
-      zIndex: isGroup ? -1 : undefined,
-      style: isGroup && n.size ? { width: n.size.width, height: n.size.height } : undefined,
-      data: {
-        sys: n.data,
-        status: opts.status?.[n.id],
-        issues: opts.issues?.[n.id],
-        readOnly: opts.readOnly,
-        members: isGroup ? doc.nodes.filter((m) => m.parent === n.id).length : undefined,
-      },
-    };
-  });
-}
-
-const SIZE: Record<string, { w: number; h: number }> = {
-  agent: { w: 220, h: 92 },
-  human: { w: 180, h: 58 },
-  env: { w: 190, h: 58 },
-  store: { w: 180, h: 58 },
-  channel: { w: 140, h: 46 },
-};
-
-function box(doc: SystemDoc, id: string) {
-  const n = doc.nodes.find((x) => x.id === id);
-  const p = absolutePosition(doc, id);
-  const s = n?.size ? { w: n.size.width, h: n.size.height } : (SIZE[n?.data.kind ?? "agent"] ?? SIZE.agent);
-  return { cx: p.x + s.w / 2, cy: p.y + s.h / 2, w: s.w, h: s.h };
-}
-
-/** Pick the facing sides so edges leave and enter where they point. */
-export function handlesFor(doc: SystemDoc, source: string, target: string): { sourceHandle: string; targetHandle: string } {
-  const a = box(doc, source);
-  const b = box(doc, target);
-  const dx = b.cx - a.cx;
-  const dy = b.cy - a.cy;
-  // compare against the boxes' aspect so wide nodes prefer left/right
-  if (Math.abs(dx) / ((a.w + b.w) / 2) >= Math.abs(dy) / ((a.h + b.h) / 2)) {
-    return dx >= 0 ? { sourceHandle: "r", targetHandle: "l" } : { sourceHandle: "l", targetHandle: "r" };
+  const nodes = doc.nodes.filter(inScope(scope));
+  const wiredOf = (id: string) => doc.edges.flatMap((e) => [e.source === id ? e.source_port : null, e.target === id ? e.target_port : null]).filter(Boolean) as string[];
+  const out: FlowNode[] = nodes.map((n) => ({
+    id: n.id,
+    type: n.data.kind,
+    position: n.position,
+    selected: opts.selected?.has(n.id) ?? false,
+    draggable: !opts.readOnly,
+    connectable: !opts.readOnly,
+    data: {
+      sys: n.data,
+      status: opts.status?.[n.id],
+      issues: opts.issues?.[n.id],
+      readOnly: opts.readOnly,
+      members: n.data.kind === "group" ? doc.nodes.filter((m) => m.parent === n.id).length : undefined,
+      wired: wiredOf(n.id),
+    },
+  }));
+  const group = scope ? doc.nodes.find((n) => n.id === scope) : undefined;
+  if (group && group.data.kind === "group") {
+    const ifc = interfaceOf(group.data);
+    const xs = nodes.map((n) => n.position.x);
+    const ys = nodes.map((n) => n.position.y);
+    const minX = xs.length ? Math.min(...xs) : 0;
+    const maxX = xs.length ? Math.max(...xs) : 300;
+    const midY = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : 0;
+    out.push(
+      { id: BOUNDARY_IN, type: "boundary", position: { x: minX - 230, y: midY }, draggable: false, selectable: false, deletable: false, data: { sys: group.data, boundary: { dir: "in", ports: ifc.inputs, group: group.id }, readOnly: opts.readOnly } },
+      { id: BOUNDARY_OUT, type: "boundary", position: { x: maxX + 300, y: midY }, draggable: false, selectable: false, deletable: false, data: { sys: group.data, boundary: { dir: "out", ports: ifc.outputs, group: group.id }, readOnly: opts.readOnly } },
+    );
   }
-  return dy >= 0 ? { sourceHandle: "b", targetHandle: "t" } : { sourceHandle: "t", targetHandle: "b" };
+  return out;
 }
 
 export function toFlowEdges(
   doc: SystemDoc,
+  scope: string | undefined,
   opts: { selected?: Set<string>; active?: Set<string>; blocked?: Set<string>; issues?: Record<string, number> } = {},
 ): FlowEdge[] {
-  return doc.edges.map((e) => {
-    const color = EDGE_COLOR[e.kind];
-    const marker = { type: MarkerType.ArrowClosed, color, width: 16, height: 16 };
-    return {
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      ...handlesFor(doc, e.source, e.target),
-      type: "sys",
-      selected: opts.selected?.has(e.id) ?? false,
-      markerEnd: marker,
-      markerStart: e.kind === "call" ? { ...marker } : undefined,
-      data: { sys: e, active: opts.active?.has(e.id), blocked: opts.blocked?.has(e.id), issues: opts.issues?.[e.id] },
-    };
-  });
-}
-
-/** Absolute canvas position of a node (adds its group's offset). */
-export function absolutePosition(doc: SystemDoc, id: string): { x: number; y: number } {
-  const n = doc.nodes.find((x) => x.id === id);
-  if (!n) return { x: 0, y: 0 };
-  if (!n.parent) return n.position;
-  const p = absolutePosition(doc, n.parent);
-  return { x: p.x + n.position.x, y: p.y + n.position.y };
+  const byId = new Map(doc.nodes.map((n) => [n.id, n]));
+  const multi = (id: string, dir: "in" | "out", inner: boolean) => {
+    const n = byId.get(id);
+    if (!n) return false;
+    const ifc = interfaceOf(n.data);
+    // inside a group its inputs act as sources and its outputs as targets
+    const list = inner ? (dir === "out" ? ifc.inputs : ifc.outputs) : dir === "out" ? ifc.outputs : ifc.inputs;
+    return list.length > 1;
+  };
+  return doc.edges
+    .filter((e) => (e.kind === "access" ? byId.get(e.source)?.parent === scope && byId.get(e.target)?.parent === scope : edgeScope(doc, e) === scope))
+    .map((e) => {
+      const color = EDGE_COLOR[e.kind];
+      const marker = { type: MarkerType.ArrowClosed, color, width: 16, height: 16 };
+      const fromBoundary = scope !== undefined && e.source === scope;
+      const toBoundary = scope !== undefined && e.target === scope;
+      return {
+        id: e.id,
+        source: fromBoundary ? BOUNDARY_IN : e.source,
+        target: toBoundary ? BOUNDARY_OUT : e.target,
+        sourceHandle: e.source_port,
+        targetHandle: e.target_port,
+        type: "sys",
+        selected: opts.selected?.has(e.id) ?? false,
+        markerEnd: marker,
+        markerStart: e.kind === "call" ? { ...marker } : undefined,
+        data: {
+          sys: e,
+          active: opts.active?.has(e.id),
+          blocked: opts.blocked?.has(e.id),
+          issues: opts.issues?.[e.id],
+          showPorts: { source: multi(e.source, "out", fromBoundary), target: multi(e.target, "in", toBoundary) },
+        },
+      };
+    });
 }

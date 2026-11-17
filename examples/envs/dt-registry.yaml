@@ -1,0 +1,8 @@
+# DT (DecodingTrust) dt_arena/envs/registry.yaml shape: one entry per env.
+netflix:
+  api_base_url: "http://127.0.0.1:8078"
+  ui_base_url: "http://127.0.0.1:8079"
+  health_path: "/health"
+paypal:
+  api_base_url: "http://127.0.0.1:8035"
+  health_path: "/health"

@@ -3,9 +3,11 @@
 // via the EnvGen monitor. Modified: studio sections.
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Boxes, LayoutTemplate, Menu, PlayCircle, Workflow, type LucideIcon } from "lucide-react";
+import { BookOpen, Boxes, LayoutTemplate, Menu, PanelLeftClose, PanelLeftOpen, PlayCircle, Workflow, type LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useUiStore } from "@/store/ui";
 
 export type NavigationItem = { value: string; path: string; label: string; icon: LucideIcon; group: "Workspace" | "Resources" };
 
@@ -14,7 +16,7 @@ export const NAV_ITEMS: NavigationItem[] = [
   { value: "canvas", path: "/canvas", label: "Canvas", icon: Workflow, group: "Workspace" },
   { value: "runs", path: "/runs", label: "Runs", icon: PlayCircle, group: "Workspace" },
   { value: "templates", path: "/templates", label: "Templates", icon: LayoutTemplate, group: "Resources" },
-  { value: "library", path: "/library", label: "Models & Tools", icon: BookOpen, group: "Resources" },
+  { value: "library", path: "/library", label: "Library", icon: BookOpen, group: "Resources" },
 ];
 const GROUPS: NavigationItem["group"][] = ["Workspace", "Resources"];
 
@@ -22,6 +24,35 @@ export function getNavigationValue(pathname: string): string {
   const first = pathname.split("/").filter(Boolean)[0];
   if (first && NAV_ITEMS.some((i) => i.value === first)) return first;
   return "systems";
+}
+
+function RailLinks({ current }: { current: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {NAV_ITEMS.map((item) => {
+        const active = item.value === current;
+        const Icon = item.icon;
+        return (
+          <Tooltip key={item.value}>
+            <TooltipTrigger asChild>
+              <Link
+                to={item.path}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                  active && "bg-active text-foreground",
+                )}
+              >
+                <Icon aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">{item.label}</TooltipContent>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
 }
 
 function Links({ current, mobile = false, onNavigate }: { current: string; mobile?: boolean; onNavigate?: () => void }) {
@@ -58,13 +89,15 @@ function Links({ current, mobile = false, onNavigate }: { current: string; mobil
   );
 }
 
-function Brand() {
+function Brand({ compact }: { compact?: boolean }) {
   return (
     <Link to="/" aria-label="MAS Studio home" className="-mx-1.5 flex items-center gap-2.5 rounded-md px-1.5 py-1 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring">
       <img src="/logo.svg" alt="" className="h-7 w-7 shrink-0 dark:invert" />
-      <span className="whitespace-nowrap text-base font-semibold tracking-tight">
-        MAS <span className="font-normal text-muted-foreground">Studio</span>
-      </span>
+      {!compact && (
+        <span className="whitespace-nowrap text-base font-semibold tracking-tight">
+          MAS <span className="font-normal text-muted-foreground">Studio</span>
+        </span>
+      )}
     </Link>
   );
 }
@@ -73,7 +106,10 @@ export function Navigation({ mode = "all", className }: { mode?: "all" | "deskto
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const current = getNavigationValue(location.pathname);
+  const collapsed = useUiStore((s) => s.navCollapsed);
+  const toggle = useUiStore((s) => s.toggleNav);
   useEffect(() => setOpen(false), [location.pathname]);
+  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
 
   return (
     <>
@@ -100,14 +136,24 @@ export function Navigation({ mode = "all", className }: { mode?: "all" | "deskto
         </Dialog>
       )}
       {mode !== "mobile" && (
-        <aside aria-label="MAS Studio" className={cn("hidden w-56 shrink-0 flex-col bg-background md:flex", className)}>
-          <div className="flex h-14 shrink-0 items-center px-5">
-            <Brand />
+        <aside aria-label="MAS Studio" className={cn("hidden shrink-0 flex-col bg-background transition-[width] duration-200 md:flex", collapsed ? "w-14" : "w-52", className)}>
+          <div className={cn("flex h-14 shrink-0 items-center", collapsed ? "justify-center" : "px-5")}>
+            <Brand compact={collapsed} />
           </div>
-          <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-y-auto px-3 pb-6 pt-3">
-            <Links current={current} />
+          <nav aria-label="Main navigation" className={cn("min-h-0 flex-1 overflow-y-auto pb-6 pt-3", collapsed ? "px-2" : "px-3")}>
+            {collapsed ? <RailLinks current={current} /> : <Links current={current} />}
           </nav>
-          <div className="px-5 py-3 text-xs text-muted-foreground">Spec v0.1 · Data is stored in this browser</div>
+          <div className={cn("flex py-3", collapsed ? "justify-center" : "px-3")}>
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              <ToggleIcon className="h-4 w-4" />
+            </button>
+          </div>
         </aside>
       )}
     </>

@@ -2,7 +2,93 @@
 // (Spec v0). The canvas edits it, the YAML view serialises it, the validator
 // and the simulator read it.
 
-export const SPEC_VERSION = "0.1";
+export const SPEC_VERSION = "0.2";
+
+// ---------------------------------------------------------------------------
+// Interfaces. Every component that exchanges data declares typed ports; an
+// edge always runs from an output port to an input port. Resources (env,
+// store) are not wired through ports but through access edges on the
+// reserved "res" handle.
+
+/**
+ * What travels through a port.
+ * - message: a chat message { role, content: (text | image | file)[], meta }
+ * - text: a plain string
+ * - json: a JSON value; `schema` names an entry in SystemDoc.schemas
+ * - file: a file reference { uri, mime, name }
+ * - event: a platform event { type, payload } (timers, webhooks, state changes)
+ * - any: accepts or emits anything
+ */
+export type DataType = "message" | "text" | "json" | "file" | "event" | "any";
+
+export interface PortSpec {
+  /** unique per direction within the component; [a-z0-9_] */
+  id: string;
+  type: DataType;
+  /** json only: id of a SystemDoc.schemas entry */
+  schema?: string | null;
+  /** inputs only: the component cannot run until this port has a value */
+  required?: boolean;
+  description?: string;
+}
+
+export interface Interface {
+  inputs: PortSpec[];
+  outputs: PortSpec[];
+}
+
+export interface SchemaSpec {
+  id: string;
+  description: string;
+  /** JSON Schema, as text */
+  json_schema: string;
+}
+
+/** Reserved handle for access edges (agent / human -> env / plugin). */
+export const RES_PORT = "res";
+
+// ---------------------------------------------------------------------------
+// Functions. One contract for every piece of user code on the canvas: edge
+// transforms, function nodes and agent pre/post processors.
+//
+//   f(input, ctx) -> output | null
+//
+// input  — the value arriving (for function nodes: { <input port id>: value })
+// ctx    — { run_id, node, edge?, vars, now }
+// output — the value to emit (function nodes: { <output port id>: value },
+//          so returning one key routes to one port); null drops it.
+
+export type FnLang = "template" | "jsonata" | "js" | "python" | "llm";
+
+export interface FunctionSpec {
+  lang: FnLang;
+  /** template: "Review: {{input.text}}" · jsonata: expression · js / python: function body · llm: prompt */
+  code: string;
+  /** llm only: model id from the catalog */
+  model?: string | null;
+  timeout_ms?: number | null;
+}
+
+/** One stage of an agent's input or output wrapper. */
+export type ProcessorOp = "transform" | "filter" | "parse_json" | "validate" | "redact" | "route" | "summarize";
+
+export interface Processor {
+  id: string;
+  op: ProcessorOp;
+  name: string;
+  /** transform / filter / route / summarize */
+  fn?: FunctionSpec | null;
+  /** parse_json / validate: schema id */
+  schema?: string | null;
+  on_fail?: "retry" | "drop" | "error" | "fallback";
+  max_retries?: number | null;
+}
+
+/** An agent is a wrapper: input stages -> context -> harness loop (model + tools) -> output stages. */
+export interface Pipeline {
+  pre: Processor[];
+  post: Processor[];
+}
 
 export type HarnessTier = "native" | "sdk" | "process" | "remote";
 export type NativeLoop = "react" | "plan_execute" | "single_shot";
@@ -33,18 +119,41 @@ export interface HarnessSpec {
   capabilities: Capabilities;
 }
 
-export interface StoreBinding {
-  store: string;
+/**
+ * How a component uses an env or plugin, configured on the access edge. One
+ * shape for memory, knowledge bases, task boards, rooms and imported envs.
+ * Every hook is a FunctionSpec, so it can be config (template / jsonata) or code.
+ */
+export interface AccessBinding {
+  /** tool: the agent decides when to read · auto_inject: read before every turn · pinned: always in context */
   mode: "tool" | "auto_inject" | "pinned";
-  top_k?: number;
+  read?: {
+    /** builds the query from ctx (last message, task, vars); default: the incoming message text */
+    query?: FunctionSpec | null;
+    top_k?: number | null;
+    /** e.g. scope == "end_user" && age_days < 30 */
+    filter?: string | null;
+    /** renders results into the context; default: a bulleted list with sources */
+    format?: FunctionSpec | null;
+    /** tokens this source may take in the context */
+    budget_tokens?: number | null;
+  } | null;
+  write?: {
+    /** agent_tool: the agent calls a write tool · after_turn: the platform writes after each turn · never */
+    when: "agent_tool" | "after_turn" | "never";
+    /** after_turn: what to store, from the turn's messages */
+    extract?: FunctionSpec | null;
+  } | null;
+  /** envs: allowed tools of the env's MCP server (empty = all) */
+  tools?: string[];
 }
 
+/** Memory / knowledge reads now live on the access edge (AccessBinding); this is only the agent's own history. */
 export interface ContextSpec {
   budget_total: number; // tokens
   history_strategy: "window" | "summary" | "window_then_summary" | "retrieve";
   history_window: number;
   mask_tool_output: boolean;
-  sources: StoreBinding[];
 }
 
 export type Trigger = "on_message" | "on_call" | "on_handoff" | "on_state" | "on_schedule" | "on_start" | "on_event";
@@ -54,6 +163,8 @@ export interface AgentData {
   kind: "agent";
   name: string;
   role: string;
+  interface: Interface;
+  pipeline: Pipeline;
   model: string; // model id from the system's model catalog
   harness: HarnessSpec;
   tools: string[]; // tool ids from the catalog
@@ -73,7 +184,10 @@ export interface HumanData {
   approves: boolean;
 }
 
-export type EnvKind = "sandbox" | "browser" | "database" | "service" | "external";
+/** room: a shared conversation space. Members are the agents / humans with an access edge to it. */
+export type EnvKind = "app" | "sandbox" | "browser" | "database" | "service" | "room" | "external";
+export type SpeakPolicy = "free" | "round_robin" | "selector" | "mention" | "bid";
+
 export interface EnvData {
   kind: "env";
   name: string;
@@ -82,52 +196,159 @@ export interface EnvData {
   lifecycle: "per_run" | "per_session" | "persistent";
   snapshot: "never" | "on_write" | "on_checkpoint";
   egress: string[];
+  /** room only */
+  room?: RoomSpec | null;
+  /** imported envs: the contract it was imported with */
+  manifest?: EnvManifest | null;
 }
 
-export interface StoreData {
-  kind: "store";
+/**
+ * The environment contract (mas-env/1). Anything that can be described this
+ * way can be plugged in: DT (DecodingTrust) envs, env-gen deliveries, or a
+ * hand-written stack. Agents with an access edge to the env get its MCP tools.
+ */
+export interface EnvManifest {
+  contract: "mas-env/1";
+  id: string;
   name: string;
-  store_kind: "memory" | "knowledge" | "board";
-  backend: "builtin" | "pgvector" | "qdrant" | "mcp" | "http";
-  scope: "agent" | "group" | "end_user" | "system";
-  write: "agent_tool" | "auto_extract" | "none";
-  sources: string[];
+  version?: string;
+  /** where it came from */
+  source: { format: "mas-env" | "dtap" | "envgen" | "compose"; path?: string };
+  kind: "web_app" | "sandbox" | "service";
+  runtime: {
+    compose?: string;
+    /** build from source, or pull prebuilt images */
+    variant?: "build" | "hub";
+    network?: "host" | "bridge";
+    services: { name: string; image?: string; port?: number | null; port_env?: string }[];
+  };
+  lifecycle: {
+    start?: string;
+    stop?: string;
+    /** required: GET this until it answers 2xx */
+    health: string;
+    /** HTTP "POST {api}/api/v1/reset" or a command */
+    reset?: string;
+    init_tenant?: string;
+  };
+  /** what agents can use */
+  exposes: {
+    http: { name: string; base: string }[];
+    mcp?: { transport: "http" | "stdio"; start?: string; url?: string; auth: "oauth_jwks" | "bearer_env" | "none"; env?: Record<string, string>; tools: string[] } | null;
+  };
+  /** login and test accounts; secrets are never stored in the manifest, only the env var that holds them */
+  auth?: { mode: "embedded" | "idp" | "none"; login?: string; test_users?: { email: string; password_env?: string }[] } | null;
+  state?: { seed: string[]; snapshots?: string } | null;
+  tasks?: { dir?: string; judge?: string } | null;
 }
 
-export type SpeakPolicy = "free" | "round_robin" | "selector" | "mention" | "bid";
-export interface ChannelData {
-  kind: "channel";
-  name: string;
-  channel_type: "room" | "topic";
+export interface RoomSpec {
   policy: SpeakPolicy;
-  /** selector: which agent picks the next speaker */
+  /** selector: which member picks the next speaker */
   selector?: string;
   history: "persistent" | "since_join";
 }
 
+/**
+ * A plugin adds a capability to the agents attached to it (access edge):
+ * memory, a knowledge base, a file workspace, a task board, or anything a
+ * user defines. All of them implement one contract (mas-plugin/1):
+ *
+ *   tools    what an attached agent can call
+ *   hooks    before_turn(ctx) -> context to inject · after_turn(turn) -> what to store · on_start()
+ *   backend  where it runs: built in, an MCP server, an HTTP service, or code
+ *
+ * Presets fill these in; "custom" leaves them all editable. The access edge
+ * can still narrow tools and override query / top_k / format per agent.
+ */
+export type PluginPreset = "memory" | "knowledge" | "workspace" | "board" | "custom";
+
+export interface PluginTool {
+  name: string;
+  description: string;
+  effect: ToolEffect;
+}
+
+export interface PluginSpec {
+  tools: PluginTool[];
+  hooks: {
+    before_turn?: FunctionSpec | null;
+    after_turn?: FunctionSpec | null;
+    on_start?: FunctionSpec | null;
+  };
+  backend: {
+    kind: "builtin" | "mcp" | "http" | "code";
+    /** mcp (http transport) / http */
+    url?: string;
+    /** mcp (stdio) / code */
+    command?: string;
+    /** non-secret settings; secrets go by env var name */
+    config?: Record<string, string>;
+  };
+  /** where its state lives and who shares it */
+  scope: "agent" | "group" | "end_user" | "system";
+  storage?: "builtin" | "pgvector" | "qdrant" | "sqlite" | "files" | "none";
+  /** knowledge: documents to index · workspace: directories to mount */
+  sources?: string[];
+}
+
+export interface PluginData {
+  kind: "plugin";
+  name: string;
+  preset: PluginPreset;
+  spec: PluginSpec;
+}
+
+/**
+ * A composite component. Members are nodes whose `parent` is this group; they
+ * live on the group's own canvas. Inside, the group's input ports act as
+ * sources and its output ports as targets, so an edge with
+ * source = (group, input port) or target = (group, output port) is internal wiring.
+ */
 export interface GroupData {
   kind: "group";
   name: string;
-  entry: string; // member node id
-  output_from: string; // member node id
+  interface: Interface;
   budget_usd: number | null;
   on_error: "retry_then_fail_up" | "fail_up" | "ignore";
 }
 
-export type NodeData = AgentData | HumanData | EnvData | StoreData | ChannelData | GroupData;
+/** A bare model call as a component: no loop, no tools. One input in, one completion out. */
+export interface ModelNodeData {
+  kind: "model";
+  name: string;
+  model: string;
+  system_prompt: string;
+  /** template for the user turn; {{input}} is the incoming value */
+  prompt: string;
+  temperature: number | null;
+  max_tokens: number | null;
+  interface: Interface;
+}
+
+/** Deterministic code between components: transform, route, merge, split. */
+export interface FunctionNodeData {
+  kind: "function";
+  name: string;
+  fn: FunctionSpec;
+  /** run when: any input arrives, or all required inputs have a value */
+  join: "any" | "all";
+  interface: Interface;
+}
+
+export type NodeData = AgentData | ModelNodeData | FunctionNodeData | HumanData | EnvData | PluginData | GroupData;
 export type NodeKind = NodeData["kind"];
 
 export interface SysNode<D extends NodeData = NodeData> {
   id: string;
+  /** position on the canvas of its scope (the root, or its group's own canvas) */
   position: { x: number; y: number };
-  /** group membership (position is then relative to the group) */
+  /** group membership */
   parent?: string;
-  /** groups only */
-  size?: { width: number; height: number };
   data: D;
 }
 
-/** message: async post · call: sync request/response · handoff: transfer of control · access: read/write a store or env */
+/** message: async post · call: sync request/response · handoff: transfer of control · access: use an env or plugin (rooms included) */
 export type EdgeKind = "message" | "call" | "handoff" | "access";
 
 export interface GateSpec {
@@ -141,15 +362,23 @@ export interface GateSpec {
 export interface SysEdge {
   id: string;
   source: string;
+  /** output port of source (an input port when source is the enclosing group); "res" for access */
+  source_port: string;
   target: string;
+  /** input port of target (an output port when target is the enclosing group); "res" for access */
+  target_port: string;
   kind: EdgeKind;
+  /** maps the source port's value to what the target port expects; null = pass through (with built-in coercion) */
+  transform?: FunctionSpec | null;
+  /** deliver only when this expression is true, e.g. input.verdict == "approve" */
+  filter?: string | null;
   label?: string;
   /** handoff: what context travels with it */
   carry?: "none" | "summary" | "full";
   /** access: read or read/write */
   access?: "read" | "read_write";
-  /** message/call: payload schema name (free text in v0) */
-  schema?: string;
+  /** access: how reads and writes happen */
+  binding?: AccessBinding | null;
   gate?: GateSpec | null;
 }
 
@@ -157,6 +386,8 @@ export interface ModelSpec {
   id: string;
   provider: "anthropic" | "openai" | "google" | "openai_compatible" | "local";
   model: string;
+  /** how to reach it; the key itself is never stored, only the env var that holds it */
+  api: { base_url?: string; key_env?: string; headers?: Record<string, string>; params?: Record<string, unknown> };
   /** USD per million tokens */
   price_in: number;
   price_out: number;
@@ -190,6 +421,7 @@ export interface SystemDoc {
   termination: string[];
   models: ModelSpec[];
   tools: ToolSpec[];
+  schemas: SchemaSpec[];
   nodes: SysNode[];
   edges: SysEdge[];
   policies: SystemPolicy[];

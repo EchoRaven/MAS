@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 export type Theme = "light" | "dark" | "system";
 const THEME_KEY = "mas-theme";
+const NAV_KEY = "mas-nav-collapsed";
 
 function read(key: string): string | null {
   try {
@@ -35,6 +36,9 @@ export function applyTheme(theme: Theme) {
 interface UiState {
   theme: Theme;
   setTheme: (t: Theme) => void;
+  /** the left navigation as an icon rail */
+  navCollapsed: boolean;
+  toggleNav: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -44,4 +48,10 @@ export const useUiStore = create<UiState>((set) => ({
     applyTheme(theme);
     set({ theme });
   },
+  navCollapsed: read(NAV_KEY) !== "0",
+  toggleNav: () =>
+    set((s) => {
+      write(NAV_KEY, s.navCollapsed ? "0" : "1");
+      return { navCollapsed: !s.navCollapsed };
+    }),
 }));

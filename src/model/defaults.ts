@@ -1,15 +1,17 @@
+import { defaultInterface } from "./ports";
+import { defaultPlugin } from "./plugins";
 import type {
   AgentData,
   Capabilities,
-  ChannelData,
   EnvData,
+  FunctionNodeData,
   GroupData,
+  ModelNodeData,
   HarnessTier,
   HumanData,
   ModelSpec,
   NodeData,
   NodeKind,
-  StoreData,
   SystemDoc,
   ToolSpec,
 } from "./types";
@@ -17,11 +19,11 @@ import { SPEC_VERSION } from "./types";
 
 /** Model catalog. Claude prices: Anthropic first-party API rates (2026-11). gpt-5.4: the rates the env-gen cost profiler uses. */
 export const DEFAULT_MODELS: ModelSpec[] = [
-  { id: "opus", provider: "anthropic", model: "claude-opus-5-5", price_in: 4, price_out: 20, modalities: ["text", "image", "file"] },
-  { id: "sonnet", provider: "anthropic", model: "claude-sonnet-5-5", price_in: 2, price_out: 10, modalities: ["text", "image", "file"] },
-  { id: "haiku", provider: "anthropic", model: "claude-haiku-5-5", price_in: 0.1, price_out: 0.5, modalities: ["text", "image"] },
-  { id: "gpt", provider: "openai", model: "gpt-5.4", price_in: 2.5, price_out: 15, modalities: ["text", "image"] },
-  { id: "local", provider: "openai_compatible", model: "my-vllm-model", price_in: 0, price_out: 0, modalities: ["text"] },
+  { id: "opus", provider: "anthropic", model: "claude-opus-5-5", api: { key_env: "ANTHROPIC_API_KEY" }, price_in: 4, price_out: 20, modalities: ["text", "image", "file"] },
+  { id: "sonnet", provider: "anthropic", model: "claude-sonnet-5-5", api: { key_env: "ANTHROPIC_API_KEY" }, price_in: 2, price_out: 10, modalities: ["text", "image", "file"] },
+  { id: "haiku", provider: "anthropic", model: "claude-haiku-5-5", api: { key_env: "ANTHROPIC_API_KEY" }, price_in: 0.1, price_out: 0.5, modalities: ["text", "image"] },
+  { id: "gpt", provider: "openai", model: "gpt-5.4", api: { key_env: "OPENAI_API_KEY" }, price_in: 2.5, price_out: 15, modalities: ["text", "image"] },
+  { id: "local", provider: "openai_compatible", model: "my-vllm-model", api: { base_url: "http://127.0.0.1:8000/v1", key_env: "LOCAL_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },
 ];
 
 export const DEFAULT_TOOLS: ToolSpec[] = [
@@ -129,6 +131,8 @@ export function defaultAgent(name = "New agent"): AgentData {
     kind: "agent",
     name,
     role: "",
+    interface: defaultInterface("agent"),
+    pipeline: { pre: [], post: [] },
     model: "sonnet",
     harness: {
       tier: "native",
@@ -140,7 +144,7 @@ export function defaultAgent(name = "New agent"): AgentData {
       capabilities: { ...RUNNERS[0].caps },
     },
     tools: [],
-    context: { budget_total: 120000, history_strategy: "window_then_summary", history_window: 30, mask_tool_output: true, sources: [] },
+    context: { budget_total: 120000, history_strategy: "window_then_summary", history_window: 30, mask_tool_output: true },
     triggers: ["on_message"],
     concurrency: "coalesce",
     modalities_in: ["text"],
@@ -166,20 +170,29 @@ export function defaultData(kind: NodeKind): NodeData {
         snapshot: "on_write",
         egress: [],
       } satisfies EnvData;
-    case "store":
+    case "plugin":
+      return defaultPlugin("memory");
+    case "model":
       return {
-        kind: "store",
-        name: "Shared memory",
-        store_kind: "memory",
-        backend: "builtin",
-        scope: "group",
-        write: "agent_tool",
-        sources: [],
-      } satisfies StoreData;
-    case "channel":
-      return { kind: "channel", name: "room", channel_type: "room", policy: "free", history: "persistent" } satisfies ChannelData;
+        kind: "model",
+        name: "Model call",
+        model: "sonnet",
+        system_prompt: "",
+        prompt: "{{input}}",
+        temperature: null,
+        max_tokens: null,
+        interface: defaultInterface("model"),
+      } satisfies ModelNodeData;
+    case "function":
+      return {
+        kind: "function",
+        name: "Function",
+        fn: { lang: "js", code: "return input;" },
+        join: "any",
+        interface: defaultInterface("function"),
+      } satisfies FunctionNodeData;
     case "group":
-      return { kind: "group", name: "Sub-team", entry: "", output_from: "", budget_usd: null, on_error: "retry_then_fail_up" } satisfies GroupData;
+      return { kind: "group", name: "Sub-team", interface: defaultInterface("group"), budget_usd: null, on_error: "retry_then_fail_up" } satisfies GroupData;
   }
 }
 
@@ -198,6 +211,7 @@ export function emptySystem(name = "Untitled system"): SystemDoc {
     termination: ["any_agent_calls_finish", "budget_exceeded"],
     models: DEFAULT_MODELS.map((m) => ({ ...m })),
     tools: DEFAULT_TOOLS.map((t) => ({ ...t })),
+    schemas: [],
     nodes: [],
     edges: [],
     policies: [],
@@ -206,9 +220,26 @@ export function emptySystem(name = "Untitled system"): SystemDoc {
 
 export const KIND_LABEL: Record<NodeKind, string> = {
   agent: "Agent",
+  model: "Model",
+  function: "Function",
   human: "Human",
   env: "Env",
-  store: "Store",
-  channel: "Room",
+  plugin: "Plugin",
   group: "Group",
 };
+
+/** A room is an env: a shared conversation space its members access. */
+export function defaultRoom(name = "room"): EnvData {
+  return { kind: "env", name, env_kind: "room", image: "", lifecycle: "per_run", snapshot: "never", egress: [], room: { policy: "free", history: "persistent" } };
+}
+
+/** Default binding for a new access edge, by what it points at. */
+export function defaultBinding(target: NodeData): import("./types").AccessBinding {
+  if (target.kind === "plugin") {
+    if (target.preset === "knowledge") return { mode: "auto_inject", read: { top_k: 5, budget_tokens: 4000 }, write: { when: "never" } };
+    if (target.preset === "memory") return { mode: "auto_inject", read: { top_k: 8, budget_tokens: 2000 }, write: { when: "after_turn" } };
+    return { mode: "tool", write: { when: "agent_tool" }, tools: [] };
+  }
+  if (target.kind === "env" && target.env_kind === "room") return { mode: "pinned", read: { budget_tokens: 8000 }, write: { when: "agent_tool" } };
+  return { mode: "tool", tools: [] };
+}

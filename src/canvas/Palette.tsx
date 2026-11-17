@@ -1,62 +1,87 @@
-import { Bot, Box, Database, Hash, Layers, User, type LucideIcon } from "lucide-react";
-import type { NodeKind } from "@/model/types";
+import { ChevronRight, Upload } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { EDGE_COLOR, EDGE_LABEL } from "./convert";
-import { DND_MIME } from "./FlowView";
+import type { NodeData, NodeKind } from "@/model/types";
+import { DND_MIME, type DragPayload } from "./FlowView";
+import { PALETTE, type PaletteEntry } from "./presets";
 
-const ITEMS: { kind: NodeKind; label: string; hint: string; icon: LucideIcon }[] = [
-  { kind: "agent", label: "Agent", hint: "model + harness + tools", icon: Bot },
-  { kind: "human", label: "Human", hint: "approve, guide, ask", icon: User },
-  { kind: "channel", label: "Room", hint: "multi-party channel", icon: Hash },
-  { kind: "env", label: "Env", hint: "sandbox, browser, database…", icon: Box },
-  { kind: "store", label: "Store", hint: "memory, knowledge, board", icon: Database },
-  { kind: "group", label: "Group", hint: "wrap as a subsystem", icon: Layers },
-];
+export type ImportKind = "agent" | "env" | "plugin";
 
-export function Palette({ onAdd, className }: { onAdd: (kind: NodeKind) => void; className?: string }) {
+const BTN =
+  "relative flex h-10 w-10 cursor-grab items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing data-[state=open]:bg-secondary data-[state=open]:text-foreground";
+
+function dragProps(payload: DragPayload) {
+  return {
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.setData(DND_MIME, JSON.stringify(payload));
+      e.dataTransfer.effectAllowed = "move";
+    },
+  };
+}
+
+function Entry({ entry, onAdd, onImport }: { entry: PaletteEntry; onAdd: (kind: NodeKind, data?: NodeData) => void; onImport: (k: ImportKind) => void }) {
+  const Icon = entry.icon;
+  if (!entry.variants) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button type="button" aria-label={entry.label} className={BTN} onClick={() => onAdd(entry.kind)} {...dragProps({ kind: entry.kind })}>
+            <Icon className="h-[18px] w-[18px]" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <p className="font-medium">{entry.label}</p>
+          <p className="text-muted-foreground">{entry.hint}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
   return (
-    <div className={cn("flex flex-col gap-4 overflow-y-auto p-3", className)}>
-      <div>
-        <p className="px-1 pb-2 text-xs text-muted-foreground">Drag onto the canvas, or click to add</p>
-        <ul className="space-y-1">
-          {ITEMS.map(({ kind, label, hint, icon: Icon }) => (
-            <li key={kind}>
-              <button
-                type="button"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData(DND_MIME, kind);
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                onClick={() => onAdd(kind)}
-                className="flex w-full cursor-grab items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-              >
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-[var(--ring-shadow)]">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-medium">{label}</span>
-                  <span className="block truncate text-[11px] text-muted-foreground">{hint}</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className="px-1">
-        <p className="pb-2 text-xs text-muted-foreground">Edges (drag from a node's edge)</p>
-        <ul className="space-y-1.5 text-[11px] text-muted-foreground">
-          {(["message", "call", "handoff", "access"] as const).map((k) => (
-            <li key={k} className="flex items-center gap-2">
-              <svg width="28" height="8" aria-hidden="true">
-                <line x1="1" y1="4" x2="27" y2="4" style={{ stroke: EDGE_COLOR[k], strokeWidth: k === "handoff" ? 2.25 : 1.5, strokeDasharray: k === "access" ? "3 3" : undefined }} />
-              </svg>
-              {EDGE_LABEL[k]}
-            </li>
-          ))}
-          <li className="pt-1">Edges to an env / store become access; others default to message. Change it in the inspector.</li>
-        </ul>
-      </div>
-    </div>
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label={entry.label} className={BTN} {...dragProps({ kind: entry.kind, data: entry.variants[0].make() })}>
+              <Icon className="h-[18px] w-[18px]" />
+              <ChevronRight className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <p className="font-medium">{entry.label}</p>
+          <p className="text-muted-foreground">{entry.hint}</p>
+        </TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent side="right" align="start" className="w-64">
+        <DropdownMenuLabel>{entry.label}</DropdownMenuLabel>
+        {entry.variants.map((v) => (
+          <DropdownMenuItem key={v.id} onSelect={() => onAdd(entry.kind, v.make())} className="flex-col items-start gap-0">
+            <span className="text-[13px]">{v.label}</span>
+            <span className="text-[11px] text-muted-foreground">{v.hint}</span>
+          </DropdownMenuItem>
+        ))}
+        {entry.importable && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onImport(entry.importable!)}>
+              <Upload className="mr-2 h-3.5 w-3.5" /> Import…
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** A narrow toolbar of components. Click or drag a plain item; items with variants open a menu. */
+export function Palette({ onAdd, onImport, className }: { onAdd: (kind: NodeKind, data?: NodeData) => void; onImport: (k: ImportKind) => void; className?: string }) {
+  return (
+    <nav aria-label="Components" className={cn("flex flex-col items-center gap-1 py-2", className)}>
+      {PALETTE.map((e) => (
+        <Entry key={e.kind} entry={e} onAdd={onAdd} onImport={onImport} />
+      ))}
+    </nav>
   );
 }

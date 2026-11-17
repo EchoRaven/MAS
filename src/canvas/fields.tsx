@@ -37,10 +37,10 @@ export function NumberField({ label, value, onChange, hint, placeholder, step }:
   );
 }
 
-export function AreaField({ label, value, onChange, hint, rows = 5, placeholder }: { label: string; value: string; onChange: (v: string) => void; hint?: ReactNode; rows?: number; placeholder?: string }) {
+export function AreaField({ label, value, onChange, hint, rows = 5, placeholder, mono }: { label: string; value: string; onChange: (v: string) => void; hint?: ReactNode; rows?: number; placeholder?: string; mono?: boolean }) {
   return (
     <Field label={label} hint={hint}>
-      <Textarea value={value} rows={rows} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} className="text-[13px]" />
+      <Textarea value={value} rows={rows} placeholder={placeholder} spellCheck={!mono} onChange={(e) => onChange(e.target.value)} className={cn("text-[13px]", mono && "font-mono text-xs leading-relaxed")} />
     </Field>
   );
 }

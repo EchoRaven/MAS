@@ -1,20 +1,27 @@
 import YAML from "yaml";
 import { defaultAgent, defaultData, emptySystem } from "./defaults";
+import { migrateDoc } from "./migrate";
+import { interfaceOf, isResource } from "./ports";
 import type { AgentData, NodeData, NodeKind, SysEdge, SysNode, SystemDoc } from "./types";
-import { SPEC_VERSION } from "./types";
+import { RES_PORT, SPEC_VERSION } from "./types";
 
-// YAML form of a system (Spec v0 layout): one section per node kind, keyed by
-// id, `connections` for edges, `layout` for canvas positions. The canvas and
-// this text are two views of the same SystemDoc.
+// YAML form of a system (Spec 0.2): one section per component kind, keyed by
+// id, `connections` for edges (endpoints written as node.port), `layout` for
+// canvas positions. The canvas and this text are two views of the same SystemDoc.
 
 const SECTIONS: [NodeKind, string][] = [
   ["group", "groups"],
   ["agent", "agents"],
+  ["model", "model_calls"],
+  ["function", "functions"],
   ["human", "humans"],
   ["env", "envs"],
-  ["store", "stores"],
-  ["channel", "channels"],
+  ["plugin", "plugins"],
 ];
+/** read-only: 0.1 files had rooms as their own section */
+const LEGACY_SECTIONS: [string, string][] = [["channel", "channels"], ["store", "stores"]];
+
+const endpoint = (node: string, p: string) => (p === RES_PORT ? node : `${node}.${p}`);
 
 /** Drop undefined keys (null and [] are meaningful values and stay). */
 function strip<T extends object>(o: T): Partial<T> {
@@ -34,6 +41,7 @@ export function toYamlObject(doc: SystemDoc) {
     termination: doc.termination,
     models: Object.fromEntries(doc.models.map(({ id, ...m }) => [id, m])),
     tools: Object.fromEntries(doc.tools.map(({ id, ...t }) => [id, strip(t)])),
+    schemas: Object.fromEntries(doc.schemas.map(({ id, ...x }) => [id, x])),
   };
   for (const [kind, section] of SECTIONS) {
     const nodes = doc.nodes.filter((n) => n.data.kind === kind);
@@ -47,11 +55,13 @@ export function toYamlObject(doc: SystemDoc) {
       }),
     );
   }
-  out.connections = doc.edges.map(({ id, source, target, ...e }) => strip({ id, from: source, to: target, ...e }));
+  out.connections = doc.edges.map(({ id, source, target, source_port, target_port, ...e }) =>
+    strip({ id, from: endpoint(source, source_port), to: endpoint(target, target_port), ...e }),
+  );
   out.policies = doc.policies;
   const canonical = SECTIONS.flatMap(([kind]) => doc.nodes.filter((n) => n.data.kind === kind));
   out.layout = Object.fromEntries(
-    canonical.map((n) => [n.id, strip({ x: Math.round(n.position.x), y: Math.round(n.position.y), w: n.size?.width, h: n.size?.height })]),
+    canonical.map((n) => [n.id, { x: Math.round(n.position.x), y: Math.round(n.position.y) }]),
   );
   return out;
 }
@@ -90,11 +100,12 @@ export function fromYaml(text: string, keepId?: string): SystemDoc {
     policies: Array.isArray(raw.policies) ? (raw.policies as SystemDoc["policies"]) : [],
   };
   if (isObj(raw.models)) doc.models = Object.entries(raw.models).map(([id, m]) => ({ ...(m as object), id }) as SystemDoc["models"][number]);
+  if (isObj(raw.schemas)) doc.schemas = Object.entries(raw.schemas).map(([id, x]) => ({ description: "", json_schema: "{}", ...(x as object), id }));
   if (isObj(raw.tools)) doc.tools = Object.entries(raw.tools).map(([id, t]) => ({ ...(t as object), needs_env: (t as { needs_env?: unknown }).needs_env ?? null, id }) as SystemDoc["tools"][number]);
 
   const layout = isObj(raw.layout) ? raw.layout : {};
   const ids = new Set<string>();
-  for (const [kind, section] of SECTIONS) {
+  for (const [kind, section] of [...SECTIONS, ...LEGACY_SECTIONS] as [NodeKind, string][]) {
     const entries = raw[section];
     if (entries == null) continue;
     if (!isObj(entries)) throw new YamlError(`${section} must be a mapping keyed by id`);
@@ -116,13 +127,14 @@ export function fromYaml(text: string, keepId?: string): SystemDoc {
           harness: { ...d.harness, ...(isObj(v.harness) ? v.harness : {}), capabilities: { ...d.harness.capabilities, ...(isObj(v.harness) && isObj(v.harness.capabilities) ? v.harness.capabilities : {}) } },
           context: { ...d.context, ...(isObj(v.context) ? v.context : {}) },
         } as AgentData;
+      } else if ((kind as string) === "channel" || (kind as string) === "store") {
+        data = { ...v, kind } as unknown as NodeData; // migrated below
       } else {
         data = { ...defaultData(kind), ...v, kind } as NodeData;
       }
       const pos = isObj(layout[id]) ? (layout[id] as Record<string, number>) : {};
       const node: SysNode = { id, position: { x: Number(pos.x ?? 80 + doc.nodes.length * 40), y: Number(pos.y ?? 80 + doc.nodes.length * 30) }, data };
       if (parent) node.parent = parent;
-      if (kind === "group") node.size = { width: Number(pos.w ?? 480), height: Number(pos.h ?? 320) };
       doc.nodes.push(node);
     }
   }
@@ -131,14 +143,40 @@ export function fromYaml(text: string, keepId?: string): SystemDoc {
   }
   if (raw.connections != null && !Array.isArray(raw.connections)) throw new YamlError("connections must be a list");
   let i = 0;
+  const byId = new Map(doc.nodes.map((n) => [n.id, n]));
+  const split = (v: string) => {
+    const dot = v.indexOf(".");
+    return dot < 0 ? { node: v, port: undefined } : { node: v.slice(0, dot), port: v.slice(dot + 1) };
+  };
   for (const c of (raw.connections as unknown[]) ?? []) {
     if (!isObj(c)) continue;
     const { from, to, id, ...rest } = c;
     if (typeof from !== "string" || typeof to !== "string") throw new YamlError("Every connection needs from and to");
-    if (!ids.has(from) || !ids.has(to)) throw new YamlError(`connection ${from} → ${to} points to a node that does not exist`);
-    const kind = (rest.kind ?? "message") as SysEdge["kind"];
+    const a = split(from);
+    const z = split(to);
+    if (!ids.has(a.node) || !ids.has(z.node)) throw new YamlError(`connection ${from} → ${to} points to a node that does not exist`);
+    let kind = (rest.kind ?? "message") as SysEdge["kind"];
     if (!["message", "call", "handoff", "access"].includes(kind)) throw new YamlError(`Unknown connection kind: ${String(kind)}`);
-    doc.edges.push({ ...(rest as object), id: typeof id === "string" ? id : `e${++i}_${Date.now() % 10000}`, source: from, target: to, kind } as SysEdge);
+    const s = byId.get(a.node)!;
+    const t = byId.get(z.node)!;
+    const legacy = (s.data.kind as string) === "channel" || (t.data.kind as string) === "channel";
+    let source_port = a.port;
+    let target_port = z.port;
+    if (!legacy) {
+      if (kind === "access" || isResource(t.data.kind)) {
+        kind = "access";
+        source_port ??= RES_PORT;
+        target_port ??= RES_PORT;
+      } else {
+        source_port ??= s.data.kind === "group" && t.parent === s.id ? interfaceOf(s.data).inputs[0]?.id : interfaceOf(s.data).outputs[0]?.id;
+        target_port ??= t.data.kind === "group" && s.parent === t.id ? interfaceOf(t.data).outputs[0]?.id : interfaceOf(t.data).inputs[0]?.id;
+        if (!source_port || !target_port) throw new YamlError(`connection ${from} → ${to}: name the port (node.port); this component has no default port`);
+      }
+    }
+    const e = { ...(rest as object), id: typeof id === "string" ? id : `e${++i}_${Date.now() % 10000}`, source: a.node, target: z.node, kind } as SysEdge;
+    if (source_port) e.source_port = source_port;
+    if (target_port) e.target_port = target_port;
+    doc.edges.push(e);
   }
-  return doc;
+  return migrateDoc(doc);
 }

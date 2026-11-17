@@ -1,21 +1,37 @@
 import { create } from "zustand";
-import { TEMPLATES } from "@/model/templates";
+import { LEGACY_SEED_NAMES, TEMPLATES } from "@/model/templates";
 import { newId } from "@/model/defaults";
+import { migrateDoc } from "@/model/migrate";
 import type { SystemDoc } from "@/model/types";
 
 // Systems live in this browser (v0 has no backend). Every read and write of
 // localStorage is guarded: private windows and blocked storage fall back to memory.
-const KEY = "mas-systems-v0";
+// Spec 0.2 storage. A 0.1 store (mas-systems-v0) is read once and migrated;
+// the old key is left in place untouched.
+const KEY = "mas-systems-v1";
+const LEGACY_KEY = "mas-systems-v0";
 
-function load(): SystemDoc[] | null {
+function read(key: string): SystemDoc[] | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as SystemDoc[]) : null;
   } catch {
     return null;
   }
+}
+
+function load(): SystemDoc[] | null {
+  const current = read(KEY);
+  if (current) return current.map(migrateDoc);
+  const legacy = read(LEGACY_KEY);
+  if (!legacy) return null;
+  // seeded copies of the old templates are replaced by the current ones; systems the user made are migrated
+  const own = legacy.filter((d) => !LEGACY_SEED_NAMES.includes(d.name)).map(migrateDoc);
+  const docs = [...own, ...seed()];
+  save(docs);
+  return docs;
 }
 
 function save(systems: SystemDoc[]) {
@@ -56,7 +72,7 @@ export const useSystems = create<SystemsState>((set, get) => {
       return doc;
     },
     importDoc: (doc) => {
-      const copy = { ...doc, id: get().systems.some((s) => s.id === doc.id) ? newId("sys") : doc.id, updated_at: new Date().toISOString() };
+      const copy = { ...migrateDoc(doc), id: get().systems.some((s) => s.id === doc.id) ? newId("sys") : doc.id, updated_at: new Date().toISOString() };
       commit([copy, ...get().systems]);
       return copy;
     },
