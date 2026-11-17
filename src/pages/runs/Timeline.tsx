@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ArrowRight, CheckCircle2, Database, Hash, ShieldAlert, ShieldCheck, Sparkles, SquareFunction, UserCheck, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertTriangle, ArrowRight, CheckCircle2, CircleAlert, Database, Flag, Hash, MessageSquareReply, ShieldAlert, ShieldCheck, Sparkles, SquareFunction, UserCheck, Wrench } from "lucide-react";
 import { EntityAvatar } from "@/components/shared/EntityAvatar";
 import { cn } from "@/lib/utils";
 import { usd } from "@/lib/format";
@@ -15,6 +15,22 @@ export function useNames(doc: SystemDoc) {
       return { ...v, room: room.has(id) };
     };
   }, [doc]);
+}
+
+/** Long text folds to a few lines with a toggle. */
+export function Clamp({ text, lines = 6, className }: { text: string; lines?: number; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 420 || text.split("\n").length > lines;
+  return (
+    <div className={className}>
+      <p className={cn("whitespace-pre-wrap break-words text-[13px]", !open && long && "line-clamp-6")}>{text}</p>
+      {long && (
+        <button type="button" onClick={() => setOpen(!open)} className="mt-0.5 text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground">
+          {open ? "Show less" : "Show all"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<typeof useNames> }) {
@@ -46,19 +62,65 @@ export function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<ty
                 <span>{to.name}</span>
               )}
             </div>
-            <p className="mt-1 text-[13px]">{e.text}</p>
+            <Clamp text={e.text} className="mt-1" />
           </div>
         </li>
       );
     }
+    case "output":
+      return (
+        <li className="mx-3 my-2 rounded-lg bg-success/10 px-3 py-2">
+          <p className="flex items-center gap-1.5 text-xs font-medium text-success">
+            <Flag className="h-3.5 w-3.5" /> Result{nameOf(e.node).kind === "human" ? ` for ${nameOf(e.node).name}` : ` from ${nameOf(e.node).name}`}
+            <span className="ml-auto font-normal text-muted-foreground">{time}</span>
+          </p>
+          <Clamp text={e.text} lines={12} className="mt-1" />
+        </li>
+      );
+    case "log":
+      if (e.level === "info")
+        return (
+          <li className="flex items-center gap-2 px-3 py-1 pl-14 text-xs text-muted-foreground">
+            <span className="truncate">{e.node ? `${nameOf(e.node).name}: ` : ""}{e.text}</span>
+            <span className="ml-auto shrink-0">{time}</span>
+          </li>
+        );
+      return (
+        <li className={cn("mx-3 my-1 flex items-start gap-2 rounded-lg px-3 py-2 text-xs", e.level === "error" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning")}>
+          {e.level === "error" ? <CircleAlert className="mt-px h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-px h-4 w-4 shrink-0" />}
+          <span className="min-w-0 break-words">{e.node ? <span className="font-medium">{nameOf(e.node).name}: </span> : null}{e.text}</span>
+          <span className="ml-auto shrink-0">{time}</span>
+        </li>
+      );
+    case "human_request":
+      return (
+        <li className="mx-3 my-1 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning">
+          <p className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            {e.request.kind === "approval" ? "Approval" : "Reply"} asked of {e.request.node ? nameOf(e.request.node).name : "you"} by {nameOf(e.request.from).name}
+            <span className="ml-auto">{time}</span>
+          </p>
+          <Clamp text={e.request.text} className="mt-1 text-foreground" />
+        </li>
+      );
+    case "human_response":
+      return (
+        <li className="flex items-center gap-2 px-3 py-1 pl-14 text-xs text-muted-foreground">
+          <MessageSquareReply className="h-3.5 w-3.5" />
+          {e.approved === undefined ? "Answered" : e.approved ? "Approved" : "Rejected"}
+          {e.text && <span className="truncate text-foreground">“{e.text}”</span>}
+        </li>
+      );
     case "tool":
       return (
         <li className="flex gap-3 px-3 py-1.5 pl-14">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-secondary/70 px-2.5 py-1.5 font-mono text-xs">
             <Wrench className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="font-medium">{e.tool}</span>
-            <span className="truncate text-muted-foreground">{e.args}</span>
-            <span className="ml-auto shrink-0 text-muted-foreground">→ {e.result}</span>
+            <span className="truncate text-muted-foreground" title={e.args}>{e.args}</span>
+            <span className={cn("ml-auto max-w-[45%] shrink-0 truncate", e.error ? "text-destructive" : "text-muted-foreground")} title={e.result}>
+              → {e.result}
+            </span>
           </div>
         </li>
       );

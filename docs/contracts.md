@@ -71,11 +71,48 @@ stages, plugin hooks and binding query/format/extract.
 ```
 f(input, ctx) -> output | null        # null drops the value
 lang: template | jsonata | js | python | llm
-ctx = { run_id, node, edge, vars, now, tools }
 ```
 
-Function nodes receive `{ <input port>: value }` when they have several
-inputs. They return `{ <output port>: value }` to choose which outputs fire.
+Function nodes receive the value itself when they have one input port, and
+`{ <input port>: value }` when they have several. They return
+`{ <output port>: value }` to choose which outputs fire.
+
+A value on a `message` port is `{ role, text, content, from, meta }`.
+`content` mirrors `text`, and code may change either one.
+
+### What code can use
+
+| Language | How it runs |
+| --- | --- |
+| `js` | The body of `async function (input, ctx)`. A single expression without `return` also works. The names in the slot's signature are locals: `query`, `lists`, `hits`, `records`, `record`, `similar`, `turn`, `doc`, `chunk`, `source`, `event`, and for loops `model`, `tools`, `memory`, `emit` |
+| `python` | The body of `def f(input, ctx):` in a fresh `python3`. `ctx` is data only |
+| `jsonata` | An expression over `input`, with `$ctx` |
+| `template` | `{{path}}`, `{{#each path}}…{{this.x}}…{{/each}}`, `{{#if path}}…{{else}}…{{/if}}`, and helper calls `(name arg key=value)` |
+| `llm` | The code is a template prompt; the reply is the output |
+
+`ctx` always has:
+- `run_id`, `node`, `edge`
+- `vars`: shared by the whole run, writable
+- `now`: milliseconds
+- `llm(prompt, data?, model?)`
+- `log(text)`
+
+Where it applies, `ctx` also has:
+
+| Where | What `ctx` adds |
+| --- | --- |
+| Plugin hooks | `search(query, k)`, `list(dir)`, `tasks()`, `self` |
+| Memory steps | `retrieve(query)` |
+| Agent hooks | `ask_human(event)`, which returns the event if approved and `null` otherwise. `event.tool` is `{ name, effect, source }` |
+| Custom loops | `task`, `history`, `messages`, `system`, `react(extra?)` |
+
+The `model`, `tools` and `memory` that custom loops receive:
+
+| Name | What it offers |
+| --- | --- |
+| `model` | `model(prompt, data?)`, `model.call(prompt or messages, data?)` → text, `model.json(prompt, data?)` → parsed JSON |
+| `tools` | `tools.list()`, `tools.call(name, args)`, `tools.call_agent(name or id, instruction)` |
+| `memory` | `memory.search(query)`, `memory.write(text)` |
 
 ## Agent stages (the wrapper)
 
@@ -135,7 +172,11 @@ Model parameters must name a catalog model of the right kind. A model's `kind` i
 - `on_error`
 - `on_finish`
 
-A hook has the signature `f(event, ctx) -> event | null`. Returning `null` from a `before_*` hook blocks the action. If a harness exposes no step hooks, the model and tool hooks run at the platform boundary, in the MCP proxy.
+A hook has the signature `f(event, ctx) -> event | null`. Returning `null`
+from a `before_*` hook blocks the action. If a harness exposes no step hooks
+(Claude Code, ACP, custom programs), the tool hooks still run at the platform
+boundary. Every platform tool reaches those harnesses through the run's MCP
+endpoint, and each call goes through the hooks, approvals and policies.
 
 ## Database environments
 

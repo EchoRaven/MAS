@@ -128,7 +128,17 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
       const adapter = ADAPTERS[a.harness.runner ?? ""];
       if (!adapter) throw new Error(`No adapter for harness "${a.harness.runner}"`);
       const cwd = rc.store.stateDir(rc.doc.id, node.id, "work");
-      const r = await adapter({ rc, node: node.id, agent: a, input: inputText, context: system, cwd: path.resolve(cwd), mcp: tools.length ? svc.exposeTools(node.id, tools) : undefined, session: state.sessions.get(node.id) });
+      // tools reached over MCP go through the same hooks, approvals, policies and events as native calls
+      const viaIo = tools.map((t) => ({
+        ...t,
+        run: async (args: Record<string, unknown>) => {
+          const [r] = await io.runTools([{ type: "tool_call", id: `mcp_${Math.random().toString(36).slice(2, 10)}`, name: t.name, input: args }]);
+          const res = r as { content: string; error?: boolean };
+          if (res.error) throw new Error(res.content.replace(/^Error: /, ""));
+          return res.content;
+        },
+      }));
+      const r = await adapter({ rc, node: node.id, agent: a, input: inputText, context: system, cwd: path.resolve(cwd), mcp: tools.length ? svc.exposeTools(node.id, viaIo) : undefined, session: state.sessions.get(node.id) });
       if (r.session) state.sessions.set(node.id, r.session);
       if (r.usage) rc.usage(node.id, { model: r.usage.model ?? a.harness.runner ?? "", tokens_in: r.usage.tokens_in, tokens_out: r.usage.tokens_out, usd: r.usage.usd }, r.usage.estimated);
       text = r.text;

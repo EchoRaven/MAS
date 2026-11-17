@@ -4,7 +4,8 @@ import { newId } from "@/model/defaults";
 import { migrateDoc } from "@/model/migrate";
 import type { SystemDoc } from "@/model/types";
 
-// Systems live in this browser (v0 has no backend). Every read and write of
+// Systems live in this browser and, once a server is connected, on the server
+// too (store/sync.ts keeps both in step). Every read and write of
 // localStorage is guarded: private windows and blocked storage fall back to memory.
 // Spec 0.2 storage. A 0.1 store (mas-systems-v0) is read once and migrated;
 // the old key is left in place untouched.
@@ -64,6 +65,8 @@ interface SystemsState {
   replace: (doc: SystemDoc) => void;
   duplicate: (id: string) => SystemDoc | undefined;
   remove: (id: string) => void;
+  /** replace the whole list (server sync) */
+  setAll: (systems: SystemDoc[]) => void;
 }
 
 export const useSystems = create<SystemsState>((set, get) => {
@@ -102,5 +105,6 @@ export const useSystems = create<SystemsState>((set, get) => {
       return copy;
     },
     remove: (id) => commit(get().systems.filter((s) => s.id !== id)),
+    setAll: (systems) => commit(systems.map(migrateDoc)),
   };
 });

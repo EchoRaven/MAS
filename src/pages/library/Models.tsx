@@ -1,5 +1,7 @@
 import { Fragment, useState } from "react";
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Plug, Trash2 } from "lucide-react";
+import { Api } from "@/api/client";
+import { useServer } from "@/store/server";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Panel } from "@/components/shared/Panel";
@@ -32,6 +34,38 @@ function JsonCell({ value, onChange, label }: { value: Record<string, unknown> |
   );
 }
 
+/** Calls the model through the server with a one-word prompt. */
+function TestButton({ m }: { m: ModelSpec }) {
+  const connected = useServer((s) => s.status === "connected");
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (!connected) return <span className="text-[11px] text-muted-foreground">Connect a server in Settings to test this model.</span>;
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setResult(null);
+          try {
+            const r = await Api.testModel(m);
+            setResult({ ok: r.ok, text: r.ok ? `${r.reply} (${r.ms} ms)` : (r.error ?? "failed") });
+          } catch (e) {
+            setResult({ ok: false, text: (e as Error).message });
+          }
+          setBusy(false);
+        }}
+      >
+        <Plug className="mr-1 h-3.5 w-3.5" /> {busy ? "Testing…" : "Test"}
+      </Button>
+      {result && <span className={`truncate text-[11px] ${result.ok ? "text-success" : "text-destructive"}`} title={result.text}>{result.text}</span>}
+    </span>
+  );
+}
+
 function ApiRow({ m, set }: { m: ModelSpec; set: (patch: Partial<ModelSpec>) => void }) {
   const api = m.api ?? {};
   const setApi = (patch: Partial<ModelSpec["api"]>) => set({ api: { ...api, ...patch } });
@@ -55,6 +89,9 @@ function ApiRow({ m, set }: { m: ModelSpec; set: (patch: Partial<ModelSpec>) => 
             <span className="text-[11px] text-muted-foreground">Default request params (JSON), e.g. {"{\"max_tokens\": 4096}"}</span>
             <JsonCell value={api.params} onChange={(params) => setApi({ params })} label="Params" />
           </label>
+        </div>
+        <div className="mt-2.5">
+          <TestButton m={m} />
         </div>
       </td>
     </tr>

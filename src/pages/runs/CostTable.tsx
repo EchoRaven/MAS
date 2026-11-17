@@ -1,7 +1,7 @@
 import { tokens as fmtTokens, usd } from "@/lib/format";
 import type { SimState } from "@/run/simulate";
 
-export function CostTable({ perAgent, nameOf }: { perAgent: SimState["perAgent"]; nameOf: (id: string) => { name: string } }) {
+export function CostTable({ perAgent, nameOf, note }: { perAgent: SimState["perAgent"]; nameOf: (id: string) => { name: string }; note?: string }) {
   return (
     <>
                 <table className="w-full text-xs">
@@ -31,7 +31,7 @@ export function CostTable({ perAgent, nameOf }: { perAgent: SimState["perAgent"]
                       ))}
                   </tbody>
                 </table>
-                <p className="mt-3 text-[11px] text-muted-foreground">* This harness does not report cost; the platform estimates it from model prices. Token counts in the simulation are random and only for showing the UI.</p>
+                <p className="mt-3 text-[11px] text-muted-foreground">* This harness does not report cost; the platform estimates it from model prices.{note ? ` ${note}` : ""}</p>
     </>
   );
 }
