@@ -365,6 +365,62 @@ describe("runtime", () => {
     expect(out.text).toMatch(/^Summary: ESM \+ AlphaFold/);
   });
 
+  describe("rooms", () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    // a room with a person who opens it and the given agents, each on its own scripted model
+    const roomDoc = (policy: "round_robin" | "mention" | "selector" | "free", agents: [string, string, unknown[]][], extra: { selector?: string; termination?: string[] } = {}) => {
+      const b = new Builder("Room", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false }).room("chat", 0, 0, "chat", { policy, history: "since_join", ...(extra.selector ? { selector: extra.selector } : {}) });
+      b.edge("me", "chat", "access", { access: "read_write", binding: { mode: "tool", write: { when: "agent_tool" } } });
+      for (const [id, name, script] of agents) {
+        b.agent(id, 0, 0, { name, role: name, model: `m_${id}`, harness: { ...native(), loop: "single_shot", instructions: `You are ${name}.` } });
+        b.doc.models.push(mock(`m_${id}`, script));
+        b.edge(id, "chat", "access", { access: extra.selector === id ? "read" : "read_write" });
+      }
+      b.doc.budget = { usd: 1, max_rounds: 12, wallclock_min: 2 };
+      b.doc.termination = extra.termination ?? [];
+      return b.doc;
+    };
+    const posts = (events: RunEvent[]) => events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "chat").map((e) => e.from);
+
+    it("round robin: everyone in the order they joined, again and again", async () => {
+      const doc = roomDoc("round_robin", [["a", "Ann", ["a1", "a2"]], ["b", "Bo", ["b1", "b2"]], ["c", "Cy", ["c1", "c2 TERMINATE"]]]);
+      const { events } = await run(doc, "go", { mock: false });
+      expect(posts(events)).toEqual(["me", "a", "b", "c", "a", "b", "c"]);
+      expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("c2 TERMINATE");
+    });
+
+    it("mention: only whoever is @named answers, and the talk ends when nobody is named", async () => {
+      const doc = roomDoc("mention", [["a", "Ann", ["@Cy what do you think?"]], ["b", "Bo", ["I was not asked."]], ["c", "Cy", ["I agree."]]]);
+      const { events } = await run(doc, "@Ann please start", { mock: false });
+      expect(posts(events)).toEqual(["me", "a", "c"]);
+      expect(usages(events, "b").length).toBe(0);
+    });
+
+    it("selector: the moderator picks the next speaker, by its whole id, never itself", async () => {
+      // "rewriter" contains "writer": a substring match would pick the wrong one
+      const doc = roomDoc(
+        "selector",
+        [
+          ["mod", "Moderator", ["rewriter", "writer"]],
+          ["writer", "Writer", ["draft TERMINATE"]],
+          ["rewriter", "Rewriter", ["better draft"]],
+        ],
+        { selector: "mod" },
+      );
+      const { events } = await run(doc, "write something", { mock: false });
+      expect(posts(events)).toEqual(["me", "rewriter", "writer"]);
+    });
+
+    it("free: every other agent hears each post, and a termination expression ends it", async () => {
+      const doc = roomDoc("free", [["a", "Ann", ["from a", "a again"]], ["b", "Bo", ["DONE from b"]]], { termination: ['text.includes("DONE")'] });
+      const { events } = await run(doc, "go", { mock: false });
+      const out = events.find((e) => e.type === "output") as { text: string };
+      expect(out.text).toContain("DONE");
+      expect(events.some((e) => e.type === "transform" && (e as { label: string }).label === "conversation ended")).toBe(true);
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

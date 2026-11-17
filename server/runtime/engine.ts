@@ -501,7 +501,14 @@ export class Engine implements TurnServices {
         const names = candidates.map((m) => `${m}: ${nameOf(rc, m)}${"role" in (rc.byId.get(m)?.data ?? {}) ? ` (${(rc.byId.get(m)!.data as { role: string }).role})` : ""}`).join("\n");
         const sel = selector && rc.byId.get(selector)?.data.kind === "agent" ? (rc.byId.get(selector)!.data as AgentData).model : null;
         const pick = await llmCall(rc, selector ?? roomId, `Conversation:\n${room.transcript(12_000)}\n\nWho should speak next? Reply with one id from:\n${names}`, sel);
-        const found = candidates.find((m) => pick.includes(m)) ?? candidates.find((m) => pick.toLowerCase().includes(nameOf(rc, m).toLowerCase()));
+        // the id (or else the name) as a whole word, longest first: "rewriter" is not "writer"
+        const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const whole = (needle: string) => new RegExp(`(^|[^A-Za-z0-9_-])${esc(needle)}($|[^A-Za-z0-9_-])`, "i").test(pick);
+        const longest = [...candidates].sort((a, b) => b.length - a.length);
+        const found =
+          longest.find((m) => whole(m)) ??
+          [...candidates].sort((a, b) => nameOf(rc, b).length - nameOf(rc, a).length).find((m) => whole(nameOf(rc, m))) ??
+          longest.find((m) => pick.toLowerCase().includes(m.toLowerCase()));
         next = found ? [found] : [];
         break;
       }
