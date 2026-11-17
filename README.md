@@ -30,12 +30,35 @@ npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public 
 | Systems | List systems, create one from a template, import or export YAML, duplicate, delete |
 | Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. Envs, agents and plugins can be imported. The issues menu jumps to each problem. |
 | Runs | Live: start a run with an input (or a dry run on the test model), watch it on the graph and in the log, answer approvals and questions, stop it, reopen past runs. Simulated: replay a generated event stream |
-| Templates | Debate, coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
+| Demos | Real recorded runs of the paper reproductions, replayable by anyone: the canvas animates, the log fills, and each demo shows its result, its mapping and the models it ran on. Static files under `public/demos`, recorded with `npm run record-demos` |
+| Templates | Twelve papers rebuilt from the components (see below), plus patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
 | Library | Models (with API settings and a connection test), tools (with how the runtime calls them), JSON schemas, and the integration contracts |
 | Settings | Server connection, API keys, and the knowledge folder |
 
 The interfaces everything plugs into are documented in
-[docs/contracts.md](docs/contracts.md).
+[docs/contracts.md](docs/contracts.md); the server and what a run does, in
+[docs/server.md](docs/server.md).
+
+## Papers rebuilt on the canvas
+
+Each one is a template with its citation, how it maps onto the components,
+and where it departs from the paper. They rebuild each paper's architecture —
+who talks to whom, roles, memory, loops — not its prompts or its results.
+
+| Paper | What it exercises |
+| --- | --- |
+| [ChatDev](https://arxiv.org/abs/2307.07924) | A phase per group, instructor/assistant dialogues repeating until consensus, a shared codebase |
+| [MetaGPT](https://arxiv.org/abs/2308.00352) | A shared message pool; roles publish and subscribe by message type; structured documents |
+| [Multiagent Debate](https://arxiv.org/abs/2305.14325) | Parallel answers, rounds of revision, a join-all function, a majority vote |
+| [Generative Agents](https://arxiv.org/abs/2304.03442) | A memory stream: recency + importance + relevance retrieval, importance scoring, reflection, daily plans |
+| [Mixture-of-Agents](https://arxiv.org/abs/2406.04692) | Layers of model calls with no agents, joined and aggregated |
+| [Magentic-One](https://arxiv.org/abs/2411.04468) | A custom orchestrator loop with a task ledger and a progress ledger, calling specialists |
+| [CAMEL](https://arxiv.org/abs/2303.17760) | Role-play between two agents until a completion token |
+| [AutoGen](https://arxiv.org/abs/2308.08155) | A group chat whose manager picks the next speaker; a user proxy runs the code |
+| [AgentCoder](https://arxiv.org/abs/2312.13010) | A programmer and a test designer in parallel, then a test-and-repair loop |
+| [AgentVerse](https://arxiv.org/abs/2308.10848) | Experts recruited by spawning, a merged decision, execution, evaluation feedback |
+| [ChatEval](https://arxiv.org/abs/2308.07201) | Referee personas debating one by one, each handed the whole discussion |
+| [MapCoder](https://arxiv.org/abs/2405.11403) | Recall similar problems, a scored plan, code, and a debugging loop |
 
 ## Layout
 

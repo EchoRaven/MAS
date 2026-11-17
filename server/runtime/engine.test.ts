@@ -74,6 +74,23 @@ describe("runtime", () => {
     expect(out.text).toContain("Worker");
   });
 
+  it("a full handoff carries the whole conversation along a chain", async () => {
+    const b = new Builder("Chain", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false });
+    for (const [i, name] of ["First", "Second", "Third"].entries())
+      b.agent(`a${i}`, 200 + i * 200, 0, { name, model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } });
+    b.edge("me", "a0", "message").edge("a0", "a1", "handoff", { carry: "full" }).edge("a1", "a2", "handoff", { carry: "full" }).edge("a2", "me", "message");
+    const { events } = await run(b.doc, "the brief");
+    expect(errors(events)).toEqual([]);
+    const seen = usages(events).map((e) => (e as { tokens_in: number }).tokens_in);
+    // each agent is handed everything said before it, so its context grows
+    expect(seen).toHaveLength(3);
+    expect(seen[1]).toBeGreaterThan(seen[0]);
+    expect(seen[2]).toBeGreaterThan(seen[1]);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("Third");
+  });
+
   it("asks an approver and continues with the answer", async () => {
     const b = new Builder("Approve", "");
     b.agent("a", 0, 0, { name: "Agent", model: "m", harness: { ...native(), instructions: "" } })

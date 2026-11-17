@@ -5,10 +5,12 @@ import { agentverse } from "./agentverse";
 import { autogen } from "./autogen";
 import { camel } from "./camel";
 import { chatdev } from "./chatdev";
+import { chateval } from "./chateval";
 import { debate } from "./debate";
 import { generativeAgents } from "./generativeAgents";
 import { magenticOne } from "./magenticOne";
+import { mapcoder } from "./mapcoder";
 import { metagpt } from "./metagpt";
 import { moa } from "./moa";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder];

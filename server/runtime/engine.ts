@@ -336,7 +336,7 @@ export class Engine implements TurnServices {
     return reply;
   }
 
-  private async afterAgent(n: SysNode<AgentData>, r: { output: unknown; text: string; port?: string; transfers: string[] }, via?: SysEdge) {
+  private async afterAgent(n: SysNode<AgentData>, r: { output: unknown; text: string; port?: string; transfers: string[]; conversation?: import("./models").ChatMessage[] }, via?: SysEdge) {
     const ports = r.port ? [r.port] : n.data.interface.outputs.map((p) => p.id);
     const edges = ports.flatMap((p) => this.outEdges(n.id, p));
     const handoffs = edges.filter((e) => e.kind === "handoff");
@@ -344,7 +344,7 @@ export class Engine implements TurnServices {
     const send = [...edges.filter((e) => e.kind !== "handoff"), ...(chosen.length || handoffs.length < 2 ? chosen : handoffs.slice(0, 1))];
     for (const e of send) {
       let v: unknown = r.output;
-      if (e.kind === "handoff" && e.carry === "full") v = { role: "user", text: asText(r.output), from: n.id, meta: { history: this.state.history.get(n.id) ?? [] } } satisfies Msg;
+      if (e.kind === "handoff" && e.carry === "full") v = { role: "user", text: asText(r.output), from: n.id, meta: { history: r.conversation ?? this.state.history.get(n.id) ?? [] } } satisfies Msg;
       this.track(this.deliver(e, v, n.id));
     }
     // rooms: post when the turn came from the room, or when there is nowhere else to send

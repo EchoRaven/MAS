@@ -89,12 +89,21 @@ The scheduler is `server/runtime/engine.ts`.
   reaches an output port either starts another round (`iterate`, until
   `until` holds or `max_rounds` is reached) or leaves the group. A group that
   is the target of a call edge replies with its output.
+- **Handoffs.** `carry: "full"` passes the whole conversation to the next
+  agent: what the sender was handed, plus its own turn, each line named by its
+  speaker. Along a chain of full handoffs the conversation accumulates, so the
+  last agent reads all of it. `carry: "summary"` (the default) passes only the
+  value on the port.
 - **Rooms.** Posting wakes the next speaker(s) by the room's policy:
   - `round_robin`: the next member in turn.
   - `mention`: whoever is `@named`.
-  - `selector`: an LLM picks the next speaker.
+  - `selector`: an LLM picks the next speaker (never itself).
   - `free`: every other agent.
 
+  A post carries the message type its edge declares (`binding.write.tag`), and
+  a member sees and is woken by a post only when its own subscription accepts
+  it (`binding.read.filter`, an expression over `msg`: `from`, `from_name`,
+  `text`, `cause_by`). Without a filter a member hears everything.
   A person who opens a room without naming anyone reaches the first agent.
   A message containing `TERMINATE`, or a `termination` expression that holds,
   ends the conversation.
@@ -143,7 +152,7 @@ instead.
 | Provider | Path |
 | --- | --- |
 | `anthropic` | Official SDK, always streamed. Adaptive thinking is on by default for Claude 5 Opus / Sonnet / Fable, unless a temperature is set or `api.params.thinking` turns it off. `web_search` in the tool catalog becomes the provider's web search tool |
-| `openai`, `google`, `openai_compatible`, `local` | Chat completions (`/chat/completions`, with tool calls), `/embeddings`, and `/rerank` (Cohere / Jina / TEI shapes) |
+| `openai`, `google`, `openai_compatible`, `local` | Chat completions (`/chat/completions`, with tool calls), `/embeddings`, and `/rerank` (Cohere / Jina / TEI shapes). Provider extras on a tool call (Gemini's `thought_signature`) are sent back with it. Rate limits wait as long as the provider asks (`Retry-After`, Gemini's `retryDelay`); overloads back off; exhausted credit or a daily quota fails at once |
 | `mock` | The built-in test model. Canned text, JSON shaped to the requested schema, and scripted replies via `api.params.script` (strings or `{tool, input}`) |
 
 ## Plugins and envs
@@ -152,7 +161,7 @@ instead.
 | --- | --- |
 | Memory | The memory policy runs on each `after_turn` write: extract → classify → merge (append, dedupe, LLM resolve) → retain (ttl, decay, cap) → consolidate (summarise, reflect, custom). Reads go through the retrieval pipeline. Records persist per scope (agent, group, end user, system). Tools: `memory_search`, `memory_write` |
 | Knowledge | Sources are folders, files or URLs under the knowledge folder, indexed per run: load → chunk (recursive, fixed, headings, whole) → enrich. Search goes through the retrieval pipeline: BM25, vector (embedding model; falls back to BM25 with a warning), RRF or weighted fusion, filters, rerank (model or LLM), top-k, MMR or budget, format |
-| Workspace | A folder per plugin (or per agent or group for those scopes). `list_files`, `read_file` and `write_file` are confined to it |
+| Workspace | A folder per plugin (or per agent or group for those scopes). `list_files`, `read_file` and `write_file` are confined to it. Workspaces that name the same first source share one folder, so copies of a plugin in different groups see the same files; the source `/work` is the folder a sandbox env mounts at `/work`, so one agent can write code and another run it |
 | Board | Tasks with owner and state: `task_list`, `task_create`, `task_update` |
 | Custom plugin backends | `mcp` (tools from the server), `http` (`POST {url}/tools/{name}`, hooks at `{url}/hooks/{hook}`), `code` (a command, JSON on stdin) |
 | Room env | A shared transcript (kept across runs when `history: persistent`) and speaking policies |

@@ -36,6 +36,8 @@ export interface TurnResult {
   dropped?: boolean;
   /** handoff edges the agent chose */
   transfers: string[];
+  /** the conversation so far: what was carried in, then this turn (what a full handoff passes on) */
+  conversation?: ChatMessage[];
 }
 
 async function trimHistory(svc: TurnServices, state: AgentState, node: SysNode<AgentData>, io: AgentIO) {
@@ -121,10 +123,13 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
     .filter(Boolean)
     .join("\n\n");
 
-  // full handoff: the previous agent's conversation comes along
+  // full handoff: the previous agent's conversation comes along. Its last turn
+  // is what was handed over, so repeating it as the incoming message would say
+  // everything twice; the agent is simply told that it is its turn.
   const carried = isMsg(inputMsg) && Array.isArray((inputMsg as Msg).meta?.history) ? ((inputMsg as Msg).meta!.history as ChatMessage[]) : [];
+  const handedOver = !!inputText && textOf(carried[carried.length - 1]?.content ?? []).endsWith(inputText);
   const history = [...carried, ...(state.history.get(node.id) ?? [])];
-  const li: LoopInput = { system, history, input: inputText };
+  const li: LoopInput = { system, history, input: handedOver ? "It is your turn. Respond to the conversation above." : inputText };
 
   let text: string;
   try {
@@ -206,5 +211,6 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   }
   await io.hook("on_finish", { input: inputText, output: text });
   void via;
-  return { output: out, text, port, transfers: [...transfers] };
+  const conversation: ChatMessage[] = [...carried, ...(handedOver ? [] : [userText(inputText)]), { role: "assistant", content: [{ type: "text", text: `${a.name}: ${text || "(no reply)"}` }] }];
+  return { output: out, text, port, transfers: [...transfers], conversation };
 }

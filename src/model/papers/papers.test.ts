@@ -26,6 +26,23 @@ describe("paper reproductions", () => {
     expect(calls("paper-debate")).toBe(6);
   });
 
+  it("ChatEval's referees are chained by full handoffs, so each one reads the whole debate", () => {
+    const doc = PAPER_TEMPLATES.find((x) => x.id === "paper-chateval")!.build();
+    const chained = doc.edges.filter((e) => e.kind === "handoff" && e.carry === "full");
+    // referee -> referee -> referee -> out of the panel
+    expect(chained).toHaveLength(3);
+    expect(chained.map((e) => e.target)).toEqual(["critic", "scientist", "panel"]);
+  });
+
+  it("every repair loop has a stop condition, not just a round cap", () => {
+    for (const id of ["paper-agentcoder", "paper-mapcoder", "paper-agentverse"]) {
+      const doc = PAPER_TEMPLATES.find((x) => x.id === id)!.build();
+      const loops = doc.nodes.filter((n) => n.data.kind === "group" && n.data.iterate);
+      expect(loops.length, id).toBeGreaterThan(0);
+      for (const g of loops) expect((g.data as { iterate: { until?: string | null } }).iterate.until, `${id} / ${g.id}`).toBeTruthy();
+    }
+  });
+
   it("role-play and phase groups loop and stop", () => {
     for (const id of ["paper-camel", "paper-chatdev"]) {
       const ev = simulate({ ...PAPER_TEMPLATES.find((x) => x.id === id)!.build(), id: "fixed" }).events;
