@@ -227,6 +227,17 @@ describe("runtime", () => {
     expect(out.text).toBe("Votes: 7 ×3, 8 ×2\nFinal: 7");
   });
 
+  it("ReConcile gives no vote to a seat that gave no answer", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push(mock("silent", ["I am not sure."]), mock("sure", ["Answer: 9\nConfidence: 0.7"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "claude" ? "sure" : "silent";
+    const { events } = await run(doc, "?", { mock: false });
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toMatch(/^Answer: 9\n/);
+    expect(out.text).toContain("Weighted vote: 9 0.3.");
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

@@ -58,7 +58,7 @@ export function Select({
       >
         {current?.leading && <span className="flex shrink-0 items-center">{current.leading}</span>}
         <span className="min-w-0 flex-1 truncate">
-          <SelectPrimitive.Value placeholder={placeholder}>{current?.label}</SelectPrimitive.Value>
+          <SelectPrimitive.Value placeholder={placeholder}>{current ? current.label : <span className="font-normal text-muted-foreground">{placeholder}</span>}</SelectPrimitive.Value>
         </span>
         {current?.hint && size === "md" && current.hint.length <= 18 && <span className="shrink-0 font-normal text-muted-foreground">{current.hint}</span>}
         <SelectPrimitive.Icon asChild>

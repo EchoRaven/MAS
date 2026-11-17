@@ -33,6 +33,15 @@ export class ApiError extends Error {
   }
 }
 
+export interface ModelHealth {
+  id: string;
+  model: string;
+  kind: string;
+  status: "ok" | "failing" | "no_key" | "unknown";
+  why?: string;
+  at?: number;
+}
+
 export async function api<T>(method: string, path: string, body?: unknown, opts: { token?: string; raw?: boolean } = {}): Promise<T> {
   const token = opts.token ?? getToken();
   const res = await fetch(`/api${path}`, {
@@ -72,6 +81,7 @@ export const Api = {
   secrets: () => api<{ secrets: { name: string; source: "store" | "environment" | null; referenced: boolean }[] }>("GET", "/secrets"),
   setSecret: (name: string, value: string) => api("PUT", `/secrets/${encodeURIComponent(name)}`, { value }),
   deleteSecret: (name: string) => api("DELETE", `/secrets/${encodeURIComponent(name)}`),
+  modelHealth: (models: ModelSpec[]) => api<{ models: ModelHealth[] }>("POST", "/models/health", { models }),
   testModel: (model: ModelSpec) => api<{ ok: boolean; ms: number; reply?: string; error?: string }>("POST", "/models/test", { model }),
   knowledge: () => api<{ root: string; files: { path: string; size: number }[] }>("GET", "/knowledge"),
   putKnowledge: (path: string, content: string | Blob) => api("PUT", `/knowledge/${path.split("/").map(encodeURIComponent).join("/")}`, content, { raw: true }),

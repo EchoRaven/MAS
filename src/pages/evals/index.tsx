@@ -9,7 +9,8 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo, usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import { modelUses } from "@/model/modelUse";
+import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
+import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, type Grader, parseCases, repeatStats, SAMPLE_SETS } from "@/run/evals";
 import { useServer } from "@/store/server";
@@ -60,6 +61,15 @@ function Evals({ systemId }: { systemId: string }) {
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
   const [error, setError] = useState("");
   const parsed = useMemo(() => parseCases(text), [text]);
+  // the system as the evaluation will run it, for the model warnings
+  const effective = useMemo(() => {
+    try {
+      if (onModel === "per") return remapModels(doc, modelMap, DEFAULT_MODELS);
+      return onModel ? runAllOn(doc, onModel, DEFAULT_MODELS) : doc;
+    } catch {
+      return doc;
+    }
+  }, [doc, onModel, modelMap]);
 
   const refresh = useCallback(async () => {
     const { evals } = await Api.evals(systemId);
@@ -132,13 +142,18 @@ function Evals({ systemId }: { systemId: string }) {
         >
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">New evaluation</h2>
-            <div className="flex gap-1">
-              {SAMPLE_SETS.map((s) => (
-                <Button key={s.name} type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => (setText(s.text), setGrader(s.grader))}>
-                  {s.name}
-                </Button>
-              ))}
-            </div>
+            <Select
+              value=""
+              placeholder="Load a sample set…"
+              onValueChange={(name) => {
+                const set = SAMPLE_SETS.find((x) => x.name === name);
+                if (set) (setText(set.text), setGrader(set.grader));
+              }}
+              items={SAMPLE_SETS.map((x) => ({ value: x.name, label: x.name }))}
+              ariaLabel="Load a sample set"
+              size="sm"
+              className="w-44"
+            />
           </div>
           <Textarea
             value={text}
@@ -153,22 +168,22 @@ function Evals({ systemId }: { systemId: string }) {
             {Number(repeats) > 1 ? ` × ${repeats} repeats = ${parsed.cases.length * Number(repeats)} runs` : ""}
             {parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            <label className="space-y-1 text-xs text-muted-foreground">
+          <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-2">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
               Grader
               <Select value={grader} onValueChange={(v) => setGrader(v as Grader)} items={GRADERS.map((g) => ({ value: g.value, label: g.label }))} ariaLabel="Grader" />
             </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
               Runs at once
               <Select value={concurrency} onValueChange={setConcurrency} items={["1", "2", "3", "4"].map((v) => ({ value: v, label: v }))} ariaLabel="Runs at once" />
             </label>
-            <label className="space-y-1 text-xs text-muted-foreground" title="Run every question this many times: scores move between runs, and the spread says how much">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Run every question this many times: scores move between runs, and the spread says how much">
               Repeats
               <Select value={repeats} onValueChange={setRepeats} items={["1", "2", "3", "5"].map((v) => ({ value: v, label: v }))} ariaLabel="Repeats" />
             </label>
           </div>
           <p className="text-[11px] leading-snug text-muted-foreground">{GRADERS.find((g) => g.value === grader)?.hint}</p>
-          <label className="block space-y-1 text-xs text-muted-foreground">
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
             Models
             <Select value={onModel || "own"} onValueChange={(v) => setOnModel(v === "own" ? "" : v)} items={[{ value: "own", label: "As the system says" }, ...chatModels.map((m) => ({ value: m.value, label: `Everything on ${m.label}` })), { value: "per", label: "Choose per model…" }]} ariaLabel="Models" />
           </label>
@@ -191,6 +206,7 @@ function Evals({ systemId }: { systemId: string }) {
               ))}
             </div>
           )}
+          <ModelWarnings doc={effective} skip={dry} hint="or pick other models above" />
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">
               <input type="checkbox" checked={dry} onChange={(e) => setDry(e.target.checked)} />

@@ -12,6 +12,7 @@ import { stateAt } from "@/run/simulate";
 import { HumanRequests } from "./HumanRequests";
 import { RunPanels, Stat } from "./RunPanels";
 import { useNames } from "./Timeline";
+import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { useLiveRun } from "./useLiveRun";
 
 const STATUS_LABEL: Record<string, string> = { running: "Running", waiting: "Waiting for you", finished: "Finished", failed: "Failed", stopped: "Stopped" };
@@ -36,6 +37,7 @@ export function LiveRun({ doc, bar }: { doc: SystemDoc; bar: (status: React.Reac
       }}
     >
       <Textarea value={input} onChange={(e) => setInput(e.target.value)} rows={3} placeholder="The task or message the run starts with" aria-label="Run input" className="text-[13px]" onKeyDown={(e) => e.key === "Enter" && (e.metaKey || e.ctrlKey) && (e.preventDefault(), void live.start(input, dry))} />
+      <ModelWarnings doc={doc} skip={dry} hint="change the model in the system's catalog, or tick Dry run" />
       <div className="flex items-center gap-2">
         <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: edges, tools, gates and loops run for real, with canned text and no cost">
           <input type="checkbox" checked={dry} onChange={(e) => setDry(e.target.checked)} />

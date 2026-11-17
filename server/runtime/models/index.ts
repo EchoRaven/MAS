@@ -34,8 +34,15 @@ export interface Usage {
  */
 const HEALTH_TTL = 60 * 60_000;
 const health = new Map<string, { ok: boolean; why?: string; at: number }>();
-const healthKey = (m: ModelSpec) => `${m.provider}|${m.model}|${m.api.base_url ?? ""}|${m.api.key_env ?? ""}`;
-const DEAD = /insufficient_quota|credit|prepayment|402|PerDay|ECONNREFUSED|fetch failed|ENOTFOUND|no longer available|404/i;
+/** A short fingerprint of a key's value: a new key under the same name starts with a clean record. */
+function fingerprint(key: string | undefined): string {
+  let h = 0x811c9dc5;
+  for (const ch of key ?? "") h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193);
+  return (h >>> 0).toString(36);
+}
+const healthKey = (m: ModelSpec, key?: string) => `${m.provider}|${m.model}|${m.api.base_url ?? ""}|${m.api.key_env ?? ""}|${fingerprint(key)}`;
+/** failures that waiting will not fix: no credit, a used-up daily quota, a refused or disabled key, a server that is not there */
+const DEAD = /insufficient_quota|credit|prepayment|402|PerDay|ECONNREFUSED|fetch failed|ENOTFOUND|no longer available|404|\b401\b|\b403\b|api key not valid|invalid_api_key|service account|PERMISSION_DENIED/i;
 
 let healthFile: string | null = null;
 
@@ -59,13 +66,13 @@ function saveHealth() {
   }
 }
 
-export function noteHealth(m: ModelSpec, ok: boolean, err?: unknown) {
-  const before = health.get(healthKey(m))?.ok;
-  if (ok) health.set(healthKey(m), { ok: true, at: Date.now() });
+export function noteHealth(m: ModelSpec, ok: boolean, err?: unknown, key?: string) {
+  const before = health.get(healthKey(m, key))?.ok;
+  if (ok) health.set(healthKey(m, key), { ok: true, at: Date.now() });
   else {
     const msg = String((err as Error)?.message ?? err ?? "");
     if (!DEAD.test(msg)) return;
-    health.set(healthKey(m), { ok: false, why: msg.replace(/\s+/g, " ").slice(0, 160), at: Date.now() });
+    health.set(healthKey(m, key), { ok: false, why: msg.replace(/\s+/g, " ").slice(0, 160), at: Date.now() });
   }
   if (before !== ok) saveHealth();
 }
@@ -95,7 +102,7 @@ export class Models {
   /** Why a model cannot be called from here, or null when it can (credit is not knowable in advance). */
   missingKey(m: ModelSpec): string | null {
     if (m.provider === "mock") return null;
-    const h = health.get(healthKey(m));
+    const h = health.get(this.hk(m));
     if (h && !h.ok && Date.now() - h.at < HEALTH_TTL) return `failed its last call (${h.why})`;
     if (!m.api.key_env || this.secrets.get(m.api.key_env)) return null;
     return m.provider === "anthropic" || m.provider === "openai" || m.provider === "google" ? `needs ${m.api.key_env}` : null;
@@ -103,7 +110,7 @@ export class Models {
 
   /** Call each model whose health is not yet known, once, cheaply, so usable() can tell the working from the dead. */
   async probe(kinds: ("chat" | "embedding" | "rerank")[] = ["chat", "embedding", "rerank"]): Promise<void> {
-    const unknown = this.catalog.filter((m) => kinds.includes((m.kind ?? "chat") as "chat") && m.provider !== "mock" && !this.missingKey(m) && !health.get(healthKey(m)));
+    const unknown = this.catalog.filter((m) => kinds.includes((m.kind ?? "chat") as "chat") && m.provider !== "mock" && !this.missingKey(m) && !health.get(this.hk(m)));
     const call = (m: ModelSpec) => {
       const signal = AbortSignal.timeout(15_000);
       if (m.kind === "embedding") return this.embed(m.id, ["ok"], signal);
@@ -114,7 +121,7 @@ export class Models {
       unknown.map((m) =>
         call(m).catch((e) =>
           // a probe that times out or cannot connect says the model is not usable now
-          noteHealth(m, false, /abort|timeout/i.test(String(e)) ? new Error("fetch failed: timed out") : e),
+          noteHealth(m, false, /abort|timeout/i.test(String(e)) ? new Error("fetch failed: timed out") : e, this.keyValue(m)),
         ),
       ),
     );
@@ -122,8 +129,28 @@ export class Models {
 
   /** Catalog models that can be called, the ones that answered recently first. */
   usable(kind: "chat" | "embedding" | "rerank" = "chat"): ModelSpec[] {
-    const proven = (m: ModelSpec) => (health.get(healthKey(m))?.ok ? 0 : 1);
+    const proven = (m: ModelSpec) => (health.get(this.hk(m))?.ok ? 0 : 1);
     return this.catalog.filter((m) => (m.kind ?? "chat") === kind && m.provider !== "mock" && !this.missingKey(m)).sort((a, b) => proven(a) - proven(b));
+  }
+
+  private keyValue(m: ModelSpec): string | undefined {
+    return m.api.key_env ? this.secrets.get(m.api.key_env) : undefined;
+  }
+  private hk(m: ModelSpec) {
+    return healthKey(m, this.keyValue(m));
+  }
+
+  /** What is known about each catalog model here: ok, failing (and why), no key, or not yet called. */
+  report(): { id: string; model: string; kind: string; status: "ok" | "failing" | "no_key" | "unknown"; why?: string; at?: number }[] {
+    return this.catalog
+      .filter((m) => m.provider !== "mock")
+      .map((m) => {
+        const h = health.get(this.hk(m));
+        const base = { id: m.id, model: m.model, kind: m.kind ?? "chat" };
+        if (h && Date.now() - h.at < HEALTH_TTL) return h.ok ? { ...base, status: "ok" as const, at: h.at } : { ...base, status: "failing" as const, why: h.why, at: h.at };
+        const missing = this.missingKey(m);
+        return missing ? { ...base, status: "no_key" as const, why: missing } : { ...base, status: "unknown" as const };
+      });
   }
 
   private key(m: ModelSpec): string | undefined {
@@ -142,9 +169,9 @@ export class Models {
     let res: ChatResponse;
     try {
       res = await PROVIDERS[m.provider].chat(m, this.key(m), req);
-      noteHealth(m, true);
+      noteHealth(m, true, undefined, this.keyValue(m));
     } catch (e) {
-      noteHealth(m, false, e);
+      noteHealth(m, false, e, this.keyValue(m));
       throw e;
     }
     return { res, usage: { model: m.id, tokens_in: res.usage.input, tokens_out: res.usage.output, usd: this.price(m, res.usage.input, res.usage.output) } };
@@ -157,9 +184,9 @@ export class Models {
     const out: number[][] = [];
     try {
       for (let i = 0; i < texts.length; i += 64) out.push(...(await p.embed(m, this.key(m), texts.slice(i, i + 64), signal)));
-      noteHealth(m, true);
+      noteHealth(m, true, undefined, this.keyValue(m));
     } catch (e) {
-      noteHealth(m, false, e);
+      noteHealth(m, false, e, this.keyValue(m));
       throw e;
     }
     return out;
@@ -171,10 +198,10 @@ export class Models {
     if (!p.rerank) throw new Error(`Provider ${m.provider} has no rerank endpoint`);
     try {
       const out = await p.rerank(m, this.key(m), query, docs, signal);
-      noteHealth(m, true);
+      noteHealth(m, true, undefined, this.keyValue(m));
       return out;
     } catch (e) {
-      noteHealth(m, false, e);
+      noteHealth(m, false, e, this.keyValue(m));
       throw e;
     }
   }

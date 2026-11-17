@@ -42,6 +42,7 @@ functions, and Docker sandboxes. Treat the token like a password.
 | `GET /api/evals?system=` · `GET /api/evals/:id` · `POST /api/evals/:id/stop` · `DELETE /api/evals/:id` | Evaluations so far, one with its graded cases, stop one, delete a finished one |
 | `GET/PUT/DELETE /api/secrets[/:name]` | Which secrets are set; set or remove one |
 | `POST /api/models/test` `{model}` | Call a model once (chat, embedding or rerank) |
+| `POST /api/models/health` `{models}` | What is known about each model without calling it: `ok`, `failing` (with the error), `no_key`, or `unknown`. A failure that waiting won't fix (a refused key, no credit, a used-up daily quota) is remembered for an hour, per key value: a new key starts clean |
 | `GET/PUT/DELETE /api/knowledge[/:path]` | The knowledge folder |
 | `POST /mcp` | MCP endpoint for process harnesses (per-run token; not proxied publicly) |
 

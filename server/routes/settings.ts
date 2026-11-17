@@ -29,6 +29,13 @@ export function settingsRoutes(r: Router, store: Store, secrets: Secrets, config
     return { ok: true };
   });
 
+  // what the server knows about models, without calling any: ok, failing (and why), no key, or not yet called
+  r.on("POST", "/api/models/health", async (req) => {
+    const { models } = (await req.body()) as { models?: ModelSpec[] };
+    if (!Array.isArray(models)) throw new HttpError(400, "Give models: [ModelSpec, …]");
+    return { models: new Models(models, secrets).report() };
+  });
+
   r.on("POST", "/api/models/test", async (req) => {
     const { model } = (await req.body()) as { model: ModelSpec };
     if (!model?.id || !model.provider) throw new HttpError(400, "Give a model");

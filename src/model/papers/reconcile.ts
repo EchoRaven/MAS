@@ -41,12 +41,13 @@ const VOTE = `const f = (p) => (p >= 1 ? 1 : p >= 0.9 ? 0.8 : p >= 0.8 ? 0.5 : p
 const norm = (a) => String(a).toLowerCase().replace(/[^a-z0-9.\\-]/g, "");
 const score = {}, shown = {};
 for (const a of input.answers ?? []) {
+  if (!a.answer) continue; // a seat that gave no answer has no vote
   const k = norm(a.answer);
   score[k] = (score[k] ?? 0) + f(a.confidence);
   shown[k] ??= a.answer;
 }
 const ranked = Object.entries(score).sort((x, y) => y[1] - x[1]);
-if (!ranked.length) return "No answers were given.";
+if (!ranked.length) return "No seat gave an answer.";
 const tally = ranked.map(([k, s]) => shown[k] + " " + s.toFixed(1)).join(", ");
 return "Answer: " + shown[ranked[0][0]] + "\\n\\n" + (input.consensus ? "Consensus in round " + input.round + "." : "No consensus after " + input.round + " rounds.") + " Weighted vote: " + tally + ".";`;
 
