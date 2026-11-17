@@ -26,7 +26,7 @@ How work moves:
 
 Two shapes worth knowing:
 · Several components working in parallel on the same input: connect the splitter to each of them, give each one its own input port on a function with join "all", and connect that function onward. The function runs once every port has arrived, and receives { port: value }.
-· A loop: put the parts in a group with max_rounds and an until condition, wire the last part back to the group's output port, and the group feeds the next round.
+· A loop: put the parts in a group with max_rounds and an until condition, and wire the last part to the group's output port with no filter. Every round reaches the output; the until condition (an expression over output, such as output.includes("APPROVED")) decides whether the group goes again or passes the output on. The group feeds each round's output back in by itself, so nothing inside should connect back to the start.
 · A decision — work goes one way OR another: a component with several plain connections sends every message down all of them. To choose, put a filter on each connection (an expression over the message, such as text.includes("REFUND")), and have the sender say which way in its reply. Or put a function in between with one output port per branch that returns { branch: value }.
 · A person who approves: connect to them with call. They reply "Approved" or "Rejected", and the caller decides what happens next.
 

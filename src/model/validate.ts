@@ -203,6 +203,9 @@ export function validate(doc: SystemDoc): Issue[] {
       }
       if (g.iterate) {
         if (!(g.iterate.max_rounds >= 1)) add("error", `Group "${g.name}" repeats but its round limit is not a positive number`, { nodeId: n.id });
+        for (const e of doc.edges.filter((x) => x.target === n.id && x.filter && byId.get(x.source)?.parent === n.id)) {
+          add("warning", `Group "${g.name}" repeats, but the connection into its output has a filter (${e.filter}): a round that is filtered out ends the loop with nothing. Let the group's until condition decide instead`, { edgeId: e.id });
+        }
         if (g.iterate.max_rounds > 100 && !g.iterate.until) add("warning", `Group "${g.name}" repeats ${g.iterate.max_rounds} times with no stop condition`, { nodeId: n.id });
       }
       for (const p of g.interface.outputs) {

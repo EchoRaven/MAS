@@ -107,6 +107,28 @@ describe("the draft the architect edits", () => {
     expect(conformSystem(d.doc).filter((c) => !c.report.passed)).toEqual([]);
   });
 
+  it("catches a loop wired twice: a member sending back inside a repeating group and out of it", () => {
+    const d = Draft.blank("Review");
+    d.add("group", "loop", "Loop", { max_rounds: 3, until: 'output.includes("APPROVED")' });
+    d.add("agent", "writer", "Writer", { group: "loop" });
+    d.add("agent", "editor", "Editor", { group: "loop" });
+    d.connect("loop", "writer", "message");
+    d.connect("writer", "editor", "message");
+    d.connect("editor", "loop", "message");
+    expect(d.problems().errors).toEqual([]);
+    d.connect("editor", "writer", "message");
+    expect(d.problems().errors.join(" ")).toMatch(/editor sends to both writer and the output of loop/);
+  });
+
+  it("catches a filter that would stall a loop", () => {
+    const d = Draft.blank("Review");
+    d.add("group", "loop", "Loop", { max_rounds: 3, until: 'output.includes("APPROVED")' });
+    d.add("agent", "editor", "Editor", { group: "loop" });
+    d.connect("loop", "editor", "message");
+    d.connect("editor", "loop", "message", { filter: 'input.includes("APPROVED")' });
+    expect(d.problems().errors.join(" ")).toMatch(/has a filter .* every round has to reach its output/);
+  });
+
   it("a function added without code still meets its contract", () => {
     const d = Draft.blank("X");
     d.add("function", "f", "F");

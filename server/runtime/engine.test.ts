@@ -156,6 +156,22 @@ describe("runtime", () => {
     expect(out.text).toMatch(/Roles: /);
   });
 
+  it("a stop condition can read a message as text", async () => {
+    const b = new Builder("Until", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .group("loop", 200, 0, { name: "Loop", iterate: { max_rounds: 5, until: 'output.includes("DONE")', feed: "output" } })
+      .agent("w", 0, 0, { name: "W", model: "w", harness: { ...native(), loop: "single_shot", instructions: "" } }, "loop")
+      .edge("me", "loop", "message")
+      .edge("loop", "w", "message")
+      .edge("w", "loop", "message")
+      .edge("loop", "me", "message");
+    b.doc.models.push({ id: "w", provider: "mock", model: "mock", api: { params: { script: ["draft", "DONE: final"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    // round 1 says "draft", round 2 says "DONE": it stops at round 2 instead of running all 5
+    expect(usages(events, "w")).toHaveLength(2);
+    expect(events.some((e) => e.type === "transform" && e.label === "rounds done" && /holds/.test(e.detail))).toBe(true);
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

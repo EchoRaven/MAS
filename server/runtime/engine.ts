@@ -17,7 +17,7 @@ import { renderTemplate } from "./functions/template";
 import { textOf, userText } from "./models";
 import { Hub } from "./resources/hub";
 import type { RtTool } from "./resources/types";
-import { asText, clip, coerce, syncMsg, type Msg } from "./values";
+import { asText, clip, coerce, exprValue, syncMsg, type Msg } from "./values";
 
 type Item = { value: unknown; via?: SysEdge };
 
@@ -150,7 +150,7 @@ export class Engine implements TurnServices {
     const rc = this.rc;
     let v = value;
     if (e.filter) {
-      const scope = { input: v, value: v, text: asText(v), ...(v && typeof v === "object" && !Array.isArray(v) ? (v as object) : {}) };
+      const scope = { ...(v && typeof v === "object" && !Array.isArray(v) ? (v as object) : {}), input: exprValue(v), value: exprValue(v), text: asText(v) };
       const r = testExpr(e.filter, scope);
       rc.emit({ type: "transform", at: from, edge: e.id, label: "filter", detail: r.error ? `error: ${r.error}` : r.ok ? `${e.filter} — passed` : `${e.filter} — dropped` });
       if (!r.ok) return;
@@ -174,7 +174,7 @@ export class Engine implements TurnServices {
     let passed = true;
     let reason = "";
     if (/^expr:/i.test(cond)) {
-      const r = testExpr(cond.slice(5).trim(), { input: v, text: asText(v), ...(v && typeof v === "object" ? (v as object) : {}) });
+      const r = testExpr(cond.slice(5).trim(), { input: exprValue(v), text: asText(v), ...(v && typeof v === "object" ? (v as object) : {}) });
       passed = r.ok;
       reason = r.error ?? cond;
     } else if (/^judge:/i.test(cond)) {
@@ -425,7 +425,7 @@ export class Engine implements TurnServices {
     const st = this.groups.get(g) ?? { round: 1, input: undefined };
     const it = gd.iterate;
     if (it) {
-      const until = it.until ? testExpr(it.until, { output: v, text: asText(v), round: st.round, input: st.input }) : { ok: false as boolean, error: undefined as string | undefined };
+      const until = it.until ? testExpr(it.until, { output: exprValue(v), text: asText(v), round: st.round, input: exprValue(st.input) }) : { ok: false as boolean, error: undefined as string | undefined };
       if (!until.ok && st.round < it.max_rounds) {
         st.round++;
         this.groups.set(g, st);

@@ -292,6 +292,18 @@ export class Draft {
       const stranded = this.doc.nodes.filter((n) => !n.parent && !isResource(n.data.kind) && !reached.has(n.id) && touched(n.id) && !this.doc.edges.some((e) => e.target === n.id && e.kind !== "access"));
       for (const n of stranded) design.push(`Nothing ever reaches "${"name" in n.data ? n.data.name : n.id}" from ${s}, so it never runs`);
     }
+    // inside a repeating group the group already feeds its output back each round, so a member that
+    // also sends straight back to another member runs that member twice a round
+    for (const g of this.doc.nodes.filter((n) => n.data.kind === "group" && n.data.iterate)) {
+      // a repeating group must reach its output every round: its until condition decides whether to go again
+      for (const e of this.doc.edges.filter((x) => x.target === g.id && x.filter && this.doc.nodes.find((n) => n.id === x.source)?.parent === g.id)) {
+        design.push(`The connection ${e.source} → output of ${g.id} has a filter (${e.filter}). ${g.id} repeats, so every round has to reach its output, or the loop stops with nothing: remove the filter and let the group's until condition decide whether to go again`);
+      }
+      for (const e of this.doc.edges.filter((x) => x.target === g.id && x.kind !== "access" && this.doc.nodes.find((n) => n.id === x.source)?.parent === g.id)) {
+        const back = this.doc.edges.find((x) => x.source === e.source && x.source_port === e.source_port && x.id !== e.id && x.kind !== "access" && !x.filter && this.doc.nodes.find((n) => n.id === x.target)?.parent === g.id);
+        if (back) design.push(`${e.source} sends to both ${back.target} and the output of ${g.id}. ${g.id} repeats, so it already passes its output back to the start of the next round: remove the connection ${e.source} → ${back.target}, or give it a filter`);
+      }
+    }
     // a split with no conditions sends everything everywhere: right for parallel work, wrong for a decision
     const splits: string[] = [];
     for (const n of this.doc.nodes) {

@@ -98,3 +98,14 @@ export function syncMsg(before: unknown, after: unknown): unknown {
   if (typeof a.text === "string" && a.text !== b.text) return { ...a, content: a.text };
   return after;
 }
+
+/**
+ * A value as conditions see it. A message reads as its text too, so both
+ * `output.text.includes("X")` and `output.includes("X")` work, as do its fields
+ * (`output.role`, `output.from`). Anything else is passed as it is.
+ */
+export function exprValue(v: unknown): unknown {
+  if (typeof v === "string") return v;
+  if (isMsg(v)) return Object.assign(new String(v.text), v);
+  return v;
+}

@@ -31,7 +31,7 @@ npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public 
 | Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. Envs, agents and plugins can be imported. The issues menu jumps to each problem. |
 | Runs | Live: start a run with an input (or a dry run on the test model), watch it on the graph and in the log, answer approvals and questions, stop it, reopen past runs. Simulated: replay a generated event stream |
 | Demos | Real recorded runs of the paper reproductions, replayable by anyone: the canvas animates, the log fills, and each demo shows its result, its mapping and the models it ran on. Static files under `public/demos`, recorded with `npm run record-demos` |
-| Templates | Twelve papers rebuilt from the components (see below), plus patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
+| Templates | Seventeen papers rebuilt from the components (see below), plus patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
 | Library | Models (with API settings and a connection test), tools (with how the runtime calls them), JSON schemas, and the integration contracts |
 | Settings | Server connection, API keys, and the knowledge folder |
 
@@ -59,6 +59,11 @@ who talks to whom, roles, memory, loops — not its prompts or its results.
 | [AgentVerse](https://arxiv.org/abs/2308.10848) | Experts recruited by spawning, a merged decision, execution, evaluation feedback |
 | [ChatEval](https://arxiv.org/abs/2308.07201) | Referee personas debating one by one, each handed the whole discussion |
 | [MapCoder](https://arxiv.org/abs/2405.11403) | Recall similar problems, a scored plan, code, and a debugging loop |
+| [Voyager](https://arxiv.org/abs/2305.16291) | An automatic curriculum and a skill library that grows only with programs a critic verified |
+| [Reflexion](https://arxiv.org/abs/2303.11366) | Actor, evaluator and self-reflection, with lessons kept in an episodic memory between trials |
+| [DyLAN](https://arxiv.org/abs/2310.02170) | Agents in layers: a ranker keeps the best for the next layer, early stop at two-thirds agreement, importance scores |
+| [TradingAgents](https://arxiv.org/abs/2412.20138) | A trading firm: parallel analysts, a bull/bear debate, a structured trade, a risk debate, a person's approval |
+| [Werewolf](https://arxiv.org/abs/2309.04658) | Hidden roles: the rules are code, each player is an agent told only what its role allows |
 
 ## Layout
 
