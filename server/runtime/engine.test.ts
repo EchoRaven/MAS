@@ -113,6 +113,25 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("DyLAN keeps the best-ranked agents for the next layer and stops at two thirds", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-dylan")!.build();
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    // two agents say 1, two say 2: no two-thirds majority in the first layer
+    doc.models.push(mock("ones", ["Final: 1"]), mock("twos", ["Final: 2"]), mock("rank", [JSON.stringify({ scores: { a1: 5, a2: 4, a3: 1, a4: 2 }, summary: "a1 and a2 are right" })]));
+    for (const n of doc.nodes) {
+      if (n.data.kind === "agent") n.data.model = n.id === "a1" || n.id === "a2" ? "ones" : "twos";
+      if (n.id === "ranker" && n.data.kind === "model") n.data.model = "rank";
+    }
+    const { events } = await run(doc, "What is 2 - 1?", { mock: false });
+    expect(errors(events)).toEqual([]);
+    const turns = (id: string) => usages(events, id).length;
+    // layer 1: all four; layer 2: only the two the ranker kept
+    expect([turns("a1"), turns("a2"), turns("a3"), turns("a4")]).toEqual([2, 2, 1, 1]);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("CONSENSUS after layer 2: 1");
+    expect(out.text).toContain('"a1":5');
+  });
+
   it("a custom loop sees every agent call it made in ctx.history", async () => {
     const b = new Builder("History", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

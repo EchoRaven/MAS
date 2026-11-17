@@ -27,6 +27,8 @@ How work moves:
 Two shapes worth knowing:
 · Several components working in parallel on the same input: connect the splitter to each of them, give each one its own input port on a function with join "all", and connect that function onward. The function runs once every port has arrived, and receives { port: value }.
 · A loop: put the parts in a group with max_rounds and an until condition, wire the last part back to the group's output port, and the group feeds the next round.
+· A decision — work goes one way OR another: a component with several plain connections sends every message down all of them. To choose, put a filter on each connection (an expression over the message, such as text.includes("REFUND")), and have the sender say which way in its reply. Or put a function in between with one output port per branch that returns { branch: value }.
+· A person who approves: connect to them with call. They reply "Approved" or "Rejected", and the caller decides what happens next.
 
 How to design well:
 · Give each agent one job, and write its instructions as if to a new colleague: what it does, what it produces, when it is finished.
@@ -80,7 +82,7 @@ export async function design(opts: { models: Models; model?: string | null; prom
     const results: Part[] = [];
     for (const c of calls) {
       const result = await runDesignTool(draft, c.name, c.input);
-      log.push({ tool: c.name, args: JSON.stringify(c.input).slice(0, 400), result: result.slice(0, 400) });
+      log.push({ tool: c.name, args: JSON.stringify(c.input).slice(0, 2000), result: result.slice(0, 2000) });
       results.push({ type: "tool_result", id: c.id, content: result });
     }
     messages.push({ role: "user", content: results });

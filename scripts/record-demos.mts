@@ -90,6 +90,9 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
     },
   },
+  "paper-dylan": {
+    input: "A farmer has 17 sheep. All but 9 run away. How many sheep does the farmer have left?",
+  },
   "paper-reflexion": {
     input:
       "Write a function is_valid_parens(s) that returns True when every bracket in s — (), [] and {} — is closed in the right order, and False otherwise.\n\nTests:\nassert is_valid_parens('()[]{}')\nassert is_valid_parens('{[()]}')\nassert not is_valid_parens('(]')\nassert not is_valid_parens('([)]')\nassert not is_valid_parens('((')\nassert is_valid_parens('')\nassert is_valid_parens('a(b)c')",

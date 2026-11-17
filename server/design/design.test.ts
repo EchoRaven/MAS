@@ -84,6 +84,29 @@ describe("the draft the architect edits", () => {
     expect(a.kind === "agent" && a.harness.instructions).toBe("Be brief.");
   });
 
+  it("points out a split with no conditions, and is satisfied once each branch has one", () => {
+    const d = Draft.blank("Triage");
+    d.add("agent", "triage", "Triage");
+    d.add("agent", "billing", "Billing");
+    d.add("agent", "tech", "Tech");
+    d.connect("triage", "billing", "message");
+    d.connect("triage", "tech", "message");
+    expect(d.problems().warnings.join(" ")).toMatch(/sends every message to all of billing, tech/);
+    d.doc.edges = [];
+    d.connect("triage", "billing", "message", { filter: 'text.includes("BILLING")' });
+    d.connect("triage", "tech", "message", { filter: 'text.includes("TECH")' });
+    expect(d.problems().warnings.join(" ")).not.toMatch(/sends every message/);
+  });
+
+  it("takes the function languages a model is likely to name, and lists the real ones otherwise", async () => {
+    const d = Draft.blank("X");
+    d.add("function", "f", "F", { lang: "javascript", code: "return input;" });
+    const f = d.doc.nodes.find((n) => n.id === "f")!.data;
+    expect(f.kind === "function" && f.fn.lang).toBe("js");
+    expect(await runDesignTool(d, "add", { kind: "function", id: "g", name: "G", options: { lang: "cobol", code: "x" } })).toMatch(/Use one of: js, python, template, jsonata, llm/);
+    expect(conformSystem(d.doc).filter((c) => !c.report.passed)).toEqual([]);
+  });
+
   it("a function added without code still meets its contract", () => {
     const d = Draft.blank("X");
     d.add("function", "f", "F");

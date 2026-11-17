@@ -16,6 +16,17 @@ const KINDS: NodeKind[] = ["agent", "model", "function", "human", "env", "plugin
 
 export class DraftError extends Error {}
 
+const LANGS = ["js", "python", "template", "jsonata", "llm"] as const;
+const LANG_ALIAS: Record<string, (typeof LANGS)[number]> = { javascript: "js", typescript: "js", ts: "js", node: "js", py: "python", python3: "python", handlebars: "template", mustache: "template", prompt: "llm" };
+
+/** A function language from what a model is likely to write ("javascript", "py"…). */
+function lang(v: unknown): (typeof LANGS)[number] {
+  const s = String(v ?? "js").toLowerCase().trim();
+  const l = (LANGS as readonly string[]).includes(s) ? (s as (typeof LANGS)[number]) : LANG_ALIAS[s];
+  if (!l) throw new DraftError(`"${v}" is not a function language. Use one of: ${LANGS.join(", ")}`);
+  return l;
+}
+
 /** Lays components out in a readable left-to-right flow as they are added. */
 function place(doc: SystemDoc, parent?: string) {
   const siblings = doc.nodes.filter((n) => n.parent === parent);
@@ -84,7 +95,7 @@ export class Draft {
         const f = { ...(defaultData("function") as Extract<NodeData, { kind: "function" }>), name };
         const code = String(options.code ?? "").trim();
         // a function with no code would not meet mas-function/1, so it starts as a pass-through
-        f.fn = { lang: (options.lang as "js" | "python" | "template" | "jsonata" | "llm") ?? "js", code: code || "// what arrived, passed on unchanged\nreturn input;" };
+        f.fn = { lang: lang(options.lang), code: code || "// what arrived, passed on unchanged\nreturn input;" };
         if (options.join === "all") f.join = "all";
         data = f;
         break;
@@ -137,7 +148,7 @@ export class Draft {
       }
       case "function":
         if (str("code")) (n.data.fn = { ...n.data.fn, code: String(options.code) }, changed.push("code"));
-        if (str("lang")) (n.data.fn = { ...n.data.fn, lang: options.lang as typeof n.data.fn.lang }, changed.push("lang"));
+        if (str("lang")) (n.data.fn = { ...n.data.fn, lang: lang(options.lang) }, changed.push("lang"));
         if (options.join === "all" || options.join === "any") (n.data.join = options.join, changed.push("join"));
         break;
       case "model":
@@ -256,7 +267,8 @@ export class Draft {
     const label = (i: Issue) => i.message;
     const conformance = conformSystem(this.doc)
       .filter((c) => !c.report.passed)
-      .map((c) => `${c.name} does not meet ${c.report.contract}: ${c.report.rules.filter((r) => !r.ok && r.severity === "error").map((r) => r.label).join("; ")}`);
+      // with each rule's detail, so the architect knows what to change and does not just rebuild the same thing
+      .map((c) => `${c.name} does not meet ${c.report.contract}: ${c.report.rules.filter((r) => !r.ok && r.severity === "error").map((r) => r.label + (r.detail ? ` (${r.detail})` : "")).join("; ")}. Fix it with update; removing and re-adding the same thing will not help`);
     const design: string[] = [];
     const touched = (id: string) => this.doc.edges.some((e) => e.source === id || e.target === id);
     for (const n of this.doc.nodes) {
@@ -280,9 +292,19 @@ export class Draft {
       const stranded = this.doc.nodes.filter((n) => !n.parent && !isResource(n.data.kind) && !reached.has(n.id) && touched(n.id) && !this.doc.edges.some((e) => e.target === n.id && e.kind !== "access"));
       for (const n of stranded) design.push(`Nothing ever reaches "${"name" in n.data ? n.data.name : n.id}" from ${s}, so it never runs`);
     }
+    // a split with no conditions sends everything everywhere: right for parallel work, wrong for a decision
+    const splits: string[] = [];
+    for (const n of this.doc.nodes) {
+      const out = this.doc.edges.filter((e) => e.source === n.id && e.kind === "message" && !e.filter);
+      const targets = new Set(out.filter((e) => e.source_port === out[0]?.source_port).map((e) => e.target));
+      if (targets.size > 1 && n.data.kind !== "function" && n.data.kind !== "group") {
+        const name = "name" in n.data ? n.data.name : n.id;
+        splits.push(`"${name}" sends every message to all of ${[...targets].join(", ")}. If that is parallel work, fine; if it is a decision, put a filter on each connection`);
+      }
+    }
     return {
       errors: [...issues.filter((i) => i.severity === "error").map(label), ...conformance, ...design],
-      warnings: issues.filter((i) => i.severity === "warning").map(label),
+      warnings: [...splits, ...issues.filter((i) => i.severity === "warning").map(label)],
     };
   }
 
