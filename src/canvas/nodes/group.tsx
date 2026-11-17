@@ -13,7 +13,7 @@ export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<F
     <div className="relative">
       {/* stacked look: it holds more inside */}
       <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-xl bg-card shadow-[var(--ring-shadow)]" />
-      <Shell selected={selected} status={data.status} issues={data.issues} className="min-w-[220px]">
+      <Shell selected={selected} status={data.status} issues={data.issues} entry={data.entry} className="min-w-[220px]">
         <Ports inputs={g.interface.inputs} outputs={g.interface.outputs} wired={data.wired} hidden={data.readOnly} />
         {!data.readOnly && <OpenHint />}
         <div className={cn("flex items-center gap-2.5 p-3", padFor(g.interface))}>

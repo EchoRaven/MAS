@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { LEGACY_SEED_NAMES, SEED_TEMPLATES, TEMPLATES } from "@/model/templates";
+import { buildSeed, LEGACY_SEED_NAMES, SEED_TEMPLATES, seedId, TEMPLATES } from "@/model/templates";
 import { newId } from "@/model/defaults";
 import { migrateDoc } from "@/model/migrate";
 import type { SystemDoc } from "@/model/types";
@@ -11,6 +11,8 @@ import type { SystemDoc } from "@/model/types";
 // the old key is left in place untouched.
 const KEY = "mas-systems-v1";
 const LEGACY_KEY = "mas-systems-v0";
+/** Templates already seeded here, so one added later arrives and a deleted one stays deleted. */
+const SEEDED_KEY = "mas-seeded-v1";
 
 function read(key: string): SystemDoc[] | null {
   try {
@@ -35,6 +37,39 @@ function load(): SystemDoc[] | null {
   return docs;
 }
 
+function seededIds(): string[] {
+  try {
+    const raw = localStorage.getItem(SEEDED_KEY);
+    const v = raw ? JSON.parse(raw) : null;
+    return Array.isArray(v) ? (v as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function markSeeded(ids: string[]) {
+  try {
+    localStorage.setItem(SEEDED_KEY, JSON.stringify([...new Set([...seededIds(), ...ids])]));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/**
+ * Templates added since this workspace was seeded (new paper reproductions,
+ * say) are seeded now. One the person deleted is not brought back: every
+ * template ever seeded is remembered, whether or not its system still exists.
+ */
+function seedNew(docs: SystemDoc[]): SystemDoc[] {
+  const known = new Set([...seededIds(), ...docs.map((d) => d.id)]);
+  const missing = SEED_TEMPLATES.filter((t) => !known.has(seedId(t.id)));
+  markSeeded(SEED_TEMPLATES.map((t) => seedId(t.id)));
+  if (!missing.length) return docs;
+  const added = [...missing.map(buildSeed), ...docs];
+  save(added);
+  return added;
+}
+
 function save(systems: SystemDoc[]) {
   try {
     localStorage.setItem(KEY, JSON.stringify(systems));
@@ -43,17 +78,18 @@ function save(systems: SystemDoc[]) {
   }
 }
 
-/** First visit: seed the templates and save them, so their ids (and links to them) stay stable across reloads. */
+/** First visit: seed every template. Later visits: seed the ones added since. */
 function loadOrSeed(): SystemDoc[] {
   const loaded = load();
-  if (loaded) return loaded;
+  if (loaded) return seedNew(loaded);
   const docs = seed();
   save(docs);
+  markSeeded(SEED_TEMPLATES.map((t) => seedId(t.id)));
   return docs;
 }
 
 function seed(): SystemDoc[] {
-  return SEED_TEMPLATES.map((t) => t.build());
+  return SEED_TEMPLATES.map(buildSeed);
 }
 
 interface SystemsState {

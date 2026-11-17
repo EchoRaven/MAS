@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
-import { Code2, Download, PanelRightClose, PanelRightOpen, PlayCircle, Workflow } from "lucide-react";
+import { Code2, Download, PanelRightClose, PanelRightOpen, PlayCircle, Wand2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AgentView } from "@/canvas/agent/AgentView";
@@ -18,6 +18,7 @@ import type { AgentData, NodeData, NodeKind, Processor, SystemDoc } from "@/mode
 import { validate } from "@/model/validate";
 import { toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
+import { ArchitectDialog } from "./ArchitectDialog";
 import { Breadcrumb } from "./Breadcrumb";
 import { IssuesMenu } from "./IssuesMenu";
 import { useEditorNav } from "./useEditorNav";
@@ -55,6 +56,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const [view, setView] = useState<"canvas" | "yaml">("canvas");
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [importing, setImporting] = useState<ImportKind | null>(null);
+  const [architect, setArchitect] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const nav = useEditorNav(doc);
 
@@ -138,6 +140,9 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           <ViewSwitch view={view} setView={setView} />
           <IssuesMenu doc={doc} issues={issues} onPick={(i) => { setView("canvas"); nav.pickIssue(i); setInspectorOpen(true); }} />
           <div className="ml-auto flex gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => setArchitect(true)} title="Describe a change and let the architect make it">
+              <Wand2 className="mr-1.5 h-3.5 w-3.5" /> Architect
+            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => downloadText(`${slug(doc.name)}.mas.yaml`, toYaml(doc))} aria-label="Export YAML" title="Export YAML">
               <Download className="h-4 w-4" />
             </Button>
@@ -204,6 +209,16 @@ export function Editor({ doc }: { doc: SystemDoc }) {
         )}
       </div>
       <ImportDialog kind={importing} doc={doc} onClose={() => setImporting(null)} onImport={(items) => { add(items); flash(`Added ${items.length} component${items.length > 1 ? "s" : ""}`); }} />
+      <ArchitectDialog
+        open={architect}
+        doc={doc}
+        onClose={() => setArchitect(false)}
+        onApply={(d) => {
+          replace({ ...d, id: doc.id });
+          nav.setSel({});
+          flash("The architect's changes are on the canvas");
+        }}
+      />
     </CanvasContext.Provider>
   );
 }

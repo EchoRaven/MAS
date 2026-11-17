@@ -1,4 +1,5 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import { ENTRY_REASON, entryPoints } from "@/model/entry";
 import { edgeScope, interfaceOf } from "@/model/ports";
 import type { EdgeKind, NodeData, PortSpec, SysEdge, SystemDoc } from "@/model/types";
 
@@ -20,6 +21,8 @@ export interface FlowNodeData extends Record<string, unknown> {
   boundary?: { dir: "in" | "out"; ports: PortSpec[]; group: string };
   /** names of ports that have an edge, for handle styling */
   wired?: string[];
+  /** this component is where a run starts; the text says why */
+  entry?: string;
 }
 export interface FlowEdgeData extends Record<string, unknown> {
   sys: SysEdge;
@@ -64,6 +67,7 @@ export function toFlowNodes(
 ): FlowNode[] {
   const nodes = doc.nodes.filter(inScope(scope));
   const wiredOf = (id: string) => doc.edges.flatMap((e) => [e.source === id ? e.source_port : null, e.target === id ? e.target_port : null]).filter(Boolean) as string[];
+  const entries = scope ? new Map<string, string>() : new Map(entryPoints(doc).map((e) => [e.node, ENTRY_REASON[e.why]]));
   const out: FlowNode[] = nodes.map((n) => ({
     id: n.id,
     type: n.data.kind,
@@ -78,6 +82,7 @@ export function toFlowNodes(
       readOnly: opts.readOnly,
       members: n.data.kind === "group" ? doc.nodes.filter((m) => m.parent === n.id).length : undefined,
       wired: wiredOf(n.id),
+      entry: entries.get(n.id),
     },
   }));
   const group = scope ? doc.nodes.find((n) => n.id === scope) : undefined;

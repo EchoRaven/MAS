@@ -3,6 +3,7 @@
 import http from "node:http";
 import { loadConfig } from "./config";
 import { Router, send } from "./http";
+import { designRoutes } from "./routes/design";
 import { runRoutes } from "./routes/runs";
 import { settingsRoutes } from "./routes/settings";
 import { systemRoutes } from "./routes/systems";
@@ -23,6 +24,7 @@ router.on("GET", "/api/session", () => ({ ok: true, data_dir: config.dataDir, lo
 systemRoutes(router, store);
 runRoutes(router, store, runs);
 settingsRoutes(router, store, secrets, config);
+designRoutes(router, store, secrets);
 
 // MCP for harnesses: authenticated by the per-run exposure token, not the user token
 router.on(

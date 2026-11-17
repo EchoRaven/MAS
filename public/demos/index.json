@@ -1,5 +1,41 @@
 [
  {
+  "id": "paper-agentcoder",
+  "name": "AgentCoder",
+  "input": "Write a function roman_to_int(s) that converts a Roman numeral string (I, V, X, L, C, D, M, with subtractive pairs like IV and IX) to an integer.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 23,
+  "tokens": 22928,
+  "usd": 0.014310100000000001,
+  "seconds": 29.2,
+  "recorded_at": "2026-11-17T10:59:13.492Z"
+ },
+ {
+  "id": "paper-agentverse",
+  "name": "AgentVerse",
+  "input": "Our two-person startup has three months of runway and a half-finished product. What should we do?",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 7,
+  "tokens": 14360,
+  "usd": 0.0213567,
+  "seconds": 45.8,
+  "recorded_at": "2026-11-17T10:56:49.146Z"
+ },
+ {
+  "id": "paper-autogen",
+  "name": "AutoGen group chat",
+  "input": "Compute how many prime numbers there are below 10000, and the sum of their digits. Verify the result.",
+  "status": "finished",
+  "reason": "All idle (no output)",
+  "calls": 4,
+  "tokens": 1148,
+  "usd": 0.0017085,
+  "seconds": 12.8,
+  "recorded_at": "2026-11-17T10:59:27.535Z"
+ },
+ {
   "id": "paper-camel",
   "name": "CAMEL role-playing",
   "input": "Develop a trading bot for the stock market",
@@ -12,6 +48,30 @@
   "recorded_at": "2026-11-17T10:03:39.516Z"
  },
  {
+  "id": "paper-chatdev",
+  "name": "ChatDev",
+  "input": "A command-line tic-tac-toe game in Python for two players on one keyboard.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 14,
+  "tokens": 39718,
+  "usd": 0.039096399999999996,
+  "seconds": 138.4,
+  "recorded_at": "2026-11-17T11:15:08.886Z"
+ },
+ {
+  "id": "paper-chateval",
+  "name": "ChatEval",
+  "input": "Which answer is better, and why?\n\nQuestion: \"Should a small team adopt microservices?\"\n\nAnswer A: \"Yes. Microservices are the modern standard: they scale, they let teams deploy independently, and every large company uses them.\"\n\nAnswer B: \"Usually not yet. Below roughly ten engineers the operational cost — deployment, tracing, data consistency across services — outweighs the benefits. Start with a well-structured monolith and split out a service when one part genuinely needs separate scaling or a separate release cadence.\"",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 7,
+  "tokens": 12265,
+  "usd": 0.009464,
+  "seconds": 47.3,
+  "recorded_at": "2026-11-17T10:56:03.040Z"
+ },
+ {
   "id": "paper-debate",
   "name": "Multiagent debate",
   "input": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? End with 'Final: <answer>'.",
@@ -22,6 +82,42 @@
   "usd": 0.0037993,
   "seconds": 9,
   "recorded_at": "2026-11-17T10:03:02.884Z"
+ },
+ {
+  "id": "paper-generative-agents",
+  "name": "Generative Agents",
+  "input": "It is 8:00 am on February 13 in Smallville. Isabella is opening her café and mentions the Valentine's Day party she is planning.",
+  "status": "finished",
+  "reason": "Round limit reached",
+  "calls": 15,
+  "tokens": 15650,
+  "usd": 0.011677799999999997,
+  "seconds": 40.5,
+  "recorded_at": "2026-11-17T11:12:48.495Z"
+ },
+ {
+  "id": "paper-mapcoder",
+  "name": "MapCoder",
+  "input": "Given a list of integers, return the length of the longest strictly increasing subsequence. Example: [10, 9, 2, 5, 3, 7, 101, 18] → 4.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 24,
+  "tokens": 45790,
+  "usd": 0.0287886,
+  "seconds": 112.9,
+  "recorded_at": "2026-11-17T10:58:43.423Z"
+ },
+ {
+  "id": "paper-metagpt",
+  "name": "MetaGPT",
+  "input": "A Python command-line tool that converts temperatures between Celsius and Fahrenheit, with unit tests.",
+  "status": "finished",
+  "reason": "Round limit reached",
+  "calls": 191,
+  "tokens": 2350752,
+  "usd": 1.2417733000000002,
+  "seconds": 623.4,
+  "recorded_at": "2026-11-17T11:12:06.401Z"
  },
  {
   "id": "paper-moa",

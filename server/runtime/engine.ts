@@ -6,6 +6,7 @@
 // requests the run waits on.
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { AgentData, FunctionNodeData, GroupData, HumanData, ModelNodeData, SysEdge, SysNode } from "@/model/types";
+import { ENTRY_REASON, entryPoints } from "@/model/entry";
 import { interfaceOf } from "@/model/ports";
 import { schemaById } from "./agent/jsonschema";
 import { AgentState, runAgentTurn, type TurnServices } from "./agent/turn";
@@ -102,29 +103,23 @@ export class Engine implements TurnServices {
     rc.vars.query ??= input;
     this.outstanding++; // hold the run open while entry points are wired
     try {
-      const humans = rc.doc.nodes.filter((n) => n.data.kind === "human" && !n.parent);
-      for (const h of humans) {
-        const outs = this.outEdges(h.id);
-        const rooms = rc.doc.edges.filter((e) => e.kind === "access" && e.source === h.id && this.isRoom(e.target));
-        if (!outs.length && !rooms.length) continue;
-        this.starters.add(h.id);
-        for (const e of outs) this.track(this.deliver(e, { ...entryValue, from: h.id }, h.id));
-        for (const e of rooms) this.track(this.post(e.target, h.id, input));
-      }
-      if (!this.starters.size) {
-        const onStart = rc.doc.nodes.filter((n) => n.data.kind === "agent" && (n.data as AgentData).triggers.includes("on_start"));
-        const incoming = new Set(rc.doc.edges.filter((e) => e.kind !== "access").map((e) => e.target));
-        const first =
-          rc.doc.nodes.find((n) => !n.parent && ["agent", "model", "function", "group"].includes(n.data.kind) && !incoming.has(n.id)) ??
-          rc.doc.nodes.find((n) => !n.parent && ["agent", "model", "function", "group"].includes(n.data.kind));
-        const entries = onStart.length ? onStart : first ? [first] : [];
-        if (!entries.length) throw new Error("Nothing to run: add an agent, model, function or group");
-        for (const n of entries) {
-          if (n.data.kind === "group") {
-            const p = interfaceOf(n.data).inputs[0];
-            if (p) this.track(this.groupEnter(n.id, p.id, entryValue));
-          } else this.schedule(n.id, entryValue);
-        }
+      const entries = entryPoints(rc.doc);
+      if (!entries.length) throw new Error("Nothing to run: add an agent, model, function or group");
+      for (const entry of entries) {
+        const n = this.node(entry.node);
+        rc.emit({ type: "log", level: "info", node: n.id, text: `${ENTRY_REASON[entry.why]}${entry.port ? ` → ${entry.port}` : ""}` });
+        if (n.data.kind === "human") {
+          // a person at the edge passes the input on, and takes the run's result back
+          this.starters.add(n.id);
+          const outs = this.outEdges(n.id);
+          const rooms = rc.doc.edges.filter((e) => e.kind === "access" && e.source === n.id && this.isRoom(e.target));
+          if (!outs.length && !rooms.length) rc.emit({ type: "log", level: "warn", node: n.id, text: `${nameOf(rc, n.id)} starts the run but has nothing to send to` });
+          for (const e of outs) this.track(this.deliver(e, { ...entryValue, from: n.id }, n.id));
+          for (const e of rooms) this.track(this.post(e.target, n.id, input));
+        } else if (n.data.kind === "group") {
+          const p = entry.port ?? interfaceOf(n.data).inputs[0]?.id;
+          if (p) this.track(this.groupEnter(n.id, p, entryValue));
+        } else this.schedule(n.id, n.data.kind === "function" && entry.port ? { [entry.port]: entryValue } : entryValue, undefined, n.data.kind === "function");
       }
     } finally {
       if (--this.outstanding === 0) this.idleResolve?.();
@@ -481,6 +476,9 @@ export class Engine implements TurnServices {
     rc.emit({ type: "message", from, to: roomId, room: roomId, edge: edge?.id, port: tag, kind: "message", text: clip(text, 6000) });
     if (/\bTERMINATE\b/.test(text) || rc.doc.termination.some((t) => testExpr(t, { text, last: text, from, room: roomId }).ok)) {
       rc.emit({ type: "transform", at: roomId, label: "conversation ended", detail: "termination condition" });
+      // a conversation that ends in a room is the run's answer, so it is not lost
+      this.outputs++;
+      rc.emit({ type: "output", node: from, port: roomId, text: clip(text, 20_000) });
       return;
     }
     // members only hear what their subscription accepts (binding.read.filter over msg)

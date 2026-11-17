@@ -1,7 +1,7 @@
 // Demos: real recorded runs of the paper reproductions, replayable by anyone
 // (static files under /demos, no server needed).
 import { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { ReactFlowProvider } from "@xyflow/react";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import { loadJson, type Demo, type DemoSummary } from "./types";
 
 export function DemosPage() {
   const { demoId } = useParams();
+  const navigate = useNavigate();
   const [index, setIndex] = useState<DemoSummary[] | null>(null);
   const [demo, setDemo] = useState<Demo | null>(null);
   const [error, setError] = useState("");
@@ -51,7 +52,7 @@ export function DemosPage() {
         })}
       </nav>
       <div className="md:hidden">
-        <Select value={demoId} onValueChange={(id) => (window.location.pathname = `/demos/${id}`)} items={index.map((d) => ({ value: d.id, label: d.name }))} ariaLabel="Demo" />
+        <Select value={demoId} onValueChange={(id) => navigate(`/demos/${id}`)} items={index.map((d) => ({ value: d.id, label: d.name }))} ariaLabel="Demo" />
       </div>
       {demo ? (
         <ReactFlowProvider key={demo.id}>
@@ -64,5 +65,19 @@ export function DemosPage() {
   );
 }
 
-const ORDER = ["paper-debate", "paper-moa", "paper-camel", "paper-chatdev", "paper-metagpt", "paper-generative-agents", "paper-magentic-one"];
+// simplest first, so the list reads as a tour
+const ORDER = [
+  "paper-debate",
+  "paper-moa",
+  "paper-chateval",
+  "paper-camel",
+  "paper-autogen",
+  "paper-agentverse",
+  "paper-agentcoder",
+  "paper-mapcoder",
+  "paper-chatdev",
+  "paper-metagpt",
+  "paper-magentic-one",
+  "paper-generative-agents",
+];
 const order = (id: string) => (ORDER.indexOf(id) + 1 || 99);

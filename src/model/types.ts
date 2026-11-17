@@ -464,6 +464,12 @@ export interface SystemDoc {
   description: string;
   updated_at: string;
   budget: { usd: number | null; max_rounds: number | null; wallclock_min: number | null };
+  /**
+   * Where a run's input arrives. Left out, the entry point is inferred from
+   * the graph (see model/entry.ts): a person at the edge, an on_start agent,
+   * or the component nothing feeds.
+   */
+  entry?: { node: string; port?: string } | null;
   termination: string[];
   models: ModelSpec[];
   tools: ToolSpec[];

@@ -1,4 +1,5 @@
 import { runnerById } from "./defaults";
+import { entryPoints } from "./entry";
 import { compat, edgeScope, interfaceOf, isResource, nodeName, sourcePort, targetPort, usesResources } from "./ports";
 import type { AgentData, EnvData, FunctionNodeData, GroupData, ModelNodeData, PortSpec, SysNode, SystemDoc } from "./types";
 import { RES_PORT } from "./types";
@@ -86,6 +87,17 @@ export function validate(doc: SystemDoc): Issue[] {
     }
     if (e.gate && !e.gate.condition.trim()) add("warning", `Gate "${e.gate.name}" has no condition`, { edgeId: e.id });
   }
+
+  // ---- where the run starts
+  if (doc.entry) {
+    const n = byId.get(doc.entry.node);
+    if (!n) add("error", `The entry point names ${doc.entry.node}, which does not exist. Pick one under System → Start`);
+    else if (n.parent) add("error", `${q(n)} is the entry point but lives inside a group. A run starts at the top level`, { nodeId: n.id });
+    else if (n.data.kind === "human" && !doc.edges.some((e) => e.source === n.id)) add("warning", `${q(n)} starts the run but has nothing to send to`, { nodeId: n.id });
+  }
+  const starts = entryPoints(doc);
+  if (doc.nodes.length > 0 && !starts.length) add("warning", "Nothing here can start a run yet: add an agent, model, function or group");
+  if (starts.length > 1) add("info", `${starts.length} components start the run at once (${starts.map((s) => nodeName(byId.get(s.node))).join(", ")}). Pick one under System → Start to send the input to just one`);
 
   // ---- agents
   const agents = doc.nodes.filter((n) => n.data.kind === "agent") as SysNode<AgentData>[];

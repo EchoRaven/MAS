@@ -282,8 +282,19 @@ export const TEMPLATES: TemplateInfo[] = [
   ...PAPER_TEMPLATES,
 ];
 
-/** The patterns seeded into a new browser; paper reproductions are offered from Templates. */
-export const SEED_TEMPLATES = TEMPLATES.filter((t) => t.id !== "blank" && !t.paper);
+/** Everything seeded into a workspace: the patterns and the paper reproductions. */
+export const SEED_TEMPLATES = TEMPLATES.filter((t) => t.id !== "blank");
+
+/**
+ * A seeded system keeps the same id in every workspace, so links to it hold
+ * and a template added later can be told apart from one already seeded.
+ */
+export const seedId = (templateId: string) => `sys_${templateId.replace(/-/g, "_")}`;
+
+/** A seeded copy of a template, ready to store. */
+export function buildSeed(t: TemplateInfo): SystemDoc {
+  return { ...t.build(), id: seedId(t.id), updated_at: new Date().toISOString() };
+}
 
 /** Names of the templates seeded by earlier versions (0.1, Chinese UI); stored copies are replaced on upgrade. */
 export const LEGACY_SEED_NAMES = ["\u8fa9\u8bba\u52a0\u88c1\u5224", "\u5171\u4eab\u4ed3\u5e93\u7684\u7f16\u7a0b\u56e2\u961f", "\u52a8\u6001\u62db\u52df\u7684\u7814\u7a76\u56e2\u961f", "\u5ba2\u670d\u5206\u8bca\u8f6c\u63a5"];

@@ -2,7 +2,7 @@
 // handle, the card shell, status line and chips.
 import type { ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Maximize2 } from "lucide-react";
+import { Maximize2, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DataType, PortSpec } from "@/model/types";
 import { RES_PORT } from "@/model/types";
@@ -91,9 +91,14 @@ export function ResHandle({ role, hidden }: { role: "user" | "resource"; hidden?
   );
 }
 
-export function Shell({ selected, status, issues, children, className }: { selected?: boolean; status?: RunStatus; issues?: number; children: ReactNode; className?: string }) {
+export function Shell({ selected, status, issues, entry, children, className }: { selected?: boolean; status?: RunStatus; issues?: number; entry?: string; children: ReactNode; className?: string }) {
   return (
     <div className={cn("group/node relative rounded-xl bg-card text-card-foreground shadow-[var(--ring-shadow)] transition-shadow", selected && "ring-2 ring-ring", status && STATUS_RING[status], className)}>
+      {entry && (
+        <span className="absolute -left-1.5 -top-1.5 z-10 flex items-center gap-0.5 rounded-full bg-success px-1.5 py-px text-[9px] font-semibold text-white" title={entry}>
+          <Play className="h-2 w-2 fill-current" /> START
+        </span>
+      )}
       {!!issues && (
         <span className="absolute -right-1.5 -top-1.5 z-10 flex h-4 min-w-4 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-semibold text-white" title={`${issues} issue(s)`}>
           {issues}

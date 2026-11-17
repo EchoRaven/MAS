@@ -17,7 +17,7 @@ export const AgentNode = memo(function AgentNode({ id, data, selected }: NodePro
   const runner = runnerById(a.harness.runner);
   const stages = a.pipeline.pre.length + a.pipeline.post.length;
   return (
-    <Shell selected={selected} status={data.status} issues={data.issues} className="w-[250px]">
+    <Shell selected={selected} status={data.status} issues={data.issues} entry={data.entry} className="w-[250px]">
       <Ports inputs={a.interface.inputs} outputs={a.interface.outputs} wired={data.wired} hidden={data.readOnly} />
       <ResHandle role="user" hidden={data.readOnly} />
       {!data.readOnly && <OpenHint />}
@@ -51,7 +51,7 @@ export const ModelNode = memo(function ModelNode({ data, selected }: NodeProps<F
   const { modelLabel } = useCanvasContext();
   const out = m.interface.outputs[0];
   return (
-    <Shell selected={selected} status={data.status} issues={data.issues} className="min-w-[200px]">
+    <Shell selected={selected} status={data.status} issues={data.issues} entry={data.entry} className="min-w-[200px]">
       <Ports inputs={m.interface.inputs} outputs={m.interface.outputs} wired={data.wired} hidden={data.readOnly} />
       <div className={cn("flex items-center gap-2.5 p-3", padFor(m.interface))}>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
@@ -76,7 +76,7 @@ export const FunctionNode = memo(function FunctionNode({ data, selected }: NodeP
   const f = data.sys as FunctionNodeData;
   const firstLine = f.fn.code.split("\n").find((l) => l.trim() && !l.trim().startsWith("//")) ?? "";
   return (
-    <Shell selected={selected} status={data.status} issues={data.issues} className="min-w-[200px] max-w-[260px]">
+    <Shell selected={selected} status={data.status} issues={data.issues} entry={data.entry} className="min-w-[200px] max-w-[260px]">
       <Ports inputs={f.interface.inputs} outputs={f.interface.outputs} wired={data.wired} hidden={data.readOnly} />
       <div className={cn("p-3", padFor(f.interface))}>
         <div className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export const HumanNode = memo(function HumanNode({ data, selected }: NodeProps<F
   const h = data.sys as HumanData;
   const ifc = interfaceOf(h);
   return (
-    <Shell selected={selected} status={data.status} issues={data.issues} className="w-[180px]">
+    <Shell selected={selected} status={data.status} issues={data.issues} entry={data.entry} className="w-[180px]">
       <Ports inputs={ifc.inputs} outputs={ifc.outputs} wired={data.wired} hidden={data.readOnly} />
       <ResHandle role="user" hidden={data.readOnly} />
       <div className="flex items-center gap-2.5 p-3">

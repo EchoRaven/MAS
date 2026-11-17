@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Boxes, Copy, Download, MoreHorizontal, PlayCircle, Plus, Search, Trash2, Upload, Workflow } from "lucide-react";
+import { Boxes, Copy, Download, MoreHorizontal, PlayCircle, Plus, Search, Trash2, Upload, Wand2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,12 +8,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { EmptyState } from "@/components/shared/EmptyState";
 import { EntityAvatar } from "@/components/shared/EntityAvatar";
 import { downloadText, slug, timeAgo } from "@/lib/format";
-import { TEMPLATES } from "@/model/templates";
+import { seedId, TEMPLATES } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
 import { validate } from "@/model/validate";
 import { conformSystem } from "@/model/conformance";
 import { fromYaml, toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
+import { ArchitectDialog } from "./canvas/ArchitectDialog";
 
 function counts(doc: SystemDoc) {
   const c = (k: string) => doc.nodes.filter((n) => n.data.kind === k).length;
@@ -29,6 +30,7 @@ function SystemCard({ doc }: { doc: SystemDoc }) {
   const errors = issues.filter((i) => i.severity === "error").length;
   const warnings = issues.filter((i) => i.severity === "warning").length;
   const agentNames = doc.nodes.filter((n) => n.data.kind === "agent").slice(0, 5);
+  const paper = paperOf(doc.id)?.paper;
 
   return (
     <article className="glass-panel group flex flex-col rounded-xl p-4">
@@ -38,6 +40,11 @@ function SystemCard({ doc }: { doc: SystemDoc }) {
           <Link to={`/canvas/${doc.id}`} className="block truncate font-semibold hover:underline">
             {doc.name}
           </Link>
+          {paper && (
+            <a href={paper.url} target="_blank" rel="noreferrer" className="block truncate text-[11px] text-info hover:underline" title={paper.title}>
+              {paper.title} — {paper.authors}, {paper.year}
+            </a>
+          )}
           <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{doc.description || "No description"}</p>
         </div>
         <DropdownMenu>
@@ -127,6 +134,26 @@ function SystemCard({ doc }: { doc: SystemDoc }) {
   );
 }
 
+/** The paper a seeded system came from, if any. */
+const paperOf = (id: string) => TEMPLATES.find((t) => t.paper && seedId(t.id) === id);
+
+function Section({ title, subtitle, docs }: { title: string; subtitle?: string; docs: SystemDoc[] }) {
+  if (!docs.length) return null;
+  return (
+    <section className="mt-4">
+      <h2 className="text-[13px] font-medium text-muted-foreground">
+        {title} <span className="tabular-nums">({docs.length})</span>
+      </h2>
+      {subtitle && <p className="text-[12px] text-muted-foreground">{subtitle}</p>}
+      <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {docs.map((doc) => (
+          <SystemCard key={doc.id} doc={doc} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function SystemsPage() {
   const systems = useSystems((s) => s.systems);
   const create = useSystems((s) => s.create);
@@ -134,6 +161,7 @@ export function SystemsPage() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
+  const [architect, setArchitect] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const shown = systems.filter((s) => `${s.name} ${s.description}`.toLowerCase().includes(q.toLowerCase()));
 
@@ -165,6 +193,9 @@ export function SystemsPage() {
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
             <Upload className="mr-1.5 h-4 w-4" /> Import YAML
           </Button>
+          <Button variant="outline" onClick={() => setArchitect(true)} title="Describe what you need and let the architect build it">
+            <Wand2 className="mr-1.5 h-4 w-4" /> Describe it
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button>
@@ -188,13 +219,13 @@ export function SystemsPage() {
             <EmptyState icon={Boxes} title={q ? "No matching systems" : "No systems yet"} subtitle="Create one from the top right, or import YAML" />
           </div>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {shown.map((doc) => (
-              <SystemCard key={doc.id} doc={doc} />
-            ))}
+          <div className="space-y-6">
+            <Section title="Your systems" docs={shown.filter((d) => !paperOf(d.id))} />
+            <Section title="Papers rebuilt on the canvas" subtitle="Each is a working system: open the canvas to see how the paper is put together, or change it and run it." docs={shown.filter((d) => paperOf(d.id))} />
           </div>
         )}
       </div>
+      <ArchitectDialog open={architect} onClose={() => setArchitect(false)} onApply={(d) => navigate(`/canvas/${importDoc(d).id}`)} />
     </div>
   );
 }

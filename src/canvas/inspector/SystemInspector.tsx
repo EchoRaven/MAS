@@ -1,8 +1,10 @@
 import { Trash2 } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { entryCandidates, entryPoints } from "@/model/entry";
+import { interfaceOf, nodeName } from "@/model/ports";
 import type { SystemDoc } from "@/model/types";
 import type { Issue } from "@/model/validate";
-import { AreaField, Chips, FIELD, NumberField, Section, TextField } from "../fields";
+import { AreaField, Chips, FIELD, NumberField, Section, SelectField, TextField } from "../fields";
 import { AddButton, Body, IssueList, type Update } from "./shared";
 
 const TERMINATION = [
@@ -15,6 +17,9 @@ const TERMINATION = [
 
 export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDoc; update: Update; issues: Issue[]; onPick: (i: Issue) => void }) {
   const set = (patch: Partial<SystemDoc>) => update((d) => ({ ...d, ...patch }));
+  const auto = doc.entry ? undefined : entryPoints(doc)[0];
+  const chosen = doc.entry && doc.nodes.find((n) => n.id === doc.entry!.node);
+  const entryPorts = chosen ? interfaceOf(chosen.data).inputs : [];
   return (
     <>
       <div className="border-b border-border/60 px-4 pb-3 pt-3.5">
@@ -24,6 +29,23 @@ export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDo
       <Body>
         <TextField label="Name" value={doc.name} onChange={(name) => set({ name })} />
         <AreaField label="Description" value={doc.description} onChange={(description) => set({ description })} rows={3} />
+        <Section title="Start">
+          <SelectField
+            label="Entry point"
+            hint="Where the run's input arrives. Automatic picks a person at the edge of the system, else an on_start agent, else the component nothing feeds. The canvas marks it START."
+            value={doc.entry?.node ?? ""}
+            onChange={(node) => set({ entry: node ? { node } : null })}
+            items={[{ value: "", label: `Automatic${auto ? ` · ${nodeName(doc.nodes.find((n) => n.id === auto.node))}` : ""}` }, ...entryCandidates(doc).map((n) => ({ value: n.id, label: nodeName(n) }))]}
+          />
+          {entryPorts.length > 1 && (
+            <SelectField
+              label="Arrives on"
+              value={doc.entry?.port ?? entryPorts[0].id}
+              onChange={(port) => doc.entry && set({ entry: { ...doc.entry, port } })}
+              items={entryPorts.map((p) => ({ value: p.id, label: `${p.id} · ${p.type}` }))}
+            />
+          )}
+        </Section>
         <Section title="Limits">
           <NumberField label="Budget (USD)" value={doc.budget.usd} onChange={(usd) => set({ budget: { ...doc.budget, usd } })} step={0.5} />
           <NumberField label="Max rounds" value={doc.budget.max_rounds} onChange={(max_rounds) => set({ budget: { ...doc.budget, max_rounds } })} />

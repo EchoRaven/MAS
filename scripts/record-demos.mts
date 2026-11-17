@@ -52,6 +52,44 @@ const DEMOS: Record<string, DemoConfig> = {
       return ["The role-play is capped at 6 rounds (the template allows 40) to keep the recording short."];
     },
   },
+  "paper-chateval": {
+    input:
+      'Which answer is better, and why?\n\nQuestion: "Should a small team adopt microservices?"\n\nAnswer A: "Yes. Microservices are the modern standard: they scale, they let teams deploy independently, and every large company uses them."\n\nAnswer B: "Usually not yet. Below roughly ten engineers the operational cost — deployment, tracing, data consistency across services — outweighs the benefits. Start with a well-structured monolith and split out a service when one part genuinely needs separate scaling or a separate release cadence."',
+  },
+  "paper-mapcoder": {
+    input: "Given a list of integers, return the length of the longest strictly increasing subsequence. Example: [10, 9, 2, 5, 3, 7, 101, 18] → 4.",
+    adapt: (doc) => {
+      capRounds(doc, 16);
+      const g = node(doc, "repair").data;
+      if (g.kind === "group" && g.iterate) g.iterate.max_rounds = 2;
+      return ["The debugging loop is capped at 2 attempts (the template allows 5)."];
+    },
+  },
+  "paper-autogen": {
+    input: "Compute how many prime numbers there are below 10000, and the sum of their digits. Verify the result.",
+    adapt: (doc) => {
+      capRounds(doc, 12);
+      return ["The chat is capped at 12 turns."];
+    },
+  },
+  "paper-agentcoder": {
+    input: "Write a function roman_to_int(s) that converts a Roman numeral string (I, V, X, L, C, D, M, with subtractive pairs like IV and IX) to an integer.",
+    adapt: (doc) => {
+      capRounds(doc, 16);
+      const g = node(doc, "loop").data;
+      if (g.kind === "group" && g.iterate) g.iterate.max_rounds = 2;
+      return ["The code-and-test loop is capped at 2 rounds (the template allows 4)."];
+    },
+  },
+  "paper-agentverse": {
+    input: "Our two-person startup has three months of runway and a half-finished product. What should we do?",
+    adapt: (doc) => {
+      capRounds(doc, 12);
+      const g = node(doc, "round").data;
+      if (g.kind === "group" && g.iterate) g.iterate.max_rounds = 2;
+      return ["The recruit-decide-execute-evaluate loop is capped at 2 rounds."];
+    },
+  },
   "paper-chatdev": {
     input: "A command-line tic-tac-toe game in Python for two players on one keyboard.",
     adapt: (doc) => {
@@ -63,8 +101,12 @@ const DEMOS: Record<string, DemoConfig> = {
   "paper-metagpt": {
     input: "A Python command-line tool that converts temperatures between Celsius and Fahrenheit, with unit tests.",
     adapt: (doc) => {
-      capRounds(doc, 10);
-      return ["The run is capped at 10 activations, so the Engineer / QA loop stops after a couple of passes."];
+      capRounds(doc, 8);
+      // each role plans and executes with up to 30 steps and pins the whole pool: left alone this recording
+      // costs a dollar in re-sent context
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.harness.max_steps = 3;
+      for (const e of doc.edges) if (e.binding?.read?.budget_tokens) e.binding.read.budget_tokens = 2000;
+      return ["Each role takes at most 3 steps per turn and sees 2000 tokens of the message pool, and the run is capped at 8 activations."];
     },
   },
   "paper-generative-agents": {
@@ -85,13 +127,15 @@ const DEMOS: Record<string, DemoConfig> = {
       const web = node(doc, "websurfer").data;
       if (web.kind === "agent") web.tools = ["fetch"];
       const orch = node(doc, "orchestrator").data;
-      if (orch.kind === "agent") orch.harness.max_steps = 6;
+      if (orch.kind === "agent") orch.harness.max_steps = 30;
+      capRounds(doc, 30);
       return [
         "ComputerTerminal runs as a platform agent with the sandbox's bash tool (the template drives an external executor program).",
         "WebSurfer reads pages with the fetch tool (the template's browser env has no MCP server configured here).",
-        "The Orchestrator may make at most 18 model calls in its turn.",
+        "The Orchestrator takes at most 5 rounds before it must write its answer.",
       ];
     },
+    vars: { max_rounds: 5 },
   },
 };
 
