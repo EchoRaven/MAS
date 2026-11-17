@@ -200,6 +200,8 @@ export class Engine implements TurnServices {
       reason = passed ? "approved by a person" : `rejected: ${a.text ?? ""}`;
     }
     rc.emit({ type: "gate", edge: e.id, gate: g.name, passed, reason });
+    // the failure count is per draft: once one passes, the next starts from zero
+    if (passed) delete rc.vars[`gate:${e.id}`];
     if (!passed && g.on_fail === "route_back") {
       const back = rc.doc.edges.find((x) => x.source === e.target && x.target === from && x.kind !== "access");
       const tries = (rc.vars[`gate:${e.id}`] as number | undefined) ?? 0;
@@ -207,7 +209,12 @@ export class Engine implements TurnServices {
       if (tries + 1 >= Math.max(1, g.escalate_after || 3)) {
         const a = await rc.ask({ node: "", from, kind: "approval", text: `Gate "${g.name}" failed ${tries + 1} times (${reason}). Let it through?` });
         if (a.approved) return true;
-      } else this.schedule(from, { role: "user", text: `Your output did not pass "${g.name}": ${reason}\nPlease revise.`, from: e.target } satisfies Msg, back);
+      } else {
+        const text = `Your output did not pass "${g.name}": ${reason}\nPlease revise.`;
+        // shown in the run like any message, so the revision that follows has a visible reason
+        rc.emit({ type: "message", from: e.target, to: from, edge: back?.id, kind: "message", text });
+        this.schedule(from, { role: "user", text, from: e.target } satisfies Msg, back);
+      }
     }
     if (!passed) this.status(from, "blocked");
     return passed;

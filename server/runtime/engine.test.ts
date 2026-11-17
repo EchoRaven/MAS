@@ -421,6 +421,65 @@ describe("runtime", () => {
     });
   });
 
+  describe("gates", () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    // me -> writer -[gated]-> reviewer -> me; the reviewer echoes what it got
+    const gated = (gate: Record<string, unknown>, writer: unknown[], extra: (b: Builder) => void = () => undefined) => {
+      const b = new Builder("Gate", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: true })
+        .agent("writer", 0, 0, { name: "Writer", model: "g_writer", harness: { ...native(), loop: "single_shot", instructions: "Write." } })
+        .agent("reviewer", 0, 0, { name: "Reviewer", model: "g_reviewer", harness: { ...native(), loop: "single_shot", instructions: "Review." } })
+        .edge("me", "writer", "message")
+        .edge("writer", "reviewer", "message", { gate: { name: "good enough", on_fail: "block", escalate_after: 3, ...gate } as never })
+        .edge("reviewer", "writer", "message", { filter: "false" })
+        .edge("reviewer", "me", "message");
+      b.doc.models.push(mock("g_writer", writer), mock("g_reviewer", ["Reviewed: {{input}}"]));
+      extra(b);
+      b.doc.budget = { usd: 1, max_rounds: 20, wallclock_min: 2 };
+      return b.doc;
+    };
+    const gateEvents = (events: RunEvent[]) => events.filter((e) => e.type === "gate").map((e) => (e as { passed: boolean }).passed);
+    const output = (events: RunEvent[]) => (events.find((e) => e.type === "output") as { text: string } | undefined)?.text;
+
+    it("expr: a value that fails is blocked and never arrives", async () => {
+      const { events } = await run(gated({ condition: 'expr: text.includes("APPROVED")' }, ["draft one"]), "go", { mock: false });
+      expect(gateEvents(events)).toEqual([false]);
+      expect(usages(events, "reviewer").length).toBe(0);
+      expect(output(events)).toBeUndefined();
+    });
+
+    it("route back: a failure goes back to the sender with the reason, and the revision passes", async () => {
+      const { events } = await run(gated({ condition: 'expr: text.includes("v2")', on_fail: "route_back" }, ["v1", "v2"]), "go", { mock: false });
+      expect(gateEvents(events)).toEqual([false, true]);
+      const toWriter = events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message" && e.to === "writer");
+      expect(toWriter.some((m) => /did not pass "good enough"/.test(m.text))).toBe(true);
+      expect(output(events)).toBe("Reviewed: v2");
+    });
+
+    it("route back: after escalate_after failures a person decides, and their yes lets it through", async () => {
+      const { events } = await run(gated({ condition: 'expr: text.includes("v9")', on_fail: "route_back", escalate_after: 2 }, ["v1"]), "go", { mock: false, answer: () => ({ approved: true }) });
+      expect(usages(events, "writer").length).toBe(2);
+      expect(events.some((e) => e.type === "human_request" && e.request.kind === "approval" && /failed 2 times/.test(e.request.text))).toBe(true);
+      expect(output(events)).toBe("Reviewed: v1");
+    });
+
+    it("judge: an agent's FAIL blocks, its PASS lets through", async () => {
+      const judged = (verdict: string) =>
+        gated({ condition: "judge: judge" }, ["the draft"], (b) => {
+          b.agent("judge", 0, 0, { name: "Judge", model: "g_judge", harness: { ...native(), loop: "single_shot", instructions: "Judge." } });
+          b.doc.models.push(mock("g_judge", [verdict]));
+        });
+      expect(output((await run(judged("FAIL: too short"), "go", { mock: false })).events)).toBeUndefined();
+      expect(output((await run(judged("PASS, fine"), "go", { mock: false })).events)).toBe("Reviewed: the draft");
+    });
+
+    it("require approval: a failed gate asks a person, and a no blocks it", async () => {
+      const { events } = await run(gated({ condition: 'expr: text.includes("APPROVED")', on_fail: "require_approval" }, ["draft"]), "go", { mock: false, answer: () => ({ approved: false, text: "no" }) });
+      expect(events.some((e) => e.type === "human_request" && e.request.kind === "approval" && /Gate "good enough" failed/.test(e.request.text))).toBe(true);
+      expect(output(events)).toBeUndefined();
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
