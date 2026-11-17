@@ -23,7 +23,12 @@ for (let round = 1; ; round++) {
     continue;
   }
   emit("next: " + progress.next_speaker, progress.instruction_or_question);
-  await tools.call_agent(progress.next_speaker, progress.instruction_or_question);
+  const reply = await tools.call_agent(progress.next_speaker, progress.instruction_or_question);
+  // Coder cannot run anything: the code it writes goes straight to the terminal
+  if (/coder/i.test(String(progress.next_speaker)) && reply.includes("\`\`\`")) {
+    emit("next: ComputerTerminal", "run the code Coder wrote");
+    await tools.call_agent("ComputerTerminal", "Run this code and report its output exactly:\\n" + reply);
+  }
 }`;
 
 function build(): SystemDoc {
@@ -66,6 +71,7 @@ export const magenticOne: TemplateInfo = {
   paper: { title: "Magentic-One: A Generalist Multi-Agent System for Solving Complex Tasks", authors: "Fourney et al.", year: 2024, url: "https://arxiv.org/abs/2411.04468" },
   notes: {
     mapped: [
+      "Code the Coder writes goes straight to ComputerTerminal, which runs it in the sandbox: in Magentic-One the Coder only writes, and execution is the terminal's job.",
       "The Orchestrator's outer (task ledger) and inner (progress ledger) loops are a custom agent loop, including re-planning after three stalled steps.",
       "Specialists are called agents; ComputerTerminal is a process agent that runs code without a model; the ledgers are kept on a board plugin.",
       "A before_tool hook holds irreversible actions for the user.",

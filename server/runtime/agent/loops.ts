@@ -137,8 +137,12 @@ export async function customLoop(io: AgentIO, li: LoopInput, extra: Record<strin
     list: () => io.tools.map((t) => ({ name: t.name, description: t.description })),
     call: runTool,
     call_agent: async (who: string, instruction: string) => {
-      const key = String(who ?? "").toLowerCase();
-      const t = io.tools.find((x) => x.name.startsWith("ask_") && (x.name.slice(4).toLowerCase() === key || x.description.toLowerCase().includes(`ask ${key}`)));
+      // names match loosely ("ComputerTerminal", "computer terminal", "terminal"), but an empty name matches nothing
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const key = norm(String(who ?? ""));
+      const callable = io.tools.filter((x) => x.name.startsWith("ask_"));
+      const named = (x: (typeof callable)[number]) => norm(x.description.replace(/^.*?ask\s+/i, "").split(/\s+\(|\s+and wait/)[0]);
+      const t = key ? (callable.find((x) => norm(x.name.slice(4)) === key || named(x) === key) ?? callable.find((x) => named(x).includes(key) || key.includes(norm(x.name.slice(4))))) : undefined;
       if (!t) return `No call edge to "${who}". Callable: ${io.tools.filter((x) => x.name.startsWith("ask_")).map((x) => x.name.slice(4)).join(", ") || "none"}`;
       const reply = await runTool(t.name, { request: String(instruction ?? "") });
       history.push({ speaker: String(who), text: `${instruction}\n→ ${reply}` });

@@ -102,10 +102,10 @@
   "status": "finished",
   "reason": "All idle",
   "calls": 12,
-  "tokens": 11401,
-  "usd": 0.013893,
-  "seconds": 41.9,
-  "recorded_at": "2026-11-17T11:45:05.137Z"
+  "tokens": 10690,
+  "usd": 0.0131525,
+  "seconds": 36.5,
+  "recorded_at": "2026-11-17T11:55:16.812Z"
  },
  {
   "id": "paper-mapcoder",
@@ -124,12 +124,12 @@
   "name": "MetaGPT",
   "input": "A Python command-line tool that converts temperatures between Celsius and Fahrenheit, with unit tests.",
   "status": "finished",
-  "reason": "Round limit reached",
-  "calls": 52,
-  "tokens": 307019,
-  "usd": 0.21806839999999997,
-  "seconds": 381.9,
-  "recorded_at": "2026-11-17T11:52:20.255Z"
+  "reason": "All idle",
+  "calls": 38,
+  "tokens": 204436,
+  "usd": 0.1554791,
+  "seconds": 304.5,
+  "recorded_at": "2026-11-17T12:00:21.620Z"
  },
  {
   "id": "paper-moa",
@@ -142,6 +142,18 @@
   "usd": 0.0025567000000000003,
   "seconds": 25.4,
   "recorded_at": "2026-11-17T09:58:23.865Z"
+ },
+ {
+  "id": "paper-reflexion",
+  "name": "Reflexion",
+  "input": "Write a function is_valid_parens(s) that returns True when every bracket in s — (), [] and {} — is closed in the right order, and False otherwise.\n\nTests:\nassert is_valid_parens('()[]{}')\nassert is_valid_parens('{[()]}')\nassert not is_valid_parens('(]')\nassert not is_valid_parens('([)]')\nassert not is_valid_parens('((')\nassert is_valid_parens('')\nassert is_valid_parens('a(b)c')",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 8,
+  "tokens": 6198,
+  "usd": 0.0021,
+  "seconds": 11,
+  "recorded_at": "2026-11-17T11:54:38.699Z"
  },
  {
   "id": "paper-voyager",

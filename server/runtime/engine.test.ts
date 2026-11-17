@@ -91,6 +91,28 @@ describe("runtime", () => {
     expect(out.text).toContain("Third");
   });
 
+  it("a custom loop calls agents by name, and an empty name calls no one", async () => {
+    const b = new Builder("Names", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("boss", 200, 0, {
+        name: "Boss",
+        model: "sonnet",
+        harness: { ...native(), loop: "custom", loop_fn: { lang: "js", code: "const a = await tools.call_agent('', 'x');\nconst b = await tools.call_agent('Computer Terminal', 'run it');\nreturn a.slice(0, 18) + ' | ' + b;" }, instructions: "" },
+      })
+      .agent("terminal", 400, 0, { name: "ComputerTerminal", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .agent("coder", 400, 200, { name: "Coder", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("me", "boss", "message")
+      .edge("boss", "me", "message")
+      .edge("boss", "coder", "call")
+      .edge("boss", "terminal", "call");
+    const { events } = await run(b.doc, "go");
+    expect(errors(events)).toEqual([]);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toMatch(/^No call edge to "" \| ComputerTerminal/);
+    // nobody was called for the empty name; the terminal was found by a loose spelling
+    expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
+  });
+
   it("an agent that runs out of steps still answers", async () => {
     const b = new Builder("Steps", "");
     // it calls a tool every step and never answers on its own; the forced final answer comes back empty
