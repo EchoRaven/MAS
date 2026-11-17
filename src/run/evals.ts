@@ -122,21 +122,45 @@ export function numbersIn(s: string): number[] {
  * ("There are 49 ways to make 50 cents": 50 is from the question); then the
  * first number at all.
  */
-export function answerNumber(answer: string, question = ""): number | null {
-  const boxed = /\\boxed\{([^}]*)\}/.exec(answer);
-  if (boxed && parseNumber(boxed[1]) !== null) return parseNumber(boxed[1]);
+/** LaTeX in an answer, as plain text: \frac{1}{221} → 1/221, 1{,}098{,}240 → 1098240, \text{B} → B, a Unicode minus → "-". */
+export function plain(s: string): string {
+  return s
+    .replace(/\u2212/g, "-")
+    .replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, "$1/$2")
+    .replace(/\{,\}/g, "")
+    .replace(/\\(?:text|textbf|mathrm|mathbf|operatorname)\{([^{}]*)\}/g, "$1")
+    .replace(/\\[,;!: ]/g, "");
+}
+
+/** What the last \boxed{…} holds, braces balanced. */
+export function boxedContent(s: string): string | null {
+  const at = s.lastIndexOf("\\boxed{");
+  if (at < 0) return null;
+  // "\\boxed" is 6 characters: the brace that opens the box is at + 6
+  let depth = 0;
+  for (let i = at + 6; i < s.length; i++) {
+    if (s[i] === "{") depth++;
+    else if (s[i] === "}" && --depth === 0) return s.slice(at + 7, i);
+  }
+  return null;
+}
+
+export function answerNumber(raw: string, question = ""): number | null {
+  const answer = plain(raw);
+  const boxed = boxedContent(answer);
+  if (boxed !== null && parseNumber(boxed) !== null) return parseNumber(boxed);
   for (const b of answer.matchAll(/\*\*([^*]+)\*\*/g)) {
     const words = b[1].trim().split(/\s+/).length;
     const n = numbersIn(b[1]);
     if (words <= 4 && n.length) return n[0];
   }
-  const given = new Set(numbersIn(question));
+  const given = new Set(numbersIn(plain(question)));
   const all = numbersIn(answer);
   return all.find((v) => !given.has(v)) ?? all[0] ?? null;
 }
 
 export const normalize = (s: string) =>
-  s
+  plain(s)
     .toLowerCase()
     .replace(/\$|\\boxed\{|\}/g, "")
     .replace(/[^\p{L}\p{N}./%-]+/gu, " ")

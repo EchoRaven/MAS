@@ -99,10 +99,14 @@ function Evals({ systemId }: { systemId: string }) {
         const r = await Api.evalRecord(selected);
         if (!live) return;
         setRecord(r);
+        setError("");
         if (r.active) timer = window.setTimeout(load, 1500);
         else void refresh();
       } catch (e) {
-        if (live) setError((e as Error).message);
+        if (!live) return;
+        setError((e as Error).message);
+        // a failed poll (a restart, a blip) is retried, more slowly, rather than leaving the page stuck on "running"
+        timer = window.setTimeout(load, 5000);
       }
     };
     void load();
@@ -295,12 +299,12 @@ function Evals({ systemId }: { systemId: string }) {
               <Stat label="Status" value={record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}` : ev.status} />
               <div className="ml-auto flex gap-1.5">
                 {record?.active ? (
-                  <Button variant="outline" size="sm" onClick={() => void Api.stopEval(ev.id)}>
+                  <Button variant="outline" size="sm" onClick={() => void Api.stopEval(ev.id).catch((e) => setError(e.message))}>
                     <Square className="mr-1.5 h-3.5 w-3.5" /> Stop
                   </Button>
                 ) : (
                   <>
-                    {grader !== "llm" && (
+                    {grader !== "llm" && ev.grader !== "llm" && (
                       <Button
                         variant="outline"
                         size="sm"

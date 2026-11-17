@@ -46,7 +46,7 @@ export class EvalManager {
   start(original: SystemDoc, opts: EvalOptions): EvalRecord {
     let doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
     if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
-    const repeats = Math.max(1, Math.min(Math.floor(opts.repeats ?? 1), 5));
+    const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
     if (!cases.length) throw new Error("No cases: each needs an input");
     const rec: EvalRecord = {
@@ -91,6 +91,8 @@ export class EvalManager {
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
+    // the judge's verdicts were paid for and cannot be had back by regrading: keep them
+    if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
     for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g, c.output, c.expected, c.input));
     rec.grader = g;
     rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
@@ -108,7 +110,15 @@ export class EvalManager {
   stop(id: string) {
     if (!this.active.has(id)) return false;
     this.stopped.add(id);
-    for (const c of this.store.getEval(id)?.cases ?? []) if (c.status === "running" && c.run_id) this.runs.stop(c.run_id);
+    // a case is "running" until it is graded, so its run may already have ended: stop only live ones, and never let one stop the rest
+    for (const c of this.store.getEval(id)?.cases ?? []) {
+      if (c.status !== "running" || !c.run_id || !this.runs.isActive(c.run_id)) continue;
+      try {
+        this.runs.stop(c.run_id);
+      } catch {
+        /* it ended in the meantime */
+      }
+    }
     return true;
   }
 
@@ -165,12 +175,21 @@ export class EvalManager {
         save();
       }
     };
-    await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.concurrency ?? 2, 8)) }, worker));
-    rec.status = this.stopped.has(rec.id) ? "stopped" : "finished";
-    rec.finished_at = new Date().toISOString();
-    for (const c of rec.cases) if (c.status === "pending") c.why = "not run (stopped)";
-    this.stopped.delete(rec.id);
-    save();
+    const workers = Number.isFinite(Number(opts.concurrency)) ? Math.max(1, Math.min(Math.floor(Number(opts.concurrency)), 8)) : 2;
+    try {
+      await Promise.all(Array.from({ length: workers }, worker));
+    } finally {
+      // whatever happened above, the evaluation leaves "running"
+      rec.status = this.stopped.has(rec.id) ? "stopped" : "finished";
+      rec.finished_at = new Date().toISOString();
+      for (const c of rec.cases) if (c.status === "pending") c.why = "not run (stopped)";
+      this.stopped.delete(rec.id);
+      try {
+        save();
+      } catch (e) {
+        console.error(`evaluation ${rec.id}: could not save its result: ${(e as Error).message}`);
+      }
+    }
   }
 
   /** Waits for a run to end. A run that waits for a person cannot be graded unattended: it is stopped. */

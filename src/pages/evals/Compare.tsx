@@ -18,6 +18,8 @@ const modelsLabel = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock" | "va
     .filter(Boolean)
     .join(" · ");
 
+const incomplete = (e: EvalSummary) => e.status !== "finished" || e.graded < e.total;
+
 export function ComparePage() {
   const connected = useServer((s) => s.status === "connected");
   const [params, setParams] = useSearchParams();
@@ -52,7 +54,8 @@ export function ComparePage() {
     const out = new Set<string>();
     for (const e of [...members].sort((a, b) => b.started_at.localeCompare(a.started_at))) {
       const k = `${e.system_id}|${modelsLabel(e)}|${e.grader}`;
-      if (seen.has(k)) out.add(e.id);
+      // an evaluation that did not run every case (stopped, cut off) would rank on a part of the questions: off by default too
+      if (seen.has(k) || incomplete(e)) out.add(e.id);
       seen.add(k);
     }
     return out;
@@ -175,14 +178,14 @@ export function ComparePage() {
                   <td className="hidden py-2 text-right tabular-nums text-muted-foreground sm:table-cell">{e.passed ? usd(e.usd / e.passed) : "–"}</td>
                   <td className="hidden py-2 text-right text-xs text-muted-foreground md:table-cell" title={e.started_at}>
                     {timeAgo(e.started_at)}
-                    {superseded.has(e.id) ? " · older" : ""}
+                    {incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : superseded.has(e.id) ? " · older" : ""}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] text-muted-foreground">Sorted by accuracy. Older runs of the same system on the same models start unticked. With few questions or one repeat, differences of a point or two are within run-to-run noise: compare the spread.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">Sorted by accuracy. Older runs of the same system on the same models, and evaluations that did not finish, start unticked. With few questions or one repeat, differences of a point or two are within run-to-run noise: compare the spread.</p>
       </section>
 
       {rows.length > 0 && (

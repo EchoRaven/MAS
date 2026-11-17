@@ -219,7 +219,7 @@ describe("runtime", () => {
   it("self-consistency samples five times and takes the majority", async () => {
     const doc = TEMPLATES.find((t) => t.id === "self-consistency")!.build();
     doc.models = doc.models.filter((m) => m.id !== "sonnet");
-    doc.models.push({ id: "sonnet", provider: "mock", model: "mock", api: { params: { script: ["so… Final: 7", "Final: 8", "Final: **7**", "Final: 8", "Final: 7"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    doc.models.push({ id: "sonnet", provider: "mock", model: "mock", api: { params: { script: ["so… Final: 7", "Final: 8", "Final: **7**", "Final: 8", "Final: 7."] } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const { events } = await run(doc, "?", { mock: false });
     expect(errors(events)).toEqual([]);
     expect(events.filter((e) => e.type === "usage").length).toBe(5);
@@ -277,7 +277,8 @@ describe("runtime", () => {
     };
 
     it("Report: the spokes see only the hub, and agreement ends the exchange", async () => {
-      const { to, out, events } = await eotRun("report", { a: ["Final: 1"], b: ["Final: 2", "Final: 1"], c: ["Final: 3", "Final: 1"] });
+      // "1." and "1" are the same answer
+      const { to, out, events } = await eotRun("report", { a: ["Final: 1"], b: ["Final: 2", "Final: 1."], c: ["Final: 3", "Final: 1"] });
       expect(errors(events)).toEqual([]);
       const b2 = to("b")[1];
       expect(b2).toContain("## Agent A (confidence 1.00)");

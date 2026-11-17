@@ -296,7 +296,7 @@ function selfConsistency(): SystemDoc {
       join: "all",
       fn: {
         lang: "js",
-        code: 'const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? String(t).trim().split("\\n").pop() ?? "").replace(/\\*+/g, "").trim();\nconst norm = (a) => a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim();\nconst counts = {}, shown = {};\nfor (const t of Object.values(input)) { const f = finalOf(t); if (!f) continue; const k = norm(f); counts[k] = (counts[k] ?? 0) + 1; shown[k] ??= f; }\nconst ranked = Object.entries(counts).sort((x, y) => y[1] - x[1]);\nif (!ranked.length) return "No sample gave an answer.";\nreturn "Votes: " + ranked.map(([k, n]) => shown[k] + " ×" + n).join(", ") + "\\nFinal: " + shown[ranked[0][0]];',
+        code: 'const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? String(t).trim().split("\\n").pop() ?? "").replace(/\\*+/g, "").trim();\nconst norm = (a) => a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");\nconst counts = {}, shown = {};\nfor (const t of Object.values(input)) { const f = finalOf(t); if (!f) continue; const k = norm(f); counts[k] = (counts[k] ?? 0) + 1; shown[k] ??= f; }\nconst ranked = Object.entries(counts).sort((x, y) => y[1] - x[1]);\nif (!ranked.length) return "No sample gave an answer.";\nreturn "Votes: " + ranked.map(([k, n]) => shown[k] + " ×" + n).join(", ") + "\\nFinal: " + shown[ranked[0][0]];',
       },
       interface: { inputs: ports, outputs: [port("out", "text")] },
     });
@@ -346,6 +346,9 @@ export function buildSeed(t: TemplateInfo): SystemDoc {
   const doc = { ...t.build(), id: seedId(t.id), updated_at: new Date().toISOString() };
   return { ...doc, seed: { template: t.id, hash: contentHash(doc) } };
 }
+
+/** A seeded system exactly as seeded: nobody has changed it since. */
+export const isUneditedSeed = (d: SystemDoc) => !!d.seed && contentHash(d) === d.seed.hash;
 
 /**
  * Seeded systems nobody has edited follow their template: when the template

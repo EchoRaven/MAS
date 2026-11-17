@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { caseSetId, finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -30,6 +30,15 @@ describe("grading", () => {
     expect(gradeByRule("number", "Summing: 1 + 12 + 36 = 49\n\nThere are **49 ways** to make 50 cents.", "49").pass).toBe(true);
     expect(gradeByRule("number", "There are 54 three-digit numbers whose digits add up to 10.", "54").pass).toBe(true);
     expect(gradeByRule("number", "The final answer is $\\boxed{9368}$.", "9368").pass).toBe(true);
+    // LaTeX the way models write it (found in review)
+    expect(gradeByRule("number", "Final: $\\boxed{\\frac{1}{221}}$", "1/221").pass).toBe(true);
+    expect(gradeByRule("number", "Final: $\\boxed{1{,}098{,}240}$", "1098240").pass).toBe(true);
+    expect(gradeByRule("number", "Final: \u22125", "-5").pass).toBe(true);
+    expect(gradeByRule("answer", "Final: $\\boxed{\\text{B}}$", "B").pass).toBe(true);
+    expect(boxedContent("so \\boxed{2} then \\boxed{\\frac{3}{4}} done")).toBe("\\frac{3}{4}");
+    expect(boxedContent("\\boxed{unclosed")).toBeNull();
+    // the box wins over other numbers: here the fallback would read 3
+    expect(gradeByRule("number", "With 3 cases left, $\\boxed{12}$", "12").pass).toBe(true);
     // a whole sentence in bold: the number the question already has (2, 50) is not the answer
     expect(gradeByRule("number", "**The sum of the decimal digits of $2^{50}$ is 76.**", "76", "What is the sum of the decimal digits of 2^50?").pass).toBe(true);
     expect(gradeByRule("number", "It takes 5 minutes for 100 machines.", "5", "If 5 machines take 5 minutes to make 5 widgets, how long for 100 machines and 100 widgets?").pass).toBe(true);
