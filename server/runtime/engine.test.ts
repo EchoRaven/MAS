@@ -113,6 +113,19 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("a custom loop sees every agent call it made in ctx.history", async () => {
+    const b = new Builder("History", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("boss", 200, 0, { name: "Boss", model: "sonnet", harness: { ...native(), loop: "custom", loop_fn: { lang: "js", code: "await tools.call_agent('Coder', 'write it');\nawait tools.call_agent('Coder', 'again');\nreturn ctx.history.map((h) => h.speaker).join(',');" }, instructions: "" } })
+      .agent("coder", 400, 0, { name: "Coder", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("me", "boss", "message")
+      .edge("boss", "me", "message")
+      .edge("boss", "coder", "call");
+    const { events } = await run(b.doc, "go");
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("Coder,Coder");
+  });
+
   it("an agent that runs out of steps still answers", async () => {
     const b = new Builder("Steps", "");
     // it calls a tool every step and never answers on its own; the forced final answer comes back empty

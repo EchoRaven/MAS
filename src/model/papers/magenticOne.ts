@@ -6,6 +6,7 @@ import type { SystemDoc } from "../types";
 const ORCHESTRATOR_LOOP = `// Outer loop: task ledger (facts, guesses, plan). Inner loop: progress ledger.
 const team = "WebSurfer (reads web pages), FileSurfer (reads local files), Coder (writes Python), ComputerTerminal (runs code it is given). A result that needs computing counts only once ComputerTerminal has run the code and reported its output";
 let ledger = await model.json("Survey the task: verified facts, facts to look up, facts to derive, educated guesses. Then a step-by-step plan for this team: " + team, { task: ctx.task });
+emit("task ledger", JSON.stringify(ledger));
 let stalls = 0;
 const max_rounds = ctx.vars.max_rounds ?? 10;
 for (let round = 1; ; round++) {
@@ -14,7 +15,9 @@ for (let round = 1; ; round++) {
     "Update the progress ledger. Answer as JSON: is_request_satisfied (true only if the history already holds the complete answer), is_in_loop, is_progress_being_made, next_speaker (one of WebSurfer, FileSurfer, Coder, ComputerTerminal), instruction_or_question (everything that speaker needs). Coder cannot run anything: once Coder has written code, the next speaker is ComputerTerminal, with the full code in instruction_or_question.",
     { task: ctx.task, team, ledger, history: ctx.history },
   );
-  if (progress.is_request_satisfied) return model.call("Write the final answer to the task, using only what the team found.", { task: ctx.task, history: ctx.history });
+  // the ledger is the method: show it in the run, round by round
+  emit("progress ledger " + round, JSON.stringify(progress));
+  if (progress.is_request_satisfied === true || progress.is_request_satisfied?.answer === true || /^true$/i.test(String(progress.is_request_satisfied))) return model.call("Write the final answer to the task, using only what the team found.", { task: ctx.task, history: ctx.history });
   stalls = progress.is_progress_being_made && !progress.is_in_loop ? 0 : stalls + 1;
   if (stalls >= 3) {
     // re-plan: update facts and guesses from what was learned, write a new plan

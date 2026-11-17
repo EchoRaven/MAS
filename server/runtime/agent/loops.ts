@@ -155,7 +155,8 @@ export async function customLoop(io: AgentIO, li: LoopInput, extra: Record<strin
     write: async (text: string) => (memTool("write") ? runTool(memTool("write")!.name, { text }) : "no memory attached"),
   };
   const emit = (label: string, detail = "") => io.rc.emit({ type: "transform", at: io.node, label: String(label), detail: String(detail) });
-  const ctxExtra = { task: li.input, history, messages: [...li.history, userText(li.input)], system: li.system, ...extra };
+  // the loop's own names come last: what the caller passes in must never shadow ctx.history (the call log)
+  const ctxExtra = { ...extra, task: li.input, history, messages: [...li.history, userText(li.input)], system: li.system };
   const out = await runFn(fn, { text: li.input, system: li.system }, io.rc, { node: io.node, helpers: { ...ctxExtra, react: (more = "") => react(io, li, more) }, named: { model, tools, memory, emit }, timeoutMs: 30 * 60_000 });
   return typeof out === "string" ? out : JSON.stringify(out);
 }

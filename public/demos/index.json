@@ -101,11 +101,11 @@
   "input": "Using Python, compute the 25th Fibonacci number and the sum of the first 100 prime numbers. Report both numbers.",
   "status": "finished",
   "reason": "All idle",
-  "calls": 12,
-  "tokens": 10690,
-  "usd": 0.0131525,
-  "seconds": 36.5,
-  "recorded_at": "2026-11-17T11:55:16.812Z"
+  "calls": 7,
+  "tokens": 7040,
+  "usd": 0.006183,
+  "seconds": 45.4,
+  "recorded_at": "2026-11-17T12:08:28.422Z"
  },
  {
   "id": "paper-mapcoder",

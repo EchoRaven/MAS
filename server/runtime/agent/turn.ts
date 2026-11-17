@@ -142,7 +142,7 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
         : loop === "plan_execute" ? await planExecute(io, li)
         : loop === "reflexion" ? await reflexion(io, li)
         : loop === "tree_search" ? await treeSearch(io, li)
-        : loop === "custom" ? await customLoop(io, li, { input: inputMsg, history })
+        : loop === "custom" ? await customLoop(io, li, { input: inputMsg, conversation: history })
         : await react(io, li);
     } else {
       const adapter = ADAPTERS[a.harness.runner ?? ""];
