@@ -2,10 +2,12 @@
 // accuracy with its spread over repeats, cost, and which question each got right.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Copy, Download } from "lucide-react";
 import { Api, type EvalSummary } from "@/api/client";
+import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { timeAgo, usd } from "@/lib/format";
+import { downloadText, timeAgo, usd } from "@/lib/format";
+import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, repeatStats } from "@/run/evals";
 import { formatVars } from "@/run/vars";
@@ -24,6 +26,11 @@ export function ComparePage() {
   // evaluations left out by hand; null = the default (older runs of the same system on the same models)
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
+  const flash = (msg: string) => {
+    setCopied(msg);
+    window.setTimeout(() => setCopied(""), 1800);
+  };
 
   useEffect(() => {
     if (!connected) return;
@@ -81,6 +88,8 @@ export function ComparePage() {
     })
     .sort((a, b) => b.acc - a.acc || a.e.usd - b.e.usd);
   const rows = allRows.filter((r) => !off.has(r.e.id));
+  // the ticked evaluations, as the exports describe them
+  const exportRows = rows.map(({ e, rec }) => ({ label: e.system_name, setup: modelsLabel(e), rec }));
   // the questions in set order, with each evaluation's pass count on it
   const questions = rows[0] ? [...new Map(rows[0].rec.cases.map((c, i) => [c.case ?? i, c.input])).entries()] : [];
   const cell = (rec: EvalRecord, input: string) => {
@@ -101,6 +110,26 @@ export function ComparePage() {
           ariaLabel="Question set"
           className="max-w-xl"
         />
+        {rows.length > 0 && (
+          <div className="ml-auto flex gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              title="The table above as Markdown, for a write-up"
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(markdownTable(exportRows))
+                  .then(() => flash("Copied"))
+                  .catch(() => flash("Could not copy"))
+              }
+            >
+              <Copy className="mr-1.5 h-3.5 w-3.5" /> {copied || "Copy as Markdown"}
+            </Button>
+            <Button variant="outline" size="sm" title="Question by question: the share of runs each system got right" onClick={() => downloadText(`comparison-${set}.csv`, csvGrid(exportRows), "text/csv")}>
+              <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
+            </Button>
+          </div>
+        )}
       </div>
 
       <section className="glass-panel rounded-xl p-4" aria-label="Results">

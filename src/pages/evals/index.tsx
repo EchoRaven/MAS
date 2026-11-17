@@ -2,12 +2,12 @@
 // output against its expected answer, and compare runs of the same system.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
-import { Check, FlaskConical, Play, Square, Trash2, X } from "lucide-react";
+import { Check, Download, FlaskConical, Play, Square, Trash2, X } from "lucide-react";
 import { Api } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { timeAgo, usd } from "@/lib/format";
+import { downloadText, timeAgo, usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import { ModelWarnings } from "@/components/shared/ModelWarnings";
@@ -315,6 +315,16 @@ function Evals({ systemId }: { systemId: string }) {
                         Regrade as {GRADERS.find((g) => g.value === grader)?.label}
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      aria-label="Download this evaluation"
+                      title="Every case with its output, grade and run id, as JSON"
+                      onClick={() => downloadText(`${ev.id}.json`, JSON.stringify(ev, null, 2), "application/json")}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
                     <Button
                     variant="ghost"
                     size="icon"
