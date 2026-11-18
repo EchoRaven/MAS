@@ -80,7 +80,7 @@ function build(): SystemDoc {
       interface: { inputs: SEATS.map((s) => port(s, "text", { required: true })), outputs: [port("agreed", "message"), port("revise", "text")] },
     }, "consult")
     .agent("reviser", 0, 0, { name: "Reviser", role: "Revises the report with the experts' advice", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Revise the report to address the advice. Reply with the revised report only, starting with 'REVISED REPORT:'." } }, "consult")
-    .agent("decider", 0, 0, { name: "Decision maker", role: "Answers from the agreed report", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Answer the question from the report. Give the answer first (the option letter and text, if there are options), then one sentence of why." } });
+    .agent("decider", 0, 0, { name: "Decision maker", role: "Answers from the agreed report", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Answer the question from the report: one sentence of why, then a last line 'Answer: X', where X is only the option letter when the question has options, else the answer itself. The last line is the result." } });
   SEATS.forEach((s, i) => {
     b.agent(s, 0, 0, { name: `Expert ${i + 1}`, role: "Analyses from the specialty it is given", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: expertPrompt } });
     b.agent(`r${i + 1}`, 0, 0, { name: `Expert ${i + 1} (review)`, role: "Votes on the report", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: reviewPrompt } }, "consult");

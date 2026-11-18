@@ -1,3 +1,4 @@
+import { finalAnswer } from "@/run/evals";
 import { describe, expect, it } from "vitest";
 import { simulate } from "@/run/simulate";
 import { TEMPLATES } from "../templates";
@@ -46,6 +47,14 @@ describe("paper reproductions", () => {
       expect(loops.length, id).toBeGreaterThan(0);
       for (const g of loops) expect((g.data as { iterate: { until?: string | null } }).iterate.until, `${id} / ${g.id}`).toBeTruthy();
     }
+  });
+
+  it("MedAgents' decision ends with the answer, so graders read the letter and not the reasoning", () => {
+    // it once gave the answer first and a sentence of why last: 0 of 57 MMLU questions graded right
+    const doc = PAPER_TEMPLATES.find((x) => x.id === "paper-medagents")!.build();
+    const decider = doc.nodes.find((n) => n.id === "decider")!.data as { harness: { instructions: string } };
+    expect(decider.harness.instructions).toMatch(/last line 'Answer: X'/);
+    expect(finalAnswer("The report agrees the coronal suture joins frontal and parietal bones.\nAnswer: A")).toBe("A");
   });
 
   it("Voyager's skill library takes only programs the critic verified", () => {
