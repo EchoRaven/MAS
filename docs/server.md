@@ -185,7 +185,7 @@ instead.
 | Provider | Path |
 | --- | --- |
 | `anthropic` | Official SDK, always streamed. Adaptive thinking is on by default for Claude 5 Opus / Sonnet / Fable, unless a temperature is set or `api.params.thinking` turns it off. `web_search` in the tool catalog becomes the provider's web search tool |
-| `openai`, `google`, `openai_compatible`, `local` | Chat completions (`/chat/completions`, with tool calls), `/embeddings`, and `/rerank` (Cohere / Jina / TEI shapes). Provider extras on a tool call (Gemini's `thought_signature`) are sent back with it. Rate limits wait as long as the provider asks (`Retry-After`, Gemini's `retryDelay`); overloads back off; exhausted credit or a daily quota fails at once |
+| `openai`, `google`, `openai_compatible`, `local` | Chat completions (`/chat/completions`, with tool calls; calls without tools are streamed, so a model that thinks for minutes is not cut off by the HTTP client's 300-second wait for headers), `/embeddings`, and `/rerank` (Cohere / Jina / TEI shapes). Provider extras on a tool call (Gemini's `thought_signature`) are sent back with it. Rate limits wait as long as the provider asks (`Retry-After`, Gemini's `retryDelay`); overloads back off; exhausted credit or a daily quota fails at once |
 | `mock` | The built-in test model. Canned text, JSON shaped to the requested schema, and scripted replies via `api.params.script` (strings or `{tool, input}`) |
 
 ## Plugins and envs
