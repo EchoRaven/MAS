@@ -28,7 +28,7 @@ const PLAN_OBSERVER = `You check the plan in a draft. Does every step name one o
 If yes, reply exactly: APPROVED. Otherwise reply with what to change, in at most three sentences.`;
 
 const ACTION_OBSERVER = `You carry out an approved draft. Go through the plan step by step. For each step, call spawn_subagents with one task that starts "You are <the agent's name>, <its expertise>." followed by what the step must produce and the results it needs from earlier steps.
-Check each result before going on: if it is wrong or incomplete, run the step again with your correction. When every step is done, reply with the final answer to the original task, built from the results.`;
+Check each result before going on: if it is wrong or incomplete, run the step again with your correction. When every step is done, reply with the final answer to the original task, built from the results; when the task asks for one value (a number, a choice), end with a last line 'Answer: X' giving only it, after any checks.`;
 
 function build(): SystemDoc {
   const b = new Builder(

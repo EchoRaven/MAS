@@ -29,8 +29,8 @@ function build(): SystemDoc {
       spawn: { template: "expert", max_instances: 4 },
     }, "round")
     .agent("expert", 0, 220, { name: "Expert", role: "Takes the role it is given", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Answer in the role named at the start of your task: a concrete proposal, then one risk of it." } }, "round")
-    .agent("executor", 330, 0, { name: "Executor", role: "Carries out the decision", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Carry out the decision: produce the final deliverable it describes." } }, "round")
-    .agent("evaluator", 660, 0, { name: "Evaluator", role: "Scores the result", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Score the deliverable 0-10 against the task on correctness, completeness and clarity, with one line each. If every score is 8 or more, end with SATISFIED and repeat the deliverable; otherwise give concrete feedback." } }, "round")
+    .agent("executor", 330, 0, { name: "Executor", role: "Carries out the decision", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Carry out the decision: produce the final deliverable it describes. When the task asks for one value (a number, a choice), end with a last line 'Answer: X' giving only it." } }, "round")
+    .agent("evaluator", 660, 0, { name: "Evaluator", role: "Scores the result", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Score the deliverable 0-10 against the task on correctness, completeness and clarity, with one line each. If every score is 8 or more, write SATISFIED; otherwise give concrete feedback. Either way, end by repeating the deliverable exactly as it was given (its last line too): if the rounds run out, it is the result." } }, "round")
     .edge("round", "recruiter", "message")
     .edge("recruiter", "executor", "message", { label: "Decision" })
     .edge("executor", "evaluator", "message")
