@@ -15,6 +15,8 @@ import { Store } from "../store/files";
 import { Secrets } from "../store/secrets";
 import { resetMock } from "./models/mock";
 import { RunManager } from "./runs";
+import { replicaCount } from "./engine";
+import { validate } from "@/model/validate";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mas-test-"));
 const config: Config = { host: "127.0.0.1", port: 0, dataDir: dir, token: "t", allowLocalExec: false, docker: "/nonexistent/docker", parallelism: 4 };
@@ -1174,6 +1176,39 @@ describe("runtime", () => {
     const { events } = await run(b.doc, "add two numbers");
     expect(errors(events)).toEqual([]);
     expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("Problem: add two numbers / plan");
+  });
+
+  it("samples a model component several times and sends the list (replicas), sized per run by a variable", async () => {
+    const b = new Builder("Forest", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("s", "model", 200, 0, { name: "Samples", model: "m_s", system_prompt: "", prompt: "{{input}}", temperature: 0.8, max_tokens: null, replicas: "{{vars.n}}", interface: { inputs: [{ id: "in", type: "text" }], outputs: [{ id: "out", type: "json" }] } })
+      .node("vote", "function", 400, 0, { name: "Vote", join: "any", fn: { lang: "js", code: "const c = {}; for (const a of input) c[a] = (c[a] ?? 0) + 1; return Object.entries(c).sort((x, y) => y[1] - x[1])[0][0] + ' of ' + input.length;" }, interface: { inputs: [{ id: "in", type: "json" }], outputs: [{ id: "out", type: "text" }] } })
+      .node("sink", "human", 600, 0, { name: "Sink", role: "", approves: false })
+      .edge("me", "s", "message")
+      .edge("s", "vote", "message")
+      .edge("vote", "sink", "message");
+    b.doc.models.push({ id: "m_s", provider: "mock", model: "mock", api: { params: { script: ["42", "41", "42", "42", "40"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "what is 6 x 7?", { mock: false, vars: { n: 5 } });
+    expect(errors(events)).toEqual([]);
+    expect(usages(events, "s").length).toBe(5);
+    expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("42 of 5");
+    expect(validate(b.doc).filter((i) => i.severity !== "info").map((i) => i.message)).toEqual([]);
+  });
+
+  it("reads replicas as a plain call at 1, and refuses sizes out of range", () => {
+    expect(replicaCount(undefined, {})).toBeNull();
+    expect(replicaCount(1, {})).toBeNull();
+    expect(replicaCount("{{vars.n}}", { n: 3 })).toBe(3);
+    expect(replicaCount("{{ vars.n }}", { n: "7" })).toBe(7);
+    expect(() => replicaCount(51, {})).toThrow(/from 1 to 50/);
+    expect(() => replicaCount("{{vars.n}}", {})).toThrow(/does not set/);
+    expect(replicaCount("{{vars.n ?? 10}}", {})).toBe(10);
+    expect(replicaCount("{{vars.n ?? 10}}", { n: 3 })).toBe(3);
+    const b = new Builder("Bad", "");
+    b.node("s", "model", 0, 0, { name: "S", model: "sonnet", system_prompt: "", prompt: "", temperature: null, max_tokens: null, replicas: 80, interface: { inputs: [{ id: "in", type: "text" }], outputs: [{ id: "out", type: "text" }] } });
+    const msgs = validate(b.doc).map((i) => i.message).join(" | ");
+    expect(msgs).toMatch(/whole number from 1 to 50/);
+    expect(msgs).toMatch(/make it json/);
   });
 
   it("stops at the round limit", async () => {

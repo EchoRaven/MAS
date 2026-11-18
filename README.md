@@ -57,6 +57,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [Multiagent Debate](https://arxiv.org/abs/2305.14325) | Parallel answers, rounds of revision, a join-all function, a majority vote |
 | [Generative Agents](https://arxiv.org/abs/2304.03442) | A memory stream: recency + importance + relevance retrieval, importance scoring, reflection, daily plans |
 | [Mixture-of-Agents](https://arxiv.org/abs/2406.04692) | Layers of model calls with no agents, joined and aggregated |
+| [Agent Forest](https://arxiv.org/abs/2402.05120) (More Agents Is All You Need) | One model sampled N times in a single component (`replicas`, N from a run variable), then a majority vote |
 | [Magentic-One](https://arxiv.org/abs/2411.04468) | A custom orchestrator loop with a task ledger and a progress ledger, calling specialists |
 | [CAMEL](https://arxiv.org/abs/2303.17760) | Role-play between two agents until a completion token |
 | [AutoGen](https://arxiv.org/abs/2308.08155) | A group chat whose manager picks the next speaker; a user proxy runs the code |

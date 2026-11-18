@@ -49,6 +49,13 @@ export function ModelInspector({ id, m, doc, set, update }: { id: string; m: Mod
       <AreaField label="Prompt" value={m.prompt} onChange={(prompt) => set({ prompt })} rows={3} mono hint="{{input}} is the incoming value; {{input.<field>}} for JSON" />
       <NumberField label="Temperature" value={m.temperature} onChange={(temperature) => set({ temperature })} step={0.1} placeholder="Default" />
       <NumberField label="Max tokens" value={m.max_tokens} onChange={(max_tokens) => set({ max_tokens })} step={256} placeholder="Default" />
+      <TextField
+        label="Replicas"
+        value={m.replicas == null ? "" : String(m.replicas)}
+        onChange={(v) => set({ replicas: v.trim() === "" ? null : /^\d+$/.test(v.trim()) ? Number(v.trim()) : v.trim() })}
+        placeholder="1"
+        hint="Sample the call this many times in parallel and send the list of replies (json): an ensemble in one component. {{vars.n}} sets it per run"
+      />
       {out?.type === "json" && <Note tone="info">The output port is json{out.schema ? ` (${out.schema})` : ""}: the call uses structured output and the reply is parsed before it leaves.</Note>}
     </WithInterface>
   );

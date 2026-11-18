@@ -1,6 +1,7 @@
 // Multi-agent systems from published papers, rebuilt with the framework's components.
 import type { TemplateInfo } from "../builder";
 import { agentcoder } from "./agentcoder";
+import { agentForest } from "./agentForest";
 import { autoagents } from "./autoagents";
 import { agentsroom } from "./agentsroom";
 import { agentverse } from "./agentverse";
@@ -27,4 +28,4 @@ import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest];

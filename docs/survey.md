@@ -3,13 +3,14 @@
 MAS Studio is partly a survey: by rebuilding published multi-agent systems on
 one platform, we find what they share, what can be one interface instead of a
 special case, and where the abstractions are still missing. This page
-collects what 26 rebuilt papers show. The parts themselves are described in
+collects what the rebuilt papers show (27 so far). The parts themselves are described in
 [architecture.md](architecture.md) and [contracts.md](contracts.md), and the
 benchmark results in [benchmarks.md](benchmarks.md).
 
 Every template records how it maps the paper (`notes.mapped`) and where it
 differs (`notes.differs`), in `src/model/papers/`. The counts below come from
-those 26 templates.
+the first 26 templates; Agent Forest, added later, is one model component with
+replicas and a vote.
 
 ## How often each part is used
 
@@ -42,6 +43,7 @@ mostly about **who sees what** and **when it stops**.
 | Test-and-fix loop | group iterate + sandbox `run_tests` + `until: "ALL TESTS PASSED"` | AgentCoder, MapCoder, Reflexion, Voyager, ChatDev |
 | Parallel work, then wait for everyone | edges fanning out + `function` with `join: all` | Debate, MoA, TradingAgents, MedAgents, AgentCoder |
 | Voting and consensus | a `function` over the collected answers (majority, confidence-weighted, 2/3 early stop) | Debate, ReConcile, DyLAN, EoT, MedAgents |
+| Sampling ensembles (N answers from one model) | `replicas` on a model component: N calls, one list | Agent Forest, self-consistency |
 | Group chat with a speaking order | room env, `policy: round_robin \| selector \| mention \| free` | AutoGen, Virtual Lab, MetaGPT, Generative Agents |
 | Publish/subscribe message pool | room with `binding.write.tag` and `binding.read.filter` | MetaGPT |
 | Who sees whom (topology) | a `function` that decides each round what each agent receives | Exchange-of-Thought (4 paradigms in one table), DyLAN |
@@ -85,6 +87,7 @@ Each one became a general interface, not a fix for one paper:
 | AgentCoder, AutoGen | On coding tasks the final message was a verdict ("ALL TESTS PASSED") or a printed value, not the code | **Result contract:** the last message of a run is its deliverable; coding systems end with the code (see "Open questions") |
 | MapCoder, AgentCoder, Reflexion | The sandbox image had no pytest and no network, so tests could never pass; the default test command never found the tests | **`run_tests`:** finds test files, uses pytest when present, else runs every `test_*` function itself, and returns the tests' exit status |
 | All of the above | Each bug looked like the paper's method doing badly until the failures were counted by reason | **Evaluate page:** failures grouped by reason, largest first; one click shows those cases |
+| Agent Forest | The paper's variable is the number of samples N, but on the canvas N was N wired copies (self-consistency was 5 model nodes into a 5-port vote) | **`replicas`** on a model component, from a run variable: one system, swept over N by an evaluation |
 | Generative Agents | The town's talk had no end; it ran into the round limit and returned nothing | **Room termination sees `posts`** (this run's messages in the room): the day ends after 12, and the last message is the result |
 | Voyager | The curriculum declared the goal reached on its first turn, with an empty skill library | **Template rule:** only skills the critic verified count; with none, the curriculum proposes the first task |
 | All 26 templates | Found the two above; structural tests and dry runs had passed | **`record-demos.mts --check`:** every template on real models, a table of which finish with an answer and why not (26 of 26 healthy after these fixes, $0.22) |

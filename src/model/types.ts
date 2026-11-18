@@ -358,6 +358,13 @@ export interface ModelNodeData {
   prompt: string;
   temperature: number | null;
   max_tokens: number | null;
+  /**
+   * Sample the call this many times per input, in parallel, and send the list
+   * of replies (a JSON array) on the output: an ensemble in one component
+   * (self-consistency, Agent Forest). A number, or "{{vars.<name>}}" to set
+   * it per run, so an evaluation can sweep it. Absent or 1: one call, one reply.
+   */
+  replicas?: number | string | null;
   interface: Interface;
 }
 

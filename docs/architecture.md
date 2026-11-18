@@ -3,7 +3,7 @@
 MAS Studio describes any multi-agent system as one document, runs it on one
 engine, and measures it with one evaluation layer. This page is the map. The
 exact rules are in [contracts.md](contracts.md) (what can be built and
-imported) and [server.md](server.md) (what a run does). What 26 papers need
+imported) and [server.md](server.md) (what a run does). What 27 papers need
 from these parts is in [survey.md](survey.md).
 
 ## The layers
@@ -35,12 +35,12 @@ diffed, validated and moved between workspaces.
 ## The vocabulary of a system
 
 Seven kinds of component, three kinds of data edge, and one kind of access
-edge are enough for the 26 papers rebuilt so far.
+edge are enough for the 27 papers rebuilt so far.
 
 | Component | Role in a MAS | Examples from the papers |
 | --- | --- | --- |
 | `agent` | A model in a loop with tools, wrapped in input/output stages | debaters, coder, critic, orchestrator |
-| `model` | One model call, no loop | MoA proposers, CAMEL's task specifier |
+| `model` | One model call, no loop; with `replicas`, N calls and the list of replies | MoA proposers, CAMEL's task specifier, Agent Forest's samples |
 | `function` | Code between components: route, merge, vote, count | majority vote, ReConcile's recalibration, DyLAN's dispatch |
 | `human` | A person: starts runs, approves, answers | user, fund manager approving a trade |
 | `group` | A sub-system; can **iterate** (rounds until a condition) | debate rounds, test-and-fix loops, ChatDev phases |

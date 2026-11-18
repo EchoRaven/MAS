@@ -2,6 +2,7 @@
 // groups, rooms, gates, approvals, spawning, transforms) and emits the events
 // a real runtime would emit. No model is called; message text is
 // placeholder. Deterministic per system id so a replay looks the same.
+import { replicaEstimate } from "@/model/replicas";
 import { runnerById } from "@/model/defaults";
 import { interfaceOf, nodeName } from "@/model/ports";
 import type { AgentData, EnvData, FunctionNodeData, HumanData, ModelNodeData, SysEdge, SysNode, SystemDoc } from "@/model/types";
@@ -269,7 +270,8 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
       const m = d as ModelNodeData;
       rounds++;
       emit({ type: "status", node: node.id, status: "working" });
-      usage(node.id, m.model, 8000, undefined, 0.4);
+      // an ensemble makes one call per sample (the run's variables are not known here: the default, or 1)
+      for (let i = 0, k = replicaEstimate(m.replicas); i < k; i++) usage(node.id, m.model, 8000, undefined, i ? 0 : 0.4);
       const port0 = m.interface.outputs[0];
       if (port0?.type === "json") emit({ type: "transform", at: node.id, label: "structured output", detail: `parsed as ${port0.schema ?? "JSON"}` }, 0.1);
       if (job.via?.kind === "call" && job.from) emit({ type: "message", from: node.id, to: job.from, edge: job.via.id, kind: "reply", text: "Completion" });

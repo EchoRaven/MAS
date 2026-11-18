@@ -1,3 +1,4 @@
+import { parseReplicas } from "./replicas";
 import { runnerById } from "./defaults";
 import { entryPoints, spawnTemplates } from "./entry";
 import { localUrl } from "./net";
@@ -215,6 +216,11 @@ export function validate(doc: SystemDoc): Issue[] {
     if (d.kind === "model") {
       const m = d as ModelNodeData;
       if (!modelIds.has(m.model)) add("error", `${q(n)} uses model ${m.model || "(empty)"}, which is not in the model catalog`, { nodeId: n.id });
+      const rs = parseReplicas(m.replicas);
+      if (rs.kind === "invalid") add("error", `${q(n)}: ${rs.why}`, { nodeId: n.id });
+      if (rs.kind === "var" && rs.fallback === null) add("info", `${q(n)} takes its number of samples from the run variable ${rs.name}; runs that do not set it fail. {{vars.${rs.name} ?? 5}} gives a default`, { nodeId: n.id });
+      const out = m.interface.outputs[0];
+      if (rs.kind !== "one" && out && out.type !== "json" && out.type !== "any") add("warning", `${q(n)} sends a list of replies; its output port ${out.id} is ${out.type}, so make it json (or any) for the component that gathers them`, { nodeId: n.id });
       if (!touching(n.id).length) add("warning", `${q(n)} has no connections`, { nodeId: n.id });
     }
     if (d.kind === "function") {

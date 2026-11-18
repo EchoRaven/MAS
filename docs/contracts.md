@@ -10,7 +10,7 @@ rules below.
 | Kind | What it is | Ports |
 | --- | --- | --- |
 | `agent` | A wrapper: input stages → context → harness loop (model + tools) → output stages | editable |
-| `model` | One model call. No loop, no tools | editable |
+| `model` | One model call. No loop, no tools. With `replicas`, N calls in parallel and the list of replies (an ensemble in one component) | editable |
 | `function` | Code between components: transform, route, merge | editable |
 | `human` | Approves, guides, answers | fixed `in` / `out` (message) |
 | `group` | A sub-system with its own canvas | editable; inside, inputs act as sources and outputs as targets |
@@ -342,6 +342,23 @@ hooks:
 The `memory`, `knowledge`, `workspace` and `board` presets fill in these
 fields for you. Switching a plugin to `custom` keeps its current values and
 makes them all editable.
+
+## Ensembles: `replicas`
+
+A model component can sample its call several times per input:
+
+```yaml
+kind: model
+replicas: 10                 # or "{{vars.n}}", or "{{vars.n ?? 10}}" (a run variable, with a default)
+interface: { outputs: [{ id: out, type: json }] }   # the list of replies
+```
+
+The calls run in parallel (each through the server's rate limit) and the
+output is a JSON array of the replies, for a function to vote on or merge.
+`replicas` is 1–50; 1 or absent is a plain call. Reading it from a run
+variable lets an evaluation sweep the ensemble size (`vars: {n: 5}`) without
+changing the system. The validator warns when the output port is not `json`
+or `any`, and the simulator counts N calls in its estimates.
 
 ## Catalog tools
 

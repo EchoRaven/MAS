@@ -19,6 +19,8 @@ import { textOf, userText } from "./models";
 import { Hub } from "./resources/hub";
 import type { RtTool } from "./resources/types";
 import { asText, clip, coerce, exprValue, syncMsg, type Msg } from "./values";
+import { replicaCount } from "@/model/replicas";
+export { replicaCount };
 
 type Item = { value: unknown; via?: SysEdge };
 
@@ -341,10 +343,22 @@ export class Engine implements TurnServices {
         const outSpec = m.interface.outputs[0];
         const schema = outSpec?.type === "json" ? schemaById(rc.doc, outSpec.schema) : null;
         const system = [m.system_prompt, outSpec?.type === "json" ? `Reply with only a JSON value${schema ? ` matching this JSON Schema:\n${JSON.stringify(schema)}` : "."}` : ""].filter(Boolean).join("\n\n");
-        const { res, usage } = await rc.models.chat(m.model, { system: system || undefined, messages: [userText(prompt)], temperature: m.temperature, max_tokens: m.max_tokens, signal: rc.signal });
-        rc.usage(n.id, usage);
-        reply = textOf(res.content);
-        if (!direct) await this.emitOutputs(n.id, { [m.interface.outputs[0]?.id ?? "out"]: reply });
+        const call = async () => {
+          const { res, usage } = await rc.models.chat(m.model, { system: system || undefined, messages: [userText(prompt)], temperature: m.temperature, max_tokens: m.max_tokens, signal: rc.signal });
+          rc.usage(n.id, usage);
+          return textOf(res.content);
+        };
+        const k = replicaCount(m.replicas, rc.vars);
+        if (k === null) {
+          reply = await call();
+          if (!direct) await this.emitOutputs(n.id, { [m.interface.outputs[0]?.id ?? "out"]: reply });
+          break;
+        }
+        // an ensemble: k samples at once (each one still goes through the server's rate limit), then the list of them
+        const replies = await Promise.all(Array.from({ length: k }, call));
+        rc.emit({ type: "transform", at: n.id, label: `${k} samples`, detail: replies.map((r) => clip(r.split("\n").filter(Boolean).pop() ?? "", 40)).join(" · ") });
+        reply = JSON.stringify(replies);
+        if (!direct) await this.emitOutputs(n.id, { [m.interface.outputs[0]?.id ?? "out"]: replies });
         break;
       }
       case "function": {

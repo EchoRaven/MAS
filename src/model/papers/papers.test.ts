@@ -23,6 +23,10 @@ describe("paper reproductions", () => {
     expect(calls("paper-moa")).toBe(7);
   });
 
+  it("Agent Forest samples its model N times in one component (10 by default), then votes", () => {
+    expect(calls("paper-agent-forest")).toBe(10);
+  });
+
   it("the debate runs three debaters for two rounds", () => {
     expect(calls("paper-debate")).toBe(6);
   });

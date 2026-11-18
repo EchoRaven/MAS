@@ -71,6 +71,7 @@ const ORDER = [
   "paper-mad",
   "paper-reconcile",
   "paper-moa",
+  "paper-agent-forest",
   "paper-chateval",
   "paper-medagents",
   "paper-eot",

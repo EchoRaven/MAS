@@ -49,6 +49,11 @@ const node = (doc: SystemDoc, id: string) => doc.nodes.find((n) => n.id === id)!
 
 const DEMOS: Record<string, DemoConfig> = {
   "paper-debate": { input: "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? End with 'Final: <answer>'." },
+  "paper-agent-forest": {
+    input: "What is 17 × 23 − 4 × 19? Give the number.",
+    vars: { n: 7 },
+    adapt: () => ["Seven samples (n = 7) instead of the default ten."],
+  },
   "paper-moa": { input: "Explain, in one short paragraph, why the sky is blue and why sunsets are red." },
   "paper-camel": {
     input: "Develop a trading bot for the stock market",
