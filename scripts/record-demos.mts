@@ -4,6 +4,13 @@
 // Each template runs on Gemini models through the server; requests for
 // approval are approved and requests for input get a short reply. The run
 // (system, input, events, summary) is written to public/demos/<id>.json.
+//
+// --check runs the same inputs as a health check of the templates instead:
+// nothing is written, every chat model is gemini-3.1-flash-lite (unless
+// MAS_DEMO_MODELS says otherwise), and a table at the end says for each
+// template whether it finished with an answer, and what went wrong if not
+// (errors, requests for a person, running out of rounds). Run it after
+// changing the engine or a template.
 import fs from "node:fs";
 import path from "node:path";
 import { TEMPLATES } from "@/model/templates";
@@ -201,7 +208,13 @@ const DEMOS: Record<string, DemoConfig> = {
   },
 };
 
+const CHECK = process.argv.includes("--check");
+// a check is about structure, not quality: the cheapest model everywhere, so all templates can be checked often
+if (CHECK && !process.env.MAS_DEMO_MODELS) for (const id of Object.keys(GEMINI)) if (GEMINI[id].kind !== "embedding") GEMINI[id] = { ...GEMINI[id], model: "gemini-3.1-flash-lite", price_in: 0.25, price_out: 1.5 };
 for (const [id, model] of Object.entries(OVERRIDE)) if (GEMINI[id]) GEMINI[id] = { ...GEMINI[id], model };
+
+interface CheckRow { id: string; status: string; reason: string; answer: boolean; errors: string[]; asked: number; calls: number; usd: number; seconds: number }
+const checks: CheckRow[] = [];
 
 function onGemini(doc: SystemDoc): Record<string, string> {
   const used: Record<string, string> = {};
@@ -247,6 +260,13 @@ async function record(id: string, cfg: DemoConfig) {
     const errors = g.events.filter((e) => e.type === "log" && e.level === "error").map((e) => (e as { text: string }).text);
     // a called agent that failed (the provider refused) shows up as a tool error, not a run error: that is not a clean demo either
     for (const e of g.events) if (e.type === "tool" && e.error && /^Error: (google|openai|anthropic|openai_compatible|local) \d{3}\b/.test(String((e as { result?: string }).result))) errors.push(`${(e as { tool: string }).tool}: ${String((e as { result?: string }).result).slice(7, 160)}`);
+    const answer = g.events.some((e) => e.type === "output" && String((e as { text?: string }).text ?? "").trim().length > 0);
+    const last = g.events[g.events.length - 1] as { t?: number } | undefined;
+    if (CHECK) {
+      checks.push({ id, status: g.run.status, reason: String(g.run.reason ?? ""), answer, errors, asked: answered.size, calls, usd: g.run.usd, seconds: Math.round(last?.t ?? 0) });
+      console.log(`\n  ${g.run.status} (${g.run.reason}) · ${answer ? "answered" : "NO ANSWER"} · ${calls} calls · $${g.run.usd.toFixed(4)}${errors.length ? `\n  errors: ${errors.join(" | ").slice(0, 300)}` : ""}`);
+      return;
+    }
     // only clean runs replace a recording
     if (!errors.length && g.run.status === "finished") {
       fs.mkdirSync(OUT, { recursive: true });
@@ -268,12 +288,26 @@ function writeIndex() {
   fs.writeFileSync(path.join(OUT, "index.json"), JSON.stringify(index, null, 1));
 }
 
-const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(DEMOS);
+const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const ids = args.length ? args : Object.keys(DEMOS);
 for (const id of ids) {
   try {
     await record(id, DEMOS[id]);
   } catch (e) {
     console.log(`\n  failed: ${(e as Error).message}`);
+    if (CHECK) checks.push({ id, status: "failed", reason: (e as Error).message.slice(0, 80), answer: false, errors: [], asked: 0, calls: 0, usd: 0, seconds: 0 });
   }
-  writeIndex();
+  if (!CHECK) writeIndex();
+}
+if (CHECK) {
+  // a template is healthy when it finishes on its own with an answer, no errors, and without hitting a limit
+  const limited = (c: CheckRow) => /limit|budget|round/i.test(c.reason);
+  const ok = (c: CheckRow) => c.status === "finished" && c.answer && !c.errors.length && !limited(c);
+  console.log("\n\ntemplate                     result  calls     cost   time  notes");
+  for (const c of checks) {
+    const notes = [!c.answer && "no answer", c.errors.length && `${c.errors.length} error(s): ${c.errors[0].slice(0, 60)}`, c.asked && `asked a person ${c.asked}x`, c.status !== "finished" && c.status, limited(c) && c.reason].filter(Boolean).join("; ");
+    console.log(`${c.id.padEnd(28)} ${(ok(c) ? "ok" : "CHECK").padEnd(7)} ${String(c.calls).padStart(5)} ${("$" + c.usd.toFixed(3)).padStart(8)} ${String(c.seconds).padStart(5)}s  ${notes}`);
+  }
+  const bad = checks.filter((c) => !ok(c)).length;
+  console.log(`\n${checks.length - bad} of ${checks.length} healthy; $${checks.reduce((n, c) => n + c.usd, 0).toFixed(3)} in all`);
 }

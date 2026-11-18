@@ -148,7 +148,9 @@ the vocabulary:
 - **Iteration is the most used part and the least visible.** Sixteen papers
   are a group that repeats. Showing rounds, why each one stopped, and what was
   fed back is where a run is hardest to read.
-- **Templates need benchmark tests.** Structural tests check that a template
-  has the paper's parts. Only running a dataset found the bugs above. A small
-  check per template (three cases, a known pass rate) would catch them when a
-  template changes.
+- **Templates need behaviour checks, not only structure checks.** Structural
+  tests check that a template has the paper's parts; only running it on real
+  models found the bugs above. `record-demos.mts --check` now runs every
+  template on real models and reports which ones finish with an answer and
+  why the others do not. A per-template benchmark sample with a known pass
+  rate would go further.

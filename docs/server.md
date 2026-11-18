@@ -213,3 +213,17 @@ instead.
 - the paper call counts (Mixture-of-Agents makes 7 model calls; Multiagent Debate makes 6)
 - every built-in template dry-run to the end without errors
 - a stdio harness listing and calling platform tools over MCP
+
+The test model checks structure, not behaviour on real models. For that,
+check every paper template against real models on its demo input:
+
+```bash
+TSX_TSCONFIG_PATH=tsconfig.server.json npx --no-install tsx scripts/record-demos.mts --check [paper-id…]
+```
+
+It writes nothing, runs every chat model as gemini-3.1-flash-lite, and ends
+with a table: whether each template finished with an answer on its own, and
+otherwise why (errors, a request for a person, a limit reached). The whole
+set costs well under a dollar. To check behaviour on a benchmark, run the
+template on a dataset sample on the Evaluate page and read "Why cases
+failed".
