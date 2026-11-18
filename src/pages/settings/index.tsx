@@ -1,5 +1,6 @@
 import { useServer } from "@/store/server";
 import { KnowledgeSection } from "./Knowledge";
+import { ModelStatusSection } from "./ModelStatus";
 import { SecretsSection } from "./Secrets";
 import { ServerSection } from "./Server";
 
@@ -10,6 +11,7 @@ export function SettingsPage() {
       <div className="mx-auto max-w-4xl space-y-3">
         <ServerSection />
         {connected && <SecretsSection />}
+        {connected && <ModelStatusSection />}
         {connected && <KnowledgeSection />}
       </div>
     </div>
