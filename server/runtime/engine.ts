@@ -582,8 +582,8 @@ export class Engine implements TurnServices {
         break;
       case "selector": {
         const selector = room.node.data.room?.selector;
-        // the selector (a group chat manager) picks among the others
-        const candidates = members.filter((m) => m !== selector);
+        // the selector (a group chat manager) picks among the other agents: a person in the room speaks when @named, not when a model says so
+        const candidates = members.filter((m) => m !== selector && rc.byId.get(m)?.data.kind === "agent");
         const names = candidates.map((m) => `${m}: ${nameOf(rc, m)}${"role" in (rc.byId.get(m)?.data ?? {}) ? ` (${(rc.byId.get(m)!.data as { role: string }).role})` : ""}`).join("\n");
         const sel = selector && rc.byId.get(selector)?.data.kind === "agent" ? (rc.byId.get(selector)!.data as AgentData).model : null;
         const pick = await llmCall(rc, selector ?? roomId, `Conversation:\n${room.transcript(12_000)}\n\nWho should speak next? Reply with one id from:\n${names}`, sel);
@@ -603,8 +603,15 @@ export class Engine implements TurnServices {
     }
     // a person opening the conversation without naming anyone reaches the first agent
     if (!next.length && this.starters.has(from)) {
-      const first = members.find((m) => rc.byId.get(m)?.data.kind === "agent");
+      const first = members.find((m) => rc.byId.get(m)?.data.kind === "agent" && m !== room.node.data.room?.selector);
       if (first) next = [first];
+    }
+    if (!next.length && rc.byId.get(from)?.data.kind === "agent") {
+      // nobody is next (the manager named no one, nobody was @named): the conversation is over, and its last word is the answer, as with TERMINATE
+      rc.emit({ type: "transform", at: roomId, label: "conversation ended", detail: room.policy === "selector" ? "the manager picked no one" : "nobody is next" });
+      this.outputs++;
+      rc.emit({ type: "output", node: from, port: roomId, text: clip(text, 20_000) });
+      return;
     }
     for (const m of next) {
       const via = rc.doc.edges.find((e) => e.kind === "access" && e.source === m && e.target === roomId);

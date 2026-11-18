@@ -413,6 +413,23 @@ describe("runtime", () => {
       expect(posts(events)).toEqual(["me", "rewriter", "writer"]);
     });
 
+    it("selector: never hands the turn to a person, and a manager that picks no one ends the talk with its last message", async () => {
+      const doc = roomDoc(
+        "selector",
+        [
+          ["mod", "Moderator", ["Me", "nobody, it is done"]],
+          ["writer", "Writer", ["The answer is 155."]],
+        ],
+        { selector: "mod" },
+      );
+      const { events } = await run(doc, "write something", { mock: false });
+      // the manager names the person first: not a candidate, so the person's opening post goes to the first agent that is not the manager
+      expect(events.some((e) => e.type === "human_request")).toBe(false);
+      const out = events.find((e) => e.type === "output") as { text: string } | undefined;
+      expect(out?.text).toBe("The answer is 155.");
+      expect(events.some((e) => e.type === "transform" && (e as { detail?: string }).detail === "the manager picked no one")).toBe(true);
+    });
+
     it("free: every other agent hears each post, and a termination expression ends it", async () => {
       const doc = roomDoc("free", [["a", "Ann", ["from a", "a again"]], ["b", "Bo", ["DONE from b"]]], { termination: ['text.includes("DONE")'] });
       const { events } = await run(doc, "go", { mock: false });
