@@ -1,6 +1,7 @@
 // OpenAI's chat-completions wire format: OpenAI itself, Gemini's
 // OpenAI-compatible endpoint, vLLM / Ollama / any compatible server.
 // Also embeddings (/embeddings) and rerank (/rerank, Cohere/Jina/TEI shapes).
+import { localUrl } from "@/model/net";
 import { providerParams } from "./types";
 import type { ModelSpec } from "@/model/types";
 import type { ChatMessage, ChatResponse, Part, Provider } from "./types";
@@ -61,6 +62,19 @@ function sleep(ms: number, signal?: AbortSignal) {
   });
 }
 
+/** Network failures (not HTTP errors) are retried this many times, 2 s, 4 s, 8 s apart. */
+export const NET_RETRIES = 3;
+const netBackoff = (attempt: number) => 2000 * 2 ** attempt;
+
+/** A failure of the connection itself, which sending the same request again can fix. */
+export function networkError(e: unknown): boolean {
+  const code = String((e as { cause?: { code?: string } })?.cause?.code ?? "");
+  // no such host, nothing listening, no network at all: asking again in seconds will not change that
+  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ENETUNREACH|EHOSTUNREACH/.test(code)) return false;
+  const m = `${(e as Error)?.message ?? ""} ${code}`;
+  return /terminated|fetch failed|socket hang up|ECONNRESET|ETIMEDOUT|EPIPE|UND_ERR|other side closed/i.test(m);
+}
+
 async function post(m: ModelSpec, key: string | undefined, path: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
   return (await send(m, key, path, body, signal)).json();
 }
@@ -70,12 +84,21 @@ async function send(m: ModelSpec, key: string | undefined, path: string, body: u
   const url = `${base(m)}${path}`;
   if (!url.startsWith("http")) throw new Error(`Model ${m.id} has no base URL`);
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...(key ? { authorization: `Bearer ${key}` } : {}), ...(m.api.headers ?? {}) },
-      body: JSON.stringify(body),
-      signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(key ? { authorization: `Bearer ${key}` } : {}), ...(m.api.headers ?? {}) },
+        body: JSON.stringify(body),
+        signal,
+      });
+    } catch (e) {
+      // the connection broke before an answer (reset, timed out): try again, a few times, unless the run was stopped.
+      // Not for a model server on this machine: a closed socket there means it is not running
+      if (signal?.aborted || attempt >= NET_RETRIES || !networkError(e) || localUrl(url)) throw e;
+      await sleep(netBackoff(attempt), signal);
+      continue;
+    }
     if (res.ok) return res;
     const text = await res.text();
     const wait = retryWait(res, text, attempt);
@@ -169,8 +192,18 @@ export const openaiProvider: Provider = {
     };
     // the reply is streamed: the headers come at once, so a model that thinks for minutes before answering is
     // not cut off by the HTTP client's 300-second wait for headers (Gemma on hard questions was)
-    const res = await send(model, key, "/chat/completions", { ...body, stream: true, stream_options: { include_usage: true } }, req.signal);
-    const data = (await readStream(res)) as {
+    // a stream the provider cuts off halfway ("terminated") is asked for again: a chat request can be repeated
+    let streamed: unknown;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        streamed = await readStream(await send(model, key, "/chat/completions", { ...body, stream: true, stream_options: { include_usage: true } }, req.signal));
+        break;
+      } catch (e) {
+        if (req.signal?.aborted || attempt >= NET_RETRIES || !networkError(e) || localUrl(base(model))) throw e;
+        await sleep(netBackoff(attempt), req.signal);
+      }
+    }
+    const data = streamed as {
       choices: { message: { content?: string | null; tool_calls?: ({ id: string; type?: string; function: { name: string; arguments: string } } & Record<string, unknown>)[] }; finish_reason: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number };
     };

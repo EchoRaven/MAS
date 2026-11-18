@@ -146,3 +146,41 @@ describe("inline reasoning", () => {
     }
   });
 });
+
+describe("network failures", () => {
+  it("asks again when the provider cuts a stream off halfway, and gives up after a few tries", async () => {
+    const { openaiProvider, networkError } = await import("./openai");
+    expect(networkError(new TypeError("terminated"))).toBe(true);
+    expect(networkError(Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } }))).toBe(true);
+    expect(networkError(new Error("google 400: bad request"))).toBe(false);
+    // a host that does not exist, or nothing listening, is not asked again
+    expect(networkError(Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } }))).toBe(false);
+    expect(networkError(Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } }))).toBe(false);
+    let calls = 0;
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      calls++;
+      const enc = new TextEncoder();
+      // the first answer is cut off after one chunk; the second is whole
+      const cut = calls === 1;
+      return new Response(
+        new ReadableStream({
+          start(c) {
+            c.enqueue(enc.encode('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'));
+            if (cut) c.error(new TypeError("terminated"));
+            else (c.enqueue(enc.encode('data: {"choices":[{"delta":{"content":" whole answer"},"finish_reason":"stop"}]}\n\n')), c.close());
+          },
+        }),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    }) as unknown as typeof fetch;
+    try {
+      const model = { id: "g", provider: "google" as const, model: "gemma", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
+      const r = await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+      expect(calls).toBe(2);
+      expect(r.content).toEqual([{ type: "text", text: "partial whole answer" }]);
+    } finally {
+      globalThis.fetch = real;
+    }
+  }, 20_000);
+});
