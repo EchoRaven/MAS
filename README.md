@@ -44,6 +44,30 @@ The interfaces everything plugs into are documented in
 [docs/architecture.md](docs/architecture.md), and what the rebuilt papers have
 in common, and which interfaces they needed, is [docs/survey.md](docs/survey.md).
 
+## What the reproductions found so far
+
+Measured on this platform, every system on the same model and questions
+(details in [docs/benchmarks.md](docs/benchmarks.md), patterns in
+[docs/survey.md](docs/survey.md)):
+
+- **Voting is the bar to beat.** Self-consistency and Agent Forest (one model,
+  several samples, a vote) match Multiagent Debate and ReConcile within a
+  question in almost every setting, at a fraction of the cost.
+- **The gain depends on how often the model slips.** On Hard computation, debate
+  and voting add 2–4 questions in 30 on gemini-3.1-flash-lite, and 8–9 on the
+  weaker gemma-4-26b (17 → 25–26). On GSM8K and MATH-500 the strong model is
+  near the ceiling and nothing shows.
+- **Tools matter more than talk.** Questions no discussion fixed were solved
+  every time once one agent could run code, and a single agent with the same
+  sandbox scored as well as AutoGen's five-agent chat.
+- **One round of discussion is all that pays**, and three samples are about as
+  good as twenty.
+- **Most "failures" of a rebuilt system were the rebuild**: wrong outputs, a
+  missing input, a test step that could never pass, a grader that misread
+  right answers. Each became a platform interface or check (declared results,
+  failure reasons, a template health check, graders validated on model
+  outputs).
+
 ## Papers rebuilt on the canvas
 
 Each one is a template with its citation, how it maps onto the components,
