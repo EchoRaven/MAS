@@ -60,4 +60,33 @@ describe("rate limit", () => {
       setRateWindow(60_000);
     }
   });
+
+  it("gives a model with its own limit its own window, which still counts against the provider's", async () => {
+    setRateWindow(200);
+    const before = process.env.MAS_RPM;
+    process.env.MAS_RPM = "3";
+    try {
+      const slow = { id: "gemma", provider: "google" as const, model: "gemma", api: { key_env: "K", params: { rpm: 1 } }, price_in: 0, price_out: 0, modalities: ["text"] };
+      const fast = { id: "lite", provider: "google" as const, model: "lite", api: { key_env: "K" }, price_in: 0, price_out: 0, modalities: ["text"] };
+      const t0 = Date.now();
+      await rateLimit(slow, "key-d");
+      // gemma's own window is full, but other models of the provider are not held by it
+      await rateLimit(fast, "key-d");
+      expect(Date.now() - t0).toBeLessThan(50);
+      await rateLimit(slow, "key-d"); // the second gemma call waits for its own window
+      expect(Date.now() - t0).toBeGreaterThanOrEqual(180);
+      // the provider's shared limit (3) counts the gemma call too: one gemma and two others fill it
+      const t1 = Date.now();
+      await rateLimit(slow, "key-e");
+      await rateLimit(fast, "key-e");
+      await rateLimit(fast, "key-e");
+      expect(Date.now() - t1).toBeLessThan(50);
+      await rateLimit(fast, "key-e");
+      expect(Date.now() - t1).toBeGreaterThanOrEqual(180);
+    } finally {
+      if (before === undefined) delete process.env.MAS_RPM;
+      else process.env.MAS_RPM = before;
+      setRateWindow(60_000);
+    }
+  });
 });

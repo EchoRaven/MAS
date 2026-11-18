@@ -87,7 +87,8 @@ export function resetHealth() {
  * and evaluation together). A burst of hundreds of calls a minute from one
  * server looks like a stolen key to a provider, and can get the account
  * suspended: calls over the limit wait for room instead. MAS_RPM sets the
- * limit (default 60); a model's api.params.rpm overrides it. The test model,
+ * limit (default 60). A model's api.params.rpm adds a limit of its own (for
+ * models whose quota is lower than the provider's), on top of the shared one. The test model,
  * and model servers on this machine or a private network, are not limited
  * unless they set their own.
  */
@@ -102,20 +103,31 @@ export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: 
   if (m.provider === "mock") return;
   const own = m.api.params?.rpm;
   if (own == null && m.api.base_url && localUrl(m.api.base_url)) return;
-  const rpm = Number(own ?? process.env.MAS_RPM ?? 60);
-  if (!(rpm > 0)) return;
-  const k = `${m.provider}|${m.api.base_url ?? ""}|${fingerprint(key)}`;
+  const shared = Number(process.env.MAS_RPM ?? 60);
+  const provider = `${m.provider}|${m.api.base_url ?? ""}|${fingerprint(key)}`;
+  // a model with its own limit (free tiers such as Gemma's are far below the provider's) gets its own window,
+  // and its calls still count against the provider's: both have to have room
+  const buckets: [string, number][] = [];
+  if (own != null && Number(own) > 0) buckets.push([`${provider}|${m.model}`, Number(own)]);
+  if (shared > 0 && !(m.api.base_url && localUrl(m.api.base_url))) buckets.push([provider, shared]);
+  if (!buckets.length) return;
   for (;;) {
     const now = Date.now();
-    const recent = (windows.get(k) ?? []).filter((t) => now - t < windowMs);
-    if (recent.length < rpm) {
-      recent.push(now);
+    let wait = 0;
+    let limit = 0;
+    for (const [k, rpm] of buckets) {
+      const recent = (windows.get(k) ?? []).filter((t) => now - t < windowMs);
       windows.set(k, recent);
+      if (recent.length >= rpm) {
+        const w = windowMs - (now - recent[0]) + 5;
+        if (w > wait) (wait = w), (limit = rpm);
+      }
+    }
+    if (!wait) {
+      for (const [k] of buckets) windows.get(k)!.push(now);
       return;
     }
-    windows.set(k, recent);
-    const wait = windowMs - (now - recent[0]) + 5;
-    onWait?.(wait, rpm);
+    onWait?.(wait, limit);
     await new Promise<void>((resolve, reject) => {
       const t = setTimeout(resolve, wait);
       signal?.addEventListener("abort", () => (clearTimeout(t), reject(signal.reason)), { once: true });
