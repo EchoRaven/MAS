@@ -185,8 +185,24 @@ Nine of the first run's ten misses were not the model's fault:
 The grader also took AutoGen's trailing "TERMINATE" for the final answer. It
 skips it now.
 
-This is the clearest result so far. On these questions, how the agents talk
-matters less than whether one of them can run code.
+### Is it the team or the tool?
+
+A single agent with the same Python sandbox (the "Single agent with code"
+baseline) on the same 30 questions and model, two runs:
+
+| System | Runs | Cost (60 runs) | Time |
+| --- | --- | --- | --- |
+| Single agent with code | **30, 30** | $0.10 | 5 min |
+| AutoGen (planner, coder, critic, executor, manager) | 30, 30 | $0.12 | 8.5 min |
+
+On these questions the tool does all the work. AutoGen's four agents and
+manager add nothing over one agent that can run code, and they take longer. A
+fair test of AutoGen's conversation needs tasks a single agent with a tool
+cannot finish: longer programs, several files, fixing failing tests.
+
+This is the clearest result so far. How the agents talk matters less than
+whether one of them can run code, and the right baseline for a system with
+tools is a single agent with the same tools.
 
 ## GSM8K: single agent vs Multiagent Debate (Du et al.)
 
