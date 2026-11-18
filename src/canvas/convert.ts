@@ -1,4 +1,5 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import { usersOf } from "@/model/envTools";
 import { ENTRY_REASON, entryPoints } from "@/model/entry";
 import { edgeScope, interfaceOf } from "@/model/ports";
 import type { EdgeKind, NodeData, PortSpec, SysEdge, SystemDoc } from "@/model/types";
@@ -23,6 +24,21 @@ export interface FlowNodeData extends Record<string, unknown> {
   wired?: string[];
   /** this component is where a run starts; the text says why */
   entry?: string;
+  /** envs and plugins: who is connected, with what access */
+  users?: { id: string; name: string; access: "read" | "read_write" }[];
+  /** envs, during or after a run: what it is doing (the last command, its exit code, the files it holds) */
+  live?: EnvLive;
+}
+
+export interface EnvLive {
+  /** starting (the box is coming up), ready, or stopped */
+  state: "starting" | "ready" | "stopped";
+  /** how it is isolated, as the server reported it */
+  isolation?: string;
+  last?: { tool: string; args: string; exit?: number };
+  calls: number;
+  /** egress connections refused so far */
+  refused: number;
 }
 export interface FlowEdgeData extends Record<string, unknown> {
   sys: SysEdge;
@@ -63,7 +79,7 @@ const inScope = (scope: string | undefined) => (n: { parent?: string }) => n.par
 export function toFlowNodes(
   doc: SystemDoc,
   scope: string | undefined,
-  opts: { selected?: Set<string>; status?: Record<string, RunStatus>; issues?: Record<string, number>; readOnly?: boolean } = {},
+  opts: { selected?: Set<string>; status?: Record<string, RunStatus>; issues?: Record<string, number>; readOnly?: boolean; live?: Record<string, EnvLive> } = {},
 ): FlowNode[] {
   const nodes = doc.nodes.filter(inScope(scope));
   const wiredOf = (id: string) => doc.edges.flatMap((e) => [e.source === id ? e.source_port : null, e.target === id ? e.target_port : null]).filter(Boolean) as string[];
@@ -83,6 +99,8 @@ export function toFlowNodes(
       members: n.data.kind === "group" ? doc.nodes.filter((m) => m.parent === n.id).length : undefined,
       wired: wiredOf(n.id),
       entry: entries.get(n.id),
+      users: n.data.kind === "env" || n.data.kind === "plugin" ? usersOf(doc, n.id) : undefined,
+      live: opts.live?.[n.id],
     },
   }));
   const group = scope ? doc.nodes.find((n) => n.id === scope) : undefined;

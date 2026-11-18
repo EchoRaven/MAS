@@ -17,7 +17,7 @@ import {
 } from "@xyflow/react";
 import type { NodeKind, SystemDoc } from "@/model/types";
 import { resolveTheme, useUiStore } from "@/store/ui";
-import { BOUNDARY_IN, BOUNDARY_OUT, toFlowEdges, toFlowNodes, type FlowEdge, type FlowNode, type RunStatus } from "./convert";
+import { BOUNDARY_IN, BOUNDARY_OUT, toFlowEdges, toFlowNodes, type EnvLive, type FlowEdge, type FlowNode, type RunStatus } from "./convert";
 import { EDGE_TYPES } from "./edges";
 import { NODE_TYPES } from "./nodes";
 import { EdgeEditContext } from "./context";
@@ -41,6 +41,7 @@ export function FlowView({
   update,
   readOnly = false,
   status,
+  live,
   activeEdges,
   blockedEdges,
   issueCounts,
@@ -54,6 +55,8 @@ export function FlowView({
   update?: (fn: (d: SystemDoc) => SystemDoc) => void;
   readOnly?: boolean;
   status?: Record<string, RunStatus>;
+  /** envs during a run: what each is doing */
+  live?: Record<string, EnvLive>;
   activeEdges?: Set<string>;
   blockedEdges?: Set<string>;
   issueCounts?: { nodes: Record<string, number>; edges: Record<string, number> };
@@ -70,10 +73,10 @@ export function FlowView({
   const [edges, setEdges] = useState<FlowEdge[]>(() => toFlowEdges(doc, scope));
 
   useEffect(() => {
-    setNodes(toFlowNodes(doc, scope, { selected: selected.nodes, status, issues: issueCounts?.nodes, readOnly }));
+    setNodes(toFlowNodes(doc, scope, { selected: selected.nodes, status, issues: issueCounts?.nodes, readOnly, live }));
     // selection is tracked separately; rebuilding on it would fight React Flow
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, scope, status, issueCounts, readOnly]);
+  }, [doc, scope, status, issueCounts, readOnly, live]);
   useEffect(() => {
     setEdges(toFlowEdges(doc, scope, { selected: selected.edges, active: activeEdges, blocked: blockedEdges, issues: issueCounts?.edges }));
     // eslint-disable-next-line react-hooks/exhaustive-deps

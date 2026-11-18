@@ -62,6 +62,7 @@ What agents reach is limited:
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/health` | Liveness (no token) |
+| `GET /api/systems/:id/envs/:env/contents` | What is inside an env, read-only: a sandbox's `/work` files for a run (`?run=`, latest by default) or one agent's (`?agent=`, per-agent sandboxes), one file's text (`?path=`, first 100 KB), a database's tables with row counts and a table's first 50 rows (`?table=`), an imported env's services and tools |
 | `GET/PUT/DELETE /api/systems[/:id]` | Systems (the browser syncs automatically) |
 | `GET /api/systems/:id/versions` · `GET …/versions/:version` · `POST …/versions/:version/restore` | Earlier versions of a system. One is kept when a save changes the system, at most one every 5 minutes, the newest 50. A restore keeps the current version first |
 | `POST /api/validate` | Issues and conformance failures of a document |

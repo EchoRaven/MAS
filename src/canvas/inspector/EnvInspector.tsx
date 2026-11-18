@@ -4,6 +4,7 @@ import { defaultDbQuery } from "@/model/pipelines";
 import type { EnvData, SystemDoc } from "@/model/types";
 import { opts, Section, SelectField, TextField } from "../fields";
 import { DbQueryEditor } from "./DbQueryEditor";
+import { EnvContents } from "./EnvContents";
 import { Body, IssueList, Note } from "./shared";
 
 const SOURCE: Record<string, string> = { dtap: "DT (DecodingTrust)", envgen: "env-gen", compose: "docker compose", "mas-env": "mas-env manifest" };
@@ -56,6 +57,9 @@ export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc:
         </>
       )}
       {e.env_kind === "database" && <DbQueryEditor value={e.db ?? defaultDbQuery()} onChange={(db) => set({ db })} doc={doc} />}
+      <Section title="Contents" defaultOpen>
+        <EnvContents systemId={doc.id} envId={id} />
+      </Section>
       {m && (
         <Section title="Imported contract">
           <Note tone="info">

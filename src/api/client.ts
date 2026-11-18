@@ -112,6 +112,9 @@ export const Api = {
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
+  /** What is inside an env: a sandbox's files (by run, by agent), one file's text, a database's tables and rows. */
+  envContents: (systemId: string, envId: string, q: { run?: string; agent?: string; path?: string; table?: string } = {}) =>
+    api<EnvContents>("GET", `/systems/${encodeURIComponent(systemId)}/envs/${encodeURIComponent(envId)}/contents${Object.keys(q).length ? `?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][])}` : ""}`),
   stopEval: (id: string) => api("POST", `/evals/${id}/stop`),
   deleteEval: (id: string) => api("DELETE", `/evals/${id}`),
   secrets: () => api<{ secrets: { name: string; source: "store" | "environment" | null; referenced: boolean }[] }>("GET", "/secrets"),
@@ -145,3 +148,9 @@ export async function followRun(id: string, onEvent: (e: RunEvent) => void, sign
     }
   }
 }
+
+export type EnvContents =
+  | { kind: "files"; runs: string[]; run: string | null; agents: string[]; agent: string | null; lifecycle: string; share: string; files?: { path: string; size: number }[]; file?: { path: string; size: number; binary: boolean; text: string; truncated: boolean } }
+  | { kind: "database"; tables: { name: string; rows: number; columns: string[] }[]; table?: string; sample?: Record<string, unknown>[]; note?: string }
+  | { kind: "imported"; manifest: { name: string; services: { name: string; image?: string; port?: number | null }[]; health: string; tools: string[]; http: unknown[] } }
+  | { kind: "room" | "none" };
