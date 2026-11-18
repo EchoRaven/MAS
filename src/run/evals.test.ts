@@ -74,6 +74,21 @@ describe("cases from text", () => {
     expect(parseCases("Is 1,000 > 999? | yes").cases).toEqual([{ input: "Is 1,000 > 999?", expected: "yes" }]);
   });
 
+  it("reads GSM8K and MMLU-style records as they come", () => {
+    const gsm = JSON.stringify({ question: "Natalia sold clips to 48 friends in April, and half as many in May. How many in all?", answer: "In May she sold 48/2 = <<48/2=24>>24.\nIn all 48+24 = <<48+24=72>>72.\n#### 72" });
+    const big = JSON.stringify({ question: "q", answer: "steps\n#### 1,250" });
+    const mmlu = JSON.stringify({ question: "What is the capital of France?", subject: "geography", choices: ["Berlin", "Madrid", "Paris", "Rome"], answer: 2 });
+    const lettered = JSON.stringify({ question: "Pick one", choices: ["x", "y"], answer: "B" });
+    const { cases, skipped } = parseCases([gsm, big, mmlu, lettered].join("\n"));
+    expect(skipped).toBe(0);
+    expect(cases[0]).toEqual({ input: "Natalia sold clips to 48 friends in April, and half as many in May. How many in all?", expected: "72" });
+    expect(cases[1].expected).toBe("1250");
+    expect(cases[2]).toEqual({ input: "What is the capital of France?\n\nA) Berlin\nB) Madrid\nC) Paris\nD) Rome\n\nAnswer with the letter of the correct option.", expected: "C" });
+    expect(cases[3].expected).toBe("B");
+    // and the letter grader accepts the usual ways of answering
+    expect(gradeByRule("answer", "The answer is C) Paris.\nAnswer: C", "C").pass).toBe(true);
+  });
+
   it("the sample sets parse completely", () => {
     for (const s of SAMPLE_SETS) expect(parseCases(s.text).skipped, s.name).toBe(0);
   });

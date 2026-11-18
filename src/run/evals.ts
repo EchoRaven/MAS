@@ -204,6 +204,30 @@ export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expe
   return { pass, answer, why: pass ? "the final answer matches" : `"${answer}" is not "${expected}"` };
 }
 
+/**
+ * One case from a benchmark record, in the shapes the common sets come in:
+ * - plain: {input | question | prompt, expected | answer | target}
+ * - GSM8K: {question, answer: "…worked solution… #### 18"}, where the answer is what follows ####
+ * - MMLU-style multiple choice: {question, choices: [...], answer: 2 | "C"}, asked with lettered options, graded by letter
+ */
+export function caseFromRecord(o: Record<string, unknown>): EvalCase | null {
+  const question = o.input ?? o.question ?? o.prompt ?? o.problem;
+  let answer = o.expected ?? o.answer ?? o.target ?? o.label;
+  if (question == null || answer == null) return null;
+  const choices = Array.isArray(o.choices) ? o.choices : Array.isArray(o.options) ? o.options : null;
+  if (choices && choices.length >= 2 && choices.length <= 10) {
+    const letters = "ABCDEFGHIJ";
+    const idx = typeof answer === "number" ? answer : /^\d+$/.test(String(answer)) ? Number(answer) : letters.indexOf(String(answer).trim().toUpperCase());
+    if (idx < 0 || idx >= choices.length) return null;
+    const lines = choices.map((ch, i) => `${letters[i]}) ${String(ch)}`);
+    return { input: `${String(question)}\n\n${lines.join("\n")}\n\nAnswer with the letter of the correct option.`, expected: letters[idx] };
+  }
+  const text = String(answer);
+  const gsm = /####\s*(.+?)\s*$/s.exec(text);
+  if (gsm) answer = gsm[1].replace(/,/g, "");
+  return { input: String(question), expected: String(answer) };
+}
+
 const INPUT_COLS = ["input", "question", "prompt", "problem"];
 const EXPECTED_COLS = ["expected", "answer", "target", "solution", "label"];
 
@@ -268,11 +292,9 @@ export function parseCases(text: string): { cases: EvalCase[]; skipped: number }
     if (!line || line.startsWith("#")) continue;
     if (line.startsWith("{")) {
       try {
-        const o = JSON.parse(line) as Record<string, unknown>;
-        const input = o.input ?? o.question ?? o.prompt;
-        const expected = o.expected ?? o.answer ?? o.target;
-        if (input != null && expected != null) {
-          cases.push({ input: String(input), expected: String(expected) });
+        const c = caseFromRecord(JSON.parse(line) as Record<string, unknown>);
+        if (c) {
+          cases.push(c);
           continue;
         }
       } catch {
