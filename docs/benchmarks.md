@@ -136,6 +136,8 @@ each, through the built-in dataset (2026-11-18):
 | Multiagent debate (Du et al.) | 21, 21 | 21.0 | $0.50 |
 | ReConcile (Chen et al.) | 22, 22 | 22.0 | $0.51 |
 | MAD (Liang et al.; angel, devil, judge) | 14, 14 | 14.0 | $0.23 |
+| AgentVerse (recruit experts, execute, evaluate) | 20 | 20.0 | $0.29 |
+| AutoAgents (generated team, observers, execution loop) | 13 | 13.0 | $0.13 |
 
 - **MAD loses 5 to the single agent, in both runs.** Its debaters are an
   "angel" and a "devil" who must disagree, and a judge decides. On the long
@@ -145,6 +147,15 @@ each, through the built-in dataset (2026-11-18):
   counter-intuitive questions, where forced disagreement breaks a first wrong
   idea; on exact computation it adds errors. (MAD was run later than the
   others in this table, on the same set.)
+- **AgentVerse matches the single agent; AutoAgents falls 6 below it.**
+  Both first scored lower for the rebuild's reasons: AgentVerse's result was
+  its evaluator's feedback whenever the evaluator stayed unsatisfied, and
+  AutoAgents ended with a digital-root check after its answer, which graders
+  read instead (AgentVerse 10 → 20 after the fix; AutoAgents's misses moved
+  but stayed at 13). What remains is real: AgentVerse's evaluator scores
+  wrong products 10/10, and AutoAgents's "quality assurance" agent confirms
+  them, so their review steps add calls without catching errors. A reviewer
+  that recomputes by hand is no check on arithmetic; one that runs code is.
 - **Here, more calls help: about +3 questions in 30.** Every multi-call system
   beats the single agent in both runs. The single agent also moves the most
   between runs (20, then 18), and voting or discussion removes that noise.
