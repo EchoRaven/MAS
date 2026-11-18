@@ -126,6 +126,13 @@ describe("evaluations", () => {
     expect(dc.cases.every((x) => x.status === "pending" && !x.run_id)).toBe(true);
   });
 
+  it("gives each run the evaluation's time limit instead of the system's, and refuses one out of range", async () => {
+    const rec = evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], time_limit_min: 30 });
+    expect(rec.time_limit_min).toBe(30);
+    expect((await finish(rec.id)).passed).toBe(1);
+    expect(() => evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], time_limit_min: 500 })).toThrow(/1 to 120/);
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

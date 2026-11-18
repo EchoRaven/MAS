@@ -44,6 +44,8 @@ export interface EvalRecord {
   mock: boolean;
   /** every chat model of the system was served by this one */
   on_model?: string;
+  /** each run's wall-clock limit, in minutes, instead of the system's own (slow models need longer) */
+  time_limit_min?: number;
   /** run variables every case started with */
   vars?: Record<string, unknown>;
   /** the dataset the cases came from, its version, and the sample drawn from it */

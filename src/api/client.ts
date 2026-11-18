@@ -90,9 +90,9 @@ export const Api = {
   dataset: (id: string) => api<Dataset>("GET", `/datasets/${encodeURIComponent(id)}`),
   createDataset: (body: { name: string; description?: string; text: string; format?: string; grader?: Grader; source?: Dataset["source"]; sample?: { n?: number; seed?: number } }) => api<DatasetSummary & { skipped: number }>("POST", "/datasets", body),
   deleteDataset: (id: string) => api("DELETE", `/datasets/${encodeURIComponent(id)}`),
-  startEval: (body: { doc: SystemDoc; cases?: EvalCase[]; dataset_id?: string; sample?: { n?: number; seed?: number }; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean }) => api<EvalRecord>("POST", "/evals", body),
+  startEval: (body: { doc: SystemDoc; cases?: EvalCase[]; dataset_id?: string; sample?: { n?: number; seed?: number }; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean }) => api<EvalRecord>("POST", "/evals", body),
   /** several systems on the same questions, run one after another */
-  startEvalBatch: (body: { docs: SystemDoc[]; cases?: EvalCase[]; dataset_id?: string; sample?: { n?: number; seed?: number }; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean }) => api<{ evals: EvalRecord[] }>("POST", "/evals/batch", body),
+  startEvalBatch: (body: { docs: SystemDoc[]; cases?: EvalCase[]; dataset_id?: string; sample?: { n?: number; seed?: number }; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean }) => api<{ evals: EvalRecord[] }>("POST", "/evals/batch", body),
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),

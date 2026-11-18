@@ -29,6 +29,8 @@ export interface EvalOptions {
   repeats?: number;
   /** serve every chat model of the system with this one (a catalog or default model id) */
   on_model?: string;
+  /** each run's wall-clock limit in minutes, instead of the system's (a slower model needs longer: 1–120) */
+  time_limit_min?: number;
   /** serve chosen models with others, after on_model: { sonnet: "gemini", gpt: "gemini_lite" } */
   model_map?: Record<string, string>;
 }
@@ -53,6 +55,9 @@ export class EvalManager {
   /** With `queued`, it waits for the queued evaluations before it (a batch of systems on the same questions runs one by one). */
   start(original: SystemDoc, opts: EvalOptions, queued = false): EvalRecord {
     let doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
+    const minutes = Number(opts.time_limit_min);
+    if (opts.time_limit_min != null && !(minutes >= 1 && minutes <= 120)) throw new Error("time_limit_min must be from 1 to 120 minutes");
+    if (opts.time_limit_min != null) doc = { ...doc, budget: { ...doc.budget, wallclock_min: minutes } };
     if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
     const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
@@ -67,6 +72,7 @@ export class EvalManager {
       ...(opts.dataset ? { dataset: opts.dataset } : {}),
       ...(opts.vars && Object.keys(opts.vars).length ? { vars: opts.vars } : {}),
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
+      ...(opts.time_limit_min != null ? { time_limit_min: Number(opts.time_limit_min) } : {}),
       ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),
       status: queued ? "queued" : "running",
       started_at: new Date().toISOString(),

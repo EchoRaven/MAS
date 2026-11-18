@@ -74,6 +74,8 @@ function Evals({ systemId }: { systemId: string }) {
   const [grader, setGrader] = useState<Grader>("number");
   const [concurrency, setConcurrency] = useState("2");
   const [repeats, setRepeats] = useState("1");
+  // each run's time limit, instead of the system's: "" keeps the system's own
+  const [timeLimit, setTimeLimit] = useState("");
   const [dry, setDry] = useState(false);
   const [varsText, setVarsText] = useState("");
   const wanted = useMemo(() => readVars(doc), [doc]);
@@ -172,7 +174,7 @@ function Evals({ systemId }: { systemId: string }) {
     setError("");
     try {
       const source = chosen ? { dataset_id: chosen.id, ...(sampleSize && sampleSize < chosen.total ? { sample: { n: sampleSize, seed: Number(seed) || 1 } } : {}) } : { cases: parsed.cases };
-      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force };
+      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force };
       const rec = alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
       await refresh();
       setSelected(rec.id);
@@ -319,7 +321,7 @@ function Evals({ systemId }: { systemId: string }) {
             {caseCount * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
             {!chosen && parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
-          <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-2">
+          <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-2">
             <label className="flex flex-col gap-1 text-xs text-muted-foreground">
               Grader
               <Select value={grader} onValueChange={(v) => setGrader(v as Grader)} items={GRADERS.map((g) => ({ value: g.value, label: g.label }))} ariaLabel="Grader" />
@@ -331,6 +333,10 @@ function Evals({ systemId }: { systemId: string }) {
             <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Run every question this many times: scores move between runs, and the spread says how much">
               Repeats
               <Select value={repeats} onValueChange={setRepeats} items={["1", "2", "3", "5"].map((v) => ({ value: v, label: v }))} ariaLabel="Repeats" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Each run's time limit, instead of the system's own. A slower model needs longer: a run cut off by its limit has no answer">
+              Minutes
+              <Select value={timeLimit || "own"} onValueChange={(v) => setTimeLimit(v === "own" ? "" : v)} items={[{ value: "own", label: `system (${doc.budget.wallclock_min ?? "none"})` }, ...["5", "10", "20", "30", "60"].map((v) => ({ value: v, label: v }))]} ariaLabel="Minutes per run" />
             </label>
           </div>
           <p className="text-[11px] leading-snug text-muted-foreground">{GRADERS.find((g) => g.value === grader)?.hint}</p>
