@@ -28,6 +28,7 @@ const GRADERS: { value: Grader; label: string; hint: string }[] = [
   { value: "number", label: "Number", hint: "The last number in the final answer equals the expected one (fractions and percentages too)" },
   { value: "answer", label: "Final answer", hint: "The final answer (after Answer: / Final:, else the last line) equals the expected one, ignoring case and punctuation; an option letter matches 'B. …'" },
   { value: "contains", label: "Contains", hint: "The expected answer appears anywhere in the output" },
+  { value: "math", label: "Math (LaTeX)", hint: "The last \\boxed{} (or the final answer) equals the expected one after the MATH benchmark's normalisation: \\frac, \\left, degrees, \\text{} and spacing do not matter, and equal numbers match" },
   { value: "llm", label: "LLM judge", hint: "A model reads the output and decides whether it gives the expected answer" },
   { value: "code", label: "Code: run the tests", hint: "The code in the answer is run with the problem's tests in a throwaway Docker container (no network, 512 MB, 10 s); it passes when the tests do. For HumanEval-style problems" },
 ];

@@ -9,7 +9,7 @@ import { HttpError, type Store } from "../store/files";
 import { findDataset } from "./datasets";
 import { checkDoc } from "./systems";
 
-const GRADERS: Grader[] = ["answer", "contains", "number", "llm", "code"];
+const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean };

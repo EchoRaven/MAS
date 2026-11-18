@@ -58,6 +58,24 @@ describe("grading", () => {
   });
 });
 
+describe("math answers", () => {
+  const g = (out: string, exp: string) => gradeByRule("math", out, exp).pass;
+  it("compares answers after the MATH benchmark's normalisation", () => {
+    expect(g("so the answer is $\\boxed{\\dfrac{14}{3}}$.", "\\frac{14}{3}")).toBe(true);
+    expect(g("\\boxed{\\left( 3, \\frac{\\pi}{2} \\right)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(true);
+    expect(g("\\boxed{90^\\circ}", "90^\\circ")).toBe(true);
+    expect(g("\\boxed{90}", "90^\\circ")).toBe(true);
+    expect(g("\\boxed{\\text{Evelyn}}", "\\text{Evelyn}")).toBe(true);
+    expect(g("\\boxed{x = 5}", "5")).toBe(true);
+    expect(g("\\boxed{\\frac12}", "\\frac{1}{2}")).toBe(true);
+    expect(g("\\boxed{0.5}", "\\frac{1}{2}")).toBe(true);
+    expect(g("Final: 1,000", "1000")).toBe(true);
+    expect(g("\\boxed{p-q}", "p - q")).toBe(true);
+    expect(g("\\boxed{\\frac{14}{5}}", "\\frac{14}{3}")).toBe(false);
+    expect(g("\\boxed{(3, \\pi)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(false);
+  });
+});
+
 describe("failure reasons", () => {
   it("groups failures by their kind, not their details, largest first", () => {
     const cases = [

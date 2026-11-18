@@ -13,7 +13,7 @@ export interface EvalCase {
  * - number: the last number in the final answer equals it (fractions and percentages too)
  * - llm: a model judges whether the output gives the expected answer
  */
-export type Grader = "answer" | "contains" | "number" | "llm" | "code";
+export type Grader = "answer" | "contains" | "number" | "math" | "llm" | "code";
 
 export interface EvalCaseResult {
   /** false when the run's answer is not the kind the system declares (system.result): a bug in the system, whatever the grade */
@@ -199,6 +199,35 @@ export function answerNumber(raw: string, question = ""): number | null {
   return all.find((v) => !given.has(v)) ?? all[0] ?? null;
 }
 
+/**
+ * A math answer in a canonical form, after the MATH benchmark's own
+ * normalisation (Hendrycks et al., is_equiv / strip_string): spacing,
+ * \left \right, \dfrac, degrees, dollars, \text{}, a leading "x =", and
+ * fractions written \frac12. Two answers are equal when these forms are, or
+ * when both are numbers that are equal.
+ */
+export function mathForm(raw: string): string {
+  let s = raw.trim();
+  s = s.replace(/\\!|\\,|\\;|\\:|\\ /g, "").replace(/\s+/g, "");
+  s = s.replace(/\\left|\\right/g, "").replace(/\\[dt]frac/g, "\\frac");
+  s = s.replace(/\^\{?\\circ\}?/g, "").replace(/\\circ/g, "").replace(/\\?\$/g, "").replace(/\\%|%/g, "");
+  s = s.replace(/\\(?:text|textbf|mathrm|mbox)\{([^{}]*)\}/g, "$1");
+  // \frac12 -> \frac{1}{2}, \frac1{2} -> \frac{1}{2}, \sqrt2 -> \sqrt{2}
+  s = s.replace(/\\frac(\d)(\d)/g, "\\frac{$1}{$2}").replace(/\\frac(\d)\{/g, "\\frac{$1}{").replace(/\\frac\{([^{}]*)\}(\d)/g, "\\frac{$1}{$2}").replace(/\\sqrt(\w)/g, "\\sqrt{$1}");
+  // "x=5" or "k = 3": the value (only for a single short variable, not an equation)
+  const assign = /^[a-zA-Z]\w?=(.+)$/.exec(s);
+  if (assign && !assign[1].includes("=")) s = assign[1];
+  s = s.replace(/\.$/, "").replace(/^0\./, ".").replace(/(\d)\.0+(?!\d)/g, "$1");
+  if (s === ".5") s = "\\frac{1}{2}";
+  return s;
+}
+
+function mathValue(s: string): number | null {
+  const t = plain(s).replace(/[{}\s]/g, "");
+  if (!/^-?[\d.,/]+$/.test(t)) return null;
+  return parseNumber(t);
+}
+
 export const normalize = (s: string) =>
   plain(s)
     .toLowerCase()
@@ -227,6 +256,15 @@ export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: str
   if (grader === "contains") {
     const pass = normalize(output).includes(normalize(expected));
     return { pass, answer, why: pass ? "the output contains the expected answer" : "the expected answer is not in the output" };
+  }
+  if (grader === "math") {
+    // the last \boxed{} is the answer, as MATH asks; else the final answer line
+    const got = boxedContent(output) ?? boxedContent(answer) ?? answer.replace(/^(final answer|answer|final)\s*[:：]\s*/i, "");
+    const want = boxedContent(expected) ?? expected;
+    const [a, e] = [mathForm(got), mathForm(want)];
+    const [na, ne] = [mathValue(got), mathValue(want)];
+    const pass = a === e || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
+    return { pass, answer: got.trim(), why: pass ? `${got.trim()} = ${want}` : `${got.trim().slice(0, 80)} ≠ ${want}` };
   }
   if (grader === "number") {
     const got = answerNumber(answer, question) ?? parseNumber(output);

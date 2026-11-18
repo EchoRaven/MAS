@@ -58,5 +58,5 @@ export function checkResult(spec: ResultSpec, output: string): { ok: boolean; wh
 
 /** The result type a grader expects, if it expects one. */
 export function resultTypeFor(grader: Grader): ResultType | null {
-  return grader === "number" ? "number" : grader === "code" ? "code" : null;
+  return grader === "number" ? "number" : grader === "code" ? "code" : null; // math answers are expressions: no single type
 }
