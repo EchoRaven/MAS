@@ -96,7 +96,10 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   multiple choice, HumanEval records) or through a small JavaScript adapter.
 - **Evaluations** run every case as an ordinary run, which can be opened and
   replayed. Several systems can be queued on the same questions; they run one
-  after another, so a comparison never multiplies the request rate.
+  after another, so a comparison never multiplies the request rate. An
+  evaluation can put every model of a system on another one (`on_model`,
+  `model_map`), set run variables (`vars`: ensemble size, debate rounds), and
+  give each run a longer time limit (`time_limit_min`) for a slower model.
 - **Graders** are rules (`answer`, `number`, `contains`), an LLM judge, or
   `code`, which runs the answer with the problem's tests in a throwaway
   container.
@@ -114,4 +117,9 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
 - Secrets are stored apart from documents and scrubbed from run events. A
   document only names the environment variable that holds a key.
 - Model requests are capped per provider and key (`MAS_RPM`, 60 a minute by
-  default) across the whole server.
+  default) across the whole server. A model can add a lower limit of its own
+  (`api.params.rpm`, kept out of the request), for quotas such as free-tier
+  Gemma's.
+- Chat replies are streamed from the provider and put back together (text,
+  tool calls, usage), so a model that thinks for minutes is not cut off by the
+  HTTP client's wait for headers.
