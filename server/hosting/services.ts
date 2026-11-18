@@ -259,13 +259,18 @@ export class HostedServices {
     return s;
   }
 
-  delete(id: string) {
+  /** Remove the service: its containers (and a compose project's volumes and network), images, and every version. */
+  async delete(id: string) {
     const s = this.must(id);
-    if (s.versions.find((x) => x.n === s.current)?.image?.startsWith("compose:")) void this.compose(s, ["down", "-v", "--rmi", "local"], {}, 300_000);
-    else void this.stop(id);
-    for (const v of s.versions) if (v.image && !v.image.startsWith("compose:")) void exec(this.docker, ["rmi", "-f", v.image]);
+    // everything that needs the project's files runs before they are removed
+    if (s.versions.find((x) => x.n === s.current)?.image?.startsWith("compose:")) {
+      await this.compose(s, ["down", "-v", "--rmi", "local"], {}, 300_000);
+      await exec(this.docker, ["network", "rm", this.projectNet(id)], { timeout: 30_000 });
+    } else await this.stop(id);
+    for (const v of s.versions) if (v.image && !v.image.startsWith("compose:")) await exec(this.docker, ["rmi", "-f", v.image], { timeout: 60_000 });
     fs.rmSync(this.dir(id), { recursive: true, force: true });
   }
+
 
   // ---- build -----------------------------------------------------------------------------
   /** Build the current version into an image. The build may use the network (to install dependencies). */
@@ -318,18 +323,18 @@ export class HostedServices {
 
   /** Rewrite the project's compose file (see compose.ts), then build its images. */
   private async buildCompose(s: HostedService, v: ServiceVersion, src: string, files: string[]): Promise<{ ok: boolean; log: string; image?: string }> {
-    if ((s.manifest.egress ?? []).length) return { ok: false, log: "A compose project cannot have egress hosts yet: it runs with no network. Remove egress, or host the part that needs the network as its own service" };
     if (!s.manifest.expose.service) return { ok: false, log: "Say which compose service is reached: expose.service (and its port)" };
     const file = COMPOSE_FILES.find((f) => files.includes(f))!;
     const raw = parseYaml(fs.readFileSync(path.join(src, file), "utf8"));
-    const check = sanitizeCompose(raw, { memory: s.manifest.memory });
+    const check = sanitizeCompose(raw, { memory: s.manifest.memory, egress: (s.manifest.egress ?? []).length > 0, network: this.projectNet(s.id) });
     if (!check.ok) return { ok: false, log: `This compose project cannot be hosted as it is:\n- ${check.refused.join("\n- ")}` };
     if (!check.services.includes(s.manifest.expose.service)) return { ok: false, log: `expose.service ${s.manifest.expose.service} is not one of its services: ${check.services.join(", ")}` };
     // the project's internal network gets a subnet of its own from 10.213.0.0/16: Docker's default pools run out
-    // on a busy host, and a shared network would let two projects' services of the same name collide
-    const subnet = await this.freeSubnet();
+    // on a busy host, and a shared network would let two projects' services of the same name collide. It is made
+    // outside compose, so the egress proxy can listen on its gateway before anything starts.
+    const subnet = this.subnetOf(s.id) ?? (await this.freeSubnet());
     if (!subnet) return { ok: false, log: "No free subnet in 10.213.0.0/16 for this project's network" };
-    (check.doc as { networks: Record<string, unknown> }).networks = { mas: { internal: true, ipam: { config: [{ subnet }] } } };
+    fs.writeFileSync(path.join(this.dir(s.id), "subnet"), subnet);
     fs.writeFileSync(this.composeFile(s.id, v.n), JSON.stringify(check.doc, null, 1));
     const r = await this.compose(s, ["build"], {}, 1_800_000);
     const log = [`Rewritten for hosting:${check.changed.length ? "\n- " + check.changed.join("\n- ") : " nothing to change"}`, r.out.slice(-5000)].join("\n\n");
@@ -339,18 +344,32 @@ export class HostedServices {
     return { ok: r.code === 0, log, ...(r.code === 0 ? { image: v.image } : {}) };
   }
 
+  private projectNet(id: string) {
+    return `${this.project(id)}-net`;
+  }
+  private subnetOf(id: string): string | null {
+    const f = path.join(this.dir(id), "subnet");
+    return fs.existsSync(f) ? fs.readFileSync(f, "utf8").trim() : null;
+  }
+
+  /** Create the project's internal network (if it is not there) and return its gateway. */
+  private async projectNetwork(s: HostedService): Promise<string> {
+    const subnet = this.subnetOf(s.id);
+    if (!subnet) throw new Error(`${s.name} has no network yet: build it first`);
+    const name = this.projectNet(s.id);
+    if ((await exec(this.docker, ["network", "inspect", name], { timeout: 20_000 })).code !== 0) {
+      const r = await exec(this.docker, ["network", "create", "--internal", "--subnet", subnet, name], { timeout: 30_000 });
+      if (r.code !== 0) throw new Error(`Could not create ${name}: ${r.out.slice(-300)}`);
+    }
+    return subnet.replace(/\.0\/24$/, ".1");
+  }
+
   /** A /24 in 10.213.0.0/16 that no Docker network uses yet. */
   private async freeSubnet(): Promise<string | null> {
     const ids = (await exec(this.docker, ["network", "ls", "-q"], { timeout: 20_000 })).out.split("\n").filter(Boolean);
     const used = ids.length ? (await exec(this.docker, ["network", "inspect", "-f", "{{range .IPAM.Config}}{{.Subnet}} {{end}}", ...ids], { timeout: 30_000 })).out : "";
     // so are the subnets other hosted projects were given, running or not
-    const mine = this.list().flatMap((x) => {
-      try {
-        return [JSON.stringify(JSON.parse(fs.readFileSync(this.composeFile(x.id, x.current), "utf8")).networks)];
-      } catch {
-        return [];
-      }
-    }).join(" ");
+    const mine = this.list().map((x) => this.subnetOf(x.id) ?? "").join(" ");
     for (let n = 0; n < 256; n++) {
       const subnet = `10.213.${n}.0/24`;
       if (!used.includes(`10.213.${n}.`) && !mine.includes(subnet)) return subnet;
@@ -479,8 +498,17 @@ export class HostedServices {
     if (now.running && now.address) return now;
     if (this.isCompose(s)) {
       this.image(s);
-      // secrets fill ${NAME} in the compose file through the environment of docker compose, never written down
-      const up = await this.compose(s, ["up", "-d"], this.envFor(s));
+      // secrets fill ${NAME} in the compose file through the environment of docker compose, never written down;
+      // so does the proxy URL with this project's credentials, when it declares egress hosts
+      const gateway = await this.projectNetwork(s);
+      const env = this.envFor(s);
+      const hosts = s.manifest.egress ?? [];
+      if (hosts.length) {
+        const at = await this.egress.listen(gateway);
+        const { user, token } = this.egress.grant(s.id, hosts);
+        env.MAS_EGRESS_PROXY = `http://${user}:${token}@${at.host}:${at.port}`;
+      }
+      const up = await this.compose(s, ["up", "-d"], env);
       if (up.code !== 0) throw new Error(`Could not start ${s.name}: ${up.out.slice(-400)}`);
       this.touch(id);
       for (let i = 0; i < 90; i++) {

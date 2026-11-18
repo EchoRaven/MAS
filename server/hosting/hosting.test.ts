@@ -71,7 +71,7 @@ describe("hosted services", () => {
     expect(v2.current).toBe(2);
     expect(v2.manifest.egress).toEqual(["api.github.com"]);
     expect(hosted.list().map((x) => x.id)).toContain(s.id);
-    hosted.delete(s.id);
+    await hosted.delete(s.id);
     expect(hosted.get(s.id)).toBeNull();
   });
 
@@ -197,5 +197,19 @@ describe("compose projects", () => {
         "service c: security_opt loosens confinement",
       ]),
     );
+  });
+});
+
+describe("compose egress", () => {
+  it("gives every service the proxy by interpolation, never the URL itself, on the project's own network", async () => {
+    const { sanitizeCompose } = await import("./compose");
+    const r = sanitizeCompose({ services: { a: { image: "x", environment: ["MODE=prod", "HTTPS_PROXY=http://evil"] }, b: { image: "x", environment: { MODE: "dev" } } } }, { egress: true, network: "mas-svc-x-net" });
+    const doc = r.doc as { services: Record<string, { environment: unknown }>; networks: unknown };
+    expect(doc.networks).toEqual({ mas: { external: true, name: "mas-svc-x-net" } });
+    expect(doc.services.a.environment).toEqual(expect.arrayContaining(["MODE=prod", "HTTPS_PROXY=${MAS_EGRESS_PROXY}"]));
+    // a proxy the project set itself does not survive
+    expect(doc.services.a.environment).not.toContain("HTTPS_PROXY=http://evil");
+    expect(doc.services.b.environment).toMatchObject({ MODE: "dev", HTTPS_PROXY: "${MAS_EGRESS_PROXY}" });
+    expect(JSON.stringify(doc)).not.toMatch(/http:\/\/[^$]/);
   });
 });

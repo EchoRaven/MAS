@@ -30,7 +30,14 @@ function insideProject(src: string): boolean {
   return !norm.startsWith("..");
 }
 
-export function sanitizeCompose(raw: unknown, opts: { memory?: string } = {}): ComposeCheck {
+/**
+ * opts.egress: the project declares egress hosts; every service then gets HTTP(S)_PROXY as
+ * ${MAS_EGRESS_PROXY}, filled in from the environment of docker compose (the URL carries the
+ * project's proxy credentials, so it is never written into the file).
+ * opts.network: the project's network, created outside compose (external), so the proxy can listen on
+ * its gateway before any service starts.
+ */
+export function sanitizeCompose(raw: unknown, opts: { memory?: string; egress?: boolean; network?: string } = {}): ComposeCheck {
   const refused: string[] = [];
   const changed: string[] = [];
   if (!raw || typeof raw !== "object" || !("services" in raw)) return { ok: false, refused: ["the compose file has no services"], changed, services: [] };
@@ -63,6 +70,12 @@ export function sanitizeCompose(raw: unknown, opts: { memory?: string } = {}): C
       }
     }
     s.networks = ["mas"];
+    if (opts.egress) {
+      const proxy = { HTTP_PROXY: "${MAS_EGRESS_PROXY}", HTTPS_PROXY: "${MAS_EGRESS_PROXY}", http_proxy: "${MAS_EGRESS_PROXY}", https_proxy: "${MAS_EGRESS_PROXY}", NO_PROXY: "", no_proxy: "" };
+      const env = s.environment;
+      if (Array.isArray(env)) s.environment = [...env.filter((e) => !/^(https?_proxy|no_proxy)=/i.test(String(e))), ...Object.entries(proxy).map(([k, v]) => `${k}=${v}`)];
+      else s.environment = { ...((env as Record<string, unknown>) ?? {}), ...proxy };
+    }
     s.security_opt = [...((Array.isArray(s0?.security_opt) ? s0.security_opt : []) as string[]).filter((o) => !/unconfined|disable/i.test(String(o))), "no-new-privileges:true"];
     s.mem_limit = (s0?.mem_limit as string | undefined) ?? opts.memory ?? "512m";
     s.pids_limit = 256;
@@ -70,7 +83,7 @@ export function sanitizeCompose(raw: unknown, opts: { memory?: string } = {}): C
   }
   if (!Object.keys(services).length) refused.push("the compose file has no services");
   if (src.networks) changed.push("its own networks replaced by one internal network");
-  const doc: Record<string, unknown> = { services, networks: { mas: { internal: true } } };
+  const doc: Record<string, unknown> = { services, networks: { mas: opts.network ? { external: true, name: opts.network } : { internal: true } } };
   // named volumes stay: they live in Docker, inside this project
   if (src.volumes && typeof src.volumes === "object") {
     const vols: Record<string, unknown> = {};

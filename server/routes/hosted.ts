@@ -55,7 +55,7 @@ export function hostedRoutes(r: Router, hosted: HostedServices) {
   });
   r.on("POST", "/api/hosted/:id/stop", async (req) => (await hosted.stop(req.params.id), { stopped: true }));
   r.on("GET", "/api/hosted/:id/logs", async (req) => ({ logs: await hosted.logs(req.params.id) }));
-  r.on("DELETE", "/api/hosted/:id", (req) => (hosted.delete(req.params.id), { ok: true }));
+  r.on("DELETE", "/api/hosted/:id", async (req) => (await hosted.delete(req.params.id), { ok: true }));
   // test any endpoint, hosted or remote: { endpoint, kind: mcp | http }
   r.on("POST", "/api/connections/test", async (req) => {
     const b = (await req.body()) as { endpoint?: Endpoint; kind?: "mcp" | "http" };

@@ -79,9 +79,14 @@ and the build log says what changed:
 | Removed | `ports` (nothing is published), `container_name`, `restart`, the project's own networks, `extra_hosts`, `dns` |
 | Added | one internal network for the whole project, with a subnet of its own from `10.213.0.0/16` (its services reach each other by name, this server reaches the entry service, nothing reaches out); `no-new-privileges`; a memory limit; 256 processes |
 
-Stop keeps the project's volumes (its data); delete removes them and its
-images. A compose project cannot declare egress hosts yet: it runs with no
-network. `examples/hosted/two-services-compose` is a small one: an api that
+Stop keeps the project's volumes (its data); delete removes them, its images
+and its network. A compose project's network is created by the platform
+(internal, its own subnet), so it can declare egress hosts like any service:
+every service gets `HTTP(S)_PROXY` as `${MAS_EGRESS_PROXY}`, filled in from
+the environment of `docker compose` (the URL with the project's credentials is
+never written into the file), and the proxy listens on the project's gateway.
+Checked (2026-11-18): a compose service declaring `example.com` got 200 there,
+403 for `api.github.com`, and no route without the proxy. `examples/hosted/two-services-compose` is a small one: an api that
 asks a backend service by name. Checked end to end (2026-11-18): rewritten
 (ports, container_name and restart removed), built, started on its own
 subnet; the api reached the backend by name; no published port, no route
@@ -133,7 +138,6 @@ port and no route to the internet; an agent used both (`add_note`,
 
 ## Next
 
-- **Egress for compose projects**, through the same proxy.
 - **Moving the remaining host-run paths onto hosting**: env `start`
   commands (with Compose, above), leaving `MAS_ALLOW_LOCAL_EXEC` as a
   developer escape hatch. (MCP servers, plugin backends, tools and agent

@@ -31,8 +31,9 @@ export function allowed(hosts: string[], host: string, port: number): boolean {
 
 export class EgressProxy {
   private grants = new Map<string, Grant>();
-  private server?: http.Server;
-  private listening?: Promise<{ host: string; port: number }>;
+  private servers: http.Server[] = [];
+  /** one listener per address: the shared internal network's gateway, and each compose project's */
+  private listening = new Map<string, Promise<{ host: string; port: number }>>();
   /** what was refused, for the service's logs */
   readonly refused: { service: string; target: string; why: string; at: string }[] = [];
 
@@ -66,7 +67,9 @@ export class EgressProxy {
 
   /** Start listening (once) on the given address: the internal network's gateway. */
   listen(host: string, port = 0): Promise<{ host: string; port: number }> {
-    this.listening ??= new Promise((resolve, reject) => {
+    const known = this.listening.get(host);
+    if (known) return known;
+    const started = new Promise<{ host: string; port: number }>((resolve, reject) => {
       const server = http.createServer(async (req, res) => {
         // plain HTTP through the proxy: the request line has the full URL
         const g = this.who(req);
@@ -125,14 +128,18 @@ export class EgressProxy {
       });
       server.on("error", reject);
       server.listen(port, host, () => {
-        this.server = server;
+        this.servers.push(server);
         resolve({ host, port: (server.address() as net.AddressInfo).port });
       });
     });
-    return this.listening;
+    this.listening.set(host, started);
+    started.catch(() => this.listening.delete(host));
+    return started;
   }
 
   close() {
-    this.server?.close();
+    for (const s of this.servers) s.close();
+    this.servers = [];
+    this.listening.clear();
   }
 }
