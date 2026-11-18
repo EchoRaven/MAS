@@ -24,6 +24,12 @@ describe("grading", () => {
     expect(gradeByRule("number", "Answer: 0.33", "1/3").pass).toBe(false);
     expect(gradeByRule("number", "Answer: 1/3", "0.3333333333333").pass).toBe(true);
     expect(gradeByRule("number", "Answer: 2 m/s", "1.5").why).toBe("2 ≠ 1.5");
+    // a percentage answers an expected value written as the percent (GSM8K "What percent…? #### 40") or as a fraction
+    expect(gradeByRule("number", "Final: 40%", "40").pass).toBe(true);
+    expect(gradeByRule("number", "Final: 40%", "0.4").pass).toBe(true);
+    expect(gradeByRule("number", "Final: 40%", "40%").pass).toBe(true);
+    expect(gradeByRule("number", "Final: 40%", "4").pass).toBe(false);
+    expect(gradeByRule("number", "Final: 40", "0.4").pass).toBe(false);
     expect(gradeByRule("answer", "Answer: **Paris.**", "paris").pass).toBe(true);
     // real outputs that a last-number rule got wrong
     expect(gradeByRule("number", "…\n**Final Answer:**\nThere are **3,600** ways for 8 people to sit.", "3600").pass).toBe(true);

@@ -195,8 +195,11 @@ export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: str
     const want = parseNumber(expected);
     if (want === null) return { pass: false, answer, why: `the expected answer "${expected}" is not a number` };
     if (got === null) return { pass: false, answer, why: "no number in the answer" };
-    const pass = Math.abs(got - want) <= 1e-6 * Math.max(1, Math.abs(want));
-    return { pass, answer, why: pass ? `${got} = ${want}` : `${got} ≠ ${want}` };
+    const close = (x: number) => Math.abs(x - want) <= 1e-6 * Math.max(1, Math.abs(want));
+    // "33%" answers "what percent…?" whose expected answer is written 33 (GSM8K), as well as 0.33
+    const asPercent = !expected.includes("%") && /\d\s*%/.test(answer) && close(got * 100);
+    const pass = close(got) || asPercent;
+    return { pass, answer, why: pass ? (asPercent ? `${answer.match(/-?[\d.,]+\s*%/)?.[0] ?? got * 100 + "%"} = ${want}` : `${got} = ${want}`) : `${got} ≠ ${want}` };
   }
   const a = normalize(answer.replace(/\*+/g, ""));
   const e = normalize(expected);
