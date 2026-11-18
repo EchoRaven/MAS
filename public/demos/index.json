@@ -12,6 +12,18 @@
   "recorded_at": "2026-11-17T10:59:13.492Z"
  },
  {
+  "id": "paper-agents-room",
+  "name": "Agents' Room",
+  "input": "A short story (about 600 words) about a lighthouse keeper who finds a message in a bottle.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 58,
+  "tokens": 76856,
+  "usd": 0.053277999999999985,
+  "seconds": 229.9,
+  "recorded_at": "2026-11-18T01:14:32.996Z"
+ },
+ {
   "id": "paper-agentverse",
   "name": "AgentVerse",
   "input": "Our two-person startup has three months of runway and a half-finished product. What should we do?",
@@ -22,6 +34,18 @@
   "usd": 0.0213567,
   "seconds": 45.8,
   "recorded_at": "2026-11-17T10:56:49.146Z"
+ },
+ {
+  "id": "paper-autoagents",
+  "name": "AutoAgents",
+  "input": "Write a short, accurate explainer (about 300 words) on how vaccines train the immune system, for high-school students.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 10,
+  "tokens": 19409,
+  "usd": 0.020994500000000003,
+  "seconds": 73.8,
+  "recorded_at": "2026-11-18T01:08:17.671Z"
  },
  {
   "id": "paper-autogen",
@@ -106,6 +130,18 @@
   "usd": 0.008114699999999999,
   "seconds": 38.6,
   "recorded_at": "2026-11-17T12:23:19.880Z"
+ },
+ {
+  "id": "paper-eot",
+  "name": "Exchange-of-Thought",
+  "input": "What is the sum of the decimal digits of 2^50?",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 3,
+  "tokens": 1118,
+  "usd": 0.0027615,
+  "seconds": 19.1,
+  "recorded_at": "2026-11-18T01:02:50.778Z"
  },
  {
   "id": "paper-generative-agents",
@@ -216,6 +252,18 @@
   "recorded_at": "2026-11-17T11:54:38.699Z"
  },
  {
+  "id": "paper-storm",
+  "name": "STORM",
+  "input": "The history of the printing press",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 35,
+  "tokens": 96886,
+  "usd": 0.08527049999999999,
+  "seconds": 132.1,
+  "recorded_at": "2026-11-18T01:17:31.876Z"
+ },
+ {
   "id": "paper-tradingagents",
   "name": "TradingAgents",
   "input": "Should we trade NVIDIA (NVDA) today? Use what you know up to your training cutoff.",
@@ -226,6 +274,18 @@
   "usd": 0.0329649,
   "seconds": 95.6,
   "recorded_at": "2026-11-17T12:27:01.095Z"
+ },
+ {
+  "id": "paper-virtual-lab",
+  "name": "Virtual Lab",
+  "input": "Propose a computational approach to design a nanobody that binds the spike protein of a newly emerged SARS-CoV-2 variant.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 16,
+  "tokens": 109993,
+  "usd": 0.08101900000000001,
+  "seconds": 251.4,
+  "recorded_at": "2026-11-18T01:07:03.451Z"
  },
  {
   "id": "paper-voyager",
