@@ -31,8 +31,8 @@ export interface EvalOptions {
 }
 
 const MAX_CASES = 200;
-/** errors no retry fixes: a rejected or disabled key, no credit, a used-up quota */
-const ACCOUNT_ERROR = /\b(401|403)\b|api key|service account|credit|billing|quota|permission denied/i;
+/** errors no retry fixes: a rejected or disabled key, no credit, a used-up quota, a model that is gone */
+const ACCOUNT_ERROR = /\b(401|403)\b|api key|service account|credit|billing|quota|permission denied|no longer available|model .*not found|does not exist/i;
 
 export class EvalManager {
   private stopped = new Set<string>();
