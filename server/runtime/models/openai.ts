@@ -48,6 +48,11 @@ function sleep(ms: number, signal?: AbortSignal) {
 }
 
 async function post(m: ModelSpec, key: string | undefined, path: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
+  return (await send(m, key, path, body, signal)).json();
+}
+
+/** POST with the provider's retries (rate limits, overloads); the response, once it is OK. */
+async function send(m: ModelSpec, key: string | undefined, path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
   const url = `${base(m)}${path}`;
   if (!url.startsWith("http")) throw new Error(`Model ${m.id} has no base URL`);
   for (let attempt = 0; ; attempt++) {
@@ -57,7 +62,7 @@ async function post(m: ModelSpec, key: string | undefined, path: string, body: u
       body: JSON.stringify(body),
       signal,
     });
-    if (res.ok) return res.json();
+    if (res.ok) return res;
     const text = await res.text();
     const wait = retryWait(res, text, attempt);
     if (wait != null) {
@@ -66,6 +71,42 @@ async function post(m: ModelSpec, key: string | undefined, path: string, body: u
     }
     throw new Error(`${m.provider} ${res.status}: ${brief(text)}`);
   }
+}
+
+/**
+ * A streamed chat completion, read into the shape of an unstreamed one. A
+ * provider that ignores stream and answers with JSON is read as JSON.
+ */
+async function readStream(res: Response): Promise<unknown> {
+  if (!/event-stream/.test(res.headers.get("content-type") ?? "")) return res.json();
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let text = "";
+  let finish = "stop";
+  let usage: { prompt_tokens: number; completion_tokens: number } | undefined;
+  const take = (line: string) => {
+    if (!line.startsWith("data:")) return;
+    const payload = line.slice(5).trim();
+    if (!payload || payload === "[DONE]") return;
+    const chunk = JSON.parse(payload) as { choices?: { delta?: { content?: string | null }; finish_reason?: string | null }[]; usage?: { prompt_tokens: number; completion_tokens: number } };
+    const c = chunk.choices?.[0];
+    if (c?.delta?.content) text += c.delta.content;
+    if (c?.finish_reason) finish = c.finish_reason;
+    if (chunk.usage) usage = chunk.usage;
+  };
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      take(buf.slice(0, nl).replace(/\r$/, ""));
+      buf = buf.slice(nl + 1);
+    }
+  }
+  if (buf.trim()) take(buf.trim());
+  return { choices: [{ message: { content: text }, finish_reason: finish }], usage };
 }
 
 type OAMessage = { role: string; content?: string | null; tool_calls?: unknown[]; tool_call_id?: string };
@@ -95,7 +136,11 @@ export const openaiProvider: Provider = {
       ...(req.temperature != null ? { temperature: req.temperature } : {}),
       ...providerParams(model),
     };
-    const data = (await post(model, key, "/chat/completions", body, req.signal)) as {
+    // without tools the reply is streamed: the headers come at once, so a model that thinks for minutes before
+    // answering is not cut off by the HTTP client's 300-second wait for headers (Gemma on hard questions was)
+    const stream = !req.tools?.length;
+    const res = await send(model, key, "/chat/completions", stream ? { ...body, stream: true, stream_options: { include_usage: true } } : body, req.signal);
+    const data = (stream ? await readStream(res) : await res.json()) as {
       choices: { message: { content?: string | null; tool_calls?: ({ id: string; type?: string; function: { name: string; arguments: string } } & Record<string, unknown>)[] }; finish_reason: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number };
     };

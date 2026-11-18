@@ -63,3 +63,32 @@ describe("api.params", () => {
     }
   });
 });
+
+describe("streamed replies", () => {
+  it("streams a call without tools and puts the reply together, usage included", async () => {
+    const { openaiProvider } = await import("./openai");
+    const bodies: Record<string, unknown>[] = [];
+    const real = globalThis.fetch;
+    const sse = [
+      'data: {"choices":[{"delta":{"content":"The answer"}}]}\n\ndata: {"choices":[{"delta":{"con',
+      'tent":" is 42."},"finish_reason":"stop"}]}\n\n',
+      'data: {"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":5}}\n\ndata: [DONE]\n\n',
+    ];
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      const enc = new TextEncoder();
+      const body = new ReadableStream({ start(c) { for (const s of sse) c.enqueue(enc.encode(s)); c.close(); } });
+      return new Response(body, { headers: { "content-type": "text/event-stream" } });
+    }) as unknown as typeof fetch;
+    try {
+      const model = { id: "g", provider: "google" as const, model: "gemma", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
+      const r = await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+      expect(bodies[0]).toMatchObject({ stream: true, stream_options: { include_usage: true } });
+      expect(r.content).toEqual([{ type: "text", text: "The answer is 42." }]);
+      expect(r.usage).toEqual({ input: 7, output: 5 });
+      expect(r.stop).toBe("end");
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});
