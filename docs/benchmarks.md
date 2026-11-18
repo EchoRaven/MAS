@@ -87,7 +87,7 @@ The two stronger models miss different questions: 3-flash gets #8 and #10,
 reach 28/30. The question is whether ReConcile, with one seat on each model,
 gets above the strongest seat's 27.
 
-## ReConcile with three different models (first run)
+## ReConcile with three different models
 
 ReConcile with one seat on each model (lite, 3.8-flash and 3-flash), on the
 harder set, one run: **28/30** ($0.31, about 25 minutes). The strongest seat
@@ -105,9 +105,23 @@ alone scored 27.
 - On #6, it reached an answer neither strong model had alone.
 - On #8, it lost a right answer.
 
-One question in 30, from one run, is within run-to-run noise. This points the
-way the paper says but does not show it. Two more repeats of each arm are
-running.
+One question in 30, from one run, is within run-to-run noise.
+
+### Three runs each: a tie
+
+| Arm | Runs | Mean | Cost per run |
+| --- | --- | --- | --- |
+| gemini-3-flash alone (the strongest seat) | 27, 27, 28 | 27.3 | about $0.07 |
+| ReConcile, one seat per model | 28, 28, 26 | 27.3 | about $0.30 |
+
+With three runs each, mixed-model ReConcile ties its strongest seat, at about
+4.4 times the cost. Both arms miss #6 and #7 at least once. ReConcile's third
+run also missed #9 and #10, the questions where the discussion had adopted the
+right seat in the first run. On this set and these models, the paper's claim
+that the mix beats its best member does not reproduce. Ten points of headroom
+are not available here (the best seat is already at 91%), so a fairer test
+needs a set where the seats are further apart and each is wrong on different
+questions.
 
 ## Earlier sets
 
