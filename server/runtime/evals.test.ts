@@ -59,12 +59,14 @@ describe("evaluations", () => {
     const done = await finish(evals.start(echo(), { grader: "answer", cases: [{ input: "Paris", expected: "the capital is Paris" }] }).id);
     expect(done.cases[0].pass).toBe(false);
     const runsBefore = store.listRuns().length;
-    const again = evals.regrade(done.id, "contains");
+    const again = await evals.regrade(done.id, "contains");
     expect(again.grader).toBe("contains");
     expect(again.cases[0].pass).toBe(false);
-    expect(evals.regrade(done.id, "answer").passed).toBe(0);
+    expect((await evals.regrade(done.id, "answer")).passed).toBe(0);
     expect(store.listRuns().length).toBe(runsBefore);
-    expect(() => evals.regrade(done.id, "llm" as never)).toThrow(/would call a model/);
+    await expect(evals.regrade(done.id, "llm" as never)).rejects.toThrow(/would call a model/);
+    // code is graded by running it against tests the cases carry: a text answer cannot switch to it
+    await expect(evals.regrade(done.id, "code")).rejects.toThrow(/cannot switch/);
   });
 
   it("repeats every question, and reports each repeat's accuracy and their spread", async () => {

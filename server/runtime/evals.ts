@@ -137,13 +137,34 @@ export class EvalManager {
   }
 
   /** Grades the stored outputs again, by a rule (the given one, or the evaluation's own); no run is repeated. */
-  regrade(id: string, grader?: Exclude<Grader, "llm">): EvalRecord {
+  async regrade(id: string, grader?: Exclude<Grader, "llm">): Promise<EvalRecord> {
     const rec = this.store.getEval(id);
     if (!rec) throw new Error("No such evaluation");
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
-    if (g === "code" || rec.grader === "code") throw new Error("Code is graded by running it; start a new evaluation to grade it again");
+    if (g === "code" || rec.grader === "code") {
+      if (g !== rec.grader) throw new Error("Code is graded by running it against its tests; an evaluation graded another way cannot switch to it, nor away from it");
+      // the stored answers run against their tests again (no model is called): after a fix to the grader
+      this.active.add(id);
+      try {
+        const todo = rec.cases.filter((c) => c.status === "done" && c.output);
+        let next = 0;
+        const worker = async () => {
+          while (next < todo.length) {
+            const c = todo[next++];
+            Object.assign(c, await gradeCode(c.expected, c.output!, this.docker));
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(4, todo.length) }, worker));
+      } finally {
+        this.active.delete(id);
+      }
+      rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
+      rec.passed = rec.cases.filter((c) => c.pass).length;
+      this.store.putEval(rec);
+      return rec;
+    }
     // the judge's verdicts were paid for and cannot be had back by regrading: keep them
     if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
     for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));

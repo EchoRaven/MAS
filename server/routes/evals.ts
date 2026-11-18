@@ -91,7 +91,7 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     const b = ((await req.body()) ?? {}) as { grader?: Grader };
     if (b.grader && !GRADERS.includes(b.grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);
     try {
-      return evals.regrade(req.params.id, b.grader as Exclude<Grader, "llm"> | undefined);
+      return await evals.regrade(req.params.id, b.grader as Exclude<Grader, "llm"> | undefined);
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }

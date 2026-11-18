@@ -97,6 +97,7 @@ function Evals({ systemId }: { systemId: string }) {
   const [onlyReason, setOnlyReason] = useState<string | null>(null);
   useEffect(() => setOnlyReason(null), [selected]);
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
+  const [regrading, setRegrading] = useState(false);
   const [error, setError] = useState("");
   const parsed = useMemo(() => parseCases(text), [text]);
   // the sets shipped with the app work without the server; stored ones come from it
@@ -483,19 +484,26 @@ function Evals({ systemId }: { systemId: string }) {
                   </Button>
                 ) : (
                   <>
-                    {grader !== "llm" && ev.grader !== "llm" && grader !== "code" && ev.grader !== "code" && (
+                    {grader !== "llm" && ev.grader !== "llm" && (grader === "code") === (ev.grader === "code") && (
                       <Button
                         variant="outline"
                         size="sm"
-                        title="Grade the stored outputs again with the grader chosen on the left; nothing is run again"
-                        onClick={() =>
+                        disabled={regrading}
+                        title={
+                          ev.grader === "code"
+                            ? "Run each stored answer against its tests again, in Docker (after a fix to the grader); no model is called"
+                            : "Grade the stored outputs again with the grader chosen on the left; nothing is run again"
+                        }
+                        onClick={() => {
+                          setRegrading(true);
                           void Api.regradeEval(ev.id, grader)
                             .then((r) => setRecord({ eval: r, active: false }))
                             .then(refresh)
                             .catch((e) => setError(e.message))
-                        }
+                            .finally(() => setRegrading(false));
+                        }}
                       >
-                        Regrade as {GRADERS.find((g) => g.value === grader)?.label}
+                        {ev.grader === "code" ? (regrading ? "Running the tests…" : "Run the tests again") : `Regrade as ${GRADERS.find((g) => g.value === grader)?.label}`}
                       </Button>
                     )}
                     <Button
