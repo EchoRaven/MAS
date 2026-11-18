@@ -16,6 +16,7 @@ const CanvasPage = lazy(() => import("@/pages/canvas").then((m) => ({ default: m
 const RunsPage = lazy(() => import("@/pages/runs").then((m) => ({ default: m.RunsPage })));
 const EvalsPage = lazy(() => import("@/pages/evals").then((m) => ({ default: m.EvalsPage })));
 const ComparePage = lazy(() => import("@/pages/evals/Compare").then((m) => ({ default: m.ComparePage })));
+const DatasetsPage = lazy(() => import("@/pages/evals/Datasets").then((m) => ({ default: m.DatasetsPage })));
 const TemplatesPage = lazy(() => import("@/pages/Templates").then((m) => ({ default: m.TemplatesPage })));
 const LibraryPage = lazy(() => import("@/pages/library").then((m) => ({ default: m.LibraryPage })));
 const DemosPage = lazy(() => import("@/pages/demos").then((m) => ({ default: m.DemosPage })));
@@ -79,6 +80,7 @@ export function AppLayout() {
               <Route path="/runs/:systemId" element={<RunsPage />} />
               <Route path="/evals" element={<EvalsPage />} />
               <Route path="/evals/compare" element={<ComparePage />} />
+              <Route path="/evals/datasets" element={<DatasetsPage />} />
               <Route path="/evals/:systemId" element={<EvalsPage />} />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/library" element={<LibraryPage />} />
