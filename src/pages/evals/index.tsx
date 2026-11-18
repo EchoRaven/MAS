@@ -195,7 +195,7 @@ function Evals({ systemId }: { systemId: string }) {
                 const d = datasets.find((x) => x.id === id);
                 if (d) setGrader(d.grader);
               }}
-              items={[{ value: "own", label: "Write or load questions" }, ...datasets.map((d) => ({ value: d.id, label: `${d.name} · ${d.total}` }))]}
+              items={[{ value: "own", label: "Write or load questions" }, ...datasets.map((d) => ({ value: d.id, label: new RegExp(`\\b${d.total}\\)?$`).test(d.name) ? d.name : `${d.name} · ${d.total}` }))]}
               ariaLabel="Dataset"
             />
           </label>
