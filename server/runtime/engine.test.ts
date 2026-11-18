@@ -953,6 +953,21 @@ describe("runtime", () => {
     });
   });
 
+  it("web_search is not offered where it cannot run (non-Anthropic models), and the run says so once", async () => {
+    const b = new Builder("Search", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 0, 0, { name: "A", model: "ws", tools: ["web_search"], harness: { ...native(), loop: "react", max_steps: 3, instructions: "" } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    // the agent tries the tool anyway: it is not there, so the attempt fails without a provider round trip
+    b.doc.models.push({ id: "ws", provider: "mock", model: "mock", api: { params: { script: [{ tool: "web_search", input: { query: "x" } }, "answered from what I know"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    const warns = events.filter((e) => e.type === "log" && /web_search is left out/.test((e as { text: string }).text));
+    expect(warns.length).toBe(1);
+    const call = events.find((e): e is Extract<RunEvent, { type: "tool" }> => e.type === "tool" && e.tool === "web_search");
+    expect(call === undefined || call.error).toBe(true);
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

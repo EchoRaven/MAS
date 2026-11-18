@@ -27,6 +27,8 @@ export interface CatalogResult {
   server_tools: ("web_search" | "web_fetch")[];
 }
 
+const warnedSearch = new Set<string>();
+
 export async function catalogTools(rc: RunCtx, agent: string, ids: string[], access: SysEdge[], hub: Hub, providerIsAnthropic: boolean): Promise<CatalogResult> {
   const out: CatalogResult = { tools: [], server_tools: [] };
   const envOfKind = (kind: EnvKind) => access.find((e) => {
@@ -39,7 +41,11 @@ export async function catalogTools(rc: RunCtx, agent: string, ids: string[], acc
     const base = { name: t.id, description: t.description, effect: t.effect, source: "catalog" };
     if (t.id === "web_search" && t.adapter === "builtin") {
       if (providerIsAnthropic) out.server_tools.push("web_search");
-      else out.tools.push({ ...base, input_schema: schema({ query: S }), run: async () => { throw new Error("web_search runs as the provider's server tool on Anthropic models; connect a search MCP env for other providers"); } });
+      else if (!warnedSearch.has(`${rc.runId}|${agent}`)) {
+        // offering a tool that can only fail wastes a model call every time the agent tries it: leave it out, and say so once
+        warnedSearch.add(`${rc.runId}|${agent}`);
+        rc.emit({ type: "log", node: agent, level: "warn", text: "web_search is left out: the built-in search runs only on Anthropic models. Connect a search MCP env to give this agent web search on other providers" });
+      }
       continue;
     }
     if (t.id === "fetch" && t.adapter === "builtin") {
