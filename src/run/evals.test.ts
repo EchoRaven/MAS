@@ -91,6 +91,15 @@ describe("math answers", () => {
 });
 
 describe("failure reasons", () => {
+  it("a sentence where a letter was expected is its own reason: the system gave no answer line", () => {
+    const r = failureReasons([
+      { pass: false, status: "done", why: '"The report concludes that the epigastric region lies below the xiphoid process." is not "A"' },
+      { pass: false, status: "done", why: '"B" is not "C"' },
+      { pass: false, status: "done", why: '"The answer is long but the key is long too, so this is a plain mismatch" is not "the capital of France is Paris"' },
+    ]);
+    expect(r.map((x) => [x.reason, x.count])).toEqual([["wrong answer", 2], ["a sentence, not an answer: no final answer line", 1]]);
+  });
+
   it("groups failures by their kind, not their details, largest first", () => {
     const cases = [
       { pass: false, status: "done", why: "tests fail: AssertionError" },

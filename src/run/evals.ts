@@ -82,7 +82,14 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
   const reasonOf = (why: string, status: string) => {
     const w = why.trim();
     if (/ ≠ /.test(w)) return "wrong answer";
-    if (/^"[\s\S]*" is not "/.test(w)) return "wrong answer";
+    const q = /^"([\s\S]*)" is not "([\s\S]*)"$/.exec(w);
+    if (q) {
+      // a sentence where a letter or a number was expected: the system gave no answer line, so the grader read
+      // its reasoning (MedAgents ended with "why" after the option: 0 of 57)
+      const [got, want] = [q[1].trim(), q[2].trim()];
+      if (want.length <= 12 && !/\s/.test(want) && got.length > 40 && /\s/.test(got)) return "a sentence, not an answer: no final answer line";
+      return "wrong answer";
+    }
     let m = /^tests fail: ([A-Za-z_][\w.]*(?:Error|Exception|Exit|Interrupt))/.exec(w);
     if (m) return `tests fail: ${m[1]}`;
     if (/^tests fail/.test(w)) return "tests fail";
