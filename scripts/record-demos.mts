@@ -22,11 +22,11 @@ const OVERRIDE: Record<string, string> = JSON.parse(process.env.MAS_DEMO_MODELS 
 const g = (model: string, price_in: number, price_out: number) => ({ provider: "google" as const, model, api: { key_env: "GEMINI_API_KEY" }, price_in, price_out, modalities: ["text"] });
 const GEMINI: Record<string, Omit<ModelSpec, "id">> = {
   opus: g("gemini-3-flash-preview", 0.5, 3),
-  sonnet: g("gemini-2.5-flash", 0.3, 2.5),
+  sonnet: g("gemini-3.8-flash", 0.5, 3),
   haiku: g("gemini-3.5-flash-lite", 0.1, 0.4),
   gpt: g("gemini-3.1-flash-lite", 0.25, 1.5),
   local: g("gemini-flash-lite-latest", 0.1, 0.4),
-  gemini: g("gemini-2.5-flash", 0.3, 2.5),
+  gemini: g("gemini-3.8-flash", 0.5, 3),
   embed: { kind: "embedding", provider: "google", model: "gemini-embedding-001", api: { key_env: "GEMINI_API_KEY" }, price_in: 0.15, price_out: 0, modalities: ["text"] },
 };
 
@@ -101,6 +101,24 @@ const DEMOS: Record<string, DemoConfig> = {
   "paper-medagents": {
     // a USMLE-style item, the kind of question the paper evaluates on (MedQA)
     input: "A 68-year-old man with heart failure takes lisinopril and furosemide. Spironolactone is added. Two weeks later he reports muscle weakness, and his ECG shows peaked T waves. Which is the most likely cause? A) Hyponatraemia B) Hyperkalaemia C) Hypocalcaemia D) Digoxin toxicity",
+  },
+  "paper-autoagents": {
+    input: "Write a short, accurate explainer (about 300 words) on how vaccines train the immune system, for high-school students.",
+  },
+  "paper-eot": {
+    // a question the single agent often got wrong in our benchmark (it is 76), so the exchange has something to settle
+    input: "What is the sum of the decimal digits of 2^50?",
+    vars: { paradigm: "memory" },
+  },
+  "paper-agents-room": {
+    input: "A short story (about 600 words) about a lighthouse keeper who finds a message in a bottle.",
+  },
+  "paper-storm": {
+    // web search is a provider tool on Anthropic models only: on Gemini the expert answers from what it knows and says so
+    input: "The history of the printing press",
+  },
+  "paper-virtual-lab": {
+    input: "Propose a computational approach to design a nanobody that binds the spike protein of a newly emerged SARS-CoV-2 variant.",
   },
   "paper-chain-of-agents": {
     // the long document is this platform's own server guide; the two answers sit in different parts of it
@@ -227,6 +245,8 @@ async function record(id: string, cfg: DemoConfig) {
     const out = { id, name: tpl.name, input: cfg.input, vars: cfg.vars ?? {}, models, changes, recorded_at: new Date().toISOString(), run: g.run, system: doc, events: g.events };
     const calls = g.events.filter((e) => e.type === "usage").length;
     const errors = g.events.filter((e) => e.type === "log" && e.level === "error").map((e) => (e as { text: string }).text);
+    // a called agent that failed (the provider refused) shows up as a tool error, not a run error: that is not a clean demo either
+    for (const e of g.events) if (e.type === "tool" && e.error && /^Error: (google|openai|anthropic|openai_compatible|local) \d{3}\b/.test(String((e as { result?: string }).result))) errors.push(`${(e as { tool: string }).tool}: ${String((e as { result?: string }).result).slice(7, 160)}`);
     // only clean runs replace a recording
     if (!errors.length && g.run.status === "finished") {
       fs.mkdirSync(OUT, { recursive: true });
