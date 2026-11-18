@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { contentHash, isUneditedSeed } from "@/model/templates";
 import type { SystemDoc } from "@/model/types";
+import type { Dataset } from "@/run/datasets";
 import type { EvalRecord } from "@/run/evals";
 import type { RunEvent, RunRecord } from "@/run/events";
 
@@ -175,6 +176,27 @@ export class Store {
       .filter((r): r is EvalRecord => !!r && (!systemId || r.system_id === systemId))
       .sort((a, b) => b.started_at.localeCompare(a.started_at));
   }
+  // datasets ------------------------------------------------------------------
+  putDataset(d: Dataset) {
+    writeJson(path.join(this.dataDir, "datasets", `${safeId(d.id)}.json`), d);
+  }
+  getDataset(id: string): Dataset | null {
+    return readJson<Dataset>(path.join(this.dataDir, "datasets", `${safeId(id)}.json`));
+  }
+  listDatasets(): Dataset[] {
+    const dir = path.join(this.dataDir, "datasets");
+    if (!fs.existsSync(dir)) return [];
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => readJson<Dataset>(path.join(dir, f)))
+      .filter((d): d is Dataset => !!d)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  deleteDataset(id: string) {
+    fs.rmSync(path.join(this.dataDir, "datasets", `${safeId(id)}.json`), { force: true });
+  }
+
   deleteEval(id: string) {
     fs.rmSync(path.join(this.evalsDir, `${safeId(id)}.json`), { force: true });
   }

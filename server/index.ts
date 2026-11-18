@@ -5,6 +5,7 @@ import path from "node:path";
 import { loadConfig } from "./config";
 import { Router, send } from "./http";
 import { designRoutes } from "./routes/design";
+import { datasetRoutes } from "./routes/datasets";
 import { evalRoutes } from "./routes/evals";
 import { runRoutes } from "./routes/runs";
 import { settingsRoutes } from "./routes/settings";
@@ -33,6 +34,7 @@ runRoutes(router, store, runs);
 settingsRoutes(router, store, secrets, config);
 designRoutes(router, store, secrets, config);
 evalRoutes(router, store, evals);
+datasetRoutes(router, store);
 
 // MCP for harnesses: authenticated by the per-run exposure token, not the user token
 router.on(

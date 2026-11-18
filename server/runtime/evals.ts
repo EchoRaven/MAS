@@ -14,6 +14,8 @@ import type { RunManager } from "./runs";
 
 export interface EvalOptions {
   cases: EvalCase[];
+  /** the dataset the cases came from, kept on the record */
+  dataset?: EvalRecord["dataset"];
   grader: Grader;
   mock?: boolean;
   /** runs at once */
@@ -56,6 +58,7 @@ export class EvalManager {
       grader: opts.grader,
       mock: !!opts.mock,
       repeats,
+      ...(opts.dataset ? { dataset: opts.dataset } : {}),
       ...(opts.vars && Object.keys(opts.vars).length ? { vars: opts.vars } : {}),
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
       ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),

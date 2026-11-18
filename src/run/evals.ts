@@ -44,6 +44,8 @@ export interface EvalRecord {
   on_model?: string;
   /** run variables every case started with */
   vars?: Record<string, unknown>;
+  /** the dataset the cases came from, its version, and the sample drawn from it */
+  dataset?: { id: string; name: string; version: string; n?: number; seed?: number };
   /** chosen models of the system served by others */
   model_map?: Record<string, string>;
   status: "running" | "finished" | "stopped";
