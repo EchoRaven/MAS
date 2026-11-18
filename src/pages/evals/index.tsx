@@ -14,7 +14,7 @@ import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
-import { type EvalRecord, type Grader, parseCases, repeatStats } from "@/run/evals";
+import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats } from "@/run/evals";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars } from "@/run/vars";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,18 @@ const GRADERS: { value: Grader; label: string; hint: string }[] = [
 const MAX_RUNS = 200;
 
 const pct = (passed: number, graded: number) => (graded ? `${Math.round((100 * passed) / graded)}%` : "–");
+
+/** What a case expects, short: a code case's JSON spec is shown as the function its tests call. */
+function expectedLabel(expected: string): string {
+  if (!expected.startsWith("{")) return expected;
+  try {
+    const spec = JSON.parse(expected) as { kind?: string; entry_point?: string };
+    if (spec.kind === "code") return spec.entry_point ? `tests of ${spec.entry_point}()` : "tests";
+  } catch {
+    /* not JSON: show it as it is */
+  }
+  return expected;
+}
 
 export function EvalsPage() {
   const { systemId } = useParams();
@@ -77,6 +89,9 @@ function Evals({ systemId }: { systemId: string }) {
   }, [doc.models]);
   const [list, setList] = useState<Summary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  // the failure reason the case table is narrowed to, if any
+  const [onlyReason, setOnlyReason] = useState<string | null>(null);
+  useEffect(() => setOnlyReason(null), [selected]);
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
   const [error, setError] = useState("");
   const parsed = useMemo(() => parseCases(text), [text]);
@@ -175,7 +190,9 @@ function Evals({ systemId }: { systemId: string }) {
   const ev = record?.eval;
   const stats = ev ? repeatStats(ev) : null;
   // a question's repeats sit together
-  const rows = ev ? ev.cases.map((c, i) => ({ c, i })).sort((a, b) => (a.c.case ?? a.i) - (b.c.case ?? b.i) || (a.c.repeat ?? 0) - (b.c.repeat ?? 0)) : [];
+  const reasons = ev ? failureReasons(ev.cases) : [];
+  const only = reasons.find((r) => r.reason === onlyReason);
+  const rows = ev ? ev.cases.map((c, i) => ({ c, i })).filter(({ i }) => !only || only.cases.includes(i)).sort((a, b) => (a.c.case ?? a.i) - (b.c.case ?? b.i) || (a.c.repeat ?? 0) - (b.c.repeat ?? 0)) : [];
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 md:flex-row md:overflow-hidden md:p-4">
       <aside className="flex w-full shrink-0 flex-col gap-3 md:w-[380px] md:overflow-y-auto">
@@ -442,7 +459,7 @@ function Evals({ systemId }: { systemId: string }) {
                   </Button>
                 ) : (
                   <>
-                    {grader !== "llm" && ev.grader !== "llm" && (
+                    {grader !== "llm" && ev.grader !== "llm" && grader !== "code" && ev.grader !== "code" && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -490,6 +507,23 @@ function Evals({ systemId }: { systemId: string }) {
                 {ev.stop_reason}
               </p>
             )}
+            {reasons.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs" role="group" aria-label="Why cases failed">
+                <span className="text-muted-foreground">Why cases failed:</span>
+                {reasons.map((r) => (
+                  <button
+                    key={r.reason}
+                    type="button"
+                    aria-pressed={onlyReason === r.reason}
+                    title={onlyReason === r.reason ? "Show every case again" : "Show only these cases"}
+                    onClick={() => setOnlyReason((o) => (o === r.reason ? null : r.reason))}
+                    className={cn("rounded-full border px-2.5 py-0.5", onlyReason === r.reason ? "border-destructive/50 bg-destructive/10 text-destructive" : "border-border/70 hover:bg-secondary/60")}
+                  >
+                    <span className="tabular-nums font-medium">{r.count}</span> × {r.reason}
+                  </button>
+                ))}
+              </div>
+            )}
             <table className="mt-4 w-full table-fixed text-left text-[13px]">
               <thead className="text-xs text-muted-foreground">
                 <tr className="border-b border-border/70">
@@ -520,7 +554,9 @@ function Evals({ systemId }: { systemId: string }) {
                         <span className="text-xs text-muted-foreground">repeat {(c.repeat ?? 0) + 1}</span>
                       )}
                     </td>
-                    <td className="py-2 pr-3 font-medium">{first ? c.expected : ""}</td>
+                    <td className="break-words py-2 pr-3 font-medium" title={first ? c.expected : undefined}>
+                      {first ? <span className="line-clamp-4">{expectedLabel(c.expected)}</span> : ""}
+                    </td>
                     <td className="py-2 pr-3">
                       {c.status === "pending" ? (
                         <span className="text-muted-foreground">{c.why ?? "waiting"}</span>

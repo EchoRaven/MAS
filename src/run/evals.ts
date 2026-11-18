@@ -68,6 +68,36 @@ export function caseSetId(cases: Pick<EvalCaseResult, "input" | "expected">[]): 
   return `set_${(h >>> 0).toString(36)}_${uniq.length}`;
 }
 
+/**
+ * Why cases failed, grouped: the specifics (numbers, names, messages) are
+ * dropped so that one systematic problem shows as one large group ("17 ×
+ * tests fail: AssertionError", "5 × no output") instead of scattered rows.
+ * Groups are sorted by size; each lists the indices of its cases.
+ */
+export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why">[]): { reason: string; count: number; cases: number[] }[] {
+  const reasonOf = (why: string, status: string) => {
+    const w = why.trim();
+    if (/ ≠ /.test(w)) return "wrong answer";
+    if (/^"[\s\S]*" is not "/.test(w)) return "wrong answer";
+    let m = /^tests fail: ([A-Za-z_][\w.]*(?:Error|Exception|Exit|Interrupt))/.exec(w);
+    if (m) return `tests fail: ${m[1]}`;
+    if (/^tests fail/.test(w)) return "tests fail";
+    if (/^timed out/.test(w)) return "timed out";
+    if (/^no output/.test(w)) return "no output";
+    if (/^no number in the answer/.test(w)) return "no number in the answer";
+    if (/^judge: FAIL/.test(w)) return "the judge said FAIL";
+    if (status === "error" && !w) return "error";
+    return w.replace(/\d+(\.\d+)?/g, "#").replace(/\s+/g, " ").slice(0, 70) || "failed";
+  };
+  const by = new Map<string, number[]>();
+  cases.forEach((c, i) => {
+    if (c.pass !== false && c.status !== "error") return;
+    const r = reasonOf(c.why ?? "", c.status);
+    by.set(r, [...(by.get(r) ?? []), i]);
+  });
+  return [...by].map(([reason, idx]) => ({ reason, count: idx.length, cases: idx })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
+}
+
 /** Accuracy of each repeat, their mean and standard deviation, and how often each question passed. */
 export function repeatStats(rec: Pick<EvalRecord, "cases" | "repeats">) {
   const n = rec.repeats ?? 1;

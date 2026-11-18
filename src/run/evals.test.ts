@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, failureReasons, finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -55,6 +55,30 @@ describe("grading", () => {
     expect(gradeByRule("answer", "Answer: B. Hyperkalaemia", "B").pass).toBe(true);
     expect(gradeByRule("answer", "Answer: Because of B", "B").pass).toBe(false);
     expect(gradeByRule("contains", "It is hyperkalaemia, clearly.", "Hyperkalaemia").pass).toBe(true);
+  });
+});
+
+describe("failure reasons", () => {
+  it("groups failures by their kind, not their details, largest first", () => {
+    const cases = [
+      { pass: false, status: "done", why: "tests fail: AssertionError" },
+      { pass: true, status: "done", why: "155 = 155" },
+      { pass: false, status: "done", why: "tests fail: AssertionError: ('', 'abc')" },
+      { pass: false, status: "done", why: "800 ≠ 165" },
+      { pass: false, status: "done", why: "no output (finished: All idle (no output))" },
+      { pass: false, status: "error", why: "the run asked a person for input; evaluations run unattended" },
+      { pass: false, status: "done", why: "tests fail: SyntaxError: invalid syntax" },
+      { pass: false, status: "done", why: "timed out after 10s" },
+      { pass: false, status: "done", why: "tests fail: AssertionError" },
+    ] as const;
+    const r = failureReasons(cases as never);
+    expect(r[0]).toEqual({ reason: "tests fail: AssertionError", count: 3, cases: [0, 2, 8] });
+    expect(r.map((x) => x.reason)).toContain("wrong answer");
+    expect(r.map((x) => x.reason)).toContain("no output");
+    expect(r.map((x) => x.reason)).toContain("tests fail: SyntaxError");
+    expect(r.map((x) => x.reason)).toContain("timed out");
+    expect(r.find((x) => x.reason.startsWith("the run asked a person"))?.count).toBe(1);
+    expect(r.reduce((n, x) => n + x.count, 0)).toBe(8);
   });
 });
 
