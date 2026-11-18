@@ -27,13 +27,14 @@ npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public 
 
 | Page | What it does |
 | --- | --- |
-| Systems | List systems, create one from a template, import or export YAML, duplicate, delete |
-| Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. Envs, agents and plugins can be imported. The issues menu jumps to each problem. |
-| Runs | Live: start a run with an input (or a dry run on the test model), watch it on the graph and in the log, answer approvals and questions, stop it, reopen past runs. Simulated: replay a generated event stream |
+| Systems | Every system in one list: create one from a template or by describing it to the Architect, import or export YAML, duplicate, delete. Built-in systems nobody has edited follow fixes to their template; deleting a system reaches every browser |
+| Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. **Architect** designs or changes the system from a description; **Tidy** lays it out; **History** restores an earlier version. The issues menu jumps to each problem; a paper system's panel cites the paper and says how it maps and where it differs |
+| Runs | Live: start a run with an input and optional run variables (or a dry run on the test model), watch it on the graph and in the log, answer approvals and questions, stop it, reopen past runs. A warning shows first when a model it uses has no key or a refused one. Simulated: replay a generated event stream |
+| Evaluate | Run a system over a set of questions (paste them, load a CSV or JSON-lines file, or pick a sample set), graded by number, final answer, containment or an LLM judge. Repeats show the spread; a system can be run on other models (all on one, or per model). **Compare** puts evaluations of the same questions side by side, question by question, and exports a Markdown table or CSV |
 | Demos | Real recorded runs of the paper reproductions, replayable by anyone: the canvas animates, the log fills, and each demo shows its result, its mapping and the models it ran on. Static files under `public/demos`, recorded with `npm run record-demos` |
-| Templates | Seventeen papers rebuilt from the components (see below), plus patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
+| Templates | Twenty-six papers rebuilt from the components (see below), two baselines (a single agent, and self-consistency) and patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
 | Library | Models (with API settings and a connection test), tools (with how the runtime calls them), JSON schemas, and the integration contracts |
-| Settings | Server connection, API keys, and the knowledge folder |
+| Settings | Server connection, API keys, model status (which models work, why one fails, a test button for each), and the knowledge folder |
 
 The interfaces everything plugs into are documented in
 [docs/contracts.md](docs/contracts.md); the server and what a run does, in
