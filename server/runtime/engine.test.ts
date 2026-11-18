@@ -890,6 +890,69 @@ describe("runtime", () => {
     }
   });
 
+  describe("run control", () => {
+    // me -> a -> b -> me, both agents slow
+    const slow = (delay = 300) => {
+      const b = new Builder("Slow", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "slow_c", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .agent("b", 0, 0, { name: "B", model: "slow_c", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "a", "message")
+        .edge("a", "b", "message")
+        .edge("b", "me", "message");
+      b.doc.models.push({ id: "slow_c", provider: "mock", model: "mock", api: { params: { script: ["done"], delay_ms: delay } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return b.doc;
+    };
+    const until = async (id: string) => {
+      for (let i = 0; i < 400 && runs.isActive(id); i++) await new Promise((r) => setTimeout(r, 10));
+    };
+
+    it("stop: a run stopped mid-way ends at once, as stopped, and nothing after it runs", async () => {
+      const doc = slow();
+      store.putSystem(doc);
+      const rec = runs.start(doc, { input: "go" });
+      await new Promise((r) => setTimeout(r, 100));
+      runs.stop(rec.id);
+      await until(rec.id);
+      expect(runs.get(rec.id)).toMatchObject({ status: "stopped", reason: "Stopped" });
+      expect(store.events(rec.id).filter((e) => e.type === "usage").length).toBe(0);
+    });
+
+    it("time limit: a run that goes past wallclock_min ends with that reason", async () => {
+      const doc = slow();
+      doc.budget = { ...doc.budget, wallclock_min: 0.005 }; // 0.3 s
+      store.putSystem(doc);
+      const rec = runs.start(doc, { input: "go" });
+      await until(rec.id);
+      expect(runs.get(rec.id)).toMatchObject({ status: "finished", reason: "Time limit reached" });
+    });
+
+    it("a run waiting for a person can be stopped, and its question is withdrawn", async () => {
+      const b = new Builder("Waits", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "w_a", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .node("checker", "human", 0, 0, { name: "Checker", role: "", approves: false })
+        .edge("me", "a", "message")
+        .edge("a", "checker", "message")
+        .edge("checker", "me", "message");
+      b.doc.models.push({ id: "w_a", provider: "mock", model: "mock", api: { params: { script: ["please check"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      store.putSystem(b.doc);
+      const rec = runs.start(b.doc, { input: "go" });
+      for (let i = 0; i < 200 && !(runs.get(rec.id)?.pending?.length); i++) await new Promise((r) => setTimeout(r, 10));
+      expect(runs.get(rec.id)?.status).toBe("waiting");
+      runs.stop(rec.id);
+      await until(rec.id);
+      expect(runs.get(rec.id)).toMatchObject({ status: "stopped", pending: [] });
+    });
+
+    it("after a restart, runs that were going are marked stopped, with the reason", () => {
+      const rec = { id: "run_cut", system_id: "s", system_name: "S", input: "x", status: "running" as const, started_at: new Date().toISOString(), usd: 0, tokens: 0, events: 0, pending: [] };
+      store.putRun(rec);
+      runs.recover();
+      expect(store.getRun("run_cut")).toMatchObject({ status: "stopped", reason: "Server restarted during the run" });
+    });
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);
