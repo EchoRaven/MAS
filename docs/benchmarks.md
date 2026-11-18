@@ -151,6 +151,43 @@ each, through the built-in dataset (2026-11-18):
   spread. A code-execution tool would solve them, which is a test of tools,
   not of the debate.
 
+## AutoGen with a code executor: 30/30
+
+The four systems above all miss the digit sums of powers and the binomial
+coefficients in every run. Those are questions that need computation, not
+discussion. AutoGen (Wu et al.) has a user proxy that runs every code block in a
+sandbox (here Docker, `python:3.12`, no network). Same 30 questions, all on
+gemini-3.1-flash-lite, two runs each:
+
+| AutoGen version | Runs | Cost (60 runs) |
+| --- | --- | --- |
+| First run | 25, 25 | $0.12 |
+| After three fixes (below) | **30, 30** | $0.12 |
+
+For comparison, the best system without a tool averaged 22.0, and the single
+agent 19.0. AutoGen costs about a quarter of what ReConcile does here, because
+the code does the work that the models otherwise get wrong.
+
+Nine of the first run's ten misses were not the model's fault:
+
+- **The critic overrode the code.** On C(47, 14) mod 997, the code printed
+  165, which is right. The critic redid the sum by hand, got 800, and ended
+  the chat with it. The template's critic now treats the executor's output as
+  fact and asks for a check in code when it doubts it.
+- **The manager handed the turn to the person** who opened the chat (4
+  cases). An unattended evaluation cannot answer. The platform's selector now
+  chooses only among agents; a person speaks when @named.
+- **The manager named no one** (5 cases). The run ended with no output,
+  although the last message had the answer. A room where nobody is next now
+  ends like TERMINATE, with its last message as the answer, which is what
+  AutoGen's group chat returns.
+
+The grader also took AutoGen's trailing "TERMINATE" for the final answer. It
+skips it now.
+
+This is the clearest result so far. On these questions, how the agents talk
+matters less than whether one of them can run code.
+
 ## GSM8K: single agent vs Multiagent Debate (Du et al.)
 
 The 100-problem GSM8K sample (`benchmarks/gsm8k/`, saved as the dataset
