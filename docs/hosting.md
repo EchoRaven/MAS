@@ -57,7 +57,7 @@ dependencies) and `word-count-http` (a plugin backend over HTTP).
 
 | | |
 | --- | --- |
-| Network | None (`--network none`, or an `--internal` Docker network for services with a port: the server reaches them, they reach nothing). A service that lists `egress` hosts gets outbound access. **The hosts are declared, not yet filtered**: any listed host means general outbound access |
+| Network | None (`--network none`, or an `--internal` Docker network for services with a port: the server reaches them, they reach nothing). A service that lists `egress` hosts stays on the internal network and gets `HTTP(S)_PROXY` pointing at the platform's **egress proxy**, with credentials of its own: it reaches those hosts (`api.github.com`, `*.example.com`, `host:8443`; ports 443/80 unless named) and nothing else, never a private or loopback address. A program that ignores the proxy settings reaches nothing at all |
 | Ports | Never published. HTTP services are reached at their address on the internal network, by this server only |
 | Privileges | Unprivileged user (uid 10001 in generated images), `--cap-drop ALL`, `no-new-privileges` |
 | Limits | `--memory` (512m by default), `--cpus` (1), `--pids-limit 256` |
@@ -67,6 +67,11 @@ dependencies) and `word-count-http` (a plugin backend over HTTP).
 A hosted endpoint needs no `MAS_ALLOW_LOCAL_EXEC`: nothing runs on the host
 itself. (`MAS_ALLOW_LOCAL_EXEC` still gates the older `command:` fields,
 which do.)
+
+Egress checked against real Docker (2026-11-18), a service declaring
+`example.com`: `https://example.com` through the proxy → 200;
+`https://api.github.com` → 403, logged as not declared; a direct connection
+without the proxy → no route.
 
 Checked end to end (2026-11-18): both examples uploaded, built and tested;
 the HTTP service ran as uid 10001 at an internal address, with no published
@@ -87,8 +92,6 @@ port and no route to the internet; an agent used both (`add_note`,
 
 ## Next
 
-- **Egress filtering**: an outbound proxy so that `egress` lists are enforced
-  host by host, instead of granting general outbound access.
 - **Compose projects**: whole application envs (`mas-env/1` `runtime.compose`)
   hosted the same way, instead of `lifecycle.start` on the host.
 - **Moving the host-run paths onto hosting**: stdio MCP `command:`, custom

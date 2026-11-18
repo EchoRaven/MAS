@@ -27,8 +27,9 @@ export interface HostManifest {
   start?: string;
   expose: { kind: ExposeKind; port?: number; path?: string; health?: string };
   /**
-   * hosts the service needs to reach. Empty (the default): no network at all.
-   * Not empty: outbound network (the hosts are declared, not yet filtered).
+   * hosts the service needs to reach ("api.github.com", "*.example.com", "host:8443").
+   * Empty (the default): no network at all. Otherwise these hosts only, through the
+   * platform's egress proxy (HTTPS_PROXY); nothing else, and nothing private.
    */
   egress?: string[];
   /** environment variables: a value, or { secret: NAME } for a secret from Settings */

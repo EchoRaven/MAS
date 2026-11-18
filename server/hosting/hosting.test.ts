@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from "node:child_process";
+import net from "node:net";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -93,5 +94,42 @@ describe("hosted services", () => {
     });
     await expect(resolveEndpoint({ secrets }, { remote: { url: "https://x", bearer_env: "NOPE" } })).rejects.toThrow(/NOPE/);
     await expect(resolveEndpoint({ secrets }, { hosted: { service: "svc_x_000000" } })).rejects.toThrow(/not available/);
+  });
+});
+
+describe("egress proxy", () => {
+  it("matches declared hosts exactly, by subdomain wildcard, and by port", async () => {
+    const { allowed } = await import("./egress");
+    expect(allowed(["api.github.com"], "api.github.com", 443)).toBe(true);
+    expect(allowed(["api.github.com"], "evil.com", 443)).toBe(false);
+    expect(allowed(["api.github.com"], "api.github.com", 22)).toBe(false);
+    expect(allowed(["*.example.com"], "a.b.example.com", 443)).toBe(true);
+    expect(allowed(["*.example.com"], "example.com", 443)).toBe(false);
+    expect(allowed(["*.example.com"], "notexample.com", 443)).toBe(false);
+    expect(allowed(["db.example.com:5432"], "db.example.com", 5432)).toBe(true);
+  });
+
+  it("asks for credentials, refuses undeclared hosts and private addresses, and keeps each service to its own list", async () => {
+    const { EgressProxy } = await import("./egress");
+    const p = new EgressProxy();
+    const { host, port } = await p.listen("127.0.0.1");
+    const a = p.grant("svc_a_000000", ["localhost", "example.com"]);
+    p.grant("svc_b_000000", ["other.example"]);
+    const connect = (auth: string | null, target: string) =>
+      new Promise<string>((resolve) => {
+        const s = net.connect(port, host, () => s.write(`CONNECT ${target} HTTP/1.1\r\nHost: ${target}\r\n${auth ? `Proxy-Authorization: Basic ${Buffer.from(auth).toString("base64")}\r\n` : ""}\r\n`));
+        s.once("data", (d) => (resolve(d.toString().split("\r\n")[0]), s.destroy()));
+      });
+    try {
+      expect(await connect(null, "example.com:443")).toMatch(/407/);
+      expect(await connect(`svc_a_000000:${a.token}`, "evil.com:443")).toMatch(/403/);
+      // declared, but it resolves to this machine: never through the proxy
+      expect(await connect(`svc_a_000000:${a.token}`, "localhost:443")).toMatch(/403/);
+      // another service's credentials do not open this service's hosts, and a wrong name does not use them
+      expect(await connect(`svc_b_000000:${a.token}`, "example.com:443")).toMatch(/407/);
+      expect(p.refused.map((r) => r.why)).toEqual(["not declared", "localhost resolves to a private address"]);
+    } finally {
+      p.close();
+    }
   });
 });

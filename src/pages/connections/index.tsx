@@ -74,8 +74,8 @@ function ServiceRow({ s, onChanged }: { s: HostedServiceInfo; onChanged: () => v
         <span className="text-sm font-medium">{s.name}</span>
         <span className="font-mono text-[11px] text-muted-foreground">{s.id}</span>
         <span className="rounded-full bg-secondary px-2 py-px text-[11px]">{kind}</span>
-        <span className={cn("rounded-full px-2 py-px text-[11px]", outbound ? "bg-amber-500/15 text-amber-800 dark:text-amber-200" : "bg-secondary")} title={outbound ? `Declared hosts: ${s.manifest.egress!.join(", ")} (outbound access; not filtered yet)` : "No network at all"}>
-          {outbound ? "outbound network" : "no network"}
+        <span className={cn("rounded-full px-2 py-px text-[11px]", outbound ? "bg-amber-500/15 text-amber-800 dark:text-amber-200" : "bg-secondary")} title={outbound ? "Only these hosts, through the platform's egress proxy (HTTPS_PROXY); nothing else, nothing private" : "No network at all"}>
+          {outbound ? `egress: ${s.manifest.egress!.join(", ")}` : "no network"}
         </span>
         <span className="text-[11px] text-muted-foreground">
           v{s.current} · {v?.from === "git" ? v.source : v?.source} · {v?.build_ok ? "built" : v?.built_at ? "build failed" : "not built"}
@@ -187,7 +187,7 @@ function HostForm({ onCreated }: { onCreated: () => void }) {
         <Button type="submit" size="sm" disabled={busy || !name.trim() || (!file && !git.trim())}>
           {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />} Host it
         </Button>
-        <span className="text-[11px] text-muted-foreground">Then Build. Listing hosts gives outbound network access; the hosts are declared, not yet filtered.</span>
+        <span className="text-[11px] text-muted-foreground">Then Build. Listed hosts are reached through the platform's egress proxy (HTTPS_PROXY), and only they; "*.example.com" covers subdomains.</span>
       </div>
       {error && <p className="text-[12px] text-destructive md:col-span-2">{error}</p>}
     </form>

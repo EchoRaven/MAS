@@ -6,8 +6,9 @@
 //   mcp-http    one long-running container on an internal network, reached
 //   http        at its address by this server only (no published port)
 //
-// No network unless the service declares egress hosts; then it gets outbound
-// access (declared, not filtered yet). Unprivileged user, no capabilities,
+// No network unless the service declares egress hosts; then it reaches those
+// hosts only, through the egress proxy (it stays on the internal network, with
+// no route out of its own). Unprivileged user, no capabilities,
 // memory / CPU / process limits. Secrets go in as environment variables when
 // the container starts and are never written to disk.
 import { execFile } from "node:child_process";
@@ -17,12 +18,12 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { checkManifest, DEFAULT_MANIFEST, detectRuntime, generatedDockerfile, type Endpoint, type HostManifest } from "@/model/hosting";
 import type { Secrets } from "../store/secrets";
+import { EgressProxy } from "./egress";
 import { HttpError } from "../store/files";
 
 const MAX_ARCHIVE = 15 * 1024 * 1024;
 const MAX_UNPACKED = 200 * 1024 * 1024;
 const INTERNAL_NET = "mas-hosted";
-const OUTBOUND_NET = "mas-hosted-out";
 
 export interface ServiceVersion {
   n: number;
@@ -77,6 +78,8 @@ function listFiles(dir: string, base = dir): string[] {
 export class HostedServices {
   private root: string;
   private building = new Set<string>();
+  /** the only way out for services that declare egress hosts */
+  readonly egress = new EgressProxy();
   constructor(
     dataDir: string,
     private docker: string,
@@ -285,6 +288,22 @@ export class HostedServices {
     return out;
   }
 
+  /**
+   * For a service with egress hosts: the internal network, and proxy settings with
+   * credentials of its own, so it reaches its declared hosts and nothing else.
+   */
+  private async proxyEnv(s: HostedService): Promise<Record<string, string>> {
+    const hosts = s.manifest.egress ?? [];
+    if (!hosts.length) return {};
+    await this.ensureNetwork(INTERNAL_NET, true);
+    const gw = (await exec(this.docker, ["network", "inspect", INTERNAL_NET, "-f", "{{range .IPAM.Config}}{{.Gateway}}{{end}}"], { timeout: 20_000 })).out.trim();
+    if (!gw) throw new Error("The internal network has no gateway address for the egress proxy");
+    const at = await this.egress.listen(gw);
+    const { user, token } = this.egress.grant(s.id, hosts);
+    const url = `http://${user}:${token}@${at.host}:${at.port}`;
+    return { HTTP_PROXY: url, HTTPS_PROXY: url, http_proxy: url, https_proxy: url, NO_PROXY: "", no_proxy: "" };
+  }
+
   /** docker run flags shared by both ways of running: limits, no privileges, the network, the environment by name. */
   private runFlags(s: HostedService, env: Record<string, string>, network: string | null): string[] {
     return [
@@ -301,13 +320,13 @@ export class HostedServices {
   }
 
   /** For mcp-stdio: the command (and environment) that starts a fresh container speaking MCP on stdio. */
-  stdioCommand(id: string): { command: string; env: Record<string, string> } {
+  async stdioCommand(id: string): Promise<{ command: string; env: Record<string, string> }> {
     const s = this.must(id);
     if (s.manifest.expose.kind !== "mcp-stdio") throw new Error(`${s.name} exposes ${s.manifest.expose.kind}, not MCP on stdio`);
-    const env = this.envFor(s);
-    const outbound = (s.manifest.egress ?? []).length > 0;
+    const proxy = await this.proxyEnv(s);
+    const env = { ...this.envFor(s), ...proxy };
     const q = (a: string) => `'${a.replace(/'/g, "'\\''")}'`;
-    const args = ["run", "-i", "--rm", ...this.runFlags(s, env, outbound ? "bridge" : null), this.image(s)];
+    const args = ["run", "-i", "--rm", ...this.runFlags(s, env, Object.keys(proxy).length ? INTERNAL_NET : null), this.image(s)];
     return { command: [this.docker, ...args].map(q).join(" "), env };
   }
 
@@ -326,10 +345,9 @@ export class HostedServices {
     if (s.manifest.expose.kind === "mcp-stdio") throw new Error(`${s.name} speaks MCP on stdio: it starts a fresh container per connection, nothing to keep running`);
     const now = await this.state(id);
     if (now.running && now.address) return now;
-    const env = this.envFor(s);
-    const outbound = (s.manifest.egress ?? []).length > 0;
-    const network = outbound ? OUTBOUND_NET : INTERNAL_NET;
-    await this.ensureNetwork(network, !outbound);
+    const env = { ...this.envFor(s), ...(await this.proxyEnv(s)) };
+    const network = INTERNAL_NET;
+    await this.ensureNetwork(network, true);
     const name = this.containerName(id);
     await exec(this.docker, ["rm", "-f", name], { timeout: 30_000 });
     const r = await exec(this.docker, ["run", "-d", "--name", name, "--restart", "no", ...this.runFlags(s, env, network), this.image(s)], { timeout: 120_000, env });
@@ -373,7 +391,7 @@ export class HostedServices {
       return { url: e.remote.url, headers };
     }
     const s = this.must(e.hosted.service);
-    if (s.manifest.expose.kind === "mcp-stdio") return this.stdioCommand(s.id);
+    if (s.manifest.expose.kind === "mcp-stdio") return await this.stdioCommand(s.id);
     const st = await this.start(s.id);
     return { url: st.address! + (e.hosted.path ?? s.manifest.expose.path ?? ""), headers: {} };
   }
