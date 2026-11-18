@@ -123,6 +123,34 @@ member does not reproduce. There is little room to show it: the best seat is
 already at 91%. A fairer test needs a set where each seat is wrong on different
 questions.
 
+## Hard computation, all on gemini-3.1-flash-lite
+
+On GSM8K the single agent left no room. On "Hard computation (30)" the lite
+model alone gets about 19, so there is room to gain. Four systems, two runs
+each, through the built-in dataset (2026-11-18):
+
+| System | Runs | Mean | Cost (60 runs) |
+| --- | --- | --- | --- |
+| Single agent | 20, 18 | 19.0 | $0.05 |
+| Self-consistency, 5 samples | 22, 22 | 22.0 | $0.31 |
+| Multiagent debate (Du et al.) | 21, 21 | 21.0 | $0.50 |
+| ReConcile (Chen et al.) | 22, 22 | 22.0 | $0.51 |
+
+- **Here, more calls help: about +3 questions in 30.** Every multi-call system
+  beats the single agent in both runs. The single agent also moves the most
+  between runs (20, then 18), and voting or discussion removes that noise.
+- **Discussion adds nothing over voting.** Five independent samples and a vote
+  match ReConcile at 60% of the cost, and beat Multiagent Debate, which also
+  lost a multiplication (#2) that the single agent had right. This matches the
+  exact-computation result above.
+- **What they fix, and what nothing fixes.** The multi-call systems recover the
+  letter counts (#17, #19, #20) and most date spans (#11, #15), where the
+  single agent slips at random. All four miss the digit sums of large powers
+  (#6–#10) and the binomial coefficients mod p (#26–#28) in every run. No agent
+  can do those in its head, so nobody in the discussion has the right answer to
+  spread. A code-execution tool would solve them, which is a test of tools,
+  not of the debate.
+
 ## GSM8K: single agent vs Multiagent Debate (Du et al.)
 
 The 100-problem GSM8K sample (`benchmarks/gsm8k/`, saved as the dataset
