@@ -1,6 +1,8 @@
 # Contracts
 
 Everything in MAS Studio plugs together through a small set of interfaces.
+This page states their rules; [components.md](components.md) shows working code
+for each one.
 The canvas and the YAML both edit one document, `SystemDoc` (spec 0.2,
 `src/model/types.ts`); the validator (`src/model/validate.ts`) enforces the
 rules below.
