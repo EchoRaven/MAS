@@ -195,6 +195,7 @@ length. Hard computation (30), one run each:
 | System on gemma | Correct | Time |
 | --- | --- | --- |
 | Single agent | 17 | 48 min |
+| Agent Forest, N = 5 (vote) | 25 | 92 min |
 | Multiagent Debate, 2 rounds | **26** | 116 min |
 
 **+9 questions in 30: the first large gain from discussion on this platform.**
@@ -203,7 +204,14 @@ four binomial coefficients mod p (#26–#29) and one digit sum (#9). On the
 stronger model, debate gained 4 at most (19 → 23), and no system without a
 tool ever solved the binomials. Here three gemma debaters, each slipping in
 different places on long exact computations, correct each other: the setting
-the paper describes. (Agent Forest on gemma is running; its row comes next.)
+the paper describes.
+
+Agent Forest fixed **the same nine questions** (all date spans and all
+binomials); debate fixed one more (a digit sum, #9). So on the weaker model
+both gain about 8–9 in 30, and five votes come within a question of three
+debaters exchanging answers, as on the stronger model (where both gained
+2–4). The gain grows with how often the model slips, and voting captures
+almost all of it.
 
 On GSM8K gemma is too strong to show this: a single agent scores 95/100.
 
