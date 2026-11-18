@@ -115,12 +115,12 @@ One question in 30, from one run, is within run-to-run noise.
 | ReConcile, one seat per model | 28, 28, 26 | 27.3 | about $0.30 |
 
 With three runs each, mixed-model ReConcile ties its strongest seat, at about
-4.4 times the cost. Both arms miss #6 and #7 at least once. ReConcile's third
-run also missed #9 and #10, the questions where the discussion had adopted the
-right seat in the first run. On this set and these models, the paper's claim
-that the mix beats its best member does not reproduce. Ten points of headroom
-are not available here (the best seat is already at 91%), so a fairer test
-needs a set where the seats are further apart and each is wrong on different
+4.4 times the cost. Between them, ReConcile's two new runs missed #6, #7, #9
+and #10, including the two questions where the first run's discussion had
+adopted the right seat. The single agent's new runs missed only #6, #7 and #8.
+On this set and these models, the paper's claim that the mix beats its best
+member does not reproduce. There is little room to show it: the best seat is
+already at 91%. A fairer test needs a set where each seat is wrong on different
 questions.
 
 ## Earlier sets
