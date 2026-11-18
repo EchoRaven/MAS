@@ -283,6 +283,28 @@ function baseline(): SystemDoc {
 }
 
 /**
+ * One agent that can run Python: the baseline for systems with a code
+ * executor (AutoGen), to tell what the team adds from what the tool adds.
+ */
+function baselineWithCode(): SystemDoc {
+  const b = new Builder("Single agent with code (baseline)", "One agent that can run Python in a sandbox (Docker, no network) before it answers. The baseline for systems with a code executor: evaluate it next to AutoGen to see what the team adds beyond the tool.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks the question", approves: false })
+    .agent("solo", 340, 0, {
+      name: "Solver",
+      role: "Answers alone, running code when it helps",
+      model: "sonnet",
+      tools: ["bash"],
+      harness: { ...native(), loop: "react", max_steps: 6, instructions: "When the answer needs exact computation, write a Python script and run it with bash (cat > main.py <<'EOF' … EOF, then python3 main.py), and trust its output over mental arithmetic. End with one line: Final: <the answer alone>" },
+    })
+    .node("sandbox", "env", 340, 220, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" })
+    .edge("asker", "solo", "message", { label: "Question" })
+    .edge("solo", "asker", "message", { label: "Answer" })
+    .edge("solo", "sandbox", "access", { access: "read_write" });
+  b.doc.budget = { usd: 0.5, max_rounds: 10, wallclock_min: 5 };
+  return b.doc;
+}
+
+/**
  * Self-consistency: the same model sampled several times, majority vote.
  * The equal-compute baseline a multi-agent system should beat.
  */
@@ -312,6 +334,7 @@ function selfConsistency(): SystemDoc {
 export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
   { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
+  { id: "baseline-code", name: "Single agent with code (baseline)", summary: "one agent + a Python sandbox · the baseline for code-executing systems", build: baselineWithCode },
   { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
   { id: "coding", name: "Coding team", summary: "Claude Code · gate · routed outputs · edge transform", build: codingTeam },
