@@ -27,7 +27,7 @@ function build(): SystemDoc {
       role: "Writes tests independently",
       model: "sonnet",
       tools: ["edit_file"],
-      harness: { ...native(), loop: "react", max_steps: 4, instructions: "Without seeing the code, write pytest tests for the task to /work/test_solution.py (import from solution): basic, edge and large-scale cases. On later rounds keep the tests unless they are wrong. Reply with a one-line summary." },
+      harness: { ...native(), loop: "react", max_steps: 4, instructions: "Without seeing the code, write tests for the task to /work/test_solution.py as test_ functions with plain asserts (import from solution; pytest may not be installed): basic, edge and large-scale cases. On later rounds keep the tests unless they are wrong. Reply with a one-line summary." },
     }, "loop")
     .node("both", "function", 330, 40, {
       name: "Both ready",
@@ -40,7 +40,7 @@ function build(): SystemDoc {
       role: "Runs the tests",
       model: "haiku",
       tools: ["run_tests"],
-      harness: { ...native(), loop: "react", max_steps: 3, instructions: "Run the tests with run_tests (command: python -m pytest -q). If every test passes reply ALL TESTS PASSED; otherwise reply with the failing tests and their error messages. Either way, then read /work/solution.py with edit_file and end your reply with its full contents in one ```python block: the code is the result." },
+      harness: { ...native(), loop: "react", max_steps: 3, instructions: "Run the tests with run_tests (no command needed). If every test passes reply ALL TESTS PASSED; otherwise reply with the failing tests and their error messages. Either way, then read /work/solution.py with edit_file and end your reply with its full contents in one ```python block: the code is the result." },
     }, "loop")
     .node("sandbox", "env", 330, 260, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }, "loop")
     .edge("loop", "programmer", "message")
@@ -65,7 +65,7 @@ export const agentcoder: TemplateInfo = {
   notes: {
     mapped: [
       "The programmer and the test designer both receive the task from the group's input and work in parallel, so the tests are written without seeing the code, as in the paper.",
-      "A join-all function waits for both; the test executor runs pytest in the shared sandbox (/work).",
+      "A join-all function waits for both; the test executor runs the tests in the shared sandbox (/work): pytest when the image has it, else the sandbox's plain-assert runner.",
       "Group iteration feeds the task plus the test report back until the report says ALL TESTS PASSED, at most 4 rounds.",
     ],
     differs: [

@@ -39,7 +39,7 @@ function build(): SystemDoc {
         loop: "react",
         max_steps: 4,
         instructions:
-          "Write the task's tests to /work/test_solution.py as pytest tests (import from solution), run them with run_tests (command: python -m pytest -q), and report. If every test passes, reply PASS and the code. Otherwise reply FAIL with each failing test and its error.",
+          "Write the task's tests to /work/test_solution.py as test_ functions with plain asserts (import from solution; pytest may not be installed), run them with run_tests (no command needed), and report. If every test passes, reply PASS and the code. Otherwise reply FAIL with each failing test and its error.",
       },
     }, "trials")
     .agent("reflector", 640, 0, {

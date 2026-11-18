@@ -19,6 +19,38 @@ function exec(cmd: string, args: string[], opts: { timeout?: number; cwd?: strin
   });
 }
 
+/**
+ * Python images often lack pytest, and a sandbox without network cannot
+ * install it: then a minimal runner calls every test_* function in the test
+ * files (plain asserts), so a test-and-fix loop still gets a real verdict.
+ */
+const PY_TESTS = `import glob, importlib.util, sys, traceback
+sys.path.insert(0, ".")
+files = sorted(set(glob.glob("test*.py") + glob.glob("*_test.py") + glob.glob("tests/test*.py")))
+failed = passed = 0
+for f in files:
+    spec = importlib.util.spec_from_file_location(f[:-3].replace("/", "_"), f)
+    m = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(m)
+    except Exception:
+        print("ERROR importing", f); traceback.print_exc(limit=3); failed += 1; continue
+    for name in sorted(n for n in dir(m) if n.startswith("test") and callable(getattr(m, n))):
+        try:
+            getattr(m, name)(); passed += 1
+        except Exception:
+            failed += 1; print("FAILED", f + "::" + name); traceback.print_exc(limit=3)
+print(f"{passed} passed, {failed} failed" if files else "no tests found")
+sys.exit(1 if failed or not files else 0)
+`;
+// the output is kept to its tail, and the exit status is the tests' (a pipe into tail would hide it)
+export const DEFAULT_TESTS = `if [ -n "$(ls *test*.py tests/*.py 2>/dev/null)" ]; then
+if python -c "import pytest" 2>/dev/null; then python -m pytest -q > /tmp/mas-tests.out 2>&1; else python - > /tmp/mas-tests.out 2>&1 <<'PYTESTS'
+${PY_TESTS}PYTESTS
+fi; s=$?; tail -60 /tmp/mas-tests.out; exit $s
+elif [ -f package.json ]; then npm test > /tmp/mas-tests.out 2>&1; s=$?; tail -40 /tmp/mas-tests.out; exit $s
+else echo 'no tests found'; fi`;
+
 export class SandboxEnv implements Resource {
   private container?: Promise<string | null>;
   readonly dir: string;
@@ -74,7 +106,7 @@ export class SandboxEnv implements Resource {
         fs.writeFileSync(f, String(a.content));
         return `Wrote ${a.path}`;
       } },
-      { name: "run_tests", description: "Run the tests (default: pytest, else npm test)", input_schema: schema({ command: S }, []), effect: "read", source: this.id, run: async (a) => this.sh(String(a.command || "if ls *test*.py tests >/dev/null 2>&1; then python -m pytest -q 2>&1 | tail -40; elif [ -f package.json ]; then npm test 2>&1 | tail -40; else echo 'no tests found'; fi"), 600_000) },
+      { name: "run_tests", description: "Run the tests in /work. With no command: pytest when it is installed, else every test_* function in test*.py / *_test.py is called (plain asserts); npm test for a package.json", input_schema: schema({ command: S }, []), effect: "read", source: this.id, run: async (a) => this.sh(String(a.command || DEFAULT_TESTS), 600_000) },
       { name: "list_work", description: "List files under /work", input_schema: schema({}), effect: "read", source: this.id, run: async () => listFiles(this.dir).join("\n") || "(empty)" },
     ];
     return all.filter((t) => !ro || t.effect === "read");
