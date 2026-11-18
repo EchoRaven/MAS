@@ -864,6 +864,32 @@ describe("runtime", () => {
     expect(JSON.stringify(events)).not.toContain("hunter2");
   });
 
+  it("a call held by the request limit makes the run say why it pauses", async () => {
+    const { setRateWindow } = await import("./models");
+    const http = await import("node:http");
+    const server = http.createServer((_req, res) => res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({ choices: [{ message: { role: "assistant", content: "ok" }, finish_reason: "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1 } })));
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    setRateWindow(300);
+    try {
+      const b = new Builder("Limited", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 0, 0, { name: "A", model: "limited", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .agent("b", 0, 0, { name: "B", model: "limited", harness: { ...native(), loop: "single_shot", instructions: "" } })
+        .edge("me", "a", "message")
+        .edge("a", "b", "message")
+        .edge("b", "me", "message");
+      // one request per window: the second agent's call has to wait
+      b.doc.models.push({ id: "limited", provider: "openai_compatible", model: "x", api: { base_url: `http://127.0.0.1:${(server.address() as { port: number }).port}/v1`, params: { rpm: 1 } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      const { events } = await run(b.doc, "go", { mock: false });
+      expect(errors(events)).toEqual([]);
+      expect(events.some((e) => e.type === "log" && /^Waiting \d+s: at most 1 requests a minute to openai_compatible/.test((e as { text: string }).text))).toBe(true);
+      expect(events.filter((e) => e.type === "output").length).toBe(1);
+    } finally {
+      setRateWindow(60_000);
+      server.close();
+    }
+  });
+
   it("Werewolf keeps secrets: a vision reaches the seer alone, and night choices only the werewolves", async () => {
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-werewolf")!.build(), "Begin the game.");
     expect(errors(events)).toEqual([]);

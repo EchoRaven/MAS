@@ -13,6 +13,7 @@ import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, type Grader, parseCases, repeatStats, SAMPLE_SETS } from "@/run/evals";
+import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars } from "@/run/vars";
 import { Input } from "@/components/ui/input";
 import { useServer } from "@/store/server";
@@ -69,6 +70,15 @@ function Evals({ systemId }: { systemId: string }) {
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
   const [error, setError] = useState("");
   const parsed = useMemo(() => parseCases(text), [text]);
+  const rpm = useServer((s) => s.rpm);
+  // model calls one run makes, from a simulated run of the system (an estimate: real runs can loop more or less)
+  const callsPerRun = useMemo(() => {
+    try {
+      return simulate(doc).events.filter((e) => e.type === "usage").length;
+    } catch {
+      return 0;
+    }
+  }, [doc]);
   // the system as the evaluation will run it, for the model warnings
   const effective = useMemo(() => {
     try {
@@ -192,6 +202,12 @@ function Evals({ systemId }: { systemId: string }) {
           <p className="text-xs text-muted-foreground">
             {parsed.cases.length} case{parsed.cases.length === 1 ? "" : "s"}
             {Number(repeats) > 1 ? ` × ${repeats} repeats = ${parsed.cases.length * Number(repeats)} runs` : ""}
+            {callsPerRun > 0 && parsed.cases.length > 0 && !dry && (
+              <span title="From a simulated run of the system; real runs can make more or fewer calls. Requests are capped per minute so the provider never sees a burst">
+                {" "}
+                · ≈{Math.min(parsed.cases.length * Number(repeats), MAX_RUNS) * callsPerRun} model calls, at least {Math.max(1, Math.ceil((Math.min(parsed.cases.length * Number(repeats), MAX_RUNS) * callsPerRun) / rpm))} min at {rpm}/min
+              </span>
+            )}
             {parsed.cases.length * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
             {parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>

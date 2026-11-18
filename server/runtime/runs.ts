@@ -132,6 +132,13 @@ export class RunManager {
     };
     const wall = doc.budget.wallclock_min ? setTimeout(() => stop("Time limit reached"), doc.budget.wallclock_min * 60_000) : undefined;
     const baseUrl = `http://${this.config.host === "0.0.0.0" ? "127.0.0.1" : this.config.host}:${this.config.port}`;
+    // a pause for the request limit is said in the run (once in a while, not for every waiting call)
+    let lastWaitNote = 0;
+    rc.models.onWait = (m, ms, rpm) => {
+      if (Date.now() - lastWaitNote < 30_000) return;
+      lastWaitNote = Date.now();
+      emit({ type: "log", level: "info", text: `Waiting ${Math.ceil(ms / 1000)}s: at most ${rpm} requests a minute to ${m.provider} (MAS_RPM), so the provider never sees a burst` });
+    };
     const engine = new Engine(rc, { expose: (node, tools) => expose(rec.id, node, tools, baseUrl) });
     emit({ type: "system_started", input: opts.input });
     // a model that has no key fails only when it is first called, deep in the run: say so now, with who needs it

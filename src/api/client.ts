@@ -73,7 +73,7 @@ export async function api<T>(method: string, path: string, body?: unknown, opts:
 
 export const Api = {
   health: () => api<{ ok: boolean }>("GET", "/health"),
-  session: (token?: string) => api<{ ok: boolean; local_exec: boolean }>("GET", "/session", undefined, { token }),
+  session: (token?: string) => api<{ ok: boolean; local_exec: boolean; rpm?: number }>("GET", "/session", undefined, { token }),
   systems: () => api<{ systems: SystemDoc[]; deleted?: Record<string, string> }>("GET", "/systems"),
   putSystem: (doc: SystemDoc) => api("PUT", `/systems/${encodeURIComponent(doc.id)}`, doc),
   versions: (id: string) => api<{ versions: SystemVersion[] }>("GET", `/systems/${encodeURIComponent(id)}/versions`),

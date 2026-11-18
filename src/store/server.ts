@@ -9,6 +9,8 @@ interface ServerState {
   status: ServerStatus;
   error?: string;
   localExec: boolean;
+  /** the server's model requests per minute (MAS_RPM) */
+  rpm: number;
   check: () => Promise<void>;
   connect: (token: string) => Promise<boolean>;
   disconnect: () => void;
@@ -17,6 +19,7 @@ interface ServerState {
 export const useServer = create<ServerState>((set) => ({
   status: "checking",
   localExec: false,
+  rpm: 60,
   check: async () => {
     try {
       await Api.health();
@@ -30,7 +33,7 @@ export const useServer = create<ServerState>((set) => ({
     }
     try {
       const s = await Api.session();
-      set({ status: "connected", error: undefined, localExec: s.local_exec });
+      set({ status: "connected", error: undefined, localExec: s.local_exec, rpm: s.rpm ?? 60 });
     } catch (e) {
       set({ status: e instanceof ApiError && e.status === 401 ? "needs_token" : "offline", error: (e as Error).message });
     }
@@ -39,7 +42,7 @@ export const useServer = create<ServerState>((set) => ({
     try {
       const s = await Api.session(token.trim());
       setToken(token.trim());
-      set({ status: "connected", error: undefined, localExec: s.local_exec });
+      set({ status: "connected", error: undefined, localExec: s.local_exec, rpm: s.rpm ?? 60 });
       return true;
     } catch (e) {
       set({ error: e instanceof ApiError && e.status === 401 ? "That token is not right" : (e as Error).message });

@@ -98,7 +98,7 @@ export function setRateWindow(ms: number) {
   windowMs = ms;
   windows.clear();
 }
-export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: AbortSignal): Promise<void> {
+export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: AbortSignal, onWait?: (ms: number, rpm: number) => void): Promise<void> {
   if (m.provider === "mock") return;
   const own = m.api.params?.rpm;
   if (own == null && m.api.base_url && localUrl(m.api.base_url)) return;
@@ -115,6 +115,7 @@ export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: 
     }
     windows.set(k, recent);
     const wait = windowMs - (now - recent[0]) + 5;
+    onWait?.(wait, rpm);
     await new Promise<void>((resolve, reject) => {
       const t = setTimeout(resolve, wait);
       signal?.addEventListener("abort", () => (clearTimeout(t), reject(signal.reason)), { once: true });
@@ -125,6 +126,8 @@ export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: 
 export const MOCK_MODEL: ModelSpec = { id: "mock", provider: "mock", model: "mock", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
 
 export class Models {
+  /** told when a call waits for the rate limit (a run logs it, so a pause has a reason) */
+  onWait?: (m: ModelSpec, ms: number, rpm: number) => void;
   constructor(
     private catalog: ModelSpec[],
     private secrets: Secrets,
@@ -208,7 +211,7 @@ export class Models {
   async chat(id: string | null | undefined, req: ChatRequest): Promise<{ res: ChatResponse; usage: Usage }> {
     const m = this.spec(id, "chat");
     let res: ChatResponse;
-    await rateLimit(m, this.keyValue(m), req.signal);
+    await rateLimit(m, this.keyValue(m), req.signal, (ms, rpm) => this.onWait?.(m, ms, rpm));
     try {
       res = await PROVIDERS[m.provider].chat(m, this.key(m), req);
       noteHealth(m, true, undefined, this.keyValue(m));
@@ -226,7 +229,7 @@ export class Models {
     const out: number[][] = [];
     try {
       for (let i = 0; i < texts.length; i += 64) {
-        await rateLimit(m, this.keyValue(m), signal);
+        await rateLimit(m, this.keyValue(m), signal, (ms, rpm) => this.onWait?.(m, ms, rpm));
         out.push(...(await p.embed(m, this.key(m), texts.slice(i, i + 64), signal)));
       }
       noteHealth(m, true, undefined, this.keyValue(m));
@@ -241,7 +244,7 @@ export class Models {
     const m = this.spec(id, "rerank");
     const p = PROVIDERS[m.provider];
     if (!p.rerank) throw new Error(`Provider ${m.provider} has no rerank endpoint`);
-    await rateLimit(m, this.keyValue(m), signal);
+    await rateLimit(m, this.keyValue(m), signal, (ms, rpm) => this.onWait?.(m, ms, rpm));
     try {
       const out = await p.rerank(m, this.key(m), query, docs, signal);
       noteHealth(m, true, undefined, this.keyValue(m));

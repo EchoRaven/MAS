@@ -27,7 +27,7 @@ evals.recover();
 
 const router = new Router(config.token);
 router.on("GET", "/api/health", () => ({ ok: true, server: "mas-studio", version: "0.1.0" }), { auth: false });
-router.on("GET", "/api/session", () => ({ ok: true, data_dir: config.dataDir, local_exec: config.allowLocalExec }));
+router.on("GET", "/api/session", () => ({ ok: true, data_dir: config.dataDir, local_exec: config.allowLocalExec, rpm: Number(process.env.MAS_RPM ?? 60) }));
 systemRoutes(router, store);
 runRoutes(router, store, runs);
 settingsRoutes(router, store, secrets, config);
