@@ -8,7 +8,7 @@ import type { SystemDoc } from "../types";
 function build(): SystemDoc {
   const b = new Builder(
     "MapCoder",
-    "Four agents in a pipeline: the retrieval agent recalls similar problems it has seen, the planner turns them into 3 plans with a confidence each, and the plans are tried best first: the coder implements one, the debugger runs the tests and reports, up to t rounds; if they still fail, the next plan. t is a run variable (5 by default).",
+    "Four agents in a pipeline: the retrieval agent recalls similar problems it has seen, the planner turns them into k plans with a confidence each, and the plans are tried best first: the coder implements one, the debugger runs the tests and reports, up to t rounds; if they still fail, the next plan. k and t are run variables (3 and 5 by default).",
   );
   b.schema({
     id: "Plans",
@@ -31,13 +31,13 @@ function build(): SystemDoc {
       harness: {
         ...native(),
         loop: "single_shot",
-        instructions: "Using the recalled problems, write 3 different step-by-step plans for the given problem: different algorithms or approaches where you can, not rewordings. Reply as JSON: {\"plans\": [{plan, confidence (0-1, how likely this plan solves it), based_on (which recalled problem)}]}.",
+        instructions: "Using the recalled problems, write {{vars.k ?? 3}} different step-by-step plans for the given problem: different algorithms or approaches where you can, not rewordings. Reply as JSON: {\"plans\": [{plan, confidence (0-1, how likely this plan solves it), based_on (which recalled problem)}]}.",
       },
     })
     .group("plans", 800, 0, {
       name: "Try plans, best first",
       // one round per plan, highest confidence first, until a plan's code passes its tests
-      iterate: { max_rounds: 3, over: "input.plans.slice().sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))", until: 'output.text.includes("ALL TESTS PASSED")' },
+      iterate: { max_rounds: "{{vars.k ?? 3}}", over: "input.plans.slice().sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))", until: 'output.text.includes("ALL TESTS PASSED")' },
       interface: { inputs: [port("plans", "json", { schema: "Plans" })], outputs: [port("report", "message")] },
     })
     .group("repair", 0, 0, {
@@ -91,7 +91,7 @@ export const mapcoder: TemplateInfo = {
     mapped: [
       "The four agents of the paper are four components in order: retrieval, planning, coding, debugging. The retrieval agent's recalled problems travel to the planner through a full handoff.",
       "The plans and their confidence are a json port bound to a Plans schema, parsed by an output stage.",
-      "Trying the plans best first is a group with iterate.over: one round per plan, sorted by confidence, until the tests pass (k = 3 plans).",
+      "Trying the plans best first is a group with iterate.over: one round per plan, sorted by confidence, until the tests pass (k plans, a run variable, 3 by default).",
       "The debugging loop is a group inside it: the bug report goes back with the plan until the tests pass, at most t rounds per plan (a run variable, 5 by default).",
     ],
     differs: [

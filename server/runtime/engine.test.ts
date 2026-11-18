@@ -1053,6 +1053,21 @@ describe("runtime", () => {
     expect(tries.some((e) => e.label === "rounds done" && /holds \(round 2\)/.test(e.detail))).toBe(true);
   });
 
+  it("an agent's instructions read run variables: {{vars.k ?? 3}} is the run's k, or 3", async () => {
+    const doc = () => {
+      const b = new Builder("Vars", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("w", 200, 0, { name: "W", model: "w", harness: { ...native(), loop: "single_shot", instructions: "Write {{vars.k ?? 3}} plans for {{input}}." } })
+        .edge("me", "w", "message")
+        .edge("w", "me", "message");
+      b.doc.models.push({ id: "w", provider: "mock", model: "mock", api: { params: { script: ["{{system}}"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return b.doc;
+    };
+    const told = async (vars?: Record<string, unknown>) => ((await run(doc(), "go", { mock: false, vars })).events.find((e) => e.type === "output") as { text: string }).text;
+    expect(await told({ k: 5 })).toContain("Write 5 plans for {{input}}.");
+    expect(await told()).toContain("Write 3 plans");
+  });
+
   it("iterate.over that finds no list runs the whole input once, and says why", async () => {
     const b = new Builder("Plans", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

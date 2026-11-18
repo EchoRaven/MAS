@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TEMPLATES } from "@/model/templates";
-import { formatVars, parseVars, readVars } from "./vars";
+import { fillVars, formatVars, parseVars, readVars } from "./vars";
 
 describe("run variables", () => {
   it("parses key=value lists, with numbers, booleans and JSON", () => {
@@ -14,5 +14,17 @@ describe("run variables", () => {
     expect(readVars(eot)).toEqual(["paradigm"]);
     // DyLAN's functions only pass state to each other through ctx.vars
     expect(readVars(TEMPLATES.find((t) => t.id === "paper-dylan")!.build())).toEqual([]);
+    // and the ones written as {{vars.x}}: round limits, ensemble sizes, instructions
+    expect(readVars(TEMPLATES.find((t) => t.id === "paper-debate")!.build())).toContain("rounds");
+    expect(readVars(TEMPLATES.find((t) => t.id === "paper-agent-forest")!.build())).toContain("n");
+    expect(readVars(TEMPLATES.find((t) => t.id === "paper-mapcoder")!.build())).toEqual(["k", "t"]);
+  });
+
+  it("fills {{vars.x}} and {{vars.x ?? default}} in text, and leaves other braces alone", () => {
+    expect(fillVars("Write {{vars.k ?? 3}} plans, {{ vars.style }} style.", { style: "terse" })).toBe("Write 3 plans, terse style.");
+    expect(fillVars("Write {{vars.k ?? 3}} plans.", { k: 5 })).toBe("Write 5 plans.");
+    expect(fillVars('Tone: {{vars.tone ?? "plain"}}', {})).toBe("Tone: plain");
+    expect(fillVars("Use {{input}} and {{vars.missing}} and {x: 1}", {})).toBe("Use {{input}} and {{vars.missing}} and {x: 1}");
+    expect(fillVars("Weights {{vars.w}}", { w: [1, 2] })).toBe("Weights [1,2]");
   });
 });

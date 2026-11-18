@@ -36,6 +36,21 @@ export const formatVars = (vars: Record<string, unknown> | undefined) =>
     .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
     .join(", ");
 
+const VAR_REF = /\{\{\s*vars\.([A-Za-z_]\w*)\s*(?:\?\?\s*([^}]*?)\s*)?\}\}/g;
+
+/**
+ * "{{vars.k}}" and "{{vars.k ?? 3}}" in text (an agent's instructions), filled from the run's variables;
+ * a default is used when the run does not set it. Other braces, and a variable with neither, stay as written.
+ */
+export function fillVars(text: string, vars: Record<string, unknown>): string {
+  if (!text.includes("{{")) return text;
+  return text.replace(VAR_REF, (all, name: string, fallback: string | undefined) => {
+    const v = vars[name];
+    if (v !== undefined && v !== null && v !== "") return typeof v === "string" ? v : JSON.stringify(v);
+    return fallback !== undefined ? fallback.replace(/^(["'])(.*)\1$/, "$2") : all;
+  });
+}
+
 /** Variables the system's code reads but never sets: the ones a run can be started with. */
 export function readVars(doc: SystemDoc): string[] {
   const read = new Set<string>();
@@ -49,6 +64,8 @@ export function readVars(doc: SystemDoc): string[] {
     if (!v || typeof v !== "object") return;
     for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
       if ((k === "code" || k === "loop_fn") && typeof x === "string") scan(x);
+      // "{{vars.k ?? 3}}" in instructions, round limits and replicas
+      else if (typeof x === "string") for (const m of x.matchAll(VAR_REF)) read.add(m[1]);
       else walk(x);
     }
   };

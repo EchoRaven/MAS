@@ -284,7 +284,12 @@ result: { type: code }        # text | number | code | json | choice
 Every finished run's answer is checked against it; evaluations flag answers
 of the wrong kind before their grade. Run variables are set per run or per
 evaluation (`vars`) and read as `ctx.vars` in code, `{{vars.x}}` in
-templates, and `{{vars.x ?? default}}` in `replicas` and `max_rounds`.
+templates, `{{vars.x ?? default}}` in `replicas` and `max_rounds`, and
+`{{vars.x}}` or `{{vars.x ?? default}}` in an agent's instructions (MapCoder:
+"write {{vars.k ?? 3}} plans", with `max_rounds: "{{vars.k ?? 3}}"` on the
+group that tries them). In instructions, only these two forms are filled; a
+variable the run does not set and that has no default stays as written. The
+Run and Evaluate pages list every variable a system reads as a hint.
 
 ## 11. Hosting your server, or reaching one
 

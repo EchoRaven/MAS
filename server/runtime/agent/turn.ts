@@ -3,6 +3,7 @@
 // and after-turn writes.
 import path from "node:path";
 import type { AgentData, SysEdge, SysNode } from "@/model/types";
+import { fillVars } from "@/run/vars";
 import { nameOf } from "../context";
 import { runFn } from "../functions";
 import { ADAPTERS } from "../harness";
@@ -123,7 +124,7 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   const plan = state.plans.get(node.id);
   const system = [
     `You are ${a.name}${a.role ? `, ${a.role}` : ""}.`,
-    a.harness.instructions,
+    fillVars(a.harness.instructions, rc.vars),
     plan ? `Your plan:\n${plan}` : "",
     summary ? `Earlier conversation (summary):\n${summary}` : "",
     ...blocks,

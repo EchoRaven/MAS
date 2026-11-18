@@ -16,7 +16,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
     name: "add",
     description:
       "Add a component.\n" +
-      "· agent: options role, instructions (its system prompt, be specific), model, loop (react | single_shot | plan_execute | reflexion), tools, group\n" +
+      "· agent: options role, instructions (its system prompt, be specific; {{vars.k ?? 3}} in it is the run variable k, or 3), model, loop (react | single_shot | plan_execute | reflexion), tools, group\n" +
       "· human: options role, approves (true when they approve actions)\n" +
       "· model: a bare model call; options prompt ({{input}} is what arrives), system_prompt, replicas (a number, or \"{{vars.n ?? 5}}\" to set it per run: the model is asked that many times in parallel and the output is the list of replies, for a function to vote on)\n" +
       "· function: deterministic code. Always give options.code: JavaScript, with `input` arriving and whatever you return going out. With join 'all' it waits for every input port and `input` is { port: value }. Options: code, lang, join\n" +

@@ -68,7 +68,8 @@ export const mockProvider: Provider = {
       counters.set(key, n + 1);
       const s = script[Math.min(n, script.length - 1)];
       const step = typeof s === "string" ? { text: s } : s;
-      if (step.text) content.push({ type: "text", text: step.text.replace("{{input}}", lastText) });
+      // "{{input}}": the last message; "{{system}}": the system prompt the model was given (for tests of what it is told)
+      if (step.text) content.push({ type: "text", text: step.text.replace("{{input}}", lastText).replace("{{system}}", req.system ?? "") });
       if (step.tool && req.tools?.some((t) => t.name === step.tool)) {
         content.push({ type: "tool_call", id: `call_${n}_${hash(step.tool)}`, name: step.tool, input: step.input ?? {} });
         stop = "tool_use";
