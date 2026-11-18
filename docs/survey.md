@@ -84,6 +84,7 @@ Each one became a general interface, not a fix for one paper:
 | AutoGen | The critic redid the code's arithmetic by hand and overrode the right result | **Template rule:** executed output is the authority; doubts become checks in code |
 | AgentCoder, AutoGen | On coding tasks the final message was a verdict ("ALL TESTS PASSED") or a printed value, not the code | **Result contract:** the last message of a run is its deliverable; coding systems end with the code (see "Open questions") |
 | MapCoder, AgentCoder, Reflexion | The sandbox image had no pytest and no network, so tests could never pass; the default test command never found the tests | **`run_tests`:** finds test files, uses pytest when present, else runs every `test_*` function itself, and returns the tests' exit status |
+| All of the above | Each bug looked like the paper's method doing badly until the failures were counted by reason | **Evaluate page:** failures grouped by reason, largest first; one click shows those cases |
 | Graders | "40%" was read as 0.4 against GSM8K's 40; AutoGen's closing `TERMINATE` was taken for the answer | **Graders:** percentages match either form; stop words are not answers |
 | Every comparison | Questions pasted by hand, evaluations run in parallel (a burst of 875 calls a minute got a key suspended) | **Datasets** (versioned, sampled), **batch evaluations** (one system after another), a **server-wide rate limit** |
 
@@ -99,6 +100,11 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   (digit sums of large powers, binomials mod p) were solved every time once
   one agent could run code. A single agent with the same sandbox scored the
   same 30/30 as AutoGen's five-agent chat, faster and cheaper.
+- **Test-and-fix loops do not pay on easy code.** On 31 coding problems a
+  single agent with a sandbox scored within two problems of AgentCoder and
+  MapCoder, at a quarter to a third of their cost. Writing tests separately
+  from the code (AgentCoder) is the one mechanism that caught bugs a single
+  attempt missed.
 - **The fair baseline has the same tools.** A system with a code executor has
   to be compared with one agent that has the same executor, not with a bare
   model.

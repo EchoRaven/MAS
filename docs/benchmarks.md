@@ -204,6 +204,50 @@ This is the clearest result so far. How the agents talk matters less than
 whether one of them can run code, and the right baseline for a system with
 tools is a single agent with the same tools.
 
+## Coding: five systems on 31 problems
+
+Two sets written for this (`benchmarks/mas-code/`, no download): 19
+function-level problems, and 12 harder ones with exact specs, performance
+limits and forbidden shortcuts that the tests enforce. Each problem is in
+HumanEval form, and each has a reference solution that passes its tests in
+the grader's Docker sandbox. The grader is "Code: run the tests". All on
+gemini-3.1-flash-lite, two runs each:
+
+| System | 19 problems (of 38) | 12 hard (of 24) | Cost, both sets |
+| --- | --- | --- | --- |
+| Single agent | 36 | 20 | $0.05 |
+| Single agent with code | 37 | 22 | $0.27 |
+| AutoGen (Wu et al.) | 37 | 21 | $0.26 |
+| AgentCoder (Huang et al.) | **38** | 22 | $1.00 |
+| MapCoder (Islam et al.) | 37 | 21 | $0.80 |
+
+- **On problems of this size, every system is within noise of the others.**
+  The best system gains about two problems in 62 over a single agent with
+  code, at three to four times the cost. AgentCoder's separately written
+  tests are the only mechanism that shows any edge: it caught the
+  edit-script ordering bug that most single attempts got wrong.
+- **The hard set separates a little, by edge cases, not algorithms.** Most
+  misses are in a few problems. An edit script applied in the wrong order
+  breaks on "" → "abc". Regex matching without memoisation times out. The
+  JSON parser has syntax errors. These are the failures a test-and-fix loop
+  is meant to catch, and it catches some of them.
+- **What the paper systems claim needs harder tasks.** The papers report their
+  gains on competition problems and on weaker models. Here a single attempt
+  already passes 90–95%, so there is little left to gain.
+
+Getting here took four fixes to the rebuilt systems, each found by grouping a
+run's failures by reason (the Evaluate page now does this):
+
+| System | What went wrong | Fix |
+| --- | --- | --- |
+| AgentCoder | Returned "ALL TESTS PASSED" instead of the code (0 of 3 in a trial) | The executor ends every report with the current code |
+| AutoGen | The critic returned what the code printed, not the code | The critic answers with the code when the task asks for code |
+| MapCoder | The coder never saw the problem, only the plan, and used the recalled LeetCode function names (5 of 38) | Functions can read the run's input (`ctx.run_input`); the plan edge carries the problem |
+| MapCoder, AgentCoder, Reflexion | The sandbox had no pytest and no network, so the tests never passed and every loop used all its rounds | `run_tests` runs plain-assert tests without pytest; templates write such tests |
+
+MapCoder went from 5 of 38 to 37 of 38 on the 19 problems, and its cost fell
+from $0.86 to $0.39, because its debug loop now stops when the tests pass.
+
 ## GSM8K: single agent vs Multiagent Debate (Du et al.)
 
 The 100-problem GSM8K sample (`benchmarks/gsm8k/`, saved as the dataset
