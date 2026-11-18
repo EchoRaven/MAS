@@ -68,6 +68,17 @@ describe("the draft the architect edits", () => {
     expect(d.doc.termination.filter((t) => t.startsWith("posts"))).toEqual(["posts >= 6"]);
   });
 
+  it("gives a plugin an MCP server hosted here or elsewhere, and refuses one that is not hosted", async () => {
+    const d = Draft.blank("Notes");
+    d.services = [{ id: "svc_notes_mcp_e6f792", name: "Notes MCP", expose: "mcp-stdio" }];
+    d.add("plugin", "notes", "Notes", { service: "svc_notes_mcp_e6f792" });
+    const p = d.doc.nodes.find((n) => n.id === "notes")!.data as { spec: { backend: unknown } };
+    expect(p.spec.backend).toEqual({ kind: "mcp", endpoint: { hosted: { service: "svc_notes_mcp_e6f792" } } });
+    d.add("plugin", "crm", "CRM", { url: "https://crm.example/mcp", bearer_env: "CRM_TOKEN" });
+    expect((d.doc.nodes.find((n) => n.id === "crm")!.data as { spec: { backend: unknown } }).spec.backend).toEqual({ kind: "mcp", endpoint: { remote: { url: "https://crm.example/mcp", bearer_env: "CRM_TOKEN" } } });
+    expect(await runDesignTool(d, "add", { kind: "plugin", id: "x", name: "X", options: { service: "svc_nope_000000" } })).toMatch(/no hosted service.*Hosted here: svc_notes_mcp_e6f792/);
+  });
+
   it("refuses what the canvas would refuse, and says why", async () => {
     const d = Draft.blank("X");
     d.add("agent", "a", "A");

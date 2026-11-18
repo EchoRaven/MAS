@@ -1,0 +1,5 @@
+# How MAS Studio runs this project when it is hosted (Connections page).
+name: Word count
+start: python app.py
+expose: { kind: http, port: 8000, health: /health }   # one container, reached by the server only
+egress: []                                             # no network

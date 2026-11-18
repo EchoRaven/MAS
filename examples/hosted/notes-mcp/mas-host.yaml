@@ -1,0 +1,5 @@
+# How MAS Studio runs this project when it is hosted (Connections page).
+name: Notes MCP
+start: python server.py
+expose: { kind: mcp-stdio }   # a fresh container per connection, MCP on stdin/stdout
+egress: []                    # no network

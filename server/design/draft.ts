@@ -38,6 +38,8 @@ function place(doc: SystemDoc, parent?: string) {
 }
 
 export class Draft {
+  /** hosted services an MCP plugin can use (listed in the architect's task); null = not known here */
+  services: { id: string; name: string; expose: string }[] | null = null;
   /** models that can actually be called here, by kind; empty = no restriction known */
   usable: { chat: string[]; embedding: string[]; rerank?: string[] } = { chat: [], embedding: [] };
   /** what the knowledge base holds (folders end with /); null = unknown, not checked */
@@ -118,9 +120,11 @@ export class Draft {
         break;
       }
       case "plugin":
-        data = defaultPlugin((options.preset as PluginPreset) ?? "memory");
+        data = defaultPlugin((options.preset as PluginPreset) ?? (options.service || options.url ? "custom" : "memory"));
         data.name = name;
         if (Array.isArray(options.sources)) data.spec.sources = options.sources.map(String);
+        // a plugin whose tools come from an MCP server: hosted here (service) or elsewhere (url)
+        if (options.service || options.url) this.setServer(data as Extract<NodeData, { kind: "plugin" }>, options);
         break;
       case "env":
         if (options.env_kind === "room" || !options.env_kind) {
@@ -213,6 +217,7 @@ export class Draft {
         break;
       case "plugin":
         if (Array.isArray(options.sources)) (n.data.spec.sources = options.sources.map(String), changed.push("sources"));
+        if (options.service || options.url) (this.setServer(n.data, options), changed.push("server"));
         break;
       case "env":
         if (str("policy") && n.data.room) (n.data.room = { ...n.data.room, policy: options.policy as NonNullable<typeof n.data.room>["policy"] }, changed.push("policy"));
@@ -310,6 +315,20 @@ export class Draft {
       return `Named "${this.doc.name}"; every run's answer will be checked to be ${type}.`;
     }
     return `Named "${this.doc.name}".`;
+  }
+
+  /** The MCP server a plugin's tools come from: a hosted service, or a remote URL with an optional bearer secret. */
+  private setServer(p: Extract<NodeData, { kind: "plugin" }>, options: Record<string, unknown>) {
+    if (options.service) {
+      const id = String(options.service);
+      if (this.services && !this.services.some((s) => s.id === id)) throw new DraftError(`There is no hosted service "${id}". Hosted here: ${this.services.map((s) => `${s.id} (${s.name}, ${s.expose})`).join(", ") || "none"}`);
+      p.spec.backend = { kind: "mcp", endpoint: { hosted: { service: id } } };
+    } else {
+      const url = String(options.url);
+      if (!/^https?:\/\//.test(url)) throw new DraftError(`url must be an http(s) URL (got ${url})`);
+      p.spec.backend = { kind: "mcp", endpoint: { remote: { url, ...(options.bearer_env ? { bearer_env: String(options.bearer_env) } : {}) } } };
+    }
+    p.spec.tools = [];
   }
 
   /** A round limit: a number, or a run variable with a default ("{{vars.rounds ?? 2}}"). */

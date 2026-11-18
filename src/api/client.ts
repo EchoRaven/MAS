@@ -72,7 +72,23 @@ export async function api<T>(method: string, path: string, body?: unknown, opts:
   return data as T;
 }
 
+export type HostedState = { running: boolean; address?: string; container?: string };
+export type HostedServiceInfo = import("@/model/hosting").HostManifest extends infer M
+  ? { id: string; name: string; created_at: string; current: number; versions: { n: number; from: "upload" | "git"; source: string; at: string; files: number; image?: string; built_at?: string; build_ok?: boolean }[]; manifest: M; overrides: Partial<M>; state?: HostedState }
+  : never;
+export type EndpointTest = { ok: boolean; detail: string; tools?: { name: string; description: string }[]; ms: number };
+
 export const Api = {
+  hostedServices: () => api<{ services: HostedServiceInfo[] }>("GET", "/hosted"),
+  createHosted: (body: { name: string; archive_base64?: string; filename?: string; git?: string; manifest?: Partial<import("@/model/hosting").HostManifest> }) => api<HostedServiceInfo>("POST", "/hosted", body),
+  newHostedVersion: (id: string, body: { archive_base64?: string; filename?: string; git?: string }) => api<HostedServiceInfo>("POST", `/hosted/${id}/versions`, body),
+  configureHosted: (id: string, manifest: Partial<import("@/model/hosting").HostManifest>) => api<HostedServiceInfo>("PUT", `/hosted/${id}/config`, manifest),
+  buildHosted: (id: string) => api<{ ok: boolean; log: string; image?: string }>("POST", `/hosted/${id}/build`),
+  startHosted: (id: string) => api<HostedState>("POST", `/hosted/${id}/start`),
+  stopHosted: (id: string) => api("POST", `/hosted/${id}/stop`),
+  hostedLogs: (id: string) => api<{ logs: string }>("GET", `/hosted/${id}/logs`),
+  deleteHosted: (id: string) => api("DELETE", `/hosted/${id}`),
+  testEndpoint: (endpoint: import("@/model/hosting").Endpoint, kind: "mcp" | "http") => api<EndpointTest>("POST", "/connections/test", { endpoint, kind }),
   health: () => api<{ ok: boolean }>("GET", "/health"),
   session: (token?: string) => api<{ ok: boolean; local_exec: boolean; rpm?: number }>("GET", "/session", undefined, { token }),
   systems: () => api<{ systems: SystemDoc[]; deleted?: Record<string, string> }>("GET", "/systems"),

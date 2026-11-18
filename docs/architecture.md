@@ -120,6 +120,10 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   default) across the whole server. A model can add a lower limit of its own
   (`api.params.rpm`, kept out of the request), for quotas such as free-tier
   Gemma's.
+- Hosted services (`.data/hosted/`) are projects uploaded or cloned, built
+  into Docker images and run isolated (no network unless declared, no
+  published ports, unprivileged); components reach them, or remote servers,
+  through one `endpoint` ([hosting.md](hosting.md)).
 - Chat replies are streamed from the provider and put back together (text,
   tool calls, usage), so a model that thinks for minutes is not cut off by the
   HTTP client's wait for headers.

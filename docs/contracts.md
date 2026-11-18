@@ -258,6 +258,8 @@ each is checked before it joins.
 | A model endpoint | catalog model | [Models](#models) | An OpenAI-compatible, Anthropic or Gemini endpoint; the key stays in an env var |
 | A benchmark | dataset | [Datasets](#datasets) | JSON lines or text in a known format, or a JavaScript adapter |
 | A whole system | system YAML | `SystemDoc` 0.2 | Every component passes its contract |
+| A server, as code (an MCP server, a backend) | a hosted service | `mas-host.yaml` ([hosting.md](hosting.md)) | An archive or git URL, a start command, what it exposes (`mcp-stdio`, `mcp-http`, `http`); runs in Docker here |
+| A server somewhere else | a remote endpoint | `endpoint: { remote: { url, bearer_env?, headers? } }` | A URL; auth as a secret name or headers |
 
 The rules are the same for all of them:
 
@@ -270,6 +272,10 @@ The rules are the same for all of them:
   code the platform did not write.
 - **Outside harnesses use the platform's tools through MCP.** Hooks,
   approvals, policies and events apply to them as to native agents.
+- **Where an outside server is, is one endpoint.** Plugin backends, catalog
+  tools and imported envs' MCP servers take `endpoint: { remote: … } | {
+  hosted: … }`, so the same component can use a server elsewhere or one
+  hosted on this server ([hosting.md](hosting.md)).
 
 ## Import contracts
 

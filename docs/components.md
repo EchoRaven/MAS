@@ -17,6 +17,7 @@ sends and expects (`server/runtime/`).
 | Give agents one tool | a catalog tool | [8](#8-a-catalog-tool) |
 | Read a benchmark in its own format | a dataset adapter | [9](#9-a-dataset-adapter) |
 | Say what a run returns, and sweep settings | `result`, run variables | [10](#10-declared-results-and-run-variables) |
+| Run your server here, or reach one elsewhere | a hosted service, or a remote endpoint | [11](#11-hosting-your-server-or-reaching-one) |
 
 All code that runs inside the platform has the same contract,
 `f(input, ctx) → output | null` (null drops the value), in `js`, `python`,
@@ -263,3 +264,26 @@ Every finished run's answer is checked against it; evaluations flag answers
 of the wrong kind before their grade. Run variables are set per run or per
 evaluation (`vars`) and read as `ctx.vars` in code, `{{vars.x}}` in
 templates, and `{{vars.x ?? default}}` in `replicas` and `max_rounds`.
+
+## 11. Hosting your server, or reaching one
+
+Any of the servers in sections 6–8 can run on this server: upload the project
+on the Connections page (or `POST /api/hosted`), with a `mas-host.yaml`:
+
+```yaml
+start: python server.py
+expose: { kind: mcp-stdio }     # or { kind: http, port: 8000, health: /health }
+egress: []                      # no network
+```
+
+then point the component at it:
+
+```yaml
+backend: { kind: mcp, endpoint: { hosted: { service: svc_notes_mcp_e6f792 } } }
+# the same server elsewhere:
+backend: { kind: mcp, endpoint: { remote: { url: https://notes.example/mcp, bearer_env: NOTES_TOKEN } } }
+```
+
+`examples/hosted/` has a complete MCP server on stdio and a complete HTTP
+plugin backend, both without dependencies. [hosting.md](hosting.md) has the
+manifest, the isolation and the API.

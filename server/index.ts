@@ -35,7 +35,7 @@ router.on("GET", "/api/session", () => ({ ok: true, data_dir: config.dataDir, lo
 systemRoutes(router, store);
 runRoutes(router, store, runs);
 settingsRoutes(router, store, secrets, config);
-designRoutes(router, store, secrets, config);
+designRoutes(router, store, secrets, config, hosted);
 evalRoutes(router, store, evals);
 datasetRoutes(router, store);
 hostedRoutes(router, hosted);

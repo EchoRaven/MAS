@@ -1,4 +1,5 @@
 // The architect endpoint: describe a system, get one back.
+import type { HostedServices } from "../hosting/services";
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_MODELS } from "@/model/defaults";
@@ -26,7 +27,7 @@ function knowledgeContents(config: Config): string[] {
   return out.slice(0, 80);
 }
 
-export function designRoutes(r: Router, store: Store, secrets: Secrets, config: Config) {
+export function designRoutes(r: Router, store: Store, secrets: Secrets, config: Config, hosted?: HostedServices) {
   r.on("POST", "/api/design", async (req) => {
     const b = (await req.body()) as { prompt?: string; doc?: unknown; system_id?: string; model?: string; mock?: boolean };
     const prompt = String(b.prompt ?? "").trim();
@@ -37,7 +38,9 @@ export function designRoutes(r: Router, store: Store, secrets: Secrets, config: 
     if (!b.mock) await models.probe();
     // the architect itself runs on the best model that answered
     const model = b.model ?? models.usable("chat")[0]?.id ?? null;
-    const result = await design({ models, model, prompt, doc, signal: AbortSignal.timeout(10 * 60_000), knowledge: knowledgeContents(config) });
+    // MCP servers hosted here that a plugin can use
+    const services = (hosted?.list() ?? []).filter((s) => s.manifest.expose.kind !== "http").map((s) => ({ id: s.id, name: s.name, expose: s.manifest.expose.kind }));
+    const result = await design({ models, model, prompt, doc, signal: AbortSignal.timeout(10 * 60_000), knowledge: knowledgeContents(config), services });
     return result;
   });
 }

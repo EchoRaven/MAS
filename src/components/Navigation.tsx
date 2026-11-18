@@ -3,7 +3,7 @@
 // via the EnvGen monitor. Modified: studio sections.
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Boxes, Clapperboard, Gauge, LayoutTemplate, Menu, PanelLeftClose, PanelLeftOpen, PlayCircle, Settings, Workflow, type LucideIcon } from "lucide-react";
+import { BookOpen, Boxes, Cable, Clapperboard, Gauge, LayoutTemplate, Menu, PanelLeftClose, PanelLeftOpen, PlayCircle, Settings, Workflow, type LucideIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export const NAV_ITEMS: NavigationItem[] = [
   { value: "demos", path: "/demos", label: "Demos", icon: Clapperboard, group: "Resources" },
   { value: "templates", path: "/templates", label: "Templates", icon: LayoutTemplate, group: "Resources" },
   { value: "library", path: "/library", label: "Library", icon: BookOpen, group: "Resources" },
+  { value: "connections", path: "/connections", label: "Connections", icon: Cable, group: "Resources" },
   { value: "settings", path: "/settings", label: "Settings", icon: Settings, group: "Resources" },
 ];
 const GROUPS: NavigationItem["group"][] = ["Workspace", "Resources"];

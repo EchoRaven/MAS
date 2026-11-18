@@ -20,6 +20,7 @@ const TemplatesPage = lazy(() => import("@/pages/Templates").then((m) => ({ defa
 const LibraryPage = lazy(() => import("@/pages/library").then((m) => ({ default: m.LibraryPage })));
 const DemosPage = lazy(() => import("@/pages/demos").then((m) => ({ default: m.DemosPage })));
 const SettingsPage = lazy(() => import("@/pages/settings").then((m) => ({ default: m.SettingsPage })));
+const ConnectionsPage = lazy(() => import("@/pages/connections").then((m) => ({ default: m.ConnectionsPage })));
 
 const SERVER_LABEL = { checking: "Server…", offline: "Offline", needs_token: "Connect server", connected: "Server" } as const;
 
@@ -82,6 +83,7 @@ export function AppLayout() {
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/library/:systemId" element={<LibraryPage />} />
+              <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/demos" element={<DemosPage />} />
               <Route path="/demos/:demoId" element={<DemosPage />} />

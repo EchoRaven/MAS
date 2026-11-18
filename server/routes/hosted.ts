@@ -13,7 +13,9 @@ export async function testEndpoint(hosted: HostedServices, e: Endpoint, kind: "m
     const target = await hosted.resolve(e);
     if (kind === "http") {
       if (!("url" in target)) return { ok: false, detail: "This endpoint speaks MCP on stdio, not HTTP", ms: Date.now() - t0 };
-      const res = await fetch(target.url, { headers: target.headers, signal: AbortSignal.timeout(15_000) });
+      // a hosted service is asked at its health path, if it declares one
+      const health = "hosted" in e ? hosted.get(e.hosted.service)?.manifest.expose.health : undefined;
+      const res = await fetch(target.url + (health ?? ""), { headers: target.headers, signal: AbortSignal.timeout(15_000) });
       return { ok: res.status < 500, detail: `HTTP ${res.status}`, ms: Date.now() - t0 };
     }
     const client = new McpClient("url" in target ? { url: target.url, headers: target.headers } : { command: target.command, env: target.env });

@@ -34,6 +34,7 @@ npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public 
 | Demos | Real recorded runs of the paper reproductions, replayable by anyone: the canvas animates, the log fills, and each demo shows its result, its mapping and the models it ran on. Static files under `public/demos`, recorded with `npm run record-demos` |
 | Templates | Twenty-six papers rebuilt from the components (see below), two baselines (a single agent, and self-consistency) and patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
 | Library | Models (with API settings and a connection test), tools (with how the runtime calls them), JSON schemas, and the integration contracts |
+| Connections | Host a project here (an archive or a git URL, built and run in Docker, isolated) as an MCP server or HTTP backend, and test any endpoint, hosted or remote, before a component uses it. See [docs/hosting.md](docs/hosting.md) |
 | Settings | Server connection, API keys, model status (which models work, why one fails, a test button for each), and the knowledge folder |
 
 The interfaces everything plugs into are documented in
