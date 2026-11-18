@@ -10,7 +10,7 @@ describe("runAllOn", () => {
     const out = runAllOn(doc, "gemini", DEFAULT_MODELS);
     const chat = out.models.filter((m) => (m.kind ?? "chat") === "chat");
     expect(chat.length).toBeGreaterThan(1);
-    expect(chat.every((m) => m.provider === "google" && m.model === "gemini-2.5-flash")).toBe(true);
+    expect(chat.every((m) => m.provider === "google" && m.model === "gemini-3.8-flash")).toBe(true);
     expect(out.models.map((m) => m.id)).toEqual(doc.models.map((m) => m.id));
     expect(out.models.find((m) => m.id === "embed")!.provider).toBe("openai");
     // the original is untouched
@@ -27,7 +27,7 @@ describe("runAllOn", () => {
     const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
     const out = remapModels(doc, { sonnet: "gemini", gpt: "gemini_lite", gemini: "gemini_3_flash" }, DEFAULT_MODELS);
     const model = (id: string) => out.models.find((m) => m.id === id)!.model;
-    expect([model("sonnet"), model("gpt"), model("gemini")]).toEqual(["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"]);
+    expect([model("sonnet"), model("gpt"), model("gemini")]).toEqual(["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"]);
     expect(() => remapModels(doc, { nope: "gemini" }, DEFAULT_MODELS)).toThrow(/no model "nope"/);
     expect(() => remapModels(doc, { sonnet: "embed" }, DEFAULT_MODELS)).toThrow(/same kind/);
   });
