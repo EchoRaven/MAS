@@ -20,7 +20,7 @@ import { validate } from "@/model/validate";
 import { toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
 import { useServer } from "@/store/server";
-import { ArchitectDialog } from "./ArchitectDialog";
+import { ArchitectPanel } from "./ArchitectPanel";
 import { HistoryDialog } from "./HistoryDialog";
 import { Breadcrumb } from "./Breadcrumb";
 import { IssuesMenu } from "./IssuesMenu";
@@ -255,7 +255,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           flash("Restored the earlier version");
         }}
       />
-      <ArchitectDialog
+      <ArchitectPanel
         open={architect}
         doc={doc}
         onClose={() => setArchitect(false)}

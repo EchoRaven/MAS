@@ -14,7 +14,7 @@ import { validate } from "@/model/validate";
 import { conformSystem } from "@/model/conformance";
 import { fromYaml, toYaml } from "@/model/yaml";
 import { useSystems } from "@/store/systems";
-import { ArchitectDialog } from "./canvas/ArchitectDialog";
+import { ArchitectPanel } from "./canvas/ArchitectPanel";
 
 function counts(doc: SystemDoc) {
   const c = (k: string) => doc.nodes.filter((n) => n.data.kind === k).length;
@@ -209,7 +209,7 @@ export function SystemsPage() {
           </div>
         )}
       </div>
-      <ArchitectDialog open={architect} onClose={() => setArchitect(false)} onApply={(d) => navigate(`/canvas/${importDoc(d).id}`)} />
+      <ArchitectPanel open={architect} onClose={() => setArchitect(false)} onApply={(d) => navigate(`/canvas/${importDoc(d).id}`)} />
     </div>
   );
 }
