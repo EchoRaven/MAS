@@ -110,6 +110,13 @@ describe("evaluations", () => {
     expect(evals.start(doc, { grader: "number", mock: true, cases: [{ input: "1", expected: "1" }] }).id).toMatch(/^eval_/);
   });
 
+  it("checks each answer against what the evaluation expects: an unmarked answer is flagged, its grade kept", async () => {
+    const doc = echo(["{{input}}"]);
+    const done = await finish(evals.start(doc, { grader: "number", expect: { type: "number", marked: true }, cases: [{ input: "Answer: 4", expected: "4" }, { input: "checked: 5", expected: "5" }] }).id);
+    expect(done.expect).toEqual({ type: "number", marked: true });
+    expect(done.cases.map((c) => [c.pass, c.result_ok])).toEqual([[true, true], [true, false]]);
+  });
+
   it("starts every run with the evaluation's variables", async () => {
     const b = new Builder("Vars", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

@@ -6,7 +6,7 @@
 // fit a dataset's grader.
 import type { ResultSpec, ResultType } from "@/model/types";
 import type { Grader } from "./evals";
-import { answerNumber, finalAnswer, parseNumber } from "./evals";
+import { answerNumber, finalAnswer, hasMarkedAnswer, parseNumber } from "./evals";
 
 export type { ResultSpec, ResultType };
 
@@ -22,6 +22,7 @@ export const RESULT_TYPES: { value: ResultType; label: string; hint: string }[] 
 export function checkResult(spec: ResultSpec, output: string): { ok: boolean; why: string } {
   const text = output.trim();
   if (!text) return { ok: false, why: "the run gave no answer" };
+  if (spec.marked && !hasMarkedAnswer(text)) return { ok: false, why: `no answer line ("Answer: …"): it ends "${text.split("\n").filter((l) => l.trim()).pop()?.slice(0, 80) ?? ""}"` };
   switch (spec.type) {
     case "text":
       return { ok: true, why: "an answer" };
@@ -54,6 +55,13 @@ export function checkResult(spec: ResultSpec, output: string): { ok: boolean; wh
       return /^\(?[A-Ja-j]\)?(?:[.):\s]|$)/.test(fin) ? { ok: true, why: `the choice ${fin[0].toUpperCase() === "(" ? fin[1] : fin[0]}` } : { ok: false, why: `"${fin.slice(0, 60)}" does not start with an option letter` };
     }
   }
+}
+
+/** What an evaluation expects of every answer with this grader: one marked value for the single-answer graders. */
+export function expectFor(grader: Grader): ResultSpec | null {
+  if (grader === "number" || grader === "math") return { type: grader === "number" ? "number" : "text", marked: true };
+  if (grader === "answer") return { type: "text", marked: true };
+  return null;
 }
 
 /** The result type a grader expects, if it expects one. */

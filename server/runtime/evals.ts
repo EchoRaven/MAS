@@ -4,7 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
-import type { SystemDoc } from "@/model/types";
+import type { ResultSpec, SystemDoc } from "@/model/types";
 import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
@@ -33,6 +33,8 @@ export interface EvalOptions {
   time_limit_min?: number;
   /** serve chosen models with others, after on_model: { sonnet: "gemini", gpt: "gemini_lite" } */
   model_map?: Record<string, string>;
+  /** what every answer must be, checked on each run as the system's own result would be (marked: an "Answer:" line) */
+  expect?: ResultSpec;
 }
 
 const MAX_CASES = 200;
@@ -63,6 +65,8 @@ export class EvalManager {
     if (opts.time_limit_min != null && !(minutes >= 1 && minutes <= 120)) throw new Error("time_limit_min must be from 1 to 120 minutes");
     if (opts.time_limit_min != null) doc = { ...doc, budget: { ...doc.budget, wallclock_min: minutes } };
     if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
+    // the evaluation's expectation adds to what the system declares (its own type stays when it has one)
+    if (opts.expect) doc = { ...doc, result: doc.result ? { ...doc.result, ...(opts.expect.marked ? { marked: true } : {}) } : opts.expect };
     // a model with no key would fail every case the same way, after the whole evaluation ran: refuse it now
     if (!opts.mock) {
       const missing = this.keyless(doc);
@@ -88,6 +92,7 @@ export class EvalManager {
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
       ...(opts.time_limit_min != null ? { time_limit_min: Number(opts.time_limit_min) } : {}),
       ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),
+      ...(opts.expect ? { expect: opts.expect } : {}),
       status: queued ? "queued" : "running",
       started_at: new Date().toISOString(),
       // repeat 1 of every question first, then repeat 2…: a stopped evaluation still has whole repeats

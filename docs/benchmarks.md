@@ -550,6 +550,15 @@ a difference is unlikely to be chance; with one run each, also repeat the
 reference (MMLU above: a +4 at p = 0.13 vanished with two more runs). "Only
 questions where they differ" cuts the grid down to the changed questions.
 
+With a number, math or final-answer grader, the Evaluate page also checks
+that every answer is **marked** ("Check that every answer is marked", on by
+default; `expect: {type, marked: true}` in the API): a line `Answer: …`,
+`Final: …` or `\boxed{…}`. An unmarked answer is graded on its last line,
+which may be a check or a critique; such cases are flagged ("not the declared
+result type: no answer line") and listed first among the failures. Grades do
+not change. Four rebuilt papers (MedAgents, AgentVerse, AutoAgents,
+AgentCoder) first lost points this way.
+
 An evaluation whose system calls a model with no key here is refused before
 it starts, with the model and the component that uses it; use "Everything on
 <model>" to run it on one you have.

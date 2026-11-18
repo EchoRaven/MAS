@@ -488,6 +488,11 @@ export interface ResultSpec {
   choices?: string[];
   /** what the answer is, in words, for people and for the Architect */
   description?: string;
+  /**
+   * the answer must be marked: a line "Answer: …" / "Final: …" or \boxed{…}. Without a mark, graders guess
+   * from the last line, and a system that ends with a check or a critique is graded on that instead
+   */
+  marked?: boolean;
 }
 
 export interface SystemDoc {

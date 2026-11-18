@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
 import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats } from "@/run/evals";
-import { resultTypeFor } from "@/run/result";
+import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars } from "@/run/vars";
 import { Input } from "@/components/ui/input";
@@ -172,11 +172,13 @@ function Evals({ systemId }: { systemId: string }) {
     };
   }, [selected, connected, refresh]);
 
+  const [markedAnswers, setMarkedAnswers] = useState(true);
   const start = async (force = false) => {
     setError("");
     try {
       const source = chosen ? { dataset_id: chosen.id, ...(sampleSize && sampleSize < chosen.total ? { sample: { n: sampleSize, seed: Number(seed) || 1 } } : {}) } : { cases: parsed.cases };
-      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force };
+      const expect = markedAnswers ? expectFor(grader) : null;
+      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force };
       const rec = alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
       await refresh();
       setSelected(rec.id);
@@ -386,6 +388,11 @@ function Evals({ systemId }: { systemId: string }) {
                 ))}
             </div>
           </details>
+          {expectFor(grader) && (
+            <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground" title="Each run is checked for a marked answer (a line 'Answer: …', 'Final: …' or \boxed{…}). An answer without one is graded on its last line, which may be a check or a critique; such cases are flagged first among the failures. Grades do not change.">
+              <input type="checkbox" checked={markedAnswers} onChange={(e) => setMarkedAnswers(e.target.checked)} /> Check that every answer is marked ("Answer: …")
+            </label>
+          )}
           {(() => {
             // a system that declares what it returns, graded by a rule that needs something else
             const want = resultTypeFor(grader);

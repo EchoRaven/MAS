@@ -52,6 +52,8 @@ export interface EvalRecord {
   dataset?: { id: string; name: string; version: string; n?: number; seed?: number };
   /** chosen models of the system served by others */
   model_map?: Record<string, string>;
+  /** what every answer had to be (type, an "Answer:" line), checked per run */
+  expect?: import("@/model/types").ResultSpec;
   /** queued: waiting for the evaluations started before it in the same batch */
   status: "queued" | "running" | "finished" | "stopped";
   /** why it stopped on its own, when it did */
@@ -230,6 +232,11 @@ export function plain(s: string): string {
     .replace(/\{,\}/g, "")
     .replace(/\\(?:text|textbf|mathrm|mathbf|operatorname)\{([^{}]*)\}/g, "$1")
     .replace(/\\[,;!: ]/g, "");
+}
+
+/** Whether an output marks its answer: a line "Answer: …" / "Final answer: …" / "Final: …", or \boxed{…}. */
+export function hasMarkedAnswer(output: string): boolean {
+  return [...output.matchAll(ANSWER_LINE)].length > 0 || boxedContent(output) !== null;
 }
 
 /** What the last \boxed{…} holds, braces balanced. */
