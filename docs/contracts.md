@@ -369,6 +369,11 @@ variable lets an evaluation sweep the ensemble size (`vars: {n: 5}`) without
 changing the system. The validator warns when the output port is not `json`
 or `any`, and the simulator counts N calls in its estimates.
 
+A group's `iterate.over` (an expression, for example `input.plans`) makes
+each round take the next item of a list picked from the group's input; the
+rounds are then at most the list's length. See
+[components.md](components.md#3-ensembles-replicas-and-a-vote).
+
 ## Catalog tools
 
 A tool in the system's catalog (`tools`) that agents list by id:

@@ -157,7 +157,7 @@ export class Draft {
       default:
         data = { ...(defaultData("group") as Extract<NodeData, { kind: "group" }>), name };
         if (options.max_rounds != null && this.checkRounds(options.max_rounds)) {
-          (data as Extract<NodeData, { kind: "group" }>).iterate = { max_rounds: options.max_rounds as number | string, until: options.until ? String(options.until) : null, feed: options.feed === "input_and_output" ? "input_and_output" : "output" };
+          (data as Extract<NodeData, { kind: "group" }>).iterate = { max_rounds: options.max_rounds as number | string, until: options.until ? String(options.until) : null, feed: options.feed === "input_and_output" ? "input_and_output" : "output", ...(options.over ? { over: String(options.over) } : {}) };
         }
     }
     const swapped = this.onUsableModels(data);
@@ -211,9 +211,17 @@ export class Draft {
         break;
       case "group":
         if (options.max_rounds != null && this.checkRounds(options.max_rounds)) {
-          n.data.iterate = { max_rounds: options.max_rounds as number | string, until: str("until") ? String(options.until) : (n.data.iterate?.until ?? null), feed: options.feed === "input_and_output" ? "input_and_output" : (n.data.iterate?.feed ?? "output") };
+          n.data.iterate = {
+            max_rounds: options.max_rounds as number | string,
+            until: str("until") ? String(options.until) : (n.data.iterate?.until ?? null),
+            feed: options.feed === "input_and_output" ? "input_and_output" : (n.data.iterate?.feed ?? "output"),
+            ...(str("over") ? { over: String(options.over) } : n.data.iterate?.over ? { over: n.data.iterate.over } : {}),
+          };
           changed.push("iterate");
-        } else if (str("until") && n.data.iterate) (n.data.iterate.until = String(options.until), changed.push("until"));
+        } else {
+          if (str("until") && n.data.iterate) (n.data.iterate.until = String(options.until), changed.push("until"));
+          if (str("over") && n.data.iterate) (n.data.iterate.over = String(options.over) || null, changed.push("over"));
+        }
         break;
       case "plugin":
         if (Array.isArray(options.sources)) (n.data.spec.sources = options.sources.map(String), changed.push("sources"));

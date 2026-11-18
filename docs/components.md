@@ -104,6 +104,23 @@ return "Final: " + Object.entries(counts).sort((x, y) => y[1] - x[1])[0][0];
 The same form sets a group's rounds: `iterate: { max_rounds: "{{vars.rounds
 ?? 2}}" }`.
 
+A group can also take its rounds from a list: `iterate.over` is an expression
+over the group's input that gives a list, and round n receives item n instead
+of the last output. The group stops when `until` holds, at `max_rounds`, or
+when the list runs out. MapCoder uses it to try its plans best first, with
+its debugging loop as a group inside:
+
+```ts
+iterate: {
+  max_rounds: 3,
+  over: "input.plans.slice().sort((a, b) => b.confidence - a.confidence)",
+  until: 'output.text.includes("ALL TESTS PASSED")',
+}
+```
+
+An expression that fails or gives no list is reported in the run, and the
+whole input is then the only item.
+
 ## 4. Agent hooks
 
 `agent.hooks` holds code for points in a turn; each is `f(event, ctx) →

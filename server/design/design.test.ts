@@ -153,6 +153,18 @@ describe("the draft the architect edits", () => {
     expect(d.problems().errors.join(" ")).toMatch(/editor sends to both writer and the output of loop/);
   });
 
+  it("adds a group that tries the items of a list in turn, and changes which list", () => {
+    const d = Draft.blank("Plans");
+    d.add("group", "plans", "Try plans", { max_rounds: 3, until: 'output.includes("PASS")', over: "input.plans" });
+    const g = () => d.doc.nodes.find((n) => n.id === "plans")!.data as { iterate: { over?: string | null; max_rounds: number | string } };
+    expect(g().iterate).toMatchObject({ max_rounds: 3, over: "input.plans" });
+    d.update("plans", { over: "input.candidates" });
+    expect(g().iterate.over).toBe("input.candidates");
+    // changing the round limit keeps the list
+    d.update("plans", { max_rounds: 2 });
+    expect(g().iterate).toMatchObject({ max_rounds: 2, over: "input.candidates" });
+  });
+
   it("catches a filter that would stall a loop", () => {
     const d = Draft.blank("Review");
     d.add("group", "loop", "Loop", { max_rounds: 3, until: 'output.includes("APPROVED")' });

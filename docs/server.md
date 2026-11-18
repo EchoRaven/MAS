@@ -100,7 +100,10 @@ The scheduler is `server/runtime/engine.ts`.
   fire.
 - **Groups.** Input ports forward to the members wired to them. A value that
   reaches an output port either starts another round (`iterate`, until
-  `until` holds or `max_rounds` is reached) or leaves the group. A group that
+  `until` holds or `max_rounds` is reached) or leaves the group. With
+  `iterate.over`, round n gets item n of a list picked from the group's input
+  instead (try candidates in turn), and the list's length also bounds the
+  rounds. A group that
   is the target of a call edge replies with its output.
 - **Handoffs.** `carry: "full"` passes the whole conversation to the next
   agent: what the sender was handed, plus its own turn, each line named by its

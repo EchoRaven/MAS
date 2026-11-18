@@ -40,6 +40,7 @@ mostly about **who sees what** and **when it stops**.
 | Pattern | Interface | Papers |
 | --- | --- | --- |
 | Rounds until agreement, approval or passing tests | `group.iterate { max_rounds, until, feed }` | Debate, MAD, ReConcile, EoT, MedAgents, DyLAN, CAMEL, ChatEval, AgentVerse, AutoAgents, ChatDev |
+| Trying candidates in turn until one passes | `group.iterate { over, until }`: round n gets item n of a list from the input; a group inside repeats per candidate | MapCoder (k plans × t debugging rounds) |
 | Test-and-fix loop | group iterate + sandbox `run_tests` + `until: "ALL TESTS PASSED"` | AgentCoder, MapCoder, Reflexion, Voyager, ChatDev |
 | Parallel work, then wait for everyone | edges fanning out + `function` with `join: all` | Debate, MoA, TradingAgents, MedAgents, AgentCoder |
 | Voting and consensus | a `function` over the collected answers (majority, confidence-weighted, 2/3 early stop) | Debate, ReConcile, DyLAN, EoT, MedAgents |
@@ -100,6 +101,7 @@ Each one became a general interface, not a fix for one paper:
 | Graders | "40%" was read as 0.4 against GSM8K's 40; AutoGen's closing `TERMINATE` was taken for the answer | **Graders:** percentages match either form; stop words are not answers |
 | MATH-500, GSM-Hard | A math grader validated only on the answer key's own forms marked ~7 of 50 right model answers wrong (`4/3` vs `\frac43`, `±`, lists, units); `-$70,145,984` was read as positive | **Graders are checked against model outputs, not only reference solutions:** fractions, `\pm`, unordered lists, trailing units; signs before currency |
 | MMLU | Debate looked 4 points better on one run each (92 → 96); two more runs of the single agent scored 96 and 97. Separately, an evaluation of a system whose model had no key ran all 100 cases with empty answers | **Paired comparison** on Compare systems: each system's questions fixed and lost against a reference, with an exact McNemar p-value; **evaluations refuse to start** when a model they call has no key |
+| MapCoder | The paper writes k plans and tries them best first, each with its own debugging rounds; the template wrote one plan, because "try in order until one passes" had no part | **`iterate.over`** on a group: round n receives item n of a list picked from the input, until the stop condition holds or the list ends; nested with the debug loop, it is the paper's k × t search |
 | Every comparison | Questions pasted by hand, evaluations run in parallel (a burst of 875 calls a minute got a key suspended) | **Datasets** (versioned, sampled), **batch evaluations** (one system after another), a **server-wide rate limit** |
 
 ## What the results say about the patterns
@@ -158,9 +160,6 @@ the vocabulary:
   agent importance across tasks. The platform runs prompted models, and does
   not carry what is learned from one task to the next, except through memory
   plugins.
-- **Search over plans.** MapCoder tries k plans in order of confidence;
-  here one plan is written. Spawning one planner per plan would express it,
-  but "try in order until one passes" is not one primitive.
 - **Agents without a model.** AutoGen's user proxy and Magentic-One's terminal
   run code without a model call. A small model stands in, or a `process`
   agent; a code-only actor with tool access would be cleaner.

@@ -22,7 +22,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
       "· function: deterministic code. Always give options.code: JavaScript, with `input` arriving and whatever you return going out. With join 'all' it waits for every input port and `input` is { port: value }. Options: code, lang, join\n" +
       "· env: options env_kind (room | sandbox | database | browser | app | service), policy for a room (free | round_robin | selector | mention), end_after for a room (end the conversation after this many messages; its last one is the answer), image\n" +
       "· plugin: options preset (memory | knowledge | workspace | board), sources. A knowledge plugin's sources are folders or files in the knowledge base (listed in your task) — set them, or it searches nothing. A plugin whose tools come from an MCP server: options service (a hosted service listed in your task) or url (a remote MCP server; bearer_env names its token's secret)\n" +
-      "· group: a sub-system on its own canvas; options max_rounds (a number, or \"{{vars.rounds ?? 2}}\" to set it per run), until (an expression over `output`), feed. Put members in it with options.group on them.",
+      "· group: a sub-system on its own canvas; options max_rounds (a number, or \"{{vars.rounds ?? 2}}\" to set it per run), until (an expression over `output`), feed, over (an expression that picks a list from the group's input, e.g. \"input.plans\": round n gets item n, to try candidates in turn until one passes). Put members in it with options.group on them.",
     input_schema: { type: "object", properties: { kind: S, id: { ...S, description: "lower_snake_case, unique" }, name: S, options: { type: "object" } }, required: ["kind", "id", "name"] },
   },
   {
@@ -46,7 +46,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
   {
     name: "update",
     description:
-      "Change a component in place; its connections stay. Give only what changes. Agent: name, role, instructions, model, loop, tools. Function: code, lang, join. Model: prompt, system_prompt, model, replicas. Human: role, approves. Group: max_rounds, until, feed. Room: policy, end_after. Plugin: sources. Prefer this to remove and add.",
+      "Change a component in place; its connections stay. Give only what changes. Agent: name, role, instructions, model, loop, tools. Function: code, lang, join. Model: prompt, system_prompt, model, replicas. Human: role, approves. Group: max_rounds, until, feed, over. Room: policy, end_after. Plugin: sources. Prefer this to remove and add.",
     input_schema: { type: "object", properties: { id: S, options: { type: "object" } }, required: ["id", "options"] },
   },
   { name: "remove", description: "Remove a component and everything connected to it.", input_schema: { type: "object", properties: { id: S }, required: ["id"] } },
