@@ -105,6 +105,12 @@ Each one became a general interface, not a fix for one paper:
 
 From [benchmarks.md](benchmarks.md), all on the same model:
 
+- **Discussion pays when the model is weak enough to need it.** On a weaker
+  model (gemma-4-26b), Multiagent Debate went from 17 to 26 of 30 on Hard
+  computation, fixing the long exact computations that a single answer gets
+  wrong in different places; on the stronger model the same debate gained 4.
+  Whether a MAS helps depends on the model's error profile as much as on the
+  protocol.
 - **Sampling more stops paying after a few samples.** Agent Forest at N = 3
   matches the discussion systems (22 of 30); N = 10 and 20 add a question or
   lose one, at up to 20 times the cost. The questions every N misses are the

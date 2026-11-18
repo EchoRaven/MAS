@@ -184,6 +184,29 @@ type (the list) was read as "each reply is JSON", so every sample answered
 with a bare number and no reasoning (1 of 30). Each sample now replies as
 text, and the component always sends a list.
 
+## A weaker model: where the debate's gain appears
+
+The papers report their gains with gpt-3.5-class models; on
+gemini-3.1-flash-lite, a single agent already gets most questions it can get
+at all. gemma-4-26b-a4b-it (an open model, about 4B active parameters, free
+tier: 10 calls a minute here, 30 minutes per run) is weaker, and thinks at
+length. Hard computation (30), one run each:
+
+| System on gemma | Correct | Time |
+| --- | --- | --- |
+| Single agent | 17 | 48 min |
+| Multiagent Debate, 2 rounds | **26** | 116 min |
+
+**+9 questions in 30: the first large gain from discussion on this platform.**
+The debate fixed 10 questions and lost 1: all five date spans (#11–#15), all
+four binomial coefficients mod p (#26–#29) and one digit sum (#9). On the
+stronger model, debate gained 4 at most (19 → 23), and no system without a
+tool ever solved the binomials. Here three gemma debaters, each slipping in
+different places on long exact computations, correct each other: the setting
+the paper describes. (Agent Forest on gemma is running; its row comes next.)
+
+On GSM8K gemma is too strong to show this: a single agent scores 95/100.
+
 ## MATH-500: a first sample
 
 MATH-500 (competition math, five levels) leaves room even for a strong
