@@ -1,6 +1,7 @@
 // OpenAI's chat-completions wire format: OpenAI itself, Gemini's
 // OpenAI-compatible endpoint, vLLM / Ollama / any compatible server.
 // Also embeddings (/embeddings) and rerank (/rerank, Cohere/Jina/TEI shapes).
+import { providerParams } from "./types";
 import type { ModelSpec } from "@/model/types";
 import type { ChatMessage, ChatResponse, Part, Provider } from "./types";
 
@@ -92,7 +93,7 @@ export const openaiProvider: Provider = {
       ...(req.tools?.length ? { tools: req.tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } })) } : {}),
       ...(req.max_tokens ? { max_completion_tokens: req.max_tokens } : {}),
       ...(req.temperature != null ? { temperature: req.temperature } : {}),
-      ...(model.api.params ?? {}),
+      ...providerParams(model),
     };
     const data = (await post(model, key, "/chat/completions", body, req.signal)) as {
       choices: { message: { content?: string | null; tool_calls?: ({ id: string; type?: string; function: { name: string; arguments: string } } & Record<string, unknown>)[] }; finish_reason: string }[];

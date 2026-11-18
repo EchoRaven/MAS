@@ -50,4 +50,13 @@ export const textOf = (parts: Part[]) =>
     .map((p) => p.text)
     .join("");
 
+/** Settings in api.params that are for the platform, not the provider: never sent in a request. */
+export const PLATFORM_PARAMS = ["rpm"] as const;
+/** api.params as the provider should see them. */
+export function providerParams(model: ModelSpec): Record<string, unknown> {
+  const out = { ...(model.api.params ?? {}) } as Record<string, unknown>;
+  for (const k of PLATFORM_PARAMS) delete out[k];
+  return out;
+}
+
 export const userText = (text: string): ChatMessage => ({ role: "user", content: [{ type: "text", text }] });

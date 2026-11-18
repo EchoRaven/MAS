@@ -43,3 +43,23 @@ describe("OpenAI-compatible tool calls", () => {
     }
   });
 });
+
+describe("api.params", () => {
+  it("sends the provider's parameters and keeps the platform's own (rpm) out of the request", async () => {
+    const { openaiProvider } = await import("./openai");
+    const bodies: Record<string, unknown>[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ choices: [{ message: { content: "ok" }, finish_reason: "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1 } }));
+    }) as unknown as typeof fetch;
+    try {
+      const model = { id: "gemma", provider: "google" as const, model: "gemma-4-26b-a4b-it", api: { params: { rpm: 10, top_p: 0.9 } }, price_in: 0, price_out: 0, modalities: ["text"] };
+      await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+      expect(bodies[0].top_p).toBe(0.9);
+      expect(bodies[0]).not.toHaveProperty("rpm");
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

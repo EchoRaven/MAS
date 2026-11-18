@@ -1,5 +1,6 @@
 // Anthropic models through the official SDK. Streams every request (long
 // outputs would otherwise hit request timeouts) and collects the final message.
+import { providerParams } from "./types";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ModelSpec } from "@/model/types";
 import type { ChatMessage, ChatRequest, ChatResponse, Part, Provider } from "./types";
@@ -54,7 +55,7 @@ function thinkingFor(model: ModelSpec, req: ChatRequest): Record<string, unknown
 
 export const anthropicProvider: Provider = {
   async chat(model, key, req) {
-    const { thinking: _ignored, ...extra } = (model.api.params ?? {}) as Record<string, unknown>;
+    const { thinking: _ignored, ...extra } = providerParams(model);
     void _ignored;
     const tools: Anthropic.ToolUnion[] = (req.tools ?? []).map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema as Anthropic.Tool.InputSchema }));
     for (const s of req.server_tools ?? []) tools.push(s === "web_search" ? { type: "web_search_20260209", name: "web_search" } : { type: "web_fetch_20260209", name: "web_fetch" });
