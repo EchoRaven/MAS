@@ -58,8 +58,19 @@ export class RunManager {
     const perNode = new Map<string, number>();
     const noticed = new Set<string>(); // notify policies already reported in this run
     let activations = 0;
+    // secret values never reach the run's log: a tool or MCP server that echoes its environment, or an error
+    // that quotes a key, would otherwise store it where the Runs page shows it and evaluations export it
+    const hidden = this.secrets.valuesToHide(doc.models.map((m) => m.api.key_env).filter((n): n is string => !!n));
+    const scrub = (v: unknown): unknown =>
+      typeof v === "string"
+        ? hidden.reduce((s, [name, value]) => (s.includes(value) ? s.split(value).join(`[secret ${name}]`) : s), v)
+        : Array.isArray(v)
+          ? v.map(scrub)
+          : v && typeof v === "object"
+            ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scrub(x)]))
+            : v;
     const emit = (body: RunEventBody) => {
-      const e = { ...body, t: Math.round((Date.now() - t0) / 100) / 10 } as RunEvent;
+      const e = { ...(hidden.length ? (scrub(body) as RunEventBody) : body), t: Math.round((Date.now() - t0) / 100) / 10 } as RunEvent;
       rec.events++;
       this.store.appendEvent(rec.id, e);
       for (const l of act.listeners) l(e);

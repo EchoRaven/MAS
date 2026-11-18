@@ -35,6 +35,21 @@ export class Secrets {
       .map((name) => ({ name, source: "store" as const }));
   }
 
+  /**
+   * Secret values to keep out of run logs: every stored one, plus the given
+   * names from the environment. Short values are left out (too likely to
+   * match ordinary text).
+   */
+  valuesToHide(names: string[] = []): [string, string][] {
+    const out = new Map<string, string>();
+    for (const [n, v] of Object.entries(this.values)) if (v && v.length >= 8) out.set(n, v);
+    for (const n of names) {
+      const v = process.env[n];
+      if (v && v.length >= 8 && !out.has(n)) out.set(n, v);
+    }
+    return [...out.entries()];
+  }
+
   has(name: string) {
     return this.get(name) !== undefined;
   }
