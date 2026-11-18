@@ -1215,6 +1215,23 @@ describe("runtime", () => {
     expect(msgs).toMatch(/make it json/);
   });
 
+  it("checks a finished run's answer against the result the system declares", async () => {
+    const b = new Builder("Coder", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Coder", model: "m_c", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    b.doc.models.push({ id: "m_c", provider: "mock", model: "mock", api: { params: { script: ["ALL TESTS PASSED"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    b.doc.result = { type: "code" };
+    const bad = await run(b.doc, "write f", { mock: false });
+    expect(bad.rec.result_check).toMatchObject({ type: "code", ok: false });
+    expect(bad.events.some((e) => e.type === "log" && e.level === "warn" && /should be code/.test(e.text))).toBe(true);
+    resetMock();
+    b.doc.models[b.doc.models.length - 1].api.params = { script: ["```python\ndef f():\n    return 1\n```"] };
+    const good = await run(b.doc, "write f", { mock: false });
+    expect(good.rec.result_check).toMatchObject({ ok: true });
+  });
+
   it("stops at the round limit", async () => {
     const b = new Builder("Loop", "");
     b.agent("a", 0, 0, { name: "A", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })

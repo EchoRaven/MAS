@@ -78,7 +78,7 @@ step.
 2. **Scheduling.** Each value is delivered along its edges; agents take turns per input (`coalesce`, `queue`, `parallel` or `interrupt` when busy); functions wait for their inputs (`join: any | all`); groups repeat while `iterate.until` is false; rooms wake speakers by policy (`round_robin`, `mention`, `selector`, `free`).
 3. **Events.** Every step emits an event (messages, tool calls, usage, transforms, approvals); the run page replays them, and they are stored as the run's record.
 4. **Limits and policies.** Budget in dollars, rounds and minutes, per-agent budgets, and policies on tools, usage and outputs can block, ask a person, or end the run.
-5. **Result.** A value that reaches the person who started the run, the last word of a room conversation, an agent's `finish`, or a policy that ends the run on a value.
+5. **Result.** A value that reaches the person who started the run, the last word of a room conversation, an agent's `finish`, or a policy that ends the run on a value. A system that declares its result type (`result: {type: code}`, say) has the answer checked at the end.
 
 The run's original input stays visible to every function as `ctx.run_input`,
 so a step deep in a pipeline can still see the task.

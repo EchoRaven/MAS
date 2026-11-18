@@ -252,5 +252,9 @@ export function validate(doc: SystemDoc): Issue[] {
   validatePipelines(doc, add);
 
   if (doc.budget.usd == null && doc.budget.max_rounds == null) add("warning", "The system has no budget or round limit and may run forever");
+  if (doc.result) {
+    if (!["text", "number", "code", "json", "choice"].includes(doc.result.type)) add("error", `The system's result type ${JSON.stringify(doc.result.type)} is not one of text, number, code, json, choice`);
+    if (doc.result.choices && doc.result.type !== "choice") add("warning", "The result lists choices, but its type is not choice");
+  }
   return issues;
 }

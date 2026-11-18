@@ -464,6 +464,16 @@ export interface SystemPolicy {
   action: "terminate" | "suspend" | "notify" | "block" | "require_approval";
 }
 
+/** What a system's run returns, so it can be checked (see src/run/result.ts). */
+export type ResultType = "text" | "number" | "code" | "json" | "choice";
+export interface ResultSpec {
+  type: ResultType;
+  /** for choice: the allowed answers (option letters or words); absent = a letter A–J */
+  choices?: string[];
+  /** what the answer is, in words, for people and for the Architect */
+  description?: string;
+}
+
 export interface SystemDoc {
   spec_version: string;
   id: string;
@@ -480,6 +490,8 @@ export interface SystemDoc {
    */
   entry?: { node: string; port?: string } | null;
   termination: string[];
+  /** optional: what a run returns; each finished run is checked against it */
+  result?: ResultSpec;
   models: ModelSpec[];
   tools: ToolSpec[];
   schemas: SchemaSpec[];

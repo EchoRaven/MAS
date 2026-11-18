@@ -406,6 +406,20 @@ an output policy ends the run on. Graders read that text:
 - **Code:** the last ```` ```python ```` block, else the whole reply. A coding
   system's last message has to contain the code, not a report about it.
 
+A system can declare what its runs return:
+
+```yaml
+result: { type: text | number | code | json | choice, choices: [buy, sell, hold], description: … }
+```
+
+Each finished run's answer is checked against it. The check is stored on the
+run (`result_check: {type, ok, why}`) and logged as a warning when it fails.
+Evaluations mark such cases (`result_ok: false`) and group them first under
+"Why cases failed", since the wrong kind of answer is a bug in the system,
+not a wrong answer. The Evaluate page warns before a run when the declared
+type does not fit the grader (a system that returns a number, graded by
+running code). `choice` without `choices` means an option letter.
+
 ## Datasets
 
 A dataset is a list of cases `{input, expected}` with a name, a source

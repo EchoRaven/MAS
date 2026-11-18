@@ -179,6 +179,7 @@ export class EvalManager {
           const events = this.store.events(run.id) as RunEvent[];
           c.output = events.filter((e): e is Extract<RunEvent, { type: "output" }> => e.type === "output").map((e) => e.text).join("\n\n");
           c.usd = done.usd;
+          if (done.result_check) c.result_ok = done.result_check.ok;
           if (!c.output) {
             c.pass = false;
             const err = events.find((e): e is Extract<RunEvent, { type: "log" }> => e.type === "log" && e.level === "error")?.text;

@@ -53,6 +53,7 @@ function build(): SystemDoc {
     .edge("loop", "user", "message", { label: "Result" });
   for (const id of ["programmer", "tester", "executor"]) b.edge(id, "sandbox", "access", { access: "read_write" });
   b.doc.budget = { usd: 3, max_rounds: 30, wallclock_min: 20 };
+  b.doc.result = { type: "code", description: "the solution, in a ```python block" };
   return b.doc;
 }
 

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
 import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats } from "@/run/evals";
+import { resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars } from "@/run/vars";
 import { Input } from "@/components/ui/input";
@@ -377,6 +378,17 @@ function Evals({ systemId }: { systemId: string }) {
                 ))}
             </div>
           </details>
+          {(() => {
+            // a system that declares what it returns, graded by a rule that needs something else
+            const want = resultTypeFor(grader);
+            const has = doc.result?.type;
+            if (!want || !has || has === want || (has === "text" && want === "number")) return null;
+            return (
+              <p className="rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-200" role="note">
+                {doc.name} returns {has}, but the grader {GRADERS.find((g) => g.value === grader)?.label} needs {want}. Most cases will fail for that reason alone.
+              </p>
+            );
+          })()}
           <ModelWarnings doc={effective} skip={dry} hint="or pick other models above" />
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">

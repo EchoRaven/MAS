@@ -16,6 +16,8 @@ export interface EvalCase {
 export type Grader = "answer" | "contains" | "number" | "llm" | "code";
 
 export interface EvalCaseResult {
+  /** false when the run's answer is not the kind the system declares (system.result): a bug in the system, whatever the grade */
+  result_ok?: boolean;
   /** which question (index into the set) and which repeat of it (0-based) */
   case?: number;
   repeat?: number;
@@ -74,7 +76,7 @@ export function caseSetId(cases: Pick<EvalCaseResult, "input" | "expected">[]): 
  * tests fail: AssertionError", "5 × no output") instead of scattered rows.
  * Groups are sorted by size; each lists the indices of its cases.
  */
-export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why">[]): { reason: string; count: number; cases: number[] }[] {
+export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why" | "result_ok">[]): { reason: string; count: number; cases: number[] }[] {
   const reasonOf = (why: string, status: string) => {
     const w = why.trim();
     if (/ ≠ /.test(w)) return "wrong answer";
@@ -92,7 +94,8 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
   const by = new Map<string, number[]>();
   cases.forEach((c, i) => {
     if (c.pass !== false && c.status !== "error") return;
-    const r = reasonOf(c.why ?? "", c.status);
+    // the wrong kind of answer explains a failure before its details do
+    const r = c.result_ok === false ? "not the declared result type" : reasonOf(c.why ?? "", c.status);
     by.set(r, [...(by.get(r) ?? []), i]);
   });
   return [...by].map(([reason, idx]) => ({ reason, count: idx.length, cases: idx })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));

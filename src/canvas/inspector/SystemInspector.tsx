@@ -1,3 +1,4 @@
+import { RESULT_TYPES, type ResultType } from "@/run/result";
 import { Trash2 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { entryCandidates, entryPoints } from "@/model/entry";
@@ -27,6 +28,13 @@ export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDo
       <Body>
         <TextField label="Name" value={doc.name} onChange={(name) => set({ name })} />
         <AreaField label="Description" value={doc.description} onChange={(description) => set({ description })} rows={3} />
+        <SelectField
+          label="A run returns"
+          value={doc.result?.type ?? "unset"}
+          onChange={(v) => set({ result: v === "unset" ? undefined : { ...(doc.result ?? {}), type: v as ResultType } })}
+          items={[{ value: "unset", label: "Not declared", hint: "The answer is not checked" }, ...RESULT_TYPES]}
+          hint="Each finished run's answer is checked against it, and evaluations flag runs whose answer is the wrong kind (a test report where code was due, say)"
+        />
         {paper?.paper && (
           <Section title="Paper">
             <a href={paper.paper.url} target="_blank" rel="noreferrer" className="block text-[12px] font-medium text-info hover:underline">

@@ -91,6 +91,7 @@ Each one became a general interface, not a fix for one paper:
 | Agent Forest (first sweep) | The replicated component's `json` output port (the list) was read as "each reply is JSON": every sample answered with a bare number and no reasoning (1 of 30 at N = 3–10); with N = 1 the vote got a string, not a list (0 of 30) | **A port's type describes what travels on it:** for an ensemble that is the list, and each sample replies as text; a replicated component always sends a list, even of one |
 | Generative Agents | The town's talk had no end; it ran into the round limit and returned nothing | **Room termination sees `posts`** (this run's messages in the room): the day ends after 12, and the last message is the result |
 | Voyager | The curriculum declared the goal reached on its first turn, with an empty skill library | **Template rule:** only skills the critic verified count; with none, the curriculum proposes the first task |
+| AgentCoder, AutoGen, MapCoder | Each returned the wrong kind of answer (a verdict, a printed value, a summary), and each first looked like the method failing | **Declared results:** `result: {type}` on the system, checked at the end of every run; wrong kinds are flagged and grouped first |
 | All 26 templates | Found the two above; structural tests and dry runs had passed | **`record-demos.mts --check`:** every template on real models, a table of which finish with an answer and why not (26 of 26 healthy after these fixes, $0.22) |
 | Graders | "40%" was read as 0.4 against GSM8K's 40; AutoGen's closing `TERMINATE` was taken for the answer | **Graders:** percentages match either form; stop words are not answers |
 | Every comparison | Questions pasted by hand, evaluations run in parallel (a burst of 875 calls a minute got a key suspended) | **Datasets** (versioned, sampled), **batch evaluations** (one system after another), a **server-wide rate limit** |
@@ -151,11 +152,12 @@ the vocabulary:
 
 ## Open questions for the platform
 
-- **The result of a run is implicit.** It is the last value that reaches the
-  starter, or a room's last message. Coding systems needed instructions to
-  make that message the code. A declared result (a port with a type, such as
-  "a Python file" or "a number") would let the platform check it and let
-  graders read it without guessing.
+- **The result of a run was implicit; it can now be declared.** A system's
+  `result: {type}` (text, number, code, json, choice) is checked at the end of
+  every run, and evaluations flag answers of the wrong kind before their
+  grade. AgentCoder and MapCoder declare `code`. Still open: graders could
+  read the declared result directly instead of searching the last message
+  for it.
 - **Iteration is the most used part.** Sixteen papers are a group that
   repeats. The run page now has a Rounds tab: each round's calls and cost, the
   value it ended with, and why the group went on, stopped, or gave up at the

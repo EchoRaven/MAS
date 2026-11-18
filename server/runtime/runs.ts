@@ -1,5 +1,6 @@
 // Active runs: event persistence and fan-out to subscribers, budgets, people's
 // answers, stopping.
+import { checkResult } from "@/run/result";
 import crypto from "node:crypto";
 import type { SystemDoc } from "@/model/types";
 import { migrateDoc } from "@/model/migrate";
@@ -69,7 +70,9 @@ export class RunManager {
           : v && typeof v === "object"
             ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scrub(x)]))
             : v;
+    const answers: string[] = [];
     const emit = (body: RunEventBody) => {
+      if (body.type === "output") answers.push(String((body as { text?: string }).text ?? ""));
       const e = { ...(hidden.length ? (scrub(body) as RunEventBody) : body), t: Math.round((Date.now() - t0) / 100) / 10 } as RunEvent;
       rec.events++;
       this.store.appendEvent(rec.id, e);
@@ -178,6 +181,12 @@ export class RunManager {
       clearTimeout(wall);
       await engine.hub.closeAll();
       revokeRun(rec.id);
+    }
+    // a system that says what it returns gets its answer checked: the wrong kind of answer is a bug in the system, not a wrong answer
+    if (doc.result?.type && rec.status !== "stopped") {
+      const chk = checkResult(doc.result, answers.join("\n\n"));
+      rec.result_check = { type: doc.result.type, ...chk };
+      emit({ type: "log", level: chk.ok ? "info" : "warn", text: chk.ok ? `The result is ${doc.result.type}, as the system declares` : `The result should be ${doc.result.type}, but ${chk.why}` });
     }
     emit({ type: "system_finished", reason });
     rec.reason = reason;

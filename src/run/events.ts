@@ -51,4 +51,6 @@ export interface RunRecord {
   events: number;
   /** the system as it ran */
   pending?: HumanRequest[];
+  /** the answer checked against the system's declared result type, when it declares one */
+  result_check?: { type: string; ok: boolean; why: string };
 }
