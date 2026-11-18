@@ -135,7 +135,16 @@ each, through the built-in dataset (2026-11-18):
 | Self-consistency, 5 samples | 22, 22 | 22.0 | $0.31 |
 | Multiagent debate (Du et al.) | 21, 21 | 21.0 | $0.50 |
 | ReConcile (Chen et al.) | 22, 22 | 22.0 | $0.51 |
+| MAD (Liang et al.; angel, devil, judge) | 14, 14 | 14.0 | $0.23 |
 
+- **MAD loses 5 to the single agent, in both runs.** Its debaters are an
+  "angel" and a "devil" who must disagree, and a judge decides. On the long
+  multiplications (#1–14) the devil disputes a right product, and the judge
+  recomputes and sides with a wrong one ("Devil correctly identified that
+  Angel's partial products were … summed incorrectly"). MAD was built for
+  counter-intuitive questions, where forced disagreement breaks a first wrong
+  idea; on exact computation it adds errors. (MAD was run later than the
+  others in this table, on the same set.)
 - **Here, more calls help: about +3 questions in 30.** Every multi-call system
   beats the single agent in both runs. The single agent also moves the most
   between runs (20, then 18), and voting or discussion removes that noise.
@@ -307,7 +316,7 @@ option first and a sentence of why last, and graders read the last line.
 The template now ends with "Answer: X", and the Evaluate page groups such
 failures as "a sentence, not an answer" instead of "wrong answer".
 
-## HumanEval: four coding systems
+## HumanEval: five coding systems
 
 50 problems sampled from HumanEval (seed 1), all on gemini-3.1-flash-lite,
 graded by running each answer against the problem's tests in Docker.
@@ -319,9 +328,12 @@ graded by running each answer against the problem's tests in Docker.
 | AgentCoder (programmer, test designer, executor) | 48 | $0.69 |
 | MapCoder (one plan, up to 5 debugging rounds) | 48 | $0.37 |
 | MapCoder as in the paper (3 plans tried best first, 5 rounds each) | 48 | $0.37 |
+| Reflexion (test, reflect, retry) | 48 | $0.34 |
 
-All four miss #47 (HumanEval/145, sorting by digit sum with negative
-numbers); the others differ by one problem each, which is noise. AgentCoder
+All five miss #47 (HumanEval/145, sorting by digit sum with negative
+numbers); the others differ by one problem each, which is noise. Reflexion
+(91% on HumanEval in its paper, with gpt-4) misses the same #8 and #47 as
+AgentCoder. AgentCoder
 and MapCoder report large gains over a single gpt-3.5 call (to 79.9% and
 80.5%); on a model that already passes 96% of these problems alone there is
 nothing for a test-and-repair loop to repair, and they cost 12 to 28 times
