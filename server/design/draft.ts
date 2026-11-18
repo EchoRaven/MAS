@@ -2,7 +2,7 @@
 // cannot produce something the canvas could not: ids are checked, components
 // are built from the platform's defaults, and ports and bindings are filled in
 // the way the editor fills them.
-import { parseReplicas } from "@/model/replicas";
+import { MAX_ROUNDS, parseCount, parseReplicas } from "@/model/replicas";
 import type { ResultType } from "@/model/types";
 import { conformSystem } from "@/model/conformance";
 import { defaultAgent, defaultBinding, defaultData, defaultRoom, emptySystem, newId } from "@/model/defaults";
@@ -152,8 +152,8 @@ export class Draft {
         break;
       default:
         data = { ...(defaultData("group") as Extract<NodeData, { kind: "group" }>), name };
-        if (typeof options.max_rounds === "number") {
-          (data as Extract<NodeData, { kind: "group" }>).iterate = { max_rounds: options.max_rounds, until: options.until ? String(options.until) : null, feed: options.feed === "input_and_output" ? "input_and_output" : "output" };
+        if (options.max_rounds != null && this.checkRounds(options.max_rounds)) {
+          (data as Extract<NodeData, { kind: "group" }>).iterate = { max_rounds: options.max_rounds as number | string, until: options.until ? String(options.until) : null, feed: options.feed === "input_and_output" ? "input_and_output" : "output" };
         }
     }
     const swapped = this.onUsableModels(data);
@@ -206,8 +206,8 @@ export class Draft {
         if (typeof options.approves === "boolean") (n.data.approves = options.approves, changed.push("approves"));
         break;
       case "group":
-        if (typeof options.max_rounds === "number") {
-          n.data.iterate = { max_rounds: options.max_rounds, until: str("until") ? String(options.until) : (n.data.iterate?.until ?? null), feed: options.feed === "input_and_output" ? "input_and_output" : (n.data.iterate?.feed ?? "output") };
+        if (options.max_rounds != null && this.checkRounds(options.max_rounds)) {
+          n.data.iterate = { max_rounds: options.max_rounds as number | string, until: str("until") ? String(options.until) : (n.data.iterate?.until ?? null), feed: options.feed === "input_and_output" ? "input_and_output" : (n.data.iterate?.feed ?? "output") };
           changed.push("iterate");
         } else if (str("until") && n.data.iterate) (n.data.iterate.until = String(options.until), changed.push("until"));
         break;
@@ -310,6 +310,13 @@ export class Draft {
       return `Named "${this.doc.name}"; every run's answer will be checked to be ${type}.`;
     }
     return `Named "${this.doc.name}".`;
+  }
+
+  /** A round limit: a number, or a run variable with a default ("{{vars.rounds ?? 2}}"). */
+  private checkRounds(r: unknown): true {
+    const spec = parseCount(typeof r === "number" ? r : String(r), "max_rounds", MAX_ROUNDS);
+    if (spec.kind === "invalid") throw new DraftError(spec.why);
+    return true;
   }
 
   /** An ensemble: the model is called this many times per input, and its output is the list of replies (json). */

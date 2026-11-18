@@ -1,4 +1,4 @@
-import { parseReplicas } from "./replicas";
+import { MAX_ROUNDS, parseCount, parseReplicas } from "./replicas";
 import { runnerById } from "./defaults";
 import { entryPoints, spawnTemplates } from "./entry";
 import { localUrl } from "./net";
@@ -237,11 +237,12 @@ export function validate(doc: SystemDoc): Issue[] {
         if (p.required && !doc.edges.some((e) => e.target === n.id && e.target_port === p.id)) add("warning", `Group "${g.name}" input "${p.id}" is required but nothing outside feeds it`, { nodeId: n.id });
       }
       if (g.iterate) {
-        if (!(g.iterate.max_rounds >= 1)) add("error", `Group "${g.name}" repeats but its round limit is not a positive number`, { nodeId: n.id });
+        const lim = parseCount(g.iterate.max_rounds, "its round limit", MAX_ROUNDS);
+        if (lim.kind === "invalid") add("error", `Group "${g.name}" repeats, but ${lim.why}`, { nodeId: n.id });
         for (const e of doc.edges.filter((x) => x.target === n.id && x.filter && byId.get(x.source)?.parent === n.id)) {
           add("warning", `Group "${g.name}" repeats, but the connection into its output has a filter (${e.filter}): a round that is filtered out ends the loop with nothing. Let the group's until condition decide instead`, { edgeId: e.id });
         }
-        if (g.iterate.max_rounds > 100 && !g.iterate.until) add("warning", `Group "${g.name}" repeats ${g.iterate.max_rounds} times with no stop condition`, { nodeId: n.id });
+        if (lim.kind === "fixed" && lim.n > 100 && !g.iterate.until) add("warning", `Group "${g.name}" repeats ${g.iterate.max_rounds} times with no stop condition`, { nodeId: n.id });
       }
       for (const p of g.interface.outputs) {
         if (!doc.edges.some((e) => e.target === n.id && e.target_port === p.id)) add("warning", `Group "${g.name}" output "${p.id}" is never written from inside`, { nodeId: n.id });

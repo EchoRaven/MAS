@@ -17,6 +17,7 @@ import { resetMock } from "./models/mock";
 import { RunManager } from "./runs";
 import { replicaCount } from "./engine";
 import { validate } from "@/model/validate";
+import { roundsOf } from "@/run/rounds";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mas-test-"));
 const config: Config = { host: "127.0.0.1", port: 0, dataDir: dir, token: "t", allowLocalExec: false, docker: "/nonexistent/docker", parallelism: 4 };
@@ -1230,6 +1231,19 @@ describe("runtime", () => {
     b.doc.models[b.doc.models.length - 1].api.params = { script: ["```python\ndef f():\n    return 1\n```"] };
     const good = await run(b.doc, "write f", { mock: false });
     expect(good.rec.result_check).toMatchObject({ ok: true });
+  });
+
+  it("takes a group's round limit from a run variable, with a default", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-debate")!.build();
+    const g = doc.nodes.find((n) => n.id === "debate")!.data as { iterate: { max_rounds: number | string } };
+    g.iterate.max_rounds = "{{vars.rounds ?? 2}}";
+    const byDefault = await run(doc, "2 + 2?");
+    expect(usages(byDefault.events).length).toBe(6);
+    const three = await run(doc, "2 + 2?", { vars: { rounds: 3 } });
+    expect(usages(three.events).length).toBe(9);
+    // the Rounds tab reads the limit the run used
+    expect(roundsOf(three.events, doc)[0]).toMatchObject({ max_rounds: 3 });
+    expect(roundsOf(three.events, doc)[0].rounds).toHaveLength(3);
   });
 
   it("stops at the round limit", async () => {

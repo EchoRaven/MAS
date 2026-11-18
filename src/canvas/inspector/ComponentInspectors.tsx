@@ -92,7 +92,13 @@ export function GroupInspector({ id, g, doc, set, update, onOpen }: { id: string
         <Toggle label="Run in rounds" checked={!!g.iterate} onChange={(on) => set({ iterate: on ? { max_rounds: 3, until: null, feed: "output" } : null })} hint="What reaches an output goes back in through the inputs: debates, multi-turn dialogues, review loops" />
         {g.iterate && (
           <>
-            <NumberField label="Max rounds" value={g.iterate.max_rounds} onChange={(v) => set({ iterate: { ...g.iterate!, max_rounds: v ?? 1 } })} />
+            <TextField
+              label="Max rounds"
+              value={String(g.iterate.max_rounds)}
+              onChange={(v) => set({ iterate: { ...g.iterate!, max_rounds: /^\s*\d+\s*$/.test(v) ? Number(v) : v.trim() } })}
+              mono
+              hint="A number, or {{vars.rounds ?? 2}} to set it per run (an evaluation can sweep it)"
+            />
             <TextField label="Stop when" value={g.iterate.until ?? ""} onChange={(until) => set({ iterate: { ...g.iterate!, until: until || null } })} mono placeholder='output.text.includes("DONE")' hint="An expression over output and round; empty runs every round" />
             <SelectField label="Next round gets" value={g.iterate.feed ?? "output"} onChange={(feed) => set({ iterate: { ...g.iterate!, feed } })} items={opts([["output", "The last output"], ["input_and_output", "The original input and the last output"]])} />
           </>

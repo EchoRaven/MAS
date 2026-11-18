@@ -19,7 +19,7 @@ import { textOf, userText } from "./models";
 import { Hub } from "./resources/hub";
 import type { RtTool } from "./resources/types";
 import { asText, clip, coerce, exprValue, syncMsg, type Msg } from "./values";
-import { parseReplicas, replicaCount } from "@/model/replicas";
+import { parseReplicas, replicaCount, roundLimit } from "@/model/replicas";
 export { replicaCount };
 
 type Item = { value: unknown; via?: SysEdge };
@@ -529,10 +529,11 @@ export class Engine implements TurnServices {
     const it = gd.iterate;
     if (it) {
       const until = it.until ? testExpr(it.until, { output: exprValue(v), text: asText(v), round: st.round, input: exprValue(st.input) }) : { ok: false as boolean, error: undefined as string | undefined };
-      if (!until.ok && st.round < it.max_rounds) {
+      const limit = roundLimit(it.max_rounds, rc.vars);
+      if (!until.ok && st.round < limit) {
         st.round++;
         this.groups.set(g, st);
-        rc.emit({ type: "transform", at: g, label: `round ${st.round} of ≤${it.max_rounds}`, detail: until.error ? `until failed: ${until.error}` : it.until ? `until ${it.until} — not yet` : "next round" });
+        rc.emit({ type: "transform", at: g, label: `round ${st.round} of ≤${limit}`, detail: until.error ? `until failed: ${until.error}` : it.until ? `until ${it.until} — not yet` : "next round" });
         const feed = it.feed === "input_and_output" ? ({ role: "user", text: `${asText(st.input)}\n\nAnswers from the previous round:\n${asText(v)}`, from: g } satisfies Msg) : v;
         for (const p of gd.interface.inputs) for (const x of rc.doc.edges.filter((y) => y.source === g && y.source_port === p.id && y.kind !== "access")) this.track(this.deliver(x, feed, g));
         return;

@@ -22,7 +22,7 @@ export const DESIGN_TOOLS: ToolDef[] = [
       "· function: deterministic code. Always give options.code: JavaScript, with `input` arriving and whatever you return going out. With join 'all' it waits for every input port and `input` is { port: value }. Options: code, lang, join\n" +
       "· env: options env_kind (room | sandbox | database | browser | app | service), policy for a room (free | round_robin | selector | mention), end_after for a room (end the conversation after this many messages; its last one is the answer), image\n" +
       "· plugin: options preset (memory | knowledge | workspace | board), sources. A knowledge plugin's sources are folders or files in the knowledge base (listed in your task) — set them, or it searches nothing\n" +
-      "· group: a sub-system on its own canvas; options max_rounds, until (an expression over `output`), feed. Put members in it with options.group on them.",
+      "· group: a sub-system on its own canvas; options max_rounds (a number, or \"{{vars.rounds ?? 2}}\" to set it per run), until (an expression over `output`), feed. Put members in it with options.group on them.",
     input_schema: { type: "object", properties: { kind: S, id: { ...S, description: "lower_snake_case, unique" }, name: S, options: { type: "object" } }, required: ["kind", "id", "name"] },
   },
   {

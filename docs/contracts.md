@@ -355,7 +355,8 @@ interface: { outputs: [{ id: out, type: json }] }   # the list of replies
 
 The calls run in parallel (each through the server's rate limit) and the
 output is a JSON array of the replies, for a function to vote on or merge.
-`replicas` is 1–50; 1 or absent is a plain call. Reading it from a run
+`replicas` is 1–50; 1 or absent is a plain call. A group's `iterate.max_rounds`
+takes the same forms (1–100), so a debate's rounds can be swept the same way. Reading it from a run
 variable lets an evaluation sweep the ensemble size (`vars: {n: 5}`) without
 changing the system. The validator warns when the output port is not `json`
 or `any`, and the simulator counts N calls in its estimates.

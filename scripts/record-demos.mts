@@ -167,7 +167,7 @@ const DEMOS: Record<string, DemoConfig> = {
     input: "A command-line tic-tac-toe game in Python for two players on one keyboard.",
     adapt: (doc) => {
       capRounds(doc, 40);
-      for (const g of doc.nodes) if (g.data.kind === "group" && g.data.iterate) g.data.iterate.max_rounds = Math.min(g.data.iterate.max_rounds, 3);
+      for (const g of doc.nodes) if (g.data.kind === "group" && g.data.iterate) g.data.iterate.max_rounds = Math.min(Number(g.data.iterate.max_rounds) || 3, 3);
       return ["Each phase is capped at 3 dialogue rounds and the run at 40 activations."];
     },
   },

@@ -12,7 +12,8 @@ function build(): SystemDoc {
   b.node("asker", "human", 0, 60, { name: "Asker", role: "Poses the question", approves: false })
     .group("debate", 260, 40, {
       name: "Debate",
-      iterate: { max_rounds: 2, until: null, feed: "input_and_output" },
+      // 2 rounds unless the run says otherwise: the paper's ablation is over the number of rounds
+      iterate: { max_rounds: "{{vars.rounds ?? 2}}", until: null, feed: "input_and_output" },
       interface: { inputs: [port("question", "message")], outputs: [port("answers", "json")] },
     })
     .node("vote", "function", 560, 50, {
@@ -52,7 +53,7 @@ export const debate: TemplateInfo = {
       "A Function node with join = all waits for every debater before passing the round on; another Function takes the majority vote.",
     ],
     differs: [
-      "The paper studies varying numbers of agents and rounds and uses the same model for all; set them on the Group and the debaters.",
+      "The paper varies the number of rounds and of agents. Rounds are the run variable rounds (2 when unset), so an evaluation can sweep them; the number of debaters is fixed at three here.",
     ],
   },
 };

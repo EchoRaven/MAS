@@ -2,7 +2,7 @@
 // groups, rooms, gates, approvals, spawning, transforms) and emits the events
 // a real runtime would emit. No model is called; message text is
 // placeholder. Deterministic per system id so a replay looks the same.
-import { replicaEstimate } from "@/model/replicas";
+import { estimateCount, replicaEstimate } from "@/model/replicas";
 import { runnerById } from "@/model/defaults";
 import { interfaceOf, nodeName } from "@/model/ports";
 import type { AgentData, EnvData, FunctionNodeData, HumanData, ModelNodeData, SysEdge, SysNode, SystemDoc } from "@/model/types";
@@ -124,10 +124,12 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
       if (it) {
         const round = (groupRound.get(g.id) ?? 1) + 1;
         // with no condition it runs every round; with one, the simulation lets it hold after a seeded number of rounds
-        const stopAt = it.until ? Math.min(it.max_rounds, 1 + Math.floor(rand() * 3)) : it.max_rounds;
+        // a round limit set per run is simulated at its default (or 1)
+        const maxRounds = estimateCount(it.max_rounds);
+        const stopAt = it.until ? Math.min(maxRounds, 1 + Math.floor(rand() * 3)) : maxRounds;
         if (round <= stopAt) {
           groupRound.set(g.id, round);
-          emit({ type: "transform", at: g.id, label: `round ${round} of ≤${it.max_rounds}`, detail: it.until ? `until ${it.until} — not yet` : "next round" }, 0.15);
+          emit({ type: "transform", at: g.id, label: `round ${round} of ≤${maxRounds}`, detail: it.until ? `until ${it.until} — not yet` : "next round" }, 0.15);
           const inputs = interfaceOf(g.data).inputs.map((p) => p.id);
           const back = doc.edges.filter((x) => x.source === g.id && inputs.includes(x.source_port));
           return back.flatMap((x) => {
@@ -135,7 +137,7 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
             return deliver(x, g.id, text, depth + 1);
           });
         }
-        emit({ type: "transform", at: g.id, label: "rounds done", detail: it.until ? `${it.until} holds` : `${it.max_rounds} rounds` }, 0.1);
+        emit({ type: "transform", at: g.id, label: "rounds done", detail: it.until ? `${it.until} holds` : `${maxRounds} rounds` }, 0.1);
         groupRound.delete(g.id);
       }
       const next = doc.edges.filter((x) => x.source === g.id && x.source_port === e.target_port);

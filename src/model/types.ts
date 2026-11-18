@@ -345,7 +345,8 @@ export interface GroupData {
    * the inputs until `until` holds (an expression over output, round) or
    * max_rounds is reached. Debates, multi-turn dialogues, review loops.
    */
-  iterate?: { max_rounds: number; until?: string | null; feed?: "output" | "input_and_output" } | null;
+  /** max_rounds: a number, or "{{vars.rounds ?? 2}}" to set it per run (an evaluation can sweep it) */
+  iterate?: { max_rounds: number | string; until?: string | null; feed?: "output" | "input_and_output" } | null;
 }
 
 /** A bare model call as a component: no loop, no tools. One input in, one completion out. */

@@ -4,6 +4,7 @@
 // rounds, consensus loops, test-and-fix loops), and these are the hardest part
 // of a run to read from the message log alone.
 import type { SystemDoc } from "@/model/types";
+import { estimateCount } from "@/model/replicas";
 import type { RunEvent } from "./events";
 
 export interface Round {
@@ -45,7 +46,9 @@ export function roundsOf(events: RunEvent[], doc: SystemDoc): GroupRounds[] {
   const groups = doc.nodes.filter((n) => n.data.kind === "group" && n.data.iterate);
   return groups
     .map((g) => {
-      const it = (g.data as { iterate: { max_rounds: number; until?: string } }).iterate;
+      const it = (g.data as { iterate: { max_rounds: number | string; until?: string } }).iterate;
+      // the limit the run used: the engine says it in "round N of ≤M"; else the written one (or its default)
+      let limit = estimateCount(it.max_rounds);
       const members = membersOf(doc, g.id);
       const rounds: Round[] = [];
       let cur: Round | null = null;
@@ -64,7 +67,8 @@ export function roundsOf(events: RunEvent[], doc: SystemDoc): GroupRounds[] {
             open(1, e.t);
           }
         } else if (e.type === "transform" && e.at === g.id) {
-          const m = /^round (\d+) of/.exec(e.label);
+          const m = /^round (\d+) of ≤(\d+)/.exec(e.label) ?? /^round (\d+) of/.exec(e.label);
+          if (m?.[2]) limit = Number(m[2]);
           if (m && cur) {
             Object.assign(cur as Round, { end: e.t, verdict: e.detail, outcome: "next" });
             open(Number(m[1]), e.t);
@@ -76,7 +80,7 @@ export function roundsOf(events: RunEvent[], doc: SystemDoc): GroupRounds[] {
           (cur as Round).usd += e.usd;
         }
       }
-      return { group: g.id, max_rounds: it.max_rounds, until: it.until || null, rounds };
+      return { group: g.id, max_rounds: limit, until: it.until || null, rounds };
     })
     .filter((g) => g.rounds.length > 0);
 }
