@@ -222,8 +222,9 @@ gemini-3.1-flash-lite, two runs each:
 | MapCoder (Islam et al.) | 37 | 21 | $0.80 |
 
 - **On problems of this size, every system is within noise of the others.**
-  The best system gains about two problems in 62 over a single agent with
-  code, at three to four times the cost. AgentCoder's separately written
+  The best system (AgentCoder, 60 of 62) gains one problem over a single
+  agent with code (59), and four over a single agent without it (56), at
+  about four times the cost of the agent with code. AgentCoder's separately written
   tests are the only mechanism that shows any edge: it caught the
   edit-script ordering bug that most single attempts got wrong.
 - **The hard set separates a little, by edge cases, not algorithms.** Most

@@ -101,8 +101,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   one agent could run code. A single agent with the same sandbox scored the
   same 30/30 as AutoGen's five-agent chat, faster and cheaper.
 - **Test-and-fix loops do not pay on easy code.** On 31 coding problems a
-  single agent with a sandbox scored within two problems of AgentCoder and
-  MapCoder, at a quarter to a third of their cost. Writing tests separately
+  single agent with a sandbox (59 of 62) scored within one problem of
+  AgentCoder (60) and ahead of MapCoder (58), at a quarter to a third of their cost. Writing tests separately
   from the code (AgentCoder) is the one mechanism that caught bugs a single
   attempt missed.
 - **The fair baseline has the same tools.** A system with a code executor has
