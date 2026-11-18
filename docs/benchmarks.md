@@ -286,6 +286,27 @@ copies of the same model share; on Hard computation its errors were slips in
 long arithmetic, which differ between copies and get corrected. Discussion
 fixes the errors that are independent between agents, and MMLU's are not.
 
+## MedAgents on MMLU's medical questions
+
+MedAgents (Tang et al.) evaluates on medical multiple choice. The 75 questions
+of the MMLU sample in medicine and biology (dataset "MMLU · medical (75)"),
+on gemini-3.1-flash-lite, one run each:
+
+| System | Correct | vs single agent | Cost |
+| --- | --- | --- | --- |
+| Single agent | 71 | | $0.02 |
+| Multiagent Debate | 73 | +2 −0 (p 0.5) | $0.21 |
+| MedAgents (specialists, report, voted consultation) | 73 | +2 −0 (p 0.5) | $0.21 |
+
+Both fixed the same two questions (#17 and #50) and missed the same two
+(#20 and #25): a panel of named specialists does what three plain debaters
+do, at the same cost. Two questions in 75 is within run-to-run noise.
+
+The first MedAgents evaluation graded 0 of 57: its decision maker gave the
+option first and a sentence of why last, and graders read the last line.
+The template now ends with "Answer: X", and the Evaluate page groups such
+failures as "a sentence, not an answer" instead of "wrong answer".
+
 ## HumanEval: four coding systems
 
 50 problems sampled from HumanEval (seed 1), all on gemini-3.1-flash-lite,
