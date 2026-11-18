@@ -9,6 +9,7 @@ import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule }
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
+import { gradeCode } from "./grading/code";
 import { Models, textOf, userText } from "./models";
 import type { RunManager } from "./runs";
 
@@ -43,6 +44,8 @@ export class EvalManager {
     private store: Store,
     private runs: RunManager,
     private secrets: Secrets,
+    /** the Docker binary, for grading code by running it */
+    private docker = "docker",
   ) {}
 
   start(original: SystemDoc, opts: EvalOptions): EvalRecord {
@@ -94,9 +97,10 @@ export class EvalManager {
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
+    if (g === "code" || rec.grader === "code") throw new Error("Code is graded by running it; start a new evaluation to grade it again");
     // the judge's verdicts were paid for and cannot be had back by regrading: keep them
     if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
-    for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g, c.output, c.expected, c.input));
+    for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
     rec.grader = g;
     rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
     rec.passed = rec.cases.filter((c) => c.pass).length;
@@ -164,8 +168,10 @@ export class EvalManager {
             const { usd, ...verdict } = await this.judge(judge, opts.judge, c.input, c.expected, c.output);
             Object.assign(c, verdict);
             c.usd = (c.usd ?? 0) + usd;
+          } else if (opts.grader === "code") {
+            Object.assign(c, await gradeCode(c.expected, c.output, this.docker));
           } else {
-            Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm">, c.output, c.expected, c.input));
+            Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
           }
           if (c.output) fatalStreak = 0;
           c.status = "done";

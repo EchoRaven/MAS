@@ -23,7 +23,7 @@ const secrets = new Secrets(config.dataDir);
 const runs = new RunManager(store, secrets, config);
 persistHealth(path.join(config.dataDir, "model-health.json"));
 runs.recover();
-const evals = new EvalManager(store, runs, secrets);
+const evals = new EvalManager(store, runs, secrets, config.docker);
 evals.recover();
 
 const router = new Router(config.token);

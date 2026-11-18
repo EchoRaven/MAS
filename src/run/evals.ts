@@ -13,7 +13,7 @@ export interface EvalCase {
  * - number: the last number in the final answer equals it (fractions and percentages too)
  * - llm: a model judges whether the output gives the expected answer
  */
-export type Grader = "answer" | "contains" | "number" | "llm";
+export type Grader = "answer" | "contains" | "number" | "llm" | "code";
 
 export interface EvalCaseResult {
   /** which question (index into the set) and which repeat of it (0-based) */
@@ -184,7 +184,7 @@ export function parseNumber(s: string): number | null {
 }
 
 /** Grades an output by a rule (every grader but llm). */
-export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expected: string, question = ""): { pass: boolean; answer: string; why: string } {
+export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: string, expected: string, question = ""): { pass: boolean; answer: string; why: string } {
   const answer = finalAnswer(output);
   if (grader === "contains") {
     const pass = normalize(output).includes(normalize(expected));
@@ -213,6 +213,13 @@ export function gradeByRule(grader: Exclude<Grader, "llm">, output: string, expe
  * - MMLU-style multiple choice: {question, choices: [...], answer: 2 | "C"}, asked with lettered options, graded by letter
  */
 export function caseFromRecord(o: Record<string, unknown>): EvalCase | null {
+  // HumanEval-style code problems: {prompt, test, entry_point}; graded by running the tests on the answer (grader "code")
+  if (typeof o.prompt === "string" && typeof o.test === "string" && typeof o.entry_point === "string") {
+    return {
+      input: `${o.prompt}\n\nComplete this Python function. Reply with the whole function in one \`\`\`python code block.`,
+      expected: JSON.stringify({ kind: "code", prompt: o.prompt, test: o.test, entry_point: o.entry_point }),
+    };
+  }
   const question = o.input ?? o.question ?? o.prompt ?? o.problem;
   let answer = o.expected ?? o.answer ?? o.target ?? o.label;
   if (question == null || answer == null) return null;

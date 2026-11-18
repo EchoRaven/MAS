@@ -8,7 +8,7 @@ import { HttpError, type Store } from "../store/files";
 import { findDataset } from "./datasets";
 import { checkDoc } from "./systems";
 
-const GRADERS: Grader[] = ["answer", "contains", "number", "llm"];
+const GRADERS: Grader[] = ["answer", "contains", "number", "llm", "code"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   r.on("POST", "/api/evals", async (req) => {
