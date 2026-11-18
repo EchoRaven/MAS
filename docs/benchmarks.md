@@ -37,6 +37,42 @@ What this shows:
   cannot produce a skill none of them has. (With one model behind every seat,
   the papers' point about diverse models doesn't apply here.)
 
+## Exchange-of-Thought: four ways of connecting the same three agents
+
+Same 30 exact-computation questions, all three agents on gemini-3.1-flash-lite,
+one run per paradigm (run variable `paradigm`). Run on 2026-11-18, with the
+server's request limit in force (at most 60 requests a minute).
+
+| Paradigm | Who sees whom | Correct | Cost |
+| --- | --- | --- | --- |
+| Debate | B and C argue; A sees both | 28/30 | $0.14 |
+| Memory | everyone sees everyone | 27/30 | $0.17 |
+| Relay | a ring: each sees the one before it | 27/30 | $0.21 |
+| Report | A is the hub; B and C see only A | 26/30 | $0.17 |
+
+On the same questions, the single agent scored 25.3 on average over three
+repeats (see above).
+
+What this shows:
+
+- Every paradigm lands within two questions of the others. That is inside one
+  run's noise: the single agent alone moves by four between runs. So no paradigm
+  is shown to be better.
+- Most questions are settled in the first round, when all three agents already
+  agree. In that case who sees whom never comes into play. The paradigms differ
+  only on the few hard questions (#19, #21–23, digit sums of large powers),
+  which every paradigm keeps missing.
+- To tell the paradigms apart, a set needs more questions where the agents
+  disagree at first.
+
+## A ceiling check for the multi-model ReConcile test
+
+A single agent on gemini-3-flash answered all 30 exact-computation questions
+correctly (30/30, $0.06). On that set, a mixed-model ReConcile cannot beat its
+strongest seat, so the test needs a harder set. One is being built: six-digit
+multiplication, digit sums of larger powers, date spans across centuries,
+letter counts in long strings, modular inverses, and binomial coefficients mod p.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
