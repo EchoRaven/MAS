@@ -20,6 +20,8 @@ export interface BoxSpec {
   cpus?: number;
   pids?: number;
   labels?: Record<string, string>;
+  /** HOME inside the box (default /tmp, which does not outlive it) */
+  home?: string;
 }
 
 export interface Box {
@@ -58,6 +60,9 @@ export function run(cmd: string, args: string[], opts: { timeout?: number; env?:
 /** The seccomp profile every box gets (this host's Docker default allows every system call). */
 export const SECCOMP_PROFILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "seccomp.json");
 
+/** The internal network (no route out): boxes on it reach this server's gateways and nothing else. */
+export const INTERNAL_NETWORK = "mas-hosted";
+
 /** Bumped when the flags below change: a kept box started with older settings is replaced. */
 export const HARDENING = "2";
 
@@ -74,7 +79,7 @@ export function hardenedFlags(spec: BoxSpec, network: string | null, envNames: s
     "--security-opt", `seccomp=${SECCOMP_PROFILE}`,
     "--read-only",
     "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m",
-    "-e", "HOME=/tmp",
+    "-e", `HOME=${spec.home ?? "/tmp"}`,
     "--network", network ?? "none",
     "--memory", spec.memory ?? "2g",
     "--cpus", String(spec.cpus ?? 2),

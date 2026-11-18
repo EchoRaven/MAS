@@ -15,6 +15,10 @@ and runs are simulated.
 | `MAS_TOKEN` | random, saved in `.data/token` | Bearer token that every `/api` call needs (the browser asks for it in Settings) |
 | `MAS_ALLOW_LOCAL_EXEC` | off | Allow commands on the host: custom stdio / ACP harnesses, `cli` tools, MCP servers started as a command (plugins and envs), env start commands, and sandboxes when Docker is missing. An MCP server reached by URL needs no opt-in |
 | `MAS_DOCKER` | `docker` | Docker binary for sandbox envs |
+| `MAS_AGENT_RUNTIME` | `container` | Where Claude Code and Codex agents run: `container` (their own hardened container per turn; models through the model gateway, tools through the MCP gateway, no key inside) or `host` (this machine, as the server's user; also needs `MAS_ALLOW_LOCAL_EXEC=1`) |
+| `MAS_CLAUDE_PKG`, `MAS_CODEX_PKG` | — | Folders where the `claude` / `codex` npm packages are installed (holding `node_modules/.bin/<cli>`); mounted read-only into the agent's container with the server's Node runtime |
+| `MAS_AGENT_IMAGE` | `python:3.12-slim` | Base image for CLI agents' containers |
+| `MAS_MODEL_GATEWAY_PORT` | MCP gateway port + 1 | Port of the model gateway on the internal network's gateway address |
 | `MAS_PARALLELISM` | `4` | Component turns that run at once in a run |
 | `MAS_RPM` | `60` | Model requests per minute per provider and key, for the whole server (all runs and evaluations together). Calls over it wait. A burst of hundreds a minute from one server looks like a stolen key to a provider and can get the account suspended. A model's `api.params.rpm` overrides it; local model servers are not limited unless they set one |
 | `MAS_KNOWLEDGE_DIR` | `<data>/knowledge` | Where knowledge plugins read their sources |
@@ -39,7 +43,14 @@ What agents reach is limited:
   the server's user, not root, with a read-only root and a private `/tmp`.
   Network: none, or the declared hosts only through the egress proxy, which
   never reaches private addresses (this server, the internal network) and
-  logs what it refuses. Sandboxes reach machines through a backend interface
+  logs what it refuses. Agent programs (Claude Code, Codex) run in such a
+  container per turn, on the internal network: they reach the platform's
+  tools through the MCP gateway and models through the **model gateway**,
+  which takes a token issued for that turn, refuses anything but model
+  endpoints (no account, billing or admin paths), puts the real key from
+  Settings on the request and sends it from this host. No key is ever inside
+  a container; every call, allowed or refused, is written to the run's log
+  (`gateway: POST anthropic/v1/messages → 200`). Sandboxes reach machines through a backend interface
   (`server/runtime/isolation`): Docker now; a Firecracker microVM backend (a
   kernel per box) fits the same interface where the server may open
   `/dev/kvm`.

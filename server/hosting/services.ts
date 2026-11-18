@@ -11,6 +11,7 @@
 // no route out of its own). Unprivileged user, no capabilities,
 // memory / CPU / process limits. Secrets go in as environment variables when
 // the container starts and are never written to disk.
+import { ModelGateway } from "./modelGateway";
 import { SECCOMP_PROFILE } from "../runtime/isolation";
 import { execFile } from "node:child_process";
 import crypto from "node:crypto";
@@ -82,6 +83,8 @@ export class HostedServices {
   private building = new Set<string>();
   /** the only way out for services that declare egress hosts */
   readonly egress = new EgressProxy();
+  /** models for agent programs in containers: a token per turn, the key swapped in here */
+  readonly models: ModelGateway;
   /** where hosted agent programs reach the platform's MCP (set when the gateway listener starts) */
   mcpGateway: string | null = null;
   /** when each long-running service was last used: idle ones are stopped, and start again on next use */
@@ -92,6 +95,7 @@ export class HostedServices {
     private docker: string,
     private secrets: Secrets,
   ) {
+    this.models = new ModelGateway(secrets);
     this.root = path.join(dataDir, "hosted");
     fs.mkdirSync(this.root, { recursive: true });
   }

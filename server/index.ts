@@ -78,6 +78,15 @@ void hosted
       hosted.mcpGateway = `http://${gw}:${port}`;
       console.log(`MCP for hosted agents on ${hosted.mcpGateway}/mcp`);
     });
+    // models for agent programs in containers: they hold a token for their turn, never a key
+    const mport = Number(process.env.MAS_MODEL_GATEWAY_PORT ?? port + 1);
+    const modelGateway = hosted.models;
+    const m = http.createServer(modelGateway.handle);
+    m.on("error", (e) => console.error(`Model gateway: ${e.message}`));
+    m.listen(mport, gw, () => {
+      modelGateway.url = `http://${gw}:${mport}`;
+      console.log(`Model gateway for agents in containers on ${modelGateway.url}`);
+    });
   })
   .catch(() => undefined);
 server.listen(config.port, config.host, () => {
