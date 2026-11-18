@@ -197,6 +197,7 @@ length. Hard computation (30), one run each:
 | Single agent | 17 | 48 min |
 | Agent Forest, N = 5 (vote) | 25 | 92 min |
 | Multiagent Debate, 2 rounds | **26** | 116 min |
+| ReConcile, 3 rounds | 25 | 112 min |
 
 **+9 questions in 30: the first large gain from discussion on this platform.**
 The debate fixed 10 questions and lost 1: all five date spans (#11–#15), all
@@ -212,6 +213,13 @@ both gain about 8–9 in 30, and five votes come within a question of three
 debaters exchanging answers, as on the stronger model (where both gained
 2–4). The gain grows with how often the model slips, and voting captures
 almost all of it.
+
+ReConcile (three gemma seats, confidence-weighted vote over three rounds)
+lands in the same place: 25, missing #6–#10 (the digit sums and a long
+product). One of those (#8) ended on a cut-off stream ("terminated") that
+every system missed; model calls now retry a dropped connection three times.
+Voting, debate and ReConcile all sit 8–9 above the single agent, and within
+one question of each other.
 
 On GSM8K gemma is too strong to show this: a single agent scores 95/100.
 

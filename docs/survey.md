@@ -109,7 +109,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   model (gemma-4-26b), Multiagent Debate went from 17 to 26 of 30 on Hard
   computation, fixing the long exact computations that a single answer gets
   wrong in different places; on the stronger model the same debate gained 4.
-  Agent Forest (five votes) reached 25, fixing the same nine questions. Whether
+  Agent Forest (five votes) reached 25, fixing the same nine questions. ReConcile
+  reached 25 too. Whether
   a MAS helps depends on the model's error profile as much as on the protocol,
   and voting captures nearly all of what discussion does.
 - **Sampling more stops paying after a few samples.** Agent Forest at N = 3
