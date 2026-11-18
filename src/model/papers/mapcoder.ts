@@ -39,7 +39,7 @@ function build(): SystemDoc {
       role: "Implements the plan",
       model: "opus",
       tools: ["edit_file"],
-      harness: { ...native(), loop: "react", max_steps: 5, instructions: "Implement the plan in Python and write it to /work/solution.py with edit_file. If a bug report is given, fix exactly what it reports. Reply with a one-line summary." },
+      harness: { ...native(), loop: "react", max_steps: 5, instructions: "Implement the plan in Python and write it to /work/solution.py with edit_file. Keep the function name, parameters and imports exactly as the given problem states them, even if a recalled problem named them differently. If a bug report is given, fix exactly what it reports. Reply with a one-line summary." },
     }, "repair")
     .agent("debugger", 330, 0, {
       name: "Debugging agent",
@@ -50,7 +50,7 @@ function build(): SystemDoc {
         ...native(),
         loop: "react",
         max_steps: 5,
-        instructions: "Write the problem's example cases as pytest tests in /work/test_solution.py (importing from solution), run them with run_tests (command: python -m pytest -q), and read /work/solution.py if you need to. If every test passes reply ALL TESTS PASSED and the final code; otherwise reply with the failing case and what is wrong.",
+        instructions: "Write the problem's example cases as pytest tests in /work/test_solution.py (importing from solution), run them with run_tests (command: python -m pytest -q), and read /work/solution.py if you need to. Check too that solution.py defines the function under the exact name the problem gives. If every test passes reply ALL TESTS PASSED and the final code in one ```python block; otherwise reply with the failing case and what is wrong.",
       },
     }, "repair")
     .node("sandbox", "env", 170, 220, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }, "repair")
