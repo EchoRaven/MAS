@@ -75,6 +75,16 @@ describe("math answers", () => {
     expect(g("\\boxed{0.5}", "\\frac{1}{2}")).toBe(true);
     expect(g("Final: 1,000", "1000")).toBe(true);
     expect(g("\\boxed{p-q}", "p - q")).toBe(true);
+    // forms models write that MATH's answer key writes differently
+    expect(g("\\boxed{4/3}", "\\frac43")).toBe(true);
+    expect(g("\\boxed{3\\sqrt{3}/4}", "\\frac{3\\sqrt{3}}{4}")).toBe(true);
+    expect(g("\\boxed{1+\\sqrt{19}, 1-\\sqrt{19}}", "1 \\pm \\sqrt{19}")).toBe(true);
+    expect(g("\\boxed{3, 1, 2}", "1,2,3")).toBe(true);
+    expect(g("\\boxed{1+\\sqrt{19}}", "1 \\pm \\sqrt{19}")).toBe(false);
+    expect(g("\\boxed{3, 1}", "1,2,3")).toBe(false);
+    expect(g("\\boxed{3/5}", "\\frac{4}{5}")).toBe(false);
+    expect(g("\\boxed{270/7}", "\\frac{270}7\\text{ degrees}")).toBe(true);
+    expect(g("\\boxed{\\text{Evelyn}}", "\\text{Evelyn}")).toBe(true);
     expect(g("\\boxed{\\frac{14}{5}}", "\\frac{14}{3}")).toBe(false);
     expect(g("\\boxed{(3, \\pi)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(false);
   });

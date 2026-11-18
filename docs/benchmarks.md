@@ -184,6 +184,34 @@ type (the list) was read as "each reply is JSON", so every sample answered
 with a bare number and no reasoning (1 of 30). Each sample now replies as
 text, and the component always sends a list.
 
+## MATH-500: a first sample
+
+MATH-500 (competition math, five levels) leaves room even for a strong
+model. 50 problems (seed 1), gemini-3.1-flash-lite, one run each, graded by
+the math grader:
+
+| System | Correct | Cost |
+| --- | --- | --- |
+| Single agent | 45 | $0.04 |
+| Agent Forest, N = 5 | 45 | $0.21 |
+| Multiagent Debate, 2 rounds | 46 | $0.31 |
+
+At about 90%, neither voting nor debate gains more than a question in 50.
+The misses are mostly wrong answers that every system gives
+(`2\sqrt{61}` for `2\sqrt{113}`), which is the same plateau as on Hard
+computation.
+
+**The grader needed a second check.** It passed MATH-500's own worked
+solutions 500 of 500, but those write answers the way the answer key does.
+Models do not: `4/3` for `\frac43`, `3\sqrt{3}/4`, `1+\sqrt{19}, 1-\sqrt{19}`
+for `1 \pm \sqrt{19}`, `270/7` for `\frac{270}7\text{ degrees}`. Graded the
+first time, every system scored 38–39; about 7 right answers per run were
+marked wrong. The grader now reads `a/b` as a fraction, expands `\pm`,
+compares lists in any order and drops a trailing unit, and still passes the
+500 reference solutions and refuses mismatched answers (3 of 500 pairs pass,
+all truly equal). A grader is checked against what models write, not only
+against the answer key's own forms.
+
 ## Multiagent Debate: accuracy against the number of rounds
 
 Du et al.'s ablation varies the rounds of debate. The template's group takes

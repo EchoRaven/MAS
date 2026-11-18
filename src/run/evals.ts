@@ -212,6 +212,8 @@ export function mathForm(raw: string): string {
   s = s.replace(/\\!|\\,|\\;|\\:|\\ /g, "").replace(/\s+/g, "");
   s = s.replace(/\\left|\\right/g, "").replace(/\\[dt]frac/g, "\\frac");
   s = s.replace(/\^\{?\\circ\}?/g, "").replace(/\\circ/g, "").replace(/\\?\$/g, "").replace(/\\%|%/g, "");
+  // a unit after the answer ("270\text{ degrees}", "5\mbox{ cm}") is not part of it; a word alone (\text{Evelyn}) is the answer
+  s = s.replace(/(.)\\(?:text|mbox|mathrm)\{[a-zA-Z]+\}$/, "$1");
   s = s.replace(/\\(?:text|textbf|mathrm|mbox)\{([^{}]*)\}/g, "$1");
   // \frac12 -> \frac{1}{2}, \frac1{2} -> \frac{1}{2}, \sqrt2 -> \sqrt{2}
   s = s.replace(/\\frac(\d)(\d)/g, "\\frac{$1}{$2}").replace(/\\frac(\d)\{/g, "\\frac{$1}{").replace(/\\frac\{([^{}]*)\}(\d)/g, "\\frac{$1}{$2}").replace(/\\sqrt(\w)/g, "\\sqrt{$1}");
@@ -219,12 +221,23 @@ export function mathForm(raw: string): string {
   const assign = /^[a-zA-Z]\w?=(.+)$/.exec(s);
   if (assign && !assign[1].includes("=")) s = assign[1];
   s = s.replace(/\.$/, "").replace(/^0\./, ".").replace(/(\d)\.0+(?!\d)/g, "$1");
+  // a/b written with a slash is \frac{a}{b}, when both sides are single terms: 4/3, 3\sqrt{3}/4, \pi/2
+  const slash = /^(-?)([^/+\-,()]+)\/([^/+\-,()]+)$/.exec(s);
+  if (slash) s = `${slash[1]}\\frac{${slash[2]}}{${slash[3]}}`;
   if (s === ".5") s = "\\frac{1}{2}";
   return s;
 }
 
+/** The forms an answer stands for: "a \pm b" is both a+b and a-b; a list is its items, in any order. */
+function mathItems(form: string): string[] {
+  const pm = /^(.*)\\pm(.*)$/.exec(form);
+  const items = pm ? [`${pm[1]}+${pm[2]}`, `${pm[1]}-${pm[2]}`] : form.split(",");
+  return items.map((x) => mathForm(x)).filter(Boolean).sort();
+}
+
 function mathValue(s: string): number | null {
-  const t = plain(s).replace(/[{}\s]/g, "");
+  // \frac43 and \frac{4}{3} both read as 4/3
+  const t = plain(mathForm(s)).replace(/[{}\s]/g, "");
   if (!/^-?[\d.,/]+$/.test(t)) return null;
   return parseNumber(t);
 }
@@ -265,7 +278,10 @@ export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: str
     const want = boxedContent(expected) ?? expected;
     const [a, e] = [mathForm(got), mathForm(want)];
     const [na, ne] = [mathValue(got), mathValue(want)];
-    const pass = a === e || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
+    const [ia, ie] = [mathItems(a), mathItems(e)];
+    // a list (or a ±) matches the same items in any order, or the same numbers
+    const sameItems = ia.length > 1 && ia.length === ie.length && ia.every((x, i) => x === ie[i]);
+    const pass = a === e || sameItems || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
     return { pass, answer: got.trim(), why: pass ? `${got.trim()} = ${want}` : `${got.trim().slice(0, 80)} ≠ ${want}` };
   }
   if (grader === "number") {
