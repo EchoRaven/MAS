@@ -96,7 +96,9 @@ const ANSWER_LINE = /(?:^|\n)\s*(?:\*\*)?(?:final answer|answer|final)(?:\*\*)?\
  * else the last non-empty line. Bold markers are kept: they say which part
  * is the answer.
  */
-export function finalAnswer(output: string): string {
+export function finalAnswer(raw: string): string {
+  // a group chat's stop word after the answer ("… = 155\n\nTERMINATE", AutoGen) is not the answer
+  const output = raw.replace(/(?:\s*\bTERMINATE\b[.!]?\s*)+$/, "").trim() || raw;
   const marked = [...output.matchAll(ANSWER_LINE)];
   if (marked.length) {
     const m = marked[marked.length - 1];

@@ -25,6 +25,9 @@ describe("grading", () => {
     expect(gradeByRule("number", "Answer: 1/3", "0.3333333333333").pass).toBe(true);
     expect(gradeByRule("number", "Answer: 2 m/s", "1.5").why).toBe("2 ≠ 1.5");
     // a percentage answers an expected value written as the percent (GSM8K "What percent…? #### 40") or as a fraction
+    // AutoGen's stop word after the answer is not the answer
+    expect(gradeByRule("answer", "The capital is checked.\nParis\n\nTERMINATE", "Paris").pass).toBe(true);
+    expect(gradeByRule("number", "The sum of the digits is 155. TERMINATE", "155").answer).toBe("The sum of the digits is 155.");
     expect(gradeByRule("number", "Final: 40%", "40").pass).toBe(true);
     expect(gradeByRule("number", "Final: 40%", "0.4").pass).toBe(true);
     expect(gradeByRule("number", "Final: 40%", "40%").pass).toBe(true);
