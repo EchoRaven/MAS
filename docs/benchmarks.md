@@ -118,7 +118,8 @@ see the git log).
 
 ## Running one yourself
 
-On the Evaluate page, pick a system and a sample set (or paste cases), choose
+On the Evaluate page, pick a system and a dataset (a built-in set, one you saved,
+or questions you paste), optionally a seeded sample of it, choose
 "Everything on <model>", and press Evaluate. Each case is an ordinary run you
 can open and replay.
 
@@ -127,3 +128,18 @@ groups every evaluation by the questions it ran. For each group it shows
 accuracy, each repeat's score and the spread, the cost, and the cost per
 correct answer. Below that is a grid of which system got each question right.
 Older runs of the same system on the same models start unticked.
+
+### Datasets and code problems
+
+Questions can be saved as a dataset (Evaluate → "Save these questions as a
+dataset…", or `POST /api/datasets`). A dataset keeps where it came from, its
+license, and a version that changes when its cases change, so two evaluations
+with the same `set` id ran the same questions. GSM8K lines (`####` answers),
+multiple choice (choices and a letter) and HumanEval records (`prompt`, `test`,
+`entry_point`) are read as they come. Anything else can be turned into cases with
+a small JavaScript adapter.
+
+HumanEval-style problems are graded with "Code: run the tests". The last Python
+block of the answer is run with the problem's tests in a fresh Docker container
+(`python:3.12-slim`): no network, 512 MB, one CPU, 128 processes, a read-only
+program, 10 seconds. A case passes when the tests pass.
