@@ -1,6 +1,7 @@
 // The model gateway: resolves a catalog id to a provider, a key and a price,
 // and reports usage for every call.
 import fs from "node:fs";
+import { localUrl } from "@/model/net";
 import type { ModelSpec } from "@/model/types";
 import type { Secrets } from "../../store/secrets";
 import { anthropicProvider } from "./anthropic";
@@ -79,6 +80,46 @@ export function noteHealth(m: ModelSpec, ok: boolean, err?: unknown, key?: strin
 
 export function resetHealth() {
   health.clear();
+}
+
+/**
+ * Requests per minute, per provider and key, for this whole server (every run
+ * and evaluation together). A burst of hundreds of calls a minute from one
+ * server looks like a stolen key to a provider, and can get the account
+ * suspended: calls over the limit wait for room instead. MAS_RPM sets the
+ * limit (default 60); a model's api.params.rpm overrides it. The test model,
+ * and model servers on this machine or a private network, are not limited
+ * unless they set their own.
+ */
+const windows = new Map<string, number[]>();
+let windowMs = 60_000;
+/** for tests: a shorter window */
+export function setRateWindow(ms: number) {
+  windowMs = ms;
+  windows.clear();
+}
+export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: AbortSignal): Promise<void> {
+  if (m.provider === "mock") return;
+  const own = m.api.params?.rpm;
+  if (own == null && m.api.base_url && localUrl(m.api.base_url)) return;
+  const rpm = Number(own ?? process.env.MAS_RPM ?? 60);
+  if (!(rpm > 0)) return;
+  const k = `${m.provider}|${m.api.base_url ?? ""}|${fingerprint(key)}`;
+  for (;;) {
+    const now = Date.now();
+    const recent = (windows.get(k) ?? []).filter((t) => now - t < windowMs);
+    if (recent.length < rpm) {
+      recent.push(now);
+      windows.set(k, recent);
+      return;
+    }
+    windows.set(k, recent);
+    const wait = windowMs - (now - recent[0]) + 5;
+    await new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, wait);
+      signal?.addEventListener("abort", () => (clearTimeout(t), reject(signal.reason)), { once: true });
+    });
+  }
 }
 
 export const MOCK_MODEL: ModelSpec = { id: "mock", provider: "mock", model: "mock", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
@@ -167,6 +208,7 @@ export class Models {
   async chat(id: string | null | undefined, req: ChatRequest): Promise<{ res: ChatResponse; usage: Usage }> {
     const m = this.spec(id, "chat");
     let res: ChatResponse;
+    await rateLimit(m, this.keyValue(m), req.signal);
     try {
       res = await PROVIDERS[m.provider].chat(m, this.key(m), req);
       noteHealth(m, true, undefined, this.keyValue(m));
@@ -183,7 +225,10 @@ export class Models {
     if (!p.embed) throw new Error(`Provider ${m.provider} has no embeddings endpoint`);
     const out: number[][] = [];
     try {
-      for (let i = 0; i < texts.length; i += 64) out.push(...(await p.embed(m, this.key(m), texts.slice(i, i + 64), signal)));
+      for (let i = 0; i < texts.length; i += 64) {
+        await rateLimit(m, this.keyValue(m), signal);
+        out.push(...(await p.embed(m, this.key(m), texts.slice(i, i + 64), signal)));
+      }
       noteHealth(m, true, undefined, this.keyValue(m));
     } catch (e) {
       noteHealth(m, false, e, this.keyValue(m));
@@ -196,6 +241,7 @@ export class Models {
     const m = this.spec(id, "rerank");
     const p = PROVIDERS[m.provider];
     if (!p.rerank) throw new Error(`Provider ${m.provider} has no rerank endpoint`);
+    await rateLimit(m, this.keyValue(m), signal);
     try {
       const out = await p.rerank(m, this.key(m), query, docs, signal);
       noteHealth(m, true, undefined, this.keyValue(m));

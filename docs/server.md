@@ -16,6 +16,7 @@ and runs are simulated.
 | `MAS_ALLOW_LOCAL_EXEC` | off | Allow commands on the host: custom stdio / ACP harnesses, `cli` tools, MCP servers started as a command (plugins and envs), env start commands, and sandboxes when Docker is missing. An MCP server reached by URL needs no opt-in |
 | `MAS_DOCKER` | `docker` | Docker binary for sandbox envs |
 | `MAS_PARALLELISM` | `4` | Component turns that run at once in a run |
+| `MAS_RPM` | `60` | Model requests per minute per provider and key, for the whole server (all runs and evaluations together). Calls over it wait. A burst of hundreds a minute from one server looks like a stolen key to a provider and can get the account suspended. A model's `api.params.rpm` overrides it; local model servers are not limited unless they set one |
 | `MAS_KNOWLEDGE_DIR` | `<data>/knowledge` | Where knowledge plugins read their sources |
 | `MAS_CLAUDE_BIN` / `MAS_CODEX_BIN` | `claude` / `codex` | CLIs for those harnesses |
 
