@@ -1,6 +1,7 @@
 // Tools from the system's tool catalog, as an agent gets them. Tools that
 // act on an env (bash, run_sql, browser…) are served by the env of that kind
 // the agent is connected to; others run by their adapter settings.
+import { mcpClientFor, resolveEndpoint } from "../../hosting/resolve";
 import type { EnvKind, SysEdge, ToolSpec } from "@/model/types";
 import type { RunCtx } from "../context";
 import { runFn } from "../functions";
@@ -66,6 +67,26 @@ export async function catalogTools(rc: RunCtx, agent: string, ids: string[], acc
       if (same.length || (!t.url && !t.command && !t.fn)) continue;
     }
     const input_schema = argsSchema(t);
+    // an endpoint (remote with auth, or a hosted service) takes the place of url for http and mcp tools
+    if (t.endpoint && (t.adapter === "http" || t.adapter === "mcp")) {
+      const endpoint = t.endpoint;
+      let client: Promise<import("../mcp/client").McpClient> | undefined;
+      out.tools.push({ ...base, input_schema, run: async (a) => {
+        if (t.adapter === "mcp") {
+          client ??= mcpClientFor(rc, endpoint);
+          const r = await (await client).call(t.id, a);
+          if (r.error) throw new Error(r.text);
+          return r.text;
+        }
+        const target = await resolveEndpoint(rc, endpoint);
+        if (!("url" in target)) throw new Error(`${t.id}: an HTTP tool cannot be an MCP-on-stdio service`);
+        const res = await fetch(target.url, { method: "POST", headers: { "content-type": "application/json", ...target.headers }, body: JSON.stringify(a), signal: AbortSignal.timeout(60_000) });
+        const text = await res.text();
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
+        return text;
+      } });
+      continue;
+    }
     if (t.adapter === "http" && t.url) out.tools.push({ ...base, input_schema, run: async (a) => {
       const res = await fetch(t.url!, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(a), signal: AbortSignal.timeout(60_000) });
       const text = await res.text();

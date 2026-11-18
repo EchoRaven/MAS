@@ -2,6 +2,7 @@
 // (Spec v0). The canvas edits it, the YAML view serialises it, the validator
 // and the simulator read it.
 
+import type { Endpoint } from "./hosting";
 import type { DbQuerySpec, IndexSpec, MemoryPolicy, RetrievalSpec } from "./pipelines";
 import type { ParamValue } from "./steps";
 
@@ -257,7 +258,7 @@ export interface EnvManifest {
   /** what agents can use */
   exposes: {
     http: { name: string; base: string }[];
-    mcp?: { transport: "http" | "stdio"; start?: string; url?: string; auth: "oauth_jwks" | "bearer_env" | "none"; env?: Record<string, string>; tools: string[] } | null;
+    mcp?: { transport: "http" | "stdio"; start?: string; url?: string; auth: "oauth_jwks" | "bearer_env" | "none"; env?: Record<string, string>; tools: string[]; /** where the MCP server is: remote, or a hosted service (instead of url / start) */ endpoint?: Endpoint } | null;
   };
   /** login and test accounts; secrets are never stored in the manifest, only the env var that holds them */
   auth?: { mode: "embedded" | "idp" | "none"; login?: string; test_users?: { email: string; password_env?: string }[] } | null;
@@ -303,6 +304,8 @@ export interface PluginSpec {
     kind: "builtin" | "mcp" | "http" | "code";
     /** mcp (http transport) / http */
     url?: string;
+    /** where the backend is: remote (a URL with auth) or a hosted service; used instead of url / command */
+    endpoint?: Endpoint;
     /** mcp (stdio) / code */
     command?: string;
     /** non-secret settings; secrets go by env var name */
@@ -454,6 +457,8 @@ export interface ToolSpec {
   url?: string;
   command?: string;
   fn?: FunctionSpec | null;
+  /** http / mcp: where the tool's server is, remote or hosted; used instead of url */
+  endpoint?: Endpoint;
   /** JSON Schema of the arguments, as text; default { input: string } */
   input_schema?: string;
 }

@@ -1,0 +1,380 @@
+// Hosted services: code someone uploads (an archive, or a git repository),
+// built into a Docker image and run isolated on this server, so an MCP server,
+// a plugin backend or a tool can live here instead of somewhere else.
+//
+//   mcp-stdio   a fresh container per connection (docker run -i), no network
+//   mcp-http    one long-running container on an internal network, reached
+//   http        at its address by this server only (no published port)
+//
+// No network unless the service declares egress hosts; then it gets outbound
+// access (declared, not filtered yet). Unprivileged user, no capabilities,
+// memory / CPU / process limits. Secrets go in as environment variables when
+// the container starts and are never written to disk.
+import { execFile } from "node:child_process";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { parse as parseYaml } from "yaml";
+import { checkManifest, DEFAULT_MANIFEST, detectRuntime, generatedDockerfile, type Endpoint, type HostManifest } from "@/model/hosting";
+import type { Secrets } from "../store/secrets";
+import { HttpError } from "../store/files";
+
+const MAX_ARCHIVE = 15 * 1024 * 1024;
+const MAX_UNPACKED = 200 * 1024 * 1024;
+const INTERNAL_NET = "mas-hosted";
+const OUTBOUND_NET = "mas-hosted-out";
+
+export interface ServiceVersion {
+  n: number;
+  from: "upload" | "git";
+  source: string;
+  at: string;
+  files: number;
+  image?: string;
+  built_at?: string;
+  build_ok?: boolean;
+}
+
+export interface HostedService {
+  id: string;
+  name: string;
+  created_at: string;
+  current: number;
+  versions: ServiceVersion[];
+  /** what the project's own mas-host file says, with what was set on the service on top */
+  manifest: HostManifest;
+  /** set on the service (overrides the project file) */
+  overrides: Partial<HostManifest>;
+}
+
+export type ServiceState = { running: boolean; address?: string; container?: string };
+
+function exec(cmd: string, args: string[], opts: { timeout?: number; cwd?: string; env?: Record<string, string> } = {}): Promise<{ code: number; out: string }> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: opts.timeout ?? 120_000, cwd: opts.cwd, env: opts.env ? { ...process.env, ...opts.env } : process.env, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+      const code = err ? (typeof (err as NodeJS.ErrnoException).code === "number" ? Number((err as NodeJS.ErrnoException).code) : 1) : 0;
+      resolve({ code, out: `${stdout}${stderr ? (stdout ? "\n" : "") + stderr : ""}`.trim() });
+    });
+  });
+}
+
+/** An archive member that could write outside the folder it is unpacked into. */
+export function unsafeMember(name: string): boolean {
+  const n = name.replace(/\\/g, "/");
+  return n.startsWith("/") || /^[a-zA-Z]:/.test(n) || n.split("/").includes("..");
+}
+
+function listFiles(dir: string, base = dir): string[] {
+  const out: string[] = [];
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) out.push(...listFiles(p, base));
+    else out.push(path.relative(base, p));
+  }
+  return out;
+}
+
+export class HostedServices {
+  private root: string;
+  private building = new Set<string>();
+  constructor(
+    dataDir: string,
+    private docker: string,
+    private secrets: Secrets,
+  ) {
+    this.root = path.join(dataDir, "hosted");
+    fs.mkdirSync(this.root, { recursive: true });
+  }
+
+  // ---- storage ---------------------------------------------------------------------------
+  private dir(id: string) {
+    if (!/^svc_[a-z0-9_]+$/.test(id)) throw new HttpError(400, "Not a service id");
+    return path.join(this.root, id);
+  }
+  private save(s: HostedService) {
+    fs.writeFileSync(path.join(this.dir(s.id), "service.json"), JSON.stringify(s, null, 1));
+  }
+  list(): HostedService[] {
+    return fs
+      .readdirSync(this.root)
+      .filter((d) => d.startsWith("svc_") && fs.existsSync(path.join(this.root, d, "service.json")))
+      .map((d) => JSON.parse(fs.readFileSync(path.join(this.root, d, "service.json"), "utf8")) as HostedService)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  get(id: string): HostedService | null {
+    const f = path.join(this.dir(id), "service.json");
+    return fs.existsSync(f) ? (JSON.parse(fs.readFileSync(f, "utf8")) as HostedService) : null;
+  }
+  private must(id: string): HostedService {
+    const s = this.get(id);
+    if (!s) throw new HttpError(404, `No hosted service ${id}`);
+    return s;
+  }
+  srcDir(id: string, n: number) {
+    return path.join(this.dir(id), `v${n}`, "src");
+  }
+
+  /** A new service from an archive (base64 .tar.gz / .tgz / .zip) or a git repository (https). */
+  async create(input: { name: string; archive_base64?: string; filename?: string; git?: string; manifest?: Partial<HostManifest> }): Promise<HostedService> {
+    const name = String(input.name ?? "").trim();
+    if (!name) throw new HttpError(400, "Give the service a name");
+    const id = `svc_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 30) || "service"}_${crypto.randomBytes(3).toString("hex")}`;
+    fs.mkdirSync(this.dir(id), { recursive: true });
+    const s: HostedService = { id, name, created_at: new Date().toISOString(), current: 0, versions: [], manifest: { ...DEFAULT_MANIFEST }, overrides: input.manifest ?? {} };
+    try {
+      await this.addVersion(s, input);
+    } catch (e) {
+      fs.rmSync(this.dir(id), { recursive: true, force: true });
+      throw e;
+    }
+    return s;
+  }
+
+  /** A new version of the code; the service switches to it (the old ones stay, to go back to). */
+  async update(id: string, input: { archive_base64?: string; filename?: string; git?: string }): Promise<HostedService> {
+    const s = this.must(id);
+    await this.addVersion(s, input);
+    return s;
+  }
+
+  private async addVersion(s: HostedService, input: { archive_base64?: string; filename?: string; git?: string }) {
+    const n = (s.versions.at(-1)?.n ?? 0) + 1;
+    const src = this.srcDir(s.id, n);
+    fs.mkdirSync(src, { recursive: true });
+    let from: ServiceVersion["from"];
+    let source: string;
+    if (input.git) {
+      const url = String(input.git);
+      if (!/^https:\/\/[^\s]+$/.test(url)) throw new HttpError(400, "Only https git URLs");
+      const r = await exec("git", ["clone", "--depth", "1", "--no-recurse-submodules", url, src], { timeout: 300_000, env: { GIT_TERMINAL_PROMPT: "0" } });
+      if (r.code !== 0) throw new HttpError(400, `git clone failed: ${r.out.slice(-300)}`);
+      fs.rmSync(path.join(src, ".git"), { recursive: true, force: true });
+      from = "git";
+      source = url;
+    } else if (input.archive_base64) {
+      const buf = Buffer.from(input.archive_base64, "base64");
+      if (!buf.length) throw new HttpError(400, "The archive is empty");
+      if (buf.length > MAX_ARCHIVE) throw new HttpError(413, `The archive is over ${MAX_ARCHIVE / 1024 / 1024} MB`);
+      const fname = String(input.filename ?? "project.tar.gz");
+      const tmp = path.join(this.dir(s.id), `v${n}`, fname.endsWith(".zip") ? "upload.zip" : "upload.tar.gz");
+      fs.writeFileSync(tmp, buf);
+      await this.unpack(tmp, src);
+      fs.rmSync(tmp, { force: true });
+      from = "upload";
+      source = fname;
+    } else throw new HttpError(400, "Give an archive (archive_base64 with filename) or a git URL");
+    // a project in one top folder (the usual archive) is that folder
+    const top = fs.readdirSync(src);
+    if (top.length === 1 && fs.statSync(path.join(src, top[0])).isDirectory()) {
+      const inner = path.join(src, top[0]);
+      for (const f of fs.readdirSync(inner)) fs.renameSync(path.join(inner, f), path.join(src, f));
+      fs.rmdirSync(inner);
+    }
+    const files = listFiles(src);
+    if (!files.length) throw new HttpError(400, "The project has no files");
+    s.versions.push({ n, from, source, at: new Date().toISOString(), files: files.length });
+    s.current = n;
+    s.manifest = this.effectiveManifest(src, s.overrides);
+    this.save(s);
+  }
+
+  /** Unpack after checking every member: no absolute paths, no "..", no links, a size cap. */
+  private async unpack(archive: string, into: string) {
+    const zip = archive.endsWith(".zip");
+    const listing = zip ? await exec("unzip", ["-Z", "-l", archive]) : await exec("tar", ["-tvzf", archive]);
+    if (listing.code !== 0) throw new HttpError(400, `Not a readable ${zip ? "zip" : ".tar.gz"} archive`);
+    const names = zip ? (await exec("unzip", ["-Z1", archive])).out.split("\n").filter(Boolean) : (await exec("tar", ["-tzf", archive])).out.split("\n").filter(Boolean);
+    const bad = names.filter(unsafeMember);
+    if (bad.length) throw new HttpError(400, `The archive has paths outside its folder: ${bad.slice(0, 3).join(", ")}`);
+    // links (tar: l/h in the mode column; zip: l in the permissions) could point anywhere
+    const lines = listing.out.split("\n");
+    if (lines.some((l) => (zip ? /^l/.test(l.trim()) : /^[lh]/.test(l)))) throw new HttpError(400, "The archive has links; send plain files");
+    let total = 0;
+    if (!zip) for (const l of lines) total += Number(l.split(/\s+/)[2] ?? 0) || 0;
+    else for (const l of lines) total += Number(l.trim().split(/\s+/)[3] ?? 0) || 0;
+    if (total > MAX_UNPACKED) throw new HttpError(413, `The project unpacks to over ${MAX_UNPACKED / 1024 / 1024} MB`);
+    const r = zip ? await exec("unzip", ["-q", "-o", archive, "-d", into], { timeout: 120_000 }) : await exec("tar", ["-xzf", archive, "-C", into, "--no-same-owner", "--no-same-permissions"], { timeout: 120_000 });
+    if (r.code !== 0) throw new HttpError(400, `Could not unpack: ${r.out.slice(-200)}`);
+  }
+
+  private effectiveManifest(src: string, overrides: Partial<HostManifest>): HostManifest {
+    let own: Partial<HostManifest> = {};
+    for (const f of ["mas-host.yaml", "mas-host.yml", "mas-host.json"]) {
+      const p = path.join(src, f);
+      if (!fs.existsSync(p)) continue;
+      const text = fs.readFileSync(p, "utf8");
+      own = (f.endsWith(".json") ? JSON.parse(text) : parseYaml(text)) ?? {};
+      break;
+    }
+    return { ...DEFAULT_MANIFEST, ...own, ...overrides, expose: { ...DEFAULT_MANIFEST.expose, ...(own.expose ?? {}), ...(overrides.expose ?? {}) } } as HostManifest;
+  }
+
+  /** Change how the service runs (start, expose, egress, env…); kept across new versions of the code. */
+  configure(id: string, overrides: Partial<HostManifest>): HostedService {
+    const s = this.must(id);
+    s.overrides = { ...s.overrides, ...overrides };
+    s.manifest = this.effectiveManifest(this.srcDir(id, s.current), s.overrides);
+    const why = checkManifest(s.manifest);
+    if (why.length) throw new HttpError(400, why.join("; "));
+    this.save(s);
+    return s;
+  }
+
+  delete(id: string) {
+    const s = this.must(id);
+    void this.stop(id);
+    for (const v of s.versions) if (v.image) void exec(this.docker, ["rmi", "-f", v.image]);
+    fs.rmSync(this.dir(id), { recursive: true, force: true });
+  }
+
+  // ---- build -----------------------------------------------------------------------------
+  /** Build the current version into an image. The build may use the network (to install dependencies). */
+  async build(id: string): Promise<{ ok: boolean; log: string; image?: string }> {
+    const s = this.must(id);
+    const why = checkManifest(s.manifest);
+    if (why.length) return { ok: false, log: `The service is not set up yet: ${why.join("; ")}` };
+    if (this.building.has(id)) return { ok: false, log: "Already building" };
+    this.building.add(id);
+    try {
+      const v = s.versions.find((x) => x.n === s.current)!;
+      const src = this.srcDir(id, v.n);
+      const files = listFiles(src);
+      const runtime = detectRuntime(files, s.manifest.runtime);
+      if (!runtime) return { ok: false, log: "Cannot tell how to build this: add a Dockerfile, a requirements.txt / pyproject.toml, a package.json, or set runtime" };
+      if (runtime !== "dockerfile" && !s.manifest.start) return { ok: false, log: "Say how to start it: start in mas-host.yaml, or set it on the service" };
+      const dockerfile = path.join(path.dirname(src), "Dockerfile.mas");
+      if (runtime === "dockerfile") fs.copyFileSync(path.join(src, "Dockerfile"), dockerfile);
+      else fs.writeFileSync(dockerfile, generatedDockerfile(runtime, files, s.manifest));
+      const image = `mas-hosted-${id.replace(/_/g, "-")}:v${v.n}`;
+      const r = await exec(this.docker, ["build", "-t", image, "-f", dockerfile, src], { timeout: 900_000 });
+      const log = r.out.slice(-6000);
+      fs.writeFileSync(path.join(path.dirname(src), "build.log"), r.out);
+      Object.assign(v, { built_at: new Date().toISOString(), build_ok: r.code === 0, ...(r.code === 0 ? { image } : {}) });
+      this.save(s);
+      return { ok: r.code === 0, log, ...(r.code === 0 ? { image } : {}) };
+    } finally {
+      this.building.delete(id);
+    }
+  }
+
+  // ---- run -------------------------------------------------------------------------------
+  private image(s: HostedService): string {
+    const v = s.versions.find((x) => x.n === s.current);
+    if (!v?.image || !v.build_ok) throw new Error(`${s.name} is not built yet (version ${s.current}): build it first`);
+    return v.image;
+  }
+  private containerName(id: string) {
+    return `mas-svc-${id.replace(/_/g, "-")}`;
+  }
+  private async ensureNetwork(name: string, internal: boolean) {
+    const r = await exec(this.docker, ["network", "inspect", name], { timeout: 20_000 });
+    if (r.code !== 0) await exec(this.docker, ["network", "create", ...(internal ? ["--internal"] : []), name], { timeout: 30_000 });
+  }
+
+  /** The environment the service starts with: plain values, and secrets read now (never stored with the service). */
+  private envFor(s: HostedService): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(s.manifest.env ?? {})) {
+      if (typeof v === "string") out[k] = v;
+      else {
+        const val = this.secrets.get(v.secret);
+        if (!val) throw new Error(`${s.name} needs the secret ${v.secret} (Settings → API keys)`);
+        out[k] = val;
+      }
+    }
+    return out;
+  }
+
+  /** docker run flags shared by both ways of running: limits, no privileges, the network, the environment by name. */
+  private runFlags(s: HostedService, env: Record<string, string>, network: string | null): string[] {
+    return [
+      ...(network ? ["--network", network] : ["--network", "none"]),
+      "--memory", s.manifest.memory ?? "512m",
+      "--cpus", String(s.manifest.cpus ?? 1),
+      "--pids-limit", "256",
+      "--cap-drop", "ALL",
+      "--security-opt", "no-new-privileges",
+      // values are passed through the client's environment, so secrets never appear on a command line
+      ...Object.keys(env).flatMap((k) => ["-e", k]),
+      "--label", `mas.service=${s.id}`,
+    ];
+  }
+
+  /** For mcp-stdio: the command (and environment) that starts a fresh container speaking MCP on stdio. */
+  stdioCommand(id: string): { command: string; env: Record<string, string> } {
+    const s = this.must(id);
+    if (s.manifest.expose.kind !== "mcp-stdio") throw new Error(`${s.name} exposes ${s.manifest.expose.kind}, not MCP on stdio`);
+    const env = this.envFor(s);
+    const outbound = (s.manifest.egress ?? []).length > 0;
+    const q = (a: string) => `'${a.replace(/'/g, "'\\''")}'`;
+    const args = ["run", "-i", "--rm", ...this.runFlags(s, env, outbound ? "bridge" : null), this.image(s)];
+    return { command: [this.docker, ...args].map(q).join(" "), env };
+  }
+
+  async state(id: string): Promise<ServiceState> {
+    const name = this.containerName(id);
+    const r = await exec(this.docker, ["inspect", "-f", "{{.State.Running}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", name], { timeout: 20_000 });
+    if (r.code !== 0) return { running: false };
+    const [running, ip] = r.out.trim().split(/\s+/);
+    const s = this.get(id);
+    return { running: running === "true", container: name, ...(running === "true" && ip && s?.manifest.expose.port ? { address: `http://${ip}:${s.manifest.expose.port}` } : {}) };
+  }
+
+  /** For mcp-http and http: start the long-running container (if it is not running) and wait until it answers. */
+  async start(id: string): Promise<ServiceState> {
+    const s = this.must(id);
+    if (s.manifest.expose.kind === "mcp-stdio") throw new Error(`${s.name} speaks MCP on stdio: it starts a fresh container per connection, nothing to keep running`);
+    const now = await this.state(id);
+    if (now.running && now.address) return now;
+    const env = this.envFor(s);
+    const outbound = (s.manifest.egress ?? []).length > 0;
+    const network = outbound ? OUTBOUND_NET : INTERNAL_NET;
+    await this.ensureNetwork(network, !outbound);
+    const name = this.containerName(id);
+    await exec(this.docker, ["rm", "-f", name], { timeout: 30_000 });
+    const r = await exec(this.docker, ["run", "-d", "--name", name, "--restart", "no", ...this.runFlags(s, env, network), this.image(s)], { timeout: 120_000, env });
+    if (r.code !== 0) throw new Error(`Could not start ${s.name}: ${r.out.slice(-300)}`);
+    for (let i = 0; i < 60; i++) {
+      const st = await this.state(id);
+      if (!st.running) throw new Error(`${s.name} stopped right after starting: ${(await this.logs(id)).slice(-500)}`);
+      if (st.address && (await this.answers(st.address, s.manifest))) return st;
+      await new Promise((res) => setTimeout(res, 1000));
+    }
+    throw new Error(`${s.name} did not answer within a minute on port ${s.manifest.expose.port}`);
+  }
+
+  private async answers(address: string, m: HostManifest): Promise<boolean> {
+    try {
+      const res = await fetch(address + (m.expose.health ?? m.expose.path ?? "/"), { signal: AbortSignal.timeout(3000) });
+      return res.status < 500;
+    } catch {
+      return false;
+    }
+  }
+
+  async stop(id: string) {
+    await exec(this.docker, ["rm", "-f", this.containerName(id)], { timeout: 30_000 });
+  }
+
+  async logs(id: string): Promise<string> {
+    const r = await exec(this.docker, ["logs", "--tail", "200", this.containerName(id)], { timeout: 20_000 });
+    return r.code === 0 ? r.out : "(not running)";
+  }
+
+  /** Where an endpoint is reached, now: a URL with headers, or a command speaking MCP on stdio. */
+  async resolve(e: Endpoint): Promise<{ url: string; headers: Record<string, string> } | { command: string; env: Record<string, string> }> {
+    if ("remote" in e) {
+      const headers = { ...(e.remote.headers ?? {}) };
+      if (e.remote.bearer_env) {
+        const key = this.secrets.get(e.remote.bearer_env);
+        if (!key) throw new Error(`The connection needs the secret ${e.remote.bearer_env} (Settings → API keys)`);
+        headers.authorization = `Bearer ${key}`;
+      }
+      return { url: e.remote.url, headers };
+    }
+    const s = this.must(e.hosted.service);
+    if (s.manifest.expose.kind === "mcp-stdio") return this.stdioCommand(s.id);
+    const st = await this.start(s.id);
+    return { url: st.address! + (e.hosted.path ?? s.manifest.expose.path ?? ""), headers: {} };
+  }
+}

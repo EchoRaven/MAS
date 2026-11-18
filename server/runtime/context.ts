@@ -1,5 +1,6 @@
 // What every part of a running system can reach: the document, the model
 // gateway, the event stream, budgets, people, and live resources.
+import type { HostedServices } from "../hosting/services";
 import type { SysNode, SystemDoc } from "@/model/types";
 import type { HumanRequest, RunEventBody } from "@/run/events";
 import type { Config } from "../config";
@@ -16,6 +17,8 @@ export interface RunCtx {
   runId: string;
   /** what the run was started with: a step deep in a pipeline can still see the original task (ctx.run_input) */
   input?: string;
+  /** hosted services, for endpoints that name one */
+  hosted?: HostedServices;
   doc: SystemDoc;
   byId: Map<string, SysNode>;
   models: Models;

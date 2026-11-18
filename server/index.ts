@@ -7,6 +7,8 @@ import { Router, send } from "./http";
 import { designRoutes } from "./routes/design";
 import { datasetRoutes } from "./routes/datasets";
 import { evalRoutes } from "./routes/evals";
+import { hostedRoutes } from "./routes/hosted";
+import { HostedServices } from "./hosting/services";
 import { runRoutes } from "./routes/runs";
 import { settingsRoutes } from "./routes/settings";
 import { systemRoutes } from "./routes/systems";
@@ -20,7 +22,8 @@ import { Secrets } from "./store/secrets";
 const config = loadConfig();
 const store = new Store(config.dataDir);
 const secrets = new Secrets(config.dataDir);
-const runs = new RunManager(store, secrets, config);
+const hosted = new HostedServices(config.dataDir, config.docker, secrets);
+const runs = new RunManager(store, secrets, config, hosted);
 persistHealth(path.join(config.dataDir, "model-health.json"));
 runs.recover();
 const evals = new EvalManager(store, runs, secrets, config.docker);
@@ -35,6 +38,7 @@ settingsRoutes(router, store, secrets, config);
 designRoutes(router, store, secrets, config);
 evalRoutes(router, store, evals);
 datasetRoutes(router, store);
+hostedRoutes(router, hosted);
 
 // MCP for harnesses: authenticated by the per-run exposure token, not the user token
 router.on(

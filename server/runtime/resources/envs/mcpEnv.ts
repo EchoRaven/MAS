@@ -1,5 +1,6 @@
 // An env imported through mas-env/1 (DT, env-gen, compose): health-checked,
 // reset per run when it says how, and used through its MCP server.
+import { mcpClientFor } from "../../../hosting/resolve";
 import type { EnvData, SysEdge, SysNode } from "@/model/types";
 import type { RunCtx } from "../../context";
 import { McpClient } from "../../mcp/client";
@@ -47,6 +48,10 @@ export class McpEnv implements Resource {
       }
       const mcp = m.exposes.mcp;
       if (!mcp) return;
+      if (mcp.endpoint) {
+        this.client = await mcpClientFor(this.rc, mcp.endpoint);
+        return;
+      }
       const token = mcp.auth === "bearer_env" ? this.rc.secrets.get(Object.values(mcp.env ?? {})[0] ?? `${this.id.toUpperCase()}_TOKEN`) : undefined;
       if (mcp.transport === "http" && mcp.url) this.client = new McpClient({ url: mcp.url, headers: token ? { authorization: `Bearer ${token}` } : {} });
       else if (mcp.start) {

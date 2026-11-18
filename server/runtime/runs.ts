@@ -1,5 +1,6 @@
 // Active runs: event persistence and fan-out to subscribers, budgets, people's
 // answers, stopping.
+import type { HostedServices } from "../hosting/services";
 import { checkResult } from "@/run/result";
 import crypto from "node:crypto";
 import type { SystemDoc } from "@/model/types";
@@ -39,6 +40,8 @@ export class RunManager {
     private store: Store,
     private secrets: Secrets,
     private config: Config,
+    /** hosted services: where endpoints that name one are reached */
+    private hosted?: HostedServices,
   ) {}
 
   /** Start a run in the background; returns its record at once. */
@@ -96,6 +99,7 @@ export class RunManager {
       stop,
       vars: { ...(opts.vars ?? {}) },
       input: opts.input,
+      hosted: this.hosted,
       emit,
       usage: (node, u, estimated = false) => {
         rec.usd += u.usd;
