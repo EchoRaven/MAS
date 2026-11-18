@@ -37,6 +37,7 @@ list of those that speak the right protocol, with a test button.
    env: { MODE: prod, API_KEY: { secret: GITHUB_TOKEN } }
    memory: 512m
    cpus: 1
+   idle_minutes: 30                     # mcp-http / http: stopped after 30 idle minutes, restarted on next use (0 = never)
    ```
 
    `runtime` is inferred: the project's `Dockerfile` if it has one; else
@@ -100,4 +101,3 @@ port and no route to the internet; an agent used both (`add_note`,
 - **Moving the host-run paths onto hosting**: stdio MCP `command:`, custom
   agent programs and env `start` commands as hosted services, leaving
   `MAS_ALLOW_LOCAL_EXEC` as a developer escape hatch.
-- **Idle stop** for long-running services.

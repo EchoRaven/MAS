@@ -133,3 +133,18 @@ describe("egress proxy", () => {
     }
   });
 });
+
+describe("idle services", () => {
+  it("stops a long-running service unused for longer than its idle_minutes, and never one set to 0", async () => {
+    const h = new HostedServices(fs.mkdtempSync(path.join(dir, "idle-")), "true", secrets);
+    const a = await h.create({ name: "api a", filename: "a.tar.gz", archive_base64: tarOf({ "app.py": "", "mas-host.yaml": "start: python app.py\nexpose: { kind: http, port: 8000 }\nidle_minutes: 10\n" }) });
+    const b = await h.create({ name: "api b", filename: "b.tar.gz", archive_base64: tarOf({ "app.py": "", "mas-host.yaml": "start: python app.py\nexpose: { kind: http, port: 8000 }\nidle_minutes: 0\n" }) });
+    const t0 = 1_000_000;
+    h.touch(a.id, t0);
+    h.touch(b.id, t0);
+    expect(await h.stopIdle(t0 + 5 * 60_000)).toEqual([]);
+    expect(await h.stopIdle(t0 + 11 * 60_000)).toEqual([a.id]);
+    // b is never stopped for being idle; a, stopped, is no longer tracked
+    expect(await h.stopIdle(t0 + 600 * 60_000)).toEqual([]);
+  });
+});

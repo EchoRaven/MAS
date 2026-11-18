@@ -80,6 +80,9 @@ export class HostedServices {
   private building = new Set<string>();
   /** the only way out for services that declare egress hosts */
   readonly egress = new EgressProxy();
+  /** when each long-running service was last used: idle ones are stopped, and start again on next use */
+  private lastUsed = new Map<string, number>();
+  private reaper?: NodeJS.Timeout;
   constructor(
     dataDir: string,
     private docker: string,
@@ -87,6 +90,36 @@ export class HostedServices {
   ) {
     this.root = path.join(dataDir, "hosted");
     fs.mkdirSync(this.root, { recursive: true });
+  }
+
+  /** Check every few minutes for long-running services nobody has used for a while. */
+  startReaper(everyMs = 5 * 60_000) {
+    this.reaper ??= setInterval(() => void this.stopIdle(), everyMs);
+    this.reaper.unref?.();
+  }
+
+  /** Stop long-running services idle for longer than their idle_minutes (default 30; 0 = never). Returns the ones stopped. */
+  async stopIdle(now = Date.now()): Promise<string[]> {
+    const stopped: string[] = [];
+    for (const [id, at] of this.lastUsed) {
+      const s = this.get(id);
+      if (!s) {
+        this.lastUsed.delete(id);
+        continue;
+      }
+      const limit = s.manifest.idle_minutes ?? 30;
+      if (limit > 0 && now - at > limit * 60_000) {
+        await this.stop(id);
+        this.lastUsed.delete(id);
+        stopped.push(id);
+      }
+    }
+    return stopped;
+  }
+
+  /** Note a use of a long-running service (so it is not stopped as idle). */
+  touch(id: string, now = Date.now()) {
+    this.lastUsed.set(id, now);
   }
 
   // ---- storage ---------------------------------------------------------------------------
@@ -352,6 +385,7 @@ export class HostedServices {
     await exec(this.docker, ["rm", "-f", name], { timeout: 30_000 });
     const r = await exec(this.docker, ["run", "-d", "--name", name, "--restart", "no", ...this.runFlags(s, env, network), this.image(s)], { timeout: 120_000, env });
     if (r.code !== 0) throw new Error(`Could not start ${s.name}: ${r.out.slice(-300)}`);
+    this.touch(id);
     for (let i = 0; i < 60; i++) {
       const st = await this.state(id);
       if (!st.running) throw new Error(`${s.name} stopped right after starting: ${(await this.logs(id)).slice(-500)}`);
@@ -371,6 +405,7 @@ export class HostedServices {
   }
 
   async stop(id: string) {
+    this.lastUsed.delete(id);
     await exec(this.docker, ["rm", "-f", this.containerName(id)], { timeout: 30_000 });
   }
 
@@ -393,6 +428,7 @@ export class HostedServices {
     const s = this.must(e.hosted.service);
     if (s.manifest.expose.kind === "mcp-stdio") return await this.stdioCommand(s.id);
     const st = await this.start(s.id);
+    this.touch(s.id);
     return { url: st.address! + (e.hosted.path ?? s.manifest.expose.path ?? ""), headers: {} };
   }
 }

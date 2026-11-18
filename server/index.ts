@@ -23,6 +23,7 @@ const config = loadConfig();
 const store = new Store(config.dataDir);
 const secrets = new Secrets(config.dataDir);
 const hosted = new HostedServices(config.dataDir, config.docker, secrets);
+hosted.startReaper();
 const runs = new RunManager(store, secrets, config, hosted);
 persistHealth(path.join(config.dataDir, "model-health.json"));
 runs.recover();

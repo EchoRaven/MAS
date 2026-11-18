@@ -36,6 +36,8 @@ export interface HostManifest {
   env?: Record<string, string | { secret: string }>;
   memory?: string;
   cpus?: number;
+  /** mcp-http / http: stop the container after this many minutes without use (it starts again when next used); 0 = never. Default 30 */
+  idle_minutes?: number;
 }
 
 export const DEFAULT_MANIFEST: HostManifest = { runtime: "auto", expose: { kind: "mcp-stdio" }, egress: [], env: {} };
@@ -54,6 +56,7 @@ export function checkManifest(m: HostManifest): string[] {
     if (typeof v === "object" && !(v && typeof v.secret === "string" && v.secret)) why.push(`env ${k}: { secret: NAME } needs a name`);
   }
   if (m.memory && !/^\d+[kmg]$/i.test(m.memory)) why.push('memory must look like "512m" or "2g"');
+  if (m.idle_minutes != null && !(Number.isFinite(m.idle_minutes) && m.idle_minutes >= 0)) why.push("idle_minutes must be 0 (never) or a number of minutes");
   return why;
 }
 
