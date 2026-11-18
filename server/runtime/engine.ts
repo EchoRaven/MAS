@@ -12,7 +12,7 @@ import { schemaById } from "./agent/jsonschema";
 import { AgentState, runAgentTurn, type TurnServices } from "./agent/turn";
 import { BudgetError, nameOf, StopError, type RunCtx } from "./context";
 import { llmCall, runFn } from "./functions";
-import { testExpr } from "./functions/sandbox";
+import { evalExpr, testExpr } from "./functions/sandbox";
 import { conditionHolds, policiesAt } from "@/model/policies";
 import { renderTemplate } from "./functions/template";
 import { textOf, userText } from "./models";
@@ -38,7 +38,8 @@ export class Engine implements TurnServices {
   private turns = new Map<string, AbortController>();
   private chain = new AsyncLocalStorage<string[]>();
   private joinBuf = new Map<string, Record<string, unknown>>();
-  private groups = new Map<string, { round: number; input: unknown }>();
+  /** each running group's round, the input it started with, and with iterate.over the items it tries one by one */
+  private groups = new Map<string, { round: number; input: unknown; items?: unknown[] }>();
   private groupWaiters = new Map<string, ((v: unknown) => void)[]>();
   private starters = new Set<string>();
   errors = 0;
@@ -516,10 +517,34 @@ export class Engine implements TurnServices {
 
   // groups --------------------------------------------------------------------------
   private async groupEnter(g: string, port: string, v: unknown) {
-    if (!this.groups.has(g)) this.groups.set(g, { round: 1, input: v });
+    if (!this.groups.has(g)) {
+      const st: { round: number; input: unknown; items?: unknown[] } = { round: 1, input: v };
+      const over = (this.node(g).data as GroupData).iterate?.over;
+      if (over) {
+        // try the items of a list one by one (MapCoder's plans, best first): round n receives item n
+        st.items = this.itemsOf(g, over, v);
+        v = st.items[0];
+        this.rc.emit({ type: "transform", at: g, label: `round 1 of ≤${Math.min(st.items.length, roundLimit((this.node(g).data as GroupData).iterate!.max_rounds, this.rc.vars))}`, detail: `item 1 of ${st.items.length} (${over})` });
+      }
+      this.groups.set(g, st);
+    }
     const inner = this.rc.doc.edges.filter((x) => x.source === g && x.source_port === port && x.kind !== "access");
     if (!inner.length) this.rc.emit({ type: "log", node: g, level: "warn", text: `input ${port} is not wired to anything inside ${nameOf(this.rc, g)}` });
     for (const x of inner) this.track(this.deliver(x, v, g));
+  }
+
+  /** The list iterate.over picks from a group's input; anything else is one item, said in the run. */
+  private itemsOf(g: string, over: string, v: unknown): unknown[] {
+    let list: unknown;
+    try {
+      list = evalExpr(over, { input: exprValue(v), vars: this.rc.vars });
+    } catch (e) {
+      this.rc.emit({ type: "log", node: g, level: "warn", text: `iterate.over ${over} failed (${(e as Error).message}): the whole input is the only item` });
+      return [v];
+    }
+    if (Array.isArray(list) && list.length) return list;
+    this.rc.emit({ type: "log", node: g, level: "warn", text: `iterate.over ${over} gave ${Array.isArray(list) ? "an empty list" : `no list (${typeof list})`}: the whole input is the only item` });
+    return [v];
   }
 
   private async groupExit(g: string, port: string, v: unknown) {
@@ -529,12 +554,13 @@ export class Engine implements TurnServices {
     const it = gd.iterate;
     if (it) {
       const until = it.until ? testExpr(it.until, { output: exprValue(v), text: asText(v), round: st.round, input: exprValue(st.input) }) : { ok: false as boolean, error: undefined as string | undefined };
-      const limit = roundLimit(it.max_rounds, rc.vars);
+      const limit = st.items ? Math.min(st.items.length, roundLimit(it.max_rounds, rc.vars)) : roundLimit(it.max_rounds, rc.vars);
       if (!until.ok && st.round < limit) {
         st.round++;
         this.groups.set(g, st);
-        rc.emit({ type: "transform", at: g, label: `round ${st.round} of ≤${limit}`, detail: until.error ? `until failed: ${until.error}` : it.until ? `until ${it.until} — not yet` : "next round" });
-        const feed = it.feed === "input_and_output" ? ({ role: "user", text: `${asText(st.input)}\n\nAnswers from the previous round:\n${asText(v)}`, from: g } satisfies Msg) : v;
+        const why = until.error ? `until failed: ${until.error}` : it.until ? `until ${it.until} — not yet` : "next round";
+        rc.emit({ type: "transform", at: g, label: `round ${st.round} of ≤${limit}`, detail: st.items ? `${why}; item ${st.round} of ${st.items.length}` : why });
+        const feed = st.items ? st.items[st.round - 1] : it.feed === "input_and_output" ? ({ role: "user", text: `${asText(st.input)}\n\nAnswers from the previous round:\n${asText(v)}`, from: g } satisfies Msg) : v;
         for (const p of gd.interface.inputs) for (const x of rc.doc.edges.filter((y) => y.source === g && y.source_port === p.id && y.kind !== "access")) this.track(this.deliver(x, feed, g));
         return;
       }

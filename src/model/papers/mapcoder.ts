@@ -1,5 +1,6 @@
-// MapCoder: retrieve similar problems, plan from them, write the code, and
-// debug it against the tests, round after round.
+// MapCoder: retrieve similar problems, write k plans from them with a
+// confidence each, then try the plans best first: code each one and debug it
+// against the tests for up to t rounds, until one passes.
 import { Builder, native, type TemplateInfo } from "../builder";
 import { port } from "../ports";
 import type { SystemDoc } from "../types";
@@ -7,12 +8,12 @@ import type { SystemDoc } from "../types";
 function build(): SystemDoc {
   const b = new Builder(
     "MapCoder",
-    "Four agents in a pipeline: the retrieval agent recalls similar problems it has seen, the planner turns them into a plan with a confidence score, the coder implements it, and the debugger runs the tests and repairs the code — up to five attempts.",
+    "Four agents in a pipeline: the retrieval agent recalls similar problems it has seen, the planner turns them into 3 plans with a confidence each, and the plans are tried best first: the coder implements one, the debugger runs the tests and reports, up to t rounds; if they still fail, the next plan. t is a run variable (5 by default).",
   );
   b.schema({
-    id: "Plan",
-    description: "A plan with its confidence",
-    json_schema: '{\n  "type": "object",\n  "required": ["plan", "confidence"],\n  "properties": {\n    "plan": { "type": "string" },\n    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },\n    "based_on": { "type": "string" }\n  }\n}',
+    id: "Plans",
+    description: "Several plans, each with its confidence",
+    json_schema: '{\n  "type": "object",\n  "required": ["plans"],\n  "properties": {\n    "plans": {\n      "type": "array",\n      "minItems": 1,\n      "items": {\n        "type": "object",\n        "required": ["plan", "confidence"],\n        "properties": {\n          "plan": { "type": "string" },\n          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },\n          "based_on": { "type": "string" }\n        }\n      }\n    }\n  }\n}',
   })
     .node("user", "human", 0, 120, { name: "User", role: "Gives the problem", approves: false })
     .agent("retrieval", 240, 40, {
@@ -23,17 +24,27 @@ function build(): SystemDoc {
     })
     .agent("planner", 540, 40, {
       name: "Planning agent",
-      role: "Writes a plan and scores it",
+      role: "Writes k plans and scores each",
       model: "opus",
-      interface: { inputs: [port("in", "message")], outputs: [port("out", "json", { schema: "Plan" })] },
-      pipeline: { pre: [], post: [{ id: "p1", op: "parse_json", name: "Parse plan", schema: "Plan", on_fail: "retry", max_retries: 2 }] },
-      harness: { ...native(), loop: "single_shot", instructions: "Using the recalled problems, write a step-by-step plan for the given problem. Reply as JSON: plan, confidence (0-1, how likely this plan solves it), based_on (which recalled problem)." },
+      interface: { inputs: [port("in", "message")], outputs: [port("out", "json", { schema: "Plans" })] },
+      pipeline: { pre: [], post: [{ id: "p1", op: "parse_json", name: "Parse plans", schema: "Plans", on_fail: "retry", max_retries: 2 }] },
+      harness: {
+        ...native(),
+        loop: "single_shot",
+        instructions: "Using the recalled problems, write 3 different step-by-step plans for the given problem: different algorithms or approaches where you can, not rewordings. Reply as JSON: {\"plans\": [{plan, confidence (0-1, how likely this plan solves it), based_on (which recalled problem)}]}.",
+      },
     })
-    .group("repair", 840, 20, {
+    .group("plans", 800, 0, {
+      name: "Try plans, best first",
+      // one round per plan, highest confidence first, until a plan's code passes its tests
+      iterate: { max_rounds: 3, over: "input.plans.slice().sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))", until: 'output.text.includes("ALL TESTS PASSED")' },
+      interface: { inputs: [port("plans", "json", { schema: "Plans" })], outputs: [port("report", "message")] },
+    })
+    .group("repair", 0, 0, {
       name: "Code and debug",
-      iterate: { max_rounds: 5, until: 'output.text.includes("ALL TESTS PASSED")', feed: "input_and_output" },
+      iterate: { max_rounds: "{{vars.t ?? 5}}", until: 'output.text.includes("ALL TESTS PASSED")', feed: "input_and_output" },
       interface: { inputs: [port("plan", "message")], outputs: [port("report", "message")] },
-    })
+    }, "plans")
     .agent("coder", 0, 0, {
       name: "Coding agent",
       role: "Implements the plan",
@@ -56,14 +67,16 @@ function build(): SystemDoc {
     .node("sandbox", "env", 170, 220, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }, "repair")
     .edge("user", "retrieval", "message", { label: "Problem" })
     .edge("retrieval", "planner", "handoff", { carry: "full" })
-    .edge("planner", "repair", "message", { transform: { lang: "template", code: "Problem:\n{{run_input}}\n\nPlan (confidence {{input.confidence}}, based on {{input.based_on}}):\n{{input.plan}}" } })
+    .edge("planner", "plans", "message")
+    .edge("plans", "repair", "message", { transform: { lang: "template", code: "Problem:\n{{run_input}}\n\nPlan (confidence {{input.confidence}}, based on {{input.based_on}}):\n{{input.plan}}" } })
     .edge("repair", "coder", "message")
     .edge("coder", "debugger", "handoff", { carry: "full" })
     .edge("debugger", "repair", "message")
-    .edge("repair", "user", "message", { label: "Solution" })
+    .edge("repair", "plans", "message")
+    .edge("plans", "user", "message", { label: "Solution" })
     .edge("coder", "sandbox", "access", { access: "read_write" })
     .edge("debugger", "sandbox", "access", { access: "read_write" });
-  b.doc.budget = { usd: 3, max_rounds: 30, wallclock_min: 20 };
+  b.doc.budget = { usd: 5, max_rounds: 60, wallclock_min: 30 };
   b.doc.result = { type: "code", description: "the solution, in a ```python block" };
   return b.doc;
 }
@@ -77,11 +90,11 @@ export const mapcoder: TemplateInfo = {
   notes: {
     mapped: [
       "The four agents of the paper are four components in order: retrieval, planning, coding, debugging. The retrieval agent's recalled problems travel to the planner through a full handoff.",
-      "The plan's confidence is a json port bound to a Plan schema, parsed by an output stage.",
-      "The debugging loop is group iteration: the bug report goes back with the plan until the tests pass, at most 5 attempts.",
+      "The plans and their confidence are a json port bound to a Plans schema, parsed by an output stage.",
+      "Trying the plans best first is a group with iterate.over: one round per plan, sorted by confidence, until the tests pass (k = 3 plans).",
+      "The debugging loop is a group inside it: the bug report goes back with the plan until the tests pass, at most t rounds per plan (a run variable, 5 by default).",
     ],
     differs: [
-      "The paper generates k plans and tries them in confidence order; here the planner writes one plan and scores it. Several plans would be a spawn with the planner as the template.",
       "Recalled problems come from the model's own knowledge. For a real corpus, attach a knowledge plugin to the retrieval agent.",
     ],
   },

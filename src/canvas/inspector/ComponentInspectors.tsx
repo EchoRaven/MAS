@@ -100,7 +100,17 @@ export function GroupInspector({ id, g, doc, set, update, onOpen }: { id: string
               hint="A number, or {{vars.rounds ?? 2}} to set it per run (an evaluation can sweep it)"
             />
             <TextField label="Stop when" value={g.iterate.until ?? ""} onChange={(until) => set({ iterate: { ...g.iterate!, until: until || null } })} mono placeholder='output.text.includes("DONE")' hint="An expression over output and round; empty runs every round" />
-            <SelectField label="Next round gets" value={g.iterate.feed ?? "output"} onChange={(feed) => set({ iterate: { ...g.iterate!, feed } })} items={opts([["output", "The last output"], ["input_and_output", "The original input and the last output"]])} />
+            <TextField
+              label="One round per item of"
+              value={g.iterate.over ?? ""}
+              onChange={(over) => set({ iterate: { ...g.iterate!, over: over.trim() || null } })}
+              mono
+              placeholder="input.plans"
+              hint="Optional: an expression that picks a list from the input. Round n gets item n, until “Stop when” holds or the list ends (try plans best first: MapCoder)"
+            />
+            {!g.iterate.over && (
+              <SelectField label="Next round gets" value={g.iterate.feed ?? "output"} onChange={(feed) => set({ iterate: { ...g.iterate!, feed } })} items={opts([["output", "The last output"], ["input_and_output", "The original input and the last output"]])} />
+            )}
           </>
         )}
       </Section>

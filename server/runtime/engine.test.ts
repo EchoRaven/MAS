@@ -1026,6 +1026,48 @@ describe("runtime", () => {
     expect(events.some((e) => e.type === "transform" && e.label === "rounds done" && /holds/.test(e.detail))).toBe(true);
   });
 
+  it("iterate.over tries the items of a list in turn, each with its own inner rounds, until one passes", async () => {
+    const b = new Builder("Plans", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .group("plans", 200, 0, { name: "Plans", iterate: { max_rounds: 10, over: "JSON.parse(input).sort((a, b) => b.c - a.c).map((p) => p.name)", until: 'output.includes("PASS")' } })
+      .group("repair", 0, 0, { name: "Repair", iterate: { max_rounds: 2, until: 'output.includes("PASS")', feed: "output" } }, "plans")
+      .agent("w", 0, 0, { name: "W", model: "w", harness: { ...native(), loop: "single_shot", instructions: "" } }, "repair")
+      .edge("me", "plans", "message")
+      .edge("plans", "repair", "message")
+      .edge("repair", "w", "message")
+      .edge("w", "repair", "message")
+      .edge("repair", "plans", "message")
+      .edge("plans", "me", "message");
+    // the best plan fails both of its repair rounds; the second passes at once; the third is never tried
+    b.doc.models.push({ id: "w", provider: "mock", model: "mock", api: { params: { script: ["broken 1", "broken 2", "PASS with plan B"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const plans = JSON.stringify([{ name: "plan C", c: 0.2 }, { name: "plan A", c: 0.9 }, { name: "plan B", c: 0.5 }]);
+    const { events } = await run(b.doc, plans, { mock: false });
+    expect(errors(events)).toEqual([]);
+    const calls = events.filter((e): e is Extract<typeof e, { type: "message" }> => e.type === "message" && e.to === "w").map((e) => e.text);
+    expect(calls).toEqual(["plan A", "broken 1", "plan B"]);
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toBe("PASS with plan B");
+    const tries = events.filter((e): e is Extract<typeof e, { type: "transform" }> => e.type === "transform" && e.at === "plans");
+    expect(tries[0]).toMatchObject({ label: "round 1 of ≤3", detail: expect.stringContaining("item 1 of 3") });
+    expect(tries.some((e) => e.label === "round 2 of ≤3" && /item 2 of 3/.test(e.detail))).toBe(true);
+    expect(tries.some((e) => e.label === "rounds done" && /holds \(round 2\)/.test(e.detail))).toBe(true);
+  });
+
+  it("iterate.over that finds no list runs the whole input once, and says why", async () => {
+    const b = new Builder("Plans", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .group("plans", 200, 0, { name: "Plans", iterate: { max_rounds: 3, over: "input.plans" } })
+      .agent("w", 0, 0, { name: "W", model: "w", harness: { ...native(), loop: "single_shot", instructions: "" } }, "plans")
+      .edge("me", "plans", "message")
+      .edge("plans", "w", "message")
+      .edge("w", "plans", "message")
+      .edge("plans", "me", "message");
+    b.doc.models.push({ id: "w", provider: "mock", model: "mock", api: { params: { script: ["done"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "just text", { mock: false });
+    expect(usages(events, "w")).toHaveLength(1);
+    expect(events.some((e) => e.type === "log" && e.level === "warn" && /iterate.over input.plans gave no list/.test(e.text))).toBe(true);
+  });
+
   it("Chain-of-Agents reads a long input part by part, then the manager answers once", async () => {
     const doc = "word ".repeat(1400); // 7000 characters: three parts of 3000
     const { events } = await run(TEMPLATES.find((t) => t.id === "paper-chain-of-agents")!.build(), "What is it about?\n---\n" + doc);

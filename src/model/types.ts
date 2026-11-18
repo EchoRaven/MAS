@@ -351,7 +351,12 @@ export interface GroupData {
    * max_rounds is reached. Debates, multi-turn dialogues, review loops.
    */
   /** max_rounds: a number, or "{{vars.rounds ?? 2}}" to set it per run (an evaluation can sweep it) */
-  iterate?: { max_rounds: number | string; until?: string | null; feed?: "output" | "input_and_output" } | null;
+  /**
+   * Run the group's contents again, round after round, until `until` holds or max_rounds. With `over`, an
+   * expression that picks a list out of the group's input (`input.plans`), round n receives item n instead:
+   * try each in turn until one passes (MapCoder's plans, best first); the rounds are at most the list's length.
+   */
+  iterate?: { max_rounds: number | string; until?: string | null; feed?: "output" | "input_and_output"; over?: string | null } | null;
 }
 
 /** A bare model call as a component: no loop, no tools. One input in, one completion out. */
