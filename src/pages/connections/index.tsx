@@ -133,6 +133,7 @@ function HostForm({ onCreated }: { onCreated: () => void }) {
   const [start, setStart] = useState("");
   const [kind, setKind] = useState<ExposeKind>("mcp-stdio");
   const [port, setPort] = useState("");
+  const [service, setService] = useState("");
   const [egress, setEgress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -140,7 +141,7 @@ function HostForm({ onCreated }: { onCreated: () => void }) {
     setBusy(true);
     setError("");
     try {
-      const manifest: Partial<HostManifest> = { expose: { kind, ...(port ? { port: Number(port) } : {}) }, ...(start.trim() ? { start: start.trim() } : {}), egress: egress.split(/[\s,]+/).filter(Boolean) };
+      const manifest: Partial<HostManifest> = { expose: { kind, ...(port ? { port: Number(port) } : {}), ...(service.trim() ? { service: service.trim() } : {}) }, ...(start.trim() ? { start: start.trim() } : {}), egress: egress.split(/[\s,]+/).filter(Boolean) };
       await Api.createHosted({ name: name.trim(), manifest, ...(file ? { archive_base64: await readAsBase64(file), filename: file.name } : { git: git.trim() }) });
       setName("");
       setFile(null);
@@ -180,6 +181,12 @@ function HostForm({ onCreated }: { onCreated: () => void }) {
         <label className="flex flex-col gap-1 text-muted-foreground">
           Port it listens on
           <Input value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))} placeholder="8000" className="h-8 text-xs" aria-label="Port" />
+        </label>
+      )}
+      {kind !== "mcp-stdio" && kind !== "agent-stdio" && (
+        <label className="flex flex-col gap-1 text-muted-foreground">
+          Compose service (if the project has a compose file)
+          <Input value={service} onChange={(e) => setService(e.target.value.replace(/[^A-Za-z0-9_.-]/g, ""))} placeholder="api" className="h-8 font-mono text-xs" aria-label="Compose service" />
         </label>
       )}
       <label className="flex flex-col gap-1 text-muted-foreground">
