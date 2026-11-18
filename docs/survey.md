@@ -99,6 +99,7 @@ Each one became a general interface, not a fix for one paper:
 | All 26 templates | Found the two above; structural tests and dry runs had passed | **`record-demos.mts --check`:** every template on real models, a table of which finish with an answer and why not (26 of 26 healthy after these fixes, $0.22) |
 | Graders | "40%" was read as 0.4 against GSM8K's 40; AutoGen's closing `TERMINATE` was taken for the answer | **Graders:** percentages match either form; stop words are not answers |
 | MATH-500, GSM-Hard | A math grader validated only on the answer key's own forms marked ~7 of 50 right model answers wrong (`4/3` vs `\frac43`, `±`, lists, units); `-$70,145,984` was read as positive | **Graders are checked against model outputs, not only reference solutions:** fractions, `\pm`, unordered lists, trailing units; signs before currency |
+| MMLU | Debate looked 4 points better on one run each (92 → 96); two more runs of the single agent scored 96 and 97. Separately, an evaluation of a system whose model had no key ran all 100 cases with empty answers | **Paired comparison** on Compare systems: each system's questions fixed and lost against a reference, with an exact McNemar p-value; **evaluations refuse to start** when a model they call has no key |
 | Every comparison | Questions pasted by hand, evaluations run in parallel (a burst of 875 calls a minute got a key suspended) | **Datasets** (versioned, sampled), **batch evaluations** (one system after another), a **server-wide rate limit** |
 
 ## What the results say about the patterns

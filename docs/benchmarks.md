@@ -442,7 +442,22 @@ To see systems side by side, open **Evaluate → Compare systems**. The page
 groups every evaluation by the questions it ran. For each group it shows
 accuracy, each repeat's score and the spread, the cost, and the cost per
 correct answer. Below that is a grid of which system got each question right.
-Older runs of the same system on the same models start unticked.
+Older runs of the same system on the same models start unticked, and so do
+evaluations that did not finish or in which no model answered.
+
+**vs reference** compares each system with one reference (a baseline system
+by default; click another's entry to switch), question by question: `+4 −0`
+means it got 4 questions right that the reference got wrong, and lost none.
+Its p-value is the exact McNemar test on those changed questions, the paired
+test papers use for two systems on the same questions. With repeats, a
+question counts as right when more than half the runs got it. Below p = 0.05
+a difference is unlikely to be chance; with one run each, also repeat the
+reference (MMLU above: a +4 at p = 0.13 vanished with two more runs). "Only
+questions where they differ" cuts the grid down to the changed questions.
+
+An evaluation whose system calls a model with no key here is refused before
+it starts, with the model and the component that uses it; use "Everything on
+<model>" to run it on one you have.
 
 ### Datasets and code problems
 
