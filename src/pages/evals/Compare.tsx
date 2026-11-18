@@ -109,7 +109,7 @@ export function ComparePage() {
         <Select
           value={set}
           onValueChange={(v) => (setParams({ set: v }), setPicked(null))}
-          items={sets.map(([id, es]) => ({ value: id, label: `${es[0].questions} questions · ${es.length} evaluation${es.length > 1 ? "s" : ""} · “${es[0].first_question.slice(0, 48)}…”` }))}
+          items={sets.map(([id, es]) => ({ value: id, label: `${es.find((e) => e.set_name)?.set_name ?? `“${es[0].first_question.slice(0, 48)}…”`} · ${es[0].questions} questions · ${es.length} evaluation${es.length > 1 ? "s" : ""}` }))}
           ariaLabel="Question set"
           className="max-w-xl"
         />

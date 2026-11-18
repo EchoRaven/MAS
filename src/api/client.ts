@@ -34,7 +34,7 @@ export class ApiError extends Error {
   }
 }
 
-export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; set: string; questions: number; first_question: string };
+export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; set: string; questions: number; first_question: string; set_name?: string };
 
 export interface SystemVersion {
   version: string;

@@ -73,10 +73,12 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       evals: store.listEvals(req.query.get("system") ?? undefined).map(({ cases, ...rest }) => ({
         ...rest,
         total: cases.length,
-        // evaluations of the same dataset version and sample group together; others by their questions
-        set: rest.dataset ? `${rest.dataset.id}@${rest.dataset.version}${rest.dataset.n ? `#${rest.dataset.n}/${rest.dataset.seed}` : ""}` : caseSetId(cases),
+        // evaluations of the same questions group together, however they were given (a dataset, a file, typed)
+        set: caseSetId(cases),
         questions: new Set(cases.map((c) => c.input)).size,
-        first_question: rest.dataset ? `${rest.dataset.name}${rest.dataset.n ? ` (sample of ${rest.dataset.n})` : ""}` : (cases[0]?.input.slice(0, 120) ?? ""),
+        first_question: cases[0]?.input.slice(0, 120) ?? "",
+        // a name for the set, when it came from a dataset
+        ...(rest.dataset ? { set_name: `${rest.dataset.name}${rest.dataset.n ? ` (sample of ${rest.dataset.n}, seed ${rest.dataset.seed})` : ""}` } : {}),
       })),
     })),
   r.on("GET", "/api/evals/:id", (req) => {
