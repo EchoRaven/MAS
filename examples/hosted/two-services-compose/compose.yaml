@@ -1,0 +1,17 @@
+# Two services that talk to each other by name. When hosted, MAS Studio
+# rewrites this file: the published port, container_name and restart policy
+# below are removed, and both services go on one internal network.
+services:
+  api:
+    image: python:3.12-slim
+    command: python /app/api.py
+    working_dir: /app
+    volumes: ["./:/app:ro"]
+    ports: ["8080:8000"]
+    container_name: example-api
+    depends_on: [backend]
+  backend:
+    image: python:3.12-slim
+    command: python /app/backend.py
+    volumes: ["./:/app:ro"]
+    restart: always

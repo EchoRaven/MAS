@@ -1,0 +1,5 @@
+# A compose project, hosted: every service on one internal network, no
+# published ports, no network out. The platform reaches the entry service.
+name: Two services
+expose: { kind: http, service: api, port: 8000, health: /health }
+egress: []

@@ -16,7 +16,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { checkManifest, DEFAULT_MANIFEST, detectRuntime, generatedDockerfile, type Endpoint, type HostManifest } from "@/model/hosting";
+import { checkManifest, COMPOSE_FILES, DEFAULT_MANIFEST, detectRuntime, generatedDockerfile, type Endpoint, type HostManifest } from "@/model/hosting";
+import { sanitizeCompose } from "./compose";
 import type { Secrets } from "../store/secrets";
 import { EgressProxy } from "./egress";
 import { HttpError } from "../store/files";
@@ -260,8 +261,9 @@ export class HostedServices {
 
   delete(id: string) {
     const s = this.must(id);
-    void this.stop(id);
-    for (const v of s.versions) if (v.image) void exec(this.docker, ["rmi", "-f", v.image]);
+    if (s.versions.find((x) => x.n === s.current)?.image?.startsWith("compose:")) void this.compose(s, ["down", "-v", "--rmi", "local"], {}, 300_000);
+    else void this.stop(id);
+    for (const v of s.versions) if (v.image && !v.image.startsWith("compose:")) void exec(this.docker, ["rmi", "-f", v.image]);
     fs.rmSync(this.dir(id), { recursive: true, force: true });
   }
 
@@ -279,6 +281,7 @@ export class HostedServices {
       const files = listFiles(src);
       const runtime = detectRuntime(files, s.manifest.runtime);
       if (!runtime) return { ok: false, log: "Cannot tell how to build this: add a Dockerfile, a requirements.txt / pyproject.toml, a package.json, or set runtime" };
+      if (runtime === "compose") return await this.buildCompose(s, v, src, files);
       if (runtime !== "dockerfile" && !s.manifest.start) return { ok: false, log: "Say how to start it: start in mas-host.yaml, or set it on the service" };
       const dockerfile = path.join(path.dirname(src), "Dockerfile.mas");
       if (runtime === "dockerfile") fs.copyFileSync(path.join(src, "Dockerfile"), dockerfile);
@@ -293,6 +296,76 @@ export class HostedServices {
     } finally {
       this.building.delete(id);
     }
+  }
+
+  // ---- compose projects ------------------------------------------------------------------
+  private project(id: string) {
+    return `mas-${id.replace(/_/g, "-")}`;
+  }
+  private composeFile(id: string, n: number) {
+    return path.join(this.srcDir(id, n), ".mas-compose.json");
+  }
+  private isCompose(s: HostedService) {
+    return detectRuntime(listFiles(this.srcDir(s.id, s.current)), s.manifest.runtime) === "compose";
+  }
+  /** `docker compose` (the plugin) where there is one, else the standalone docker-compose */
+  private composeCli?: Promise<[string, string[]]>;
+  private async compose(s: HostedService, args: string[], env: Record<string, string> = {}, timeout = 600_000) {
+    this.composeCli ??= exec(this.docker, ["compose", "version"], { timeout: 20_000 }).then((r) => (r.code === 0 ? [this.docker, ["compose"]] : ["docker-compose", []]) as [string, string[]]);
+    const [cmd, pre] = await this.composeCli;
+    return exec(cmd, [...pre, "-p", this.project(s.id), "-f", this.composeFile(s.id, s.current), ...args], { timeout, env, cwd: this.srcDir(s.id, s.current) });
+  }
+
+  /** Rewrite the project's compose file (see compose.ts), then build its images. */
+  private async buildCompose(s: HostedService, v: ServiceVersion, src: string, files: string[]): Promise<{ ok: boolean; log: string; image?: string }> {
+    if ((s.manifest.egress ?? []).length) return { ok: false, log: "A compose project cannot have egress hosts yet: it runs with no network. Remove egress, or host the part that needs the network as its own service" };
+    if (!s.manifest.expose.service) return { ok: false, log: "Say which compose service is reached: expose.service (and its port)" };
+    const file = COMPOSE_FILES.find((f) => files.includes(f))!;
+    const raw = parseYaml(fs.readFileSync(path.join(src, file), "utf8"));
+    const check = sanitizeCompose(raw, { memory: s.manifest.memory });
+    if (!check.ok) return { ok: false, log: `This compose project cannot be hosted as it is:\n- ${check.refused.join("\n- ")}` };
+    if (!check.services.includes(s.manifest.expose.service)) return { ok: false, log: `expose.service ${s.manifest.expose.service} is not one of its services: ${check.services.join(", ")}` };
+    // the project's internal network gets a subnet of its own from 10.213.0.0/16: Docker's default pools run out
+    // on a busy host, and a shared network would let two projects' services of the same name collide
+    const subnet = await this.freeSubnet();
+    if (!subnet) return { ok: false, log: "No free subnet in 10.213.0.0/16 for this project's network" };
+    (check.doc as { networks: Record<string, unknown> }).networks = { mas: { internal: true, ipam: { config: [{ subnet }] } } };
+    fs.writeFileSync(this.composeFile(s.id, v.n), JSON.stringify(check.doc, null, 1));
+    const r = await this.compose(s, ["build"], {}, 1_800_000);
+    const log = [`Rewritten for hosting:${check.changed.length ? "\n- " + check.changed.join("\n- ") : " nothing to change"}`, r.out.slice(-5000)].join("\n\n");
+    fs.writeFileSync(path.join(path.dirname(src), "build.log"), log);
+    Object.assign(v, { built_at: new Date().toISOString(), build_ok: r.code === 0, ...(r.code === 0 ? { image: `compose:${this.project(s.id)}` } : {}) });
+    this.save(s);
+    return { ok: r.code === 0, log, ...(r.code === 0 ? { image: v.image } : {}) };
+  }
+
+  /** A /24 in 10.213.0.0/16 that no Docker network uses yet. */
+  private async freeSubnet(): Promise<string | null> {
+    const ids = (await exec(this.docker, ["network", "ls", "-q"], { timeout: 20_000 })).out.split("\n").filter(Boolean);
+    const used = ids.length ? (await exec(this.docker, ["network", "inspect", "-f", "{{range .IPAM.Config}}{{.Subnet}} {{end}}", ...ids], { timeout: 30_000 })).out : "";
+    // so are the subnets other hosted projects were given, running or not
+    const mine = this.list().flatMap((x) => {
+      try {
+        return [JSON.stringify(JSON.parse(fs.readFileSync(this.composeFile(x.id, x.current), "utf8")).networks)];
+      } catch {
+        return [];
+      }
+    }).join(" ");
+    for (let n = 0; n < 256; n++) {
+      const subnet = `10.213.${n}.0/24`;
+      if (!used.includes(`10.213.${n}.`) && !mine.includes(subnet)) return subnet;
+    }
+    return null;
+  }
+
+  /** The entry service's address on the project's internal network, if it is running. */
+  private async composeState(s: HostedService): Promise<ServiceState> {
+    const ps = await this.compose(s, ["ps", "-q", s.manifest.expose.service ?? ""], {}, 30_000);
+    const container = ps.out.trim().split("\n")[0];
+    if (ps.code !== 0 || !container) return { running: false };
+    const r = await exec(this.docker, ["inspect", "-f", "{{.State.Running}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", container], { timeout: 20_000 });
+    const [running, ip] = r.out.trim().split(/\s+/);
+    return { running: running === "true", container, ...(running === "true" && ip && s.manifest.expose.port ? { address: `http://${ip}:${s.manifest.expose.port}` } : {}) };
   }
 
   // ---- run -------------------------------------------------------------------------------
@@ -388,6 +461,8 @@ export class HostedServices {
   }
 
   async state(id: string): Promise<ServiceState> {
+    const svc = this.get(id);
+    if (svc && svc.versions.find((x) => x.n === svc.current)?.image?.startsWith("compose:")) return this.composeState(svc);
     const name = this.containerName(id);
     const r = await exec(this.docker, ["inspect", "-f", "{{.State.Running}} {{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}", name], { timeout: 20_000 });
     if (r.code !== 0) return { running: false };
@@ -399,9 +474,22 @@ export class HostedServices {
   /** For mcp-http and http: start the long-running container (if it is not running) and wait until it answers. */
   async start(id: string): Promise<ServiceState> {
     const s = this.must(id);
-    if (s.manifest.expose.kind === "mcp-stdio") throw new Error(`${s.name} speaks MCP on stdio: it starts a fresh container per connection, nothing to keep running`);
+    if (s.manifest.expose.kind === "mcp-stdio" || s.manifest.expose.kind === "agent-stdio") throw new Error(`${s.name} runs per connection or per turn: nothing to keep running`);
     const now = await this.state(id);
     if (now.running && now.address) return now;
+    if (this.isCompose(s)) {
+      this.image(s);
+      // secrets fill ${NAME} in the compose file through the environment of docker compose, never written down
+      const up = await this.compose(s, ["up", "-d"], this.envFor(s));
+      if (up.code !== 0) throw new Error(`Could not start ${s.name}: ${up.out.slice(-400)}`);
+      this.touch(id);
+      for (let i = 0; i < 90; i++) {
+        const st = await this.composeState(s);
+        if (st.address && (await this.answers(st.address, s.manifest))) return st;
+        await new Promise((res) => setTimeout(res, 1000));
+      }
+      throw new Error(`${s.name}: service ${s.manifest.expose.service} did not answer within 90 s on port ${s.manifest.expose.port}`);
+    }
     const env = { ...this.envFor(s), ...(await this.proxyEnv(s)) };
     const network = INTERNAL_NET;
     await this.ensureNetwork(network, true);
@@ -430,10 +518,18 @@ export class HostedServices {
 
   async stop(id: string) {
     this.lastUsed.delete(id);
-    await exec(this.docker, ["rm", "-f", this.containerName(id)], { timeout: 30_000 });
+    const s = this.get(id);
+    // a compose project keeps its volumes when stopped (its data); delete removes them
+    if (s && s.versions.find((x) => x.n === s.current)?.image?.startsWith("compose:")) await this.compose(s, ["down"], {}, 120_000);
+    else await exec(this.docker, ["rm", "-f", this.containerName(id)], { timeout: 30_000 });
   }
 
   async logs(id: string): Promise<string> {
+    const s = this.get(id);
+    if (s && s.versions.find((x) => x.n === s.current)?.image?.startsWith("compose:")) {
+      const r = await this.compose(s, ["logs", "--tail", "100", "--no-color"], {}, 30_000);
+      return r.code === 0 ? r.out : "(not running)";
+    }
     const r = await exec(this.docker, ["logs", "--tail", "200", this.containerName(id)], { timeout: 20_000 });
     return r.code === 0 ? r.out : "(not running)";
   }

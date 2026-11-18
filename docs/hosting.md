@@ -40,7 +40,8 @@ list of those that speak the right protocol, with a test button.
    idle_minutes: 30                     # mcp-http / http: stopped after 30 idle minutes, restarted on next use (0 = never)
    ```
 
-   `runtime` is inferred: the project's `Dockerfile` if it has one; else
+   `runtime` is inferred: a compose file (`compose.yaml`,
+   `docker-compose.yml`) if the project has one; else its `Dockerfile`; else
    Python (`requirements.txt` / `pyproject.toml`, `pip install`) or Node
    (`package.json`, `npm ci`). `install` replaces the install step.
 3. **Build.** The image is `mas-hosted-<service>:v<version>`; the build may use
@@ -59,6 +60,33 @@ list of those that speak the right protocol, with a test button.
 `word-count-http` (a plugin backend over HTTP) and `tool-lister-agent` (an
 agent program that asks the platform for its tools over MCP), all without
 dependencies.
+
+## Compose projects
+
+An application env (an app, its database, its MCP server…) is hosted as its
+compose project. `expose.service` names the service the platform reaches:
+
+```yaml
+expose: { kind: http, service: api, port: 8000, health: /health }
+```
+
+The compose file is rewritten before it runs (`server/hosting/compose.ts`),
+and the build log says what changed:
+
+| | |
+| --- | --- |
+| Refused, with the reason | `privileged`; `network_mode` / `pid` / `ipc` of the host; `cap_add`; `devices`; mounts outside the project folder or of the Docker socket; `security_opt` that loosens confinement; external volumes |
+| Removed | `ports` (nothing is published), `container_name`, `restart`, the project's own networks, `extra_hosts`, `dns` |
+| Added | one internal network for the whole project, with a subnet of its own from `10.213.0.0/16` (its services reach each other by name, this server reaches the entry service, nothing reaches out); `no-new-privileges`; a memory limit; 256 processes |
+
+Stop keeps the project's volumes (its data); delete removes them and its
+images. A compose project cannot declare egress hosts yet: it runs with no
+network. `examples/hosted/two-services-compose` is a small one: an api that
+asks a backend service by name. Checked end to end (2026-11-18): rewritten
+(ports, container_name and restart removed), built, started on its own
+subnet; the api reached the backend by name; no published port, no route
+out; a privileged project with a mount of `/etc` was refused with both
+reasons.
 
 ## Isolation
 
@@ -105,8 +133,7 @@ port and no route to the internet; an agent used both (`add_note`,
 
 ## Next
 
-- **Compose projects**: whole application envs (`mas-env/1` `runtime.compose`)
-  hosted the same way, instead of `lifecycle.start` on the host.
+- **Egress for compose projects**, through the same proxy.
 - **Moving the remaining host-run paths onto hosting**: env `start`
   commands (with Compose, above), leaving `MAS_ALLOW_LOCAL_EXEC` as a
   developer escape hatch. (MCP servers, plugin backends, tools and agent

@@ -20,13 +20,14 @@ export type Endpoint =
  */
 export interface HostManifest {
   name?: string;
-  /** auto: a Dockerfile if there is one, else python (requirements.txt / pyproject.toml) or node (package.json) */
-  runtime?: "auto" | "dockerfile" | "python" | "node";
+  /** auto: a compose file if there is one (several containers), else a Dockerfile, else python (requirements.txt / pyproject.toml) or node (package.json) */
+  runtime?: "auto" | "compose" | "dockerfile" | "python" | "node";
   /** replaces the inferred install step (pip install -r requirements.txt, npm ci) */
   install?: string;
   /** the command that starts the service, run in /app */
   start?: string;
-  expose: { kind: ExposeKind; port?: number; path?: string; health?: string };
+  /** service: for a compose project, the service that is reached (its port, path and health) */
+  expose: { kind: ExposeKind; port?: number; path?: string; health?: string; service?: string };
   /**
    * hosts the service needs to reach ("api.github.com", "*.example.com", "host:8443").
    * Empty (the default): no network at all. Otherwise these hosts only, through the
@@ -49,8 +50,8 @@ export function checkManifest(m: HostManifest): string[] {
   const kinds: ExposeKind[] = ["mcp-stdio", "mcp-http", "http", "agent-stdio"];
   if (!m.expose || !kinds.includes(m.expose.kind)) why.push(`expose.kind must be one of ${kinds.join(", ")}`);
   if (m.expose && m.expose.kind !== "mcp-stdio" && m.expose.kind !== "agent-stdio" && !(Number.isInteger(m.expose.port) && m.expose.port! > 0 && m.expose.port! < 65536)) why.push(`${m.expose.kind} needs expose.port (the port the service listens on)`);
-  if (m.runtime && !["auto", "dockerfile", "python", "node"].includes(m.runtime)) why.push("runtime must be auto, dockerfile, python or node");
-  if (m.runtime !== "dockerfile" && m.start !== undefined && !String(m.start).trim()) why.push("start is empty");
+  if (m.runtime && !["auto", "compose", "dockerfile", "python", "node"].includes(m.runtime)) why.push("runtime must be auto, compose, dockerfile, python or node");
+  if (m.runtime !== "dockerfile" && m.runtime !== "compose" && m.start !== undefined && !String(m.start).trim()) why.push("start is empty");
   for (const h of m.egress ?? []) if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(h)) why.push(`egress host "${h}" is not a host name`);
   for (const [k, v] of Object.entries(m.env ?? {})) {
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) why.push(`env name "${k}" is not a valid variable name`);
@@ -62,8 +63,11 @@ export function checkManifest(m: HostManifest): string[] {
 }
 
 /** The runtime to build with, from what the project contains. */
-export function detectRuntime(files: string[], asked: HostManifest["runtime"] = "auto"): "dockerfile" | "python" | "node" | null {
+export const COMPOSE_FILES = ["compose.yaml", "compose.yml", "docker-compose.yaml", "docker-compose.yml"];
+
+export function detectRuntime(files: string[], asked: HostManifest["runtime"] = "auto"): "compose" | "dockerfile" | "python" | "node" | null {
   if (asked && asked !== "auto") return asked;
+  if (COMPOSE_FILES.some((f) => files.includes(f))) return "compose";
   if (files.includes("Dockerfile")) return "dockerfile";
   if (files.includes("requirements.txt") || files.includes("pyproject.toml") || files.some((f) => f.endsWith(".py"))) return "python";
   if (files.includes("package.json")) return "node";

@@ -150,3 +150,52 @@ describe("idle services", () => {
     expect(await h.stopIdle(t0 + 600 * 60_000)).toEqual([]);
   });
 });
+
+describe("compose projects", () => {
+  it("rewrites a compose file onto one internal network, without published ports, and says what changed", async () => {
+    const { sanitizeCompose } = await import("./compose");
+    const r = sanitizeCompose({
+      services: {
+        app: { build: ".", ports: ["8080:80"], depends_on: ["db"], container_name: "app", networks: ["front"], volumes: ["./data:/data", "cache:/cache"] },
+        db: { image: "postgres:16", environment: { POSTGRES_PASSWORD: "x" }, restart: "always" },
+      },
+      networks: { front: {} },
+      volumes: { cache: {} },
+    });
+    expect(r.ok).toBe(true);
+    const doc = r.doc as { services: Record<string, Record<string, unknown>>; networks: unknown; volumes: unknown };
+    expect(doc.networks).toEqual({ mas: { internal: true } });
+    expect(doc.services.app.networks).toEqual(["mas"]);
+    expect(doc.services.app).not.toHaveProperty("ports");
+    expect(doc.services.app).not.toHaveProperty("container_name");
+    expect(doc.services.app.security_opt).toContain("no-new-privileges:true");
+    expect(doc.services.db.mem_limit).toBe("512m");
+    expect(doc.volumes).toEqual({ cache: {} });
+    expect(r.changed).toEqual(expect.arrayContaining(["service app: ports removed", "service db: restart removed", "its own networks replaced by one internal network"]));
+  });
+
+  it("refuses what would break isolation, and says each reason", async () => {
+    const { sanitizeCompose } = await import("./compose");
+    const r = sanitizeCompose({
+      services: {
+        a: { image: "x", privileged: true, network_mode: "host" },
+        b: { image: "x", cap_add: ["SYS_ADMIN"], volumes: ["/etc:/host-etc", "/var/run/docker.sock:/var/run/docker.sock", "../up:/up"] },
+        c: { image: "x", pid: "host", security_opt: ["seccomp:unconfined"] },
+      },
+    });
+    expect(r.ok).toBe(false);
+    expect(r.doc).toBeUndefined();
+    expect(r.refused).toEqual(
+      expect.arrayContaining([
+        "service a: privileged",
+        "service a: network_mode: host",
+        "service b: cap_add SYS_ADMIN",
+        "service b: mounts /etc, outside the project",
+        "service b: mounts the Docker socket",
+        "service b: mounts ../up, outside the project",
+        "service c: pid: host",
+        "service c: security_opt loosens confinement",
+      ]),
+    );
+  });
+});

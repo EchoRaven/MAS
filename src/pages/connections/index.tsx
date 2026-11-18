@@ -249,7 +249,7 @@ export function ConnectionsPage() {
         <section className="glass-panel rounded-xl p-4" aria-label="Hosted services">
           <h2 className="text-sm font-semibold">Hosted services</h2>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
-            Projects run on this server, each in its own Docker container: an MCP server, a plugin backend or a tool. Upload an archive or give a git URL; a Dockerfile is used as it is, otherwise Python (requirements.txt / pyproject.toml) or Node (package.json) is set up for you. No network unless the service lists the hosts it needs.
+            Projects run on this server, each in its own Docker container: an MCP server, a plugin backend or a tool. Upload an archive or give a git URL; a compose project runs as a whole (rewritten: no published ports, one internal network), a Dockerfile is used as it is, otherwise Python (requirements.txt / pyproject.toml) or Node (package.json) is set up for you. No network unless the service lists the hosts it needs.
           </p>
           <HostForm onCreated={load} />
           <ul className="mt-2 divide-y divide-border/70">
