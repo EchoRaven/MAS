@@ -24,6 +24,10 @@ from these parts is in [survey.md](survey.md).
  │   Models: Anthropic, OpenAI-compatible, Gemini, local, mock           │  server/runtime/models/
  │   Policies · budgets · approvals · events                             │  server/runtime/runs.ts
  ├───────────────────────────────────────────────────────────────────────┤
+ │ Isolation: boxes for sandboxes and agent programs (Docker; a microVM  │  server/runtime/isolation/
+ │   backend fits the same interface) · egress proxy · MCP and model     │  server/hosting/
+ │   gateways: the only ways out of a box                                │
+ ├───────────────────────────────────────────────────────────────────────┤
  │ Evaluation: datasets → evaluations (runs) → graders → comparison      │  server/runtime/evals.ts, grading/
  └───────────────────────────────────────────────────────────────────────┘
 ```
@@ -124,6 +128,14 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   into Docker images and run isolated (no network unless declared, no
   published ports, unprivileged); components reach them, or remote servers,
   through one `endpoint` ([hosting.md](hosting.md)).
+- Everything that runs code an agent or a model wrote runs in a box: not
+  root, no capabilities, no privilege gain, a seccomp profile of our own, a
+  read-only root, limits. A box has no network, or reaches its declared hosts
+  through the egress proxy; agent programs (Claude Code, Codex) reach the
+  platform's tools through the MCP gateway and models through the model
+  gateway, which puts the key on the request outside the box. Every
+  connection, allowed or refused, is in the run's log. Sandboxes are shared by
+  the agents connected to them, or one per agent (`share: per_agent`).
 - Chat replies are streamed from the provider and put back together (text,
   tool calls, usage), so a model that thinks for minutes is not cut off by the
   HTTP client's wait for headers.
