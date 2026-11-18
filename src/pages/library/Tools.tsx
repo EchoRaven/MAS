@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Panel } from "@/components/shared/Panel";
 import type { SystemDoc, ToolSpec } from "@/model/types";
+import { EndpointField } from "@/canvas/inspector/EndpointField";
 import { FunctionEditor } from "@/canvas/inspector/FunctionEditor";
 import { cell } from "./cell";
 
@@ -14,10 +15,19 @@ function RuntimeRow({ t, set, doc }: { t: ToolSpec; set: (patch: Partial<ToolSpe
       <td colSpan={8} className="px-3 py-2.5">
         <div className="grid gap-2 md:grid-cols-2">
           {(t.adapter === "http" || t.adapter === "mcp") && (
-            <label className="space-y-1">
-              <span className="text-[11px] text-muted-foreground">{t.adapter === "http" ? "URL the arguments are POSTed to" : "MCP server URL (Streamable HTTP)"}</span>
-              <input className={`${cell} font-mono`} value={t.url ?? ""} onChange={(e) => set({ url: e.target.value || undefined })} placeholder="https://…" aria-label="Tool URL" />
-            </label>
+            <div className="space-y-1.5">
+              <EndpointField
+                kind={t.adapter}
+                value={t.endpoint}
+                onChange={(endpoint) => set({ endpoint })}
+                legacy={
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-muted-foreground">{t.adapter === "http" ? "URL the arguments are POSTed to" : "MCP server URL (Streamable HTTP)"}</span>
+                    <input className={`${cell} font-mono`} value={t.url ?? ""} onChange={(e) => set({ url: e.target.value || undefined })} placeholder="https://…" aria-label="Tool URL" />
+                  </label>
+                }
+              />
+            </div>
           )}
           {t.adapter === "cli" && (
             <label className="space-y-1">

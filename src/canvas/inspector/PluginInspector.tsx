@@ -6,6 +6,7 @@ import { defaultIndex, defaultMemoryPolicy, defaultRetrieval } from "@/model/pip
 import { PLUGIN_PRESETS, switchPreset } from "@/model/plugins";
 import type { PluginData, PluginSpec, SystemDoc, ToolEffect } from "@/model/types";
 import { Hint, opts, Section, SelectField, TextField, Toggle } from "../fields";
+import { EndpointField } from "./EndpointField";
 import { emptyFn, FunctionEditor } from "./FunctionEditor";
 import { IndexEditor, MemoryPolicyEditor, RetrievalEditor } from "./PipelineEditor";
 import { AddButton, Note, PanelTabs, RowList } from "./shared";
@@ -65,8 +66,20 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
       </div>
       <Section title="Backend">
         <SelectField label="Runs as" value={spec.backend.kind} onChange={(kind) => setSpec({ backend: { ...spec.backend, kind } })} items={opts([["builtin", "Built into the platform"], ["mcp", "MCP server"], ["http", "HTTP service"], ["code", "Code (runs in the platform sandbox)"]])} />
-        {(spec.backend.kind === "mcp" || spec.backend.kind === "http") && <TextField label="URL" value={spec.backend.url ?? ""} onChange={(url) => setSpec({ backend: { ...spec.backend, url } })} mono placeholder="http://127.0.0.1:9100/mcp" />}
-        {(spec.backend.kind === "mcp" || spec.backend.kind === "code") && <TextField label="Command" value={spec.backend.command ?? ""} onChange={(command) => setSpec({ backend: { ...spec.backend, command } })} mono placeholder="uv run python my_plugin.py" />}
+        {(spec.backend.kind === "mcp" || spec.backend.kind === "http") && (
+          <EndpointField
+            kind={spec.backend.kind}
+            value={spec.backend.endpoint}
+            onChange={(endpoint) => setSpec({ backend: { ...spec.backend, endpoint } })}
+            legacy={
+              <>
+                <TextField label="URL" value={spec.backend.url ?? ""} onChange={(url) => setSpec({ backend: { ...spec.backend, url } })} mono placeholder="http://127.0.0.1:9100/mcp" />
+                {spec.backend.kind === "mcp" && <TextField label="Command" value={spec.backend.command ?? ""} onChange={(command) => setSpec({ backend: { ...spec.backend, command } })} mono placeholder="uv run python my_plugin.py" hint="Runs on this machine: needs MAS_ALLOW_LOCAL_EXEC=1. A hosted service runs it in a container instead" />}
+              </>
+            }
+          />
+        )}
+        {spec.backend.kind === "code" && <TextField label="Command" value={spec.backend.command ?? ""} onChange={(command) => setSpec({ backend: { ...spec.backend, command } })} mono placeholder="uv run python my_plugin.py" />}
       </Section>
       {(spec.sources || p.preset === "knowledge" || p.preset === "workspace") && (
         <TextField label={p.preset === "workspace" ? "Mounted directories" : "Sources"} value={(spec.sources ?? []).join(", ")} onChange={(v) => setSpec({ sources: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />

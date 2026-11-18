@@ -18,7 +18,10 @@ that speaks MCP on stdio, and the component works the same way. The older
 
 The **Connections** page lists hosted services and tests endpoints: for MCP it
 lists the server's tools, for HTTP it calls the service (its health path, if
-it declares one).
+it declares one). In the inspector, a plugin's MCP/HTTP backend and a catalog
+tool's connection have a **Where** field: on this machine (URL or command),
+a remote endpoint (URL and bearer secret), or a hosted service picked from a
+list of those that speak the right protocol, with a test button.
 
 ## Hosting a project
 
@@ -97,5 +100,4 @@ port and no route to the internet; an agent used both (`add_note`,
 - **Moving the host-run paths onto hosting**: stdio MCP `command:`, custom
   agent programs and env `start` commands as hosted services, leaving
   `MAS_ALLOW_LOCAL_EXEC` as a developer escape hatch.
-- **Endpoint pickers in the inspector**, so components choose a connection
-  from a list instead of an id in YAML; idle stop for long-running services.
+- **Idle stop** for long-running services.
