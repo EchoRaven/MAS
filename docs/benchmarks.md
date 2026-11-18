@@ -297,6 +297,7 @@ graded by running each answer against the problem's tests in Docker.
 | Single agent with a code runner | **49** | $0.18 |
 | AgentCoder (programmer, test designer, executor) | 48 | $0.69 |
 | MapCoder (one plan, up to 5 debugging rounds) | 48 | $0.37 |
+| MapCoder as in the paper (3 plans tried best first, 5 rounds each) | 48 | $0.37 |
 
 All four miss #47 (HumanEval/145, sorting by digit sum with negative
 numbers); the others differ by one problem each, which is noise. AgentCoder
@@ -304,6 +305,15 @@ and MapCoder report large gains over a single gpt-3.5 call (to 79.9% and
 80.5%); on a model that already passes 96% of these problems alone there is
 nothing for a test-and-repair loop to repair, and they cost 12 to 28 times
 as much.
+
+MapCoder with its plan search (`iterate.over`, three plans, best first)
+never once tried a second plan: on 44 problems the first plan's code passed
+the debugger's tests in round 1, on 4 after one or two repairs. The two it
+missed (#8 and #47) passed the debugger's own tests too, and failed the
+hidden ones. A search over plans can only act on failures the agents' own
+tests catch; here every wrong answer looked right to them, so the paper's
+k × t search costs nothing extra and changes nothing. What would help is
+better tests (AgentCoder's test designer aims at that), not more plans.
 
 The first grading had every system at 46–47: the grader copied an `import
 math` from inside HumanEval/115's function, and a docstring line starting
