@@ -92,3 +92,34 @@ describe("streamed replies", () => {
     }
   });
 });
+
+describe("streamed tool calls", () => {
+  it("puts a tool call together from its pieces, keeping Gemini's thought_signature to send back", async () => {
+    const { openaiProvider } = await import("./openai");
+    const bodies: { messages: { tool_calls?: Record<string, unknown>[] }[] }[] = [];
+    const real = globalThis.fetch;
+    const sse = [
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","type":"function","function":{"name":"search","arguments":"{\\"q\\": "},"extra_content":{"google":{"thought_signature":"sig"}}}]}}]}\n\n',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\\"cats\\"}"}}]},"finish_reason":"tool_calls"}]}\n\n',
+      "data: [DONE]\n\n",
+    ];
+    globalThis.fetch = (async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      const enc = new TextEncoder();
+      const stream = bodies.length === 1;
+      if (!stream) return new Response(JSON.stringify({ choices: [{ message: { content: "done" }, finish_reason: "stop" }] }));
+      return new Response(new ReadableStream({ start(c) { for (const s of sse) c.enqueue(enc.encode(s)); c.close(); } }), { headers: { "content-type": "text/event-stream" } });
+    }) as unknown as typeof fetch;
+    try {
+      const model = { id: "g", provider: "google" as const, model: "gemini-3-flash-preview", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
+      const tools = [{ name: "search", description: "", input_schema: { type: "object" } }];
+      const first = await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "find cats" }] }], tools });
+      expect(first.stop).toBe("tool_use");
+      expect(first.content).toEqual([{ type: "tool_call", id: "c1", name: "search", input: { q: "cats" }, extra: { extra_content: { google: { thought_signature: "sig" } } } }]);
+      await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "find cats" }] }, { role: "assistant", content: first.content }, { role: "user", content: [{ type: "tool_result", id: "c1", content: "ok" }] }], tools });
+      expect(bodies[1].messages[1].tool_calls?.[0].extra_content).toEqual({ google: { thought_signature: "sig" } });
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

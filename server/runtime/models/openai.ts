@@ -85,13 +85,29 @@ async function readStream(res: Response): Promise<unknown> {
   let text = "";
   let finish = "stop";
   let usage: { prompt_tokens: number; completion_tokens: number } | undefined;
+  // tool calls arrive in pieces, by index: the id and name once, the arguments as text in parts, and provider
+  // extras (Gemini's extra_content.google.thought_signature) whole, which must be sent back with the call
+  type Call = { id: string; type: string; function: { name: string; arguments: string } } & Record<string, unknown>;
+  const calls: Call[] = [];
+  type CallDelta = { index?: number; id?: string; type?: string; function?: { name?: string; arguments?: string } } & Record<string, unknown>;
   const take = (line: string) => {
     if (!line.startsWith("data:")) return;
     const payload = line.slice(5).trim();
     if (!payload || payload === "[DONE]") return;
-    const chunk = JSON.parse(payload) as { choices?: { delta?: { content?: string | null }; finish_reason?: string | null }[]; usage?: { prompt_tokens: number; completion_tokens: number } };
+    const chunk = JSON.parse(payload) as { choices?: { delta?: { content?: string | null; tool_calls?: CallDelta[] }; finish_reason?: string | null }[]; usage?: { prompt_tokens: number; completion_tokens: number } };
     const c = chunk.choices?.[0];
     if (c?.delta?.content) text += c.delta.content;
+    for (const d of c?.delta?.tool_calls ?? []) {
+      const i = d.index ?? calls.length;
+      const cur = (calls[i] ??= { id: "", type: "function", function: { name: "", arguments: "" } });
+      const { index: _i, id, type, function: fn, ...extra } = d;
+      void _i;
+      if (id) cur.id = id;
+      if (type) cur.type = type;
+      if (fn?.name) cur.function.name += fn.name;
+      if (fn?.arguments) cur.function.arguments += fn.arguments;
+      Object.assign(cur, extra);
+    }
     if (c?.finish_reason) finish = c.finish_reason;
     if (chunk.usage) usage = chunk.usage;
   };
@@ -106,7 +122,8 @@ async function readStream(res: Response): Promise<unknown> {
     }
   }
   if (buf.trim()) take(buf.trim());
-  return { choices: [{ message: { content: text }, finish_reason: finish }], usage };
+  const done = calls.filter(Boolean).map((c, i) => ({ ...c, id: c.id || `call_${i}` }));
+  return { choices: [{ message: { content: text, ...(done.length ? { tool_calls: done } : {}) }, finish_reason: finish }], usage };
 }
 
 type OAMessage = { role: string; content?: string | null; tool_calls?: unknown[]; tool_call_id?: string };
@@ -136,11 +153,10 @@ export const openaiProvider: Provider = {
       ...(req.temperature != null ? { temperature: req.temperature } : {}),
       ...providerParams(model),
     };
-    // without tools the reply is streamed: the headers come at once, so a model that thinks for minutes before
-    // answering is not cut off by the HTTP client's 300-second wait for headers (Gemma on hard questions was)
-    const stream = !req.tools?.length;
-    const res = await send(model, key, "/chat/completions", stream ? { ...body, stream: true, stream_options: { include_usage: true } } : body, req.signal);
-    const data = (stream ? await readStream(res) : await res.json()) as {
+    // the reply is streamed: the headers come at once, so a model that thinks for minutes before answering is
+    // not cut off by the HTTP client's 300-second wait for headers (Gemma on hard questions was)
+    const res = await send(model, key, "/chat/completions", { ...body, stream: true, stream_options: { include_usage: true } }, req.signal);
+    const data = (await readStream(res)) as {
       choices: { message: { content?: string | null; tool_calls?: ({ id: string; type?: string; function: { name: string; arguments: string } } & Record<string, unknown>)[] }; finish_reason: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number };
     };
