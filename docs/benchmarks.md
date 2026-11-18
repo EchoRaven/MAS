@@ -151,6 +151,39 @@ each, through the built-in dataset (2026-11-18):
   spread. A code-execution tool would solve them, which is a test of tools,
   not of the debate.
 
+## Agent Forest: accuracy against the number of samples
+
+"More Agents Is All You Need" (Li et al., 2024) samples one model N times and
+takes the majority answer, and reports accuracy rising with N. The template
+is one model component with `replicas: "{{vars.n ?? 10}}"` and a vote, so
+the sweep is the same system with a different run variable. Hard computation
+(30), gemini-3.1-flash-lite, one run per N:
+
+| N (samples) | Correct | Cost | Time |
+| --- | --- | --- | --- |
+| 1 | 20 | $0.03 | 40 s |
+| 3 | 22 | $0.09 | 80 s |
+| 5 | 21 | $0.16 | 160 s |
+| 10 | **23** | $0.31 | 300 s |
+| 20 | 22 | $0.60 | 600 s |
+
+- **The gain comes from the first few samples.** N = 3 already reaches 22,
+  where ReConcile and self-consistency stand (22.0). Past that the score moves
+  by a question either way, which is noise, while the cost doubles each step.
+- **The plateau is the questions nobody can do in their head.** Every N
+  misses #7–#10 and #26–#28 (digit sums of large powers, binomials mod p), and
+  #6 at all but N = 10. Voting removes random slips (#14 and #20 at N = 1); it
+  cannot produce an answer no sample has. With a code sandbox, a single agent
+  gets all 30 (above).
+- **The paper's curve needs room to rise.** Its gains are largest on weaker
+  models and on tasks where samples are often right but not reliably. Here a
+  single sample is already right on most questions the model can do at all.
+
+The first sweep found a bug in `replicas` itself: the output port's `json`
+type (the list) was read as "each reply is JSON", so every sample answered
+with a bare number and no reasoning (1 of 30). Each sample now replies as
+text, and the component always sends a list.
+
 ## AutoGen with a code executor: 30/30
 
 The four systems above all miss the digit sums of powers and the binomial

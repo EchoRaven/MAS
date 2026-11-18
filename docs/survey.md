@@ -99,6 +99,10 @@ Each one became a general interface, not a fix for one paper:
 
 From [benchmarks.md](benchmarks.md), all on the same model:
 
+- **Sampling more stops paying after a few samples.** Agent Forest at N = 3
+  matches the discussion systems (22 of 30); N = 10 and 20 add a question or
+  lose one, at up to 20 times the cost. The questions every N misses are the
+  ones that need computation.
 - **Discussion helps a little, and voting is the bar to beat.** On a set with
   room to improve, Multiagent Debate and ReConcile gain 2–3 questions in 30
   over a single agent. Self-consistency (five samples and a vote) gains as
