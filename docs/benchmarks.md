@@ -251,6 +251,26 @@ compares lists in any order and drops a trailing unit, and still passes the
 all truly equal). A grader is checked against what models write, not only
 against the answer key's own forms.
 
+## MMLU: single agent vs Multiagent Debate
+
+Du et al. report MMLU going from 63.9 to 71.1 with debate (gpt-3.5). Here:
+100 questions sampled from the 500-question MMLU sample (seed 1), all on
+gemini-3.1-flash-lite, graded by the letter.
+
+| System | Runs | Mean | Cost per run |
+| --- | --- | --- | --- |
+| Single agent | 92, 96, 97 | 95.0 | $0.03 |
+| Multiagent Debate, 2 rounds | 96, 95 | 95.5 | $0.28 |
+
+**No gain on this model.** The first pair of runs looked like one (92 → 96,
+four questions fixed, none lost), but the single agent's next two runs scored
+96 and 97. On one run each, the Compare page gave that first gap p = 0.13
+(McNemar on the 4 changed questions): not enough to call it, and the repeats
+confirmed as much. Both systems miss the same few questions (#48, #74, #96;
+on #96 the debaters agreed on "A, B, C, and D" for a one-letter question). At
+95% there is little left for discussion to fix, as with GSM8K; the paper's
+setting is a model that gets a third of MMLU wrong.
+
 ## Multiagent Debate: accuracy against the number of rounds
 
 Du et al.'s ablation varies the rounds of debate. The template's group takes
