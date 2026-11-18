@@ -123,6 +123,36 @@ member does not reproduce. There is little room to show it: the best seat is
 already at 91%. A fairer test needs a set where each seat is wrong on different
 questions.
 
+## GSM8K: single agent vs Multiagent Debate (Du et al.)
+
+The 100-problem GSM8K sample (`benchmarks/gsm8k/`, saved as the dataset
+"GSM8K test · 100"), one run each, everything on gemini-3.1-flash-lite, graded
+by Number:
+
+| System | Score | Cost | Time |
+| --- | --- | --- | --- |
+| Single agent | 97/100 | $0.02 | 1.5 min |
+| Multiagent debate (3 agents, 2 rounds) | 98/100 | $0.26 | 10 min |
+
+The paper reports 77.0 → 85.0 with gpt-3.5-turbo. With this model, the single
+agent is already at 97, so there is no room for an 8-point gain. One question
+in 100 is noise, at about 12 times the cost.
+
+| Question | Single | Debate | What happened |
+| --- | --- | --- | --- |
+| #4 | ✗ | ✓ | the single agent read "sell all his toys" as all the lego sets too, and answered 0 |
+| #8 | ✗ | ✓ | ambiguous: the expected 36 takes 10% off the time; the model divided by 1.1 (36.36) |
+| #47 | ✓ | ✗ | the debate settled on a wrong commission ($900 for $450) |
+| #76 | ✗ | ✗ | the question says "8:00 AM until 11:00 PM" (15 hours, 1800); the expected 360 is 8 to 11 AM. A label error in GSM8K: both answers follow the text |
+
+The first grading marked both systems wrong on #22 and #58. They answered
+"33%" and "40%", and GSM8K writes those answers as 33 and 40. The Number grader
+read "40%" as 0.4. It now accepts a percentage in either form, and both
+evaluations were regraded without calling a model again.
+
+To show the paper's effect, the next step is a weaker model, or harder
+problems (GSM-Hard, MATH), where the single agent leaves room.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
