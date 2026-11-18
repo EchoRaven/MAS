@@ -98,6 +98,16 @@ describe("evaluations", () => {
     }
   });
 
+  it("refuses to start when a model the system calls has no key, naming it and who uses it", () => {
+    const doc = echo();
+    doc.models = [{ id: "echo", provider: "anthropic", model: "x", api: { key_env: "NO_SUCH_KEY_FOR_TEST" }, price_in: 0, price_out: 0, modalities: ["text"] }];
+    const before = store.listEvals().length;
+    expect(() => evals.start(doc, { grader: "number", cases: [{ input: "1", expected: "1" }] })).toThrow(/Model "echo" needs NO_SUCH_KEY_FOR_TEST \(used by a\).*on_model/);
+    expect(store.listEvals().length).toBe(before);
+    // a mock evaluation calls no model, so it may start
+    expect(evals.start(doc, { grader: "number", mock: true, cases: [{ input: "1", expected: "1" }] }).id).toMatch(/^eval_/);
+  });
+
   it("starts every run with the evaluation's variables", async () => {
     const b = new Builder("Vars", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

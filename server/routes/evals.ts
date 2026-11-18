@@ -63,6 +63,7 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     for (const d of docs) checkValid(d, b.force); // all or none: a batch that stops halfway compares less than it says
     if (given) for (const d of given) store.putSystem(d);
     try {
+      for (const d of docs) evals.prepare(d, opts); // a model with no key in any of them refuses the whole batch
       return { evals: docs.map((d) => evals.start(d, opts, true)) };
     } catch (e) {
       throw new HttpError(400, (e as Error).message);

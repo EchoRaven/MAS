@@ -3,7 +3,7 @@
 // be replayed like any other.
 import { randomUUID } from "node:crypto";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import { remapModels, runAllOn } from "@/model/modelUse";
+import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { SystemDoc } from "@/model/types";
 import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
@@ -37,7 +37,7 @@ export interface EvalOptions {
 
 const MAX_CASES = 200;
 /** errors no retry fixes: a rejected or disabled key, no credit, a used-up quota, a model that is gone */
-const ACCOUNT_ERROR = /\b(401|403)\b|api key|service account|credit|billing|quota|permission denied|no longer available|model .*not found|does not exist/i;
+const ACCOUNT_ERROR = /\b(401|403)\b|api[ _]key|service account|credit|billing|quota|permission denied|no longer available|model .*not found|does not exist/i;
 
 export class EvalManager {
   private stopped = new Set<string>();
@@ -53,12 +53,26 @@ export class EvalManager {
   ) {}
 
   /** With `queued`, it waits for the queued evaluations before it (a batch of systems on the same questions runs one by one). */
-  start(original: SystemDoc, opts: EvalOptions, queued = false): EvalRecord {
+  /**
+   * The system as the evaluation runs it (on_model, model_map, time limit applied); throws what would make it
+   * fail every case: a time limit out of range, a model with no key. A batch checks all its systems first.
+   */
+  prepare(original: SystemDoc, opts: EvalOptions): SystemDoc {
     let doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
     const minutes = Number(opts.time_limit_min);
     if (opts.time_limit_min != null && !(minutes >= 1 && minutes <= 120)) throw new Error("time_limit_min must be from 1 to 120 minutes");
     if (opts.time_limit_min != null) doc = { ...doc, budget: { ...doc.budget, wallclock_min: minutes } };
     if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
+    // a model with no key would fail every case the same way, after the whole evaluation ran: refuse it now
+    if (!opts.mock) {
+      const missing = this.keyless(doc);
+      if (missing.length) throw new Error(`${doc.name}: ${missing.join("; ")}. Add the key under Settings → Secrets, or run on another model (on_model / "Run on")`);
+    }
+    return doc;
+  }
+
+  start(original: SystemDoc, opts: EvalOptions, queued = false): EvalRecord {
+    const doc = this.prepare(original, opts);
     const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
     if (!cases.length) throw new Error("No cases: each needs an input");
@@ -99,6 +113,16 @@ export class EvalManager {
       .catch(() => {})
       .finally(() => this.active.delete(rec.id));
     return rec;
+  }
+
+  /** The models this system calls that have no key here, each with who uses it. */
+  private keyless(doc: SystemDoc): string[] {
+    const uses = modelUses(doc);
+    return [...new Set(uses.map((u) => u.model))].flatMap((id) => {
+      const m = doc.models.find((x) => x.id === id);
+      if (!m || !m.api?.key_env || !["anthropic", "openai", "google"].includes(m.provider) || this.secrets.get(m.api.key_env)) return [];
+      return [`Model "${id}" needs ${m.api.key_env} (used by ${[...new Set(uses.filter((u) => u.model === id).map((u) => u.where))].join(", ")})`];
+    });
   }
 
   /** Evaluations cut off by a restart are marked stopped, with what they finished. */
