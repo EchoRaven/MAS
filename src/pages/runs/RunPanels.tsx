@@ -6,9 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FlowView } from "@/canvas/FlowView";
 import type { SystemDoc } from "@/model/types";
 import type { RunEvent } from "@/run/events";
+import { roundsOf } from "@/run/rounds";
 import { stateAt } from "@/run/simulate";
 import { Breadcrumb } from "../canvas/Breadcrumb";
 import { CostTable } from "./CostTable";
+import { RoundsTable } from "./RoundsTable";
 import { describe, TimelineItem, useNames } from "./Timeline";
 
 export function RunPanels({ doc, events, upto = events.length, top, empty, estimatedNote }: { doc: SystemDoc; events: RunEvent[]; upto?: number; top?: ReactNode; empty: string; estimatedNote?: string }) {
@@ -17,6 +19,8 @@ export function RunPanels({ doc, events, upto = events.length, top, empty, estim
   const nameOf = useNames(doc);
   const listRef = useRef<HTMLDivElement>(null);
   const st = useMemo(() => stateAt(events, upto, doc), [events, upto, doc]);
+  // groups that repeat: their rounds, as far as the replay has got
+  const rounds = useMemo(() => roundsOf(events.slice(0, upto), doc), [events, upto, doc]);
   const shown = events.slice(0, upto).filter((e) => {
     if (e.type === "usage" || e.type === "status" || e.type === "system_started") return false;
     if (filter === "all") return true;
@@ -62,6 +66,7 @@ export function RunPanels({ doc, events, upto = events.length, top, empty, estim
           <div className="flex items-center gap-2 px-3 pt-3">
             <TabsList>
               <TabsTrigger value="timeline">Messages</TabsTrigger>
+              {rounds.length > 0 && <TabsTrigger value="rounds">Rounds</TabsTrigger>}
               <TabsTrigger value="cost">Cost</TabsTrigger>
               <TabsTrigger value="events">Events</TabsTrigger>
             </TabsList>
@@ -80,6 +85,11 @@ export function RunPanels({ doc, events, upto = events.length, top, empty, estim
               )}
             </div>
           </TabsContent>
+          {rounds.length > 0 && (
+            <TabsContent value="rounds" className="mt-2 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+              <RoundsTable groups={rounds} nameOf={(id) => nameOf(id).name} />
+            </TabsContent>
+          )}
           <TabsContent value="cost" className="mt-2 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
             <CostTable perAgent={st.perAgent} nameOf={nameOf} note={estimatedNote} />
           </TabsContent>

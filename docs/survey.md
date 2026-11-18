@@ -148,9 +148,12 @@ the vocabulary:
   make that message the code. A declared result (a port with a type, such as
   "a Python file" or "a number") would let the platform check it and let
   graders read it without guessing.
-- **Iteration is the most used part and the least visible.** Sixteen papers
-  are a group that repeats. Showing rounds, why each one stopped, and what was
-  fed back is where a run is hardest to read.
+- **Iteration is the most used part.** Sixteen papers are a group that
+  repeats. The run page now has a Rounds tab: each round's calls and cost, the
+  value it ended with, and why the group went on, stopped, or gave up at the
+  round limit. A loop that never passes (MapCoder before its fixes: five
+  rounds, then "gave up") is visible at a glance. What is still missing is a
+  per-round view on the canvas itself.
 - **Templates need behaviour checks, not only structure checks.** Structural
   tests check that a template has the paper's parts; only running it on real
   models found the bugs above. `record-demos.mts --check` now runs every
