@@ -123,3 +123,26 @@ describe("streamed tool calls", () => {
     }
   });
 });
+
+describe("inline reasoning", () => {
+  it("keeps a model's <thought> block out of its answer", async () => {
+    const { splitThought, openaiProvider } = await import("./openai");
+    expect(splitThought("<thought>Let me add 2 and 2.</thought>Final: 4")).toEqual({ text: "Final: 4", thought: "Let me add 2 and 2." });
+    expect(splitThought("Final: 4")).toEqual({ text: "Final: 4", thought: null });
+    // only a leading block: a tag later in the answer is part of the answer
+    expect(splitThought("Use <think> tags like <think>x</think>").thought).toBeNull();
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      const enc = new TextEncoder();
+      const parts = ['data: {"choices":[{"delta":{"content":"<thought>long reasoning…"}}]}\n\n', 'data: {"choices":[{"delta":{"content":"</thought>The answer is 7."},"finish_reason":"stop"}]}\n\n'];
+      return new Response(new ReadableStream({ start(c) { for (const p of parts) c.enqueue(enc.encode(p)); c.close(); } }), { headers: { "content-type": "text/event-stream" } });
+    }) as unknown as typeof fetch;
+    try {
+      const model = { id: "gemma", provider: "google" as const, model: "gemma-4-26b-a4b-it", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
+      const r = await openaiProvider.chat(model, "k", { messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+      expect(r.content).toEqual([{ type: "text", text: "The answer is 7." }]);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+});

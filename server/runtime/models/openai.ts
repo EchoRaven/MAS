@@ -30,14 +30,28 @@ export function retryWait(res: { status: number; headers: Headers }, text: strin
 
 /** The provider's error message, not the whole body. */
 function brief(text: string): string {
+  let msg = text;
   try {
     const d = JSON.parse(text);
     const e = Array.isArray(d) ? d[0]?.error : d.error;
-    if (e?.message) return String(e.message).slice(0, 300);
+    if (e?.message) msg = String(e.message);
   } catch {
     /* not JSON */
   }
-  return text.slice(0, 300);
+  // a quota error names what ran out (tokens a minute, requests a day…): keep that, not the boilerplate around it
+  const metrics = [...new Set([...msg.matchAll(/Quota exceeded for metric: ([\w./-]+)/g)].map((m) => m[1].split("/").pop()))];
+  if (metrics.length) return `${msg.split(".")[0]}. Quota exceeded: ${metrics.join(", ")}`.slice(0, 400);
+  return msg.slice(0, 300);
+}
+
+/**
+ * Some models write their reasoning into the reply (Gemma: "<thought>…</thought>answer").
+ * It is not the answer: kept out of the text that goes on to other agents and graders,
+ * where it multiplies the tokens of every later call (and ran into a free tier's token quota).
+ */
+export function splitThought(text: string): { text: string; thought: string | null } {
+  const m = /^\s*<(thought|think|thinking)>([\s\S]*?)<\/\1>\s*/i.exec(text);
+  return m ? { text: text.slice(m[0].length), thought: m[2].trim() } : { text, thought: null };
 }
 
 function sleep(ms: number, signal?: AbortSignal) {
@@ -162,7 +176,8 @@ export const openaiProvider: Provider = {
     };
     const choice = data.choices[0];
     const content: Part[] = [];
-    if (choice.message.content) content.push({ type: "text", text: choice.message.content });
+    const reply = splitThought(choice.message.content ?? "");
+    if (reply.text) content.push({ type: "text", text: reply.text });
     for (const c of choice.message.tool_calls ?? []) {
       let input: Record<string, unknown> = {};
       try {
