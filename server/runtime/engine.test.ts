@@ -430,6 +430,14 @@ describe("runtime", () => {
       expect(events.some((e) => e.type === "transform" && (e as { detail?: string }).detail === "the manager picked no one")).toBe(true);
     });
 
+    it("ends a conversation after a set number of posts (posts in termination)", async () => {
+      const doc = roomDoc("round_robin", [["a", "Ann", ["a1", "a2", "a3"]], ["b", "Bo", ["b1", "b2", "b3"]]], { termination: ["posts >= 4"] });
+      const { events } = await run(doc, "go", { mock: false });
+      // the person's opening post counts: me, a, b, a — then it ends, and the fourth post is the answer
+      expect(posts(events)).toEqual(["me", "a", "b", "a"]);
+      expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("a2");
+    });
+
     it("free: every other agent hears each post, and a termination expression ends it", async () => {
       const doc = roomDoc("free", [["a", "Ann", ["from a", "a again"]], ["b", "Bo", ["DONE from b"]]], { termination: ['text.includes("DONE")'] });
       const { events } = await run(doc, "go", { mock: false });

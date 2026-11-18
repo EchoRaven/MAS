@@ -181,8 +181,9 @@ const DEMOS: Record<string, DemoConfig> = {
   "paper-generative-agents": {
     input: "It is 8:00 am on February 13 in Smallville. Isabella is opening her café and mentions the Valentine's Day party she is planning.",
     adapt: (doc) => {
-      capRounds(doc, 8);
-      return ["The day is cut to 8 agent turns."];
+      capRounds(doc, 20);
+      doc.termination = [...doc.termination.filter((t) => !t.startsWith("posts")), "posts >= 8"];
+      return ["The day is cut to 8 messages in the town (the template has 12)."];
     },
   },
   "paper-magentic-one": {

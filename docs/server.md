@@ -119,7 +119,9 @@ The scheduler is `server/runtime/engine.ts`.
   `text`, `cause_by`). Without a filter a member hears everything.
   A person who opens a room without naming anyone reaches the first agent.
   A message containing `TERMINATE`, or a `termination` expression that holds,
-  ends the conversation. So does a post after which nobody is next (the
+  ends the conversation. A termination expression sees `text`, `from`,
+  `room` and `posts`, the number of messages this run has put in the room, so
+  `posts >= 12` ends a conversation after twelve messages. So does a post after which nobody is next (the
   selector named no one, nobody was `@named`). The last message is then the
   conversation's answer.
 - **People.**

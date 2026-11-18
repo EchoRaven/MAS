@@ -85,7 +85,8 @@ function build(): SystemDoc {
     b.edge(id, "memory", "access", { access: "read_write", binding: { mode: "auto_inject", read: { budget_tokens: 3000 }, write: { when: "after_turn" } } });
   }
   b.doc.budget = { usd: 10, max_rounds: 200, wallclock_min: 120 };
-  b.doc.termination = ["budget_exceeded", "max_rounds"];
+  // the day ends after 12 messages in the town; the last one is the run's result
+  b.doc.termination = ["budget_exceeded", "max_rounds", "posts >= 12"];
   return b.doc;
 }
 

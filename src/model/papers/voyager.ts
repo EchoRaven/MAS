@@ -21,7 +21,7 @@ function build(): SystemDoc {
       harness: {
         ...native(),
         loop: "single_shot",
-        instructions: `You plan a learning curriculum toward the overall goal. Your context lists the skills already learned. You may also be given the result of the last attempt.\n\nPropose the single next task: just beyond what is already learned, achievable, and useful toward the goal. Name the learned skills it should reuse. Reply with the task in two or three sentences.\n\nWhen the learned skills together accomplish the goal, reply ${DONE} instead, followed by a short summary of what was learned.`,
+        instructions: `You plan a learning curriculum toward the overall goal. Your context lists the skills already learned. You may also be given the result of the last attempt.\n\nPropose the single next task: just beyond what is already learned, achievable, and useful toward the goal. Name the learned skills it should reuse. Reply with the task in two or three sentences.\n\nWhen the learned skills together accomplish the goal, reply ${DONE} instead, followed by a short summary of what was learned. Only the skills listed in your context count as learned (each was verified by the critic): while that list is empty, never reply ${DONE}, and propose the first task.`,
       },
     })
     .group("attempt", 600, 60, {
