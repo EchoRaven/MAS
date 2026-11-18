@@ -65,13 +65,27 @@ What this shows:
 - To tell the paradigms apart, a set needs more questions where the agents
   disagree at first.
 
-## A ceiling check for the multi-model ReConcile test
+## A ceiling check, and a harder set
 
-A single agent on gemini-3-flash answered all 30 exact-computation questions
-correctly (30/30, $0.06). On that set, a mixed-model ReConcile cannot beat its
-strongest seat, so the test needs a harder set. One is being built: six-digit
-multiplication, digit sums of larger powers, date spans across centuries,
-letter counts in long strings, modular inverses, and binomial coefficients mod p.
+On the 30 exact-computation questions, a single agent scored **30/30** on both
+gemini-3-flash and gemini-3.8-flash. On that set, a mixed-model ReConcile cannot
+beat its strongest seat.
+
+So there is a harder set, "Hard computation (30)", with answers computed by
+program: six-digit multiplication, digit sums of larger powers, date spans
+across centuries, letter counts in long strings, modular inverses, and binomial
+coefficients mod p. One run each, 2026-11-18:
+
+| Single agent on | Correct | Missed |
+| --- | --- | --- |
+| gemini-3.1-flash-lite | 17/30 | 13, across every kind of question |
+| gemini-3.8-flash | 26/30 | #6, #7, #8, #10 (digit sums of powers) |
+| gemini-3-flash | 27/30 | #6, #7, #9 |
+
+The two stronger models miss different questions: 3-flash gets #8 and #10,
+3.8-flash gets #9. A discussion that always adopted the right answer could
+reach 28/30. The question is whether ReConcile, with one seat on each model,
+gets above the strongest seat's 27.
 
 ## Earlier sets
 
