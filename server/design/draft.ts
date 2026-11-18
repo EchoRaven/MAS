@@ -2,6 +2,8 @@
 // cannot produce something the canvas could not: ids are checked, components
 // are built from the platform's defaults, and ports and bindings are filled in
 // the way the editor fills them.
+import { parseReplicas } from "@/model/replicas";
+import type { ResultType } from "@/model/types";
 import { conformSystem } from "@/model/conformance";
 import { defaultAgent, defaultBinding, defaultData, defaultRoom, emptySystem, newId } from "@/model/defaults";
 import { entryPoints } from "@/model/entry";
@@ -124,6 +126,7 @@ export class Draft {
         if (options.env_kind === "room" || !options.env_kind) {
           data = defaultRoom(name);
           if (options.policy) data.room = { ...data.room!, policy: options.policy as NonNullable<typeof data.room>["policy"] };
+          if (options.end_after != null) this.setEndAfter(options.end_after);
         } else {
           data = { ...(defaultData("env") as Extract<NodeData, { kind: "env" }>), name, env_kind: options.env_kind as Extract<NodeData, { kind: "env" }>["env_kind"] };
           if (options.image) (data as Extract<NodeData, { kind: "env" }>).image = String(options.image);
@@ -142,6 +145,7 @@ export class Draft {
         data = { ...(defaultData("model") as Extract<NodeData, { kind: "model" }>), name, model: String(options.model ?? this.defaultModel()) };
         if (options.prompt) (data as Extract<NodeData, { kind: "model" }>).prompt = String(options.prompt);
         if (options.system_prompt) (data as Extract<NodeData, { kind: "model" }>).system_prompt = String(options.system_prompt);
+        if (options.replicas != null) this.setReplicas(data as Extract<NodeData, { kind: "model" }>, options.replicas);
         break;
       case "human":
         data = { ...(defaultData("human") as Extract<NodeData, { kind: "human" }>), name, role: String(options.role ?? ""), approves: !!options.approves };
@@ -195,6 +199,7 @@ export class Draft {
         if (str("prompt")) (n.data.prompt = String(options.prompt), changed.push("prompt"));
         if (str("system_prompt")) (n.data.system_prompt = String(options.system_prompt), changed.push("system_prompt"));
         if (str("model")) (n.data.model = String(options.model), changed.push("model"));
+        if (options.replicas != null) (this.setReplicas(n.data, options.replicas), changed.push("replicas"));
         break;
       case "human":
         if (str("role")) (n.data.role = String(options.role), changed.push("role"));
@@ -212,6 +217,7 @@ export class Draft {
       case "env":
         if (str("policy") && n.data.room) (n.data.room = { ...n.data.room, policy: options.policy as NonNullable<typeof n.data.room>["policy"] }, changed.push("policy"));
         if (str("image")) (n.data.image = String(options.image), changed.push("image"));
+        if (options.end_after != null && n.data.room) (this.setEndAfter(options.end_after), changed.push("end_after"));
         break;
       default:
         break;
@@ -294,10 +300,33 @@ export class Draft {
     return `A run now starts at ${id}.`;
   }
 
-  describe(name: string, description: string): string {
+  describe(name: string, description: string, result?: unknown): string {
     this.doc.name = name || this.doc.name;
     this.doc.description = description || this.doc.description;
+    if (result != null && result !== "") {
+      const type = String(result) as ResultType;
+      if (!["text", "number", "code", "json", "choice"].includes(type)) throw new DraftError(`result must be one of text, number, code, json, choice (got ${JSON.stringify(result)})`);
+      this.doc.result = { type };
+      return `Named "${this.doc.name}"; every run's answer will be checked to be ${type}.`;
+    }
     return `Named "${this.doc.name}".`;
+  }
+
+  /** An ensemble: the model is called this many times per input, and its output is the list of replies (json). */
+  private setReplicas(m: Extract<NodeData, { kind: "model" }>, r: unknown) {
+    const value = typeof r === "number" ? r : String(r);
+    const spec = parseReplicas(value);
+    if (spec.kind === "invalid") throw new DraftError(spec.why);
+    m.replicas = spec.kind === "one" ? null : value;
+    // the list travels on the output port; a later component votes on it or merges it
+    if (spec.kind !== "one" && m.interface.outputs[0]) m.interface.outputs[0] = { ...m.interface.outputs[0], type: "json" };
+  }
+
+  /** A room conversation that ends after this many messages (its last is the answer). */
+  private setEndAfter(n: unknown) {
+    const k = Math.floor(Number(n));
+    if (!Number.isFinite(k) || k < 1) throw new DraftError(`end_after must be a number of messages (got ${JSON.stringify(n)})`);
+    this.doc.termination = [...this.doc.termination.filter((t) => !/^posts\s*>=/.test(t)), `posts >= ${k}`];
   }
 
   /**

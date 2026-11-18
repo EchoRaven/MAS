@@ -18,9 +18,9 @@ export const DESIGN_TOOLS: ToolDef[] = [
       "Add a component.\n" +
       "· agent: options role, instructions (its system prompt, be specific), model, loop (react | single_shot | plan_execute | reflexion), tools, group\n" +
       "· human: options role, approves (true when they approve actions)\n" +
-      "· model: a bare model call; options prompt ({{input}} is what arrives), system_prompt\n" +
+      "· model: a bare model call; options prompt ({{input}} is what arrives), system_prompt, replicas (a number, or \"{{vars.n ?? 5}}\" to set it per run: the model is asked that many times in parallel and the output is the list of replies, for a function to vote on)\n" +
       "· function: deterministic code. Always give options.code: JavaScript, with `input` arriving and whatever you return going out. With join 'all' it waits for every input port and `input` is { port: value }. Options: code, lang, join\n" +
-      "· env: options env_kind (room | sandbox | database | browser | app | service), policy for a room (free | round_robin | selector | mention), image\n" +
+      "· env: options env_kind (room | sandbox | database | browser | app | service), policy for a room (free | round_robin | selector | mention), end_after for a room (end the conversation after this many messages; its last one is the answer), image\n" +
       "· plugin: options preset (memory | knowledge | workspace | board), sources. A knowledge plugin's sources are folders or files in the knowledge base (listed in your task) — set them, or it searches nothing\n" +
       "· group: a sub-system on its own canvas; options max_rounds, until (an expression over `output`), feed. Put members in it with options.group on them.",
     input_schema: { type: "object", properties: { kind: S, id: { ...S, description: "lower_snake_case, unique" }, name: S, options: { type: "object" } }, required: ["kind", "id", "name"] },
@@ -46,12 +46,16 @@ export const DESIGN_TOOLS: ToolDef[] = [
   {
     name: "update",
     description:
-      "Change a component in place; its connections stay. Give only what changes. Agent: name, role, instructions, model, loop, tools. Function: code, lang, join. Model: prompt, system_prompt, model. Human: role, approves. Group: max_rounds, until, feed. Room: policy. Plugin: sources. Prefer this to remove and add.",
+      "Change a component in place; its connections stay. Give only what changes. Agent: name, role, instructions, model, loop, tools. Function: code, lang, join. Model: prompt, system_prompt, model, replicas. Human: role, approves. Group: max_rounds, until, feed. Room: policy, end_after. Plugin: sources. Prefer this to remove and add.",
     input_schema: { type: "object", properties: { id: S, options: { type: "object" } }, required: ["id", "options"] },
   },
   { name: "remove", description: "Remove a component and everything connected to it.", input_schema: { type: "object", properties: { id: S }, required: ["id"] } },
   { name: "set_entry", description: "Choose where a run's input arrives. Use it when more than one component could start the run.", input_schema: { type: "object", properties: { id: S }, required: ["id"] } },
-  { name: "describe", description: "Name the system and say in one or two sentences what it does.", input_schema: { type: "object", properties: { name: S, description: S }, required: ["name", "description"] } },
+  {
+    name: "describe",
+    description: "Name the system and say in one or two sentences what it does. result: what a run returns (text | number | code | json | choice); every run's answer is then checked to be that kind. Set it when the answer has a definite kind.",
+    input_schema: { type: "object", properties: { name: S, description: S, result: S }, required: ["name", "description"] },
+  },
   { name: "review", description: "Look at the whole system as YAML, where a run starts, and everything still wrong with it. Call this before you finish.", input_schema: { type: "object", properties: {} } },
 ];
 
@@ -79,7 +83,7 @@ export async function runDesignTool(draft: Draft, name: string, args: Record<str
       case "set_entry":
         return draft.setEntry(String(args.id));
       case "describe":
-        return draft.describe(String(args.name), String(args.description));
+        return draft.describe(String(args.name), String(args.description), args.result);
       case "review":
         return draft.review();
       default:

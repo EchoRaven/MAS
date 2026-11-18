@@ -46,6 +46,28 @@ describe("the draft the architect edits", () => {
     expect(toYaml(fromYaml(toYaml(d.doc), d.doc.id))).toBe(toYaml(d.doc));
   });
 
+  it("builds an ensemble with replicas, ends a room by length, and declares the result", async () => {
+    const d = Draft.blank("Forest");
+    d.add("human", "asker", "Asker", { role: "Asks" });
+    d.add("model", "samples", "Samples", { prompt: "{{input}}", replicas: "{{vars.n ?? 5}}" });
+    d.add("function", "vote", "Vote", { code: "return input.length;" });
+    d.connect("asker", "samples", "message");
+    d.connect("samples", "vote", "message");
+    d.connect("vote", "asker", "message");
+    const m = d.doc.nodes.find((n) => n.id === "samples")!.data as { replicas?: unknown; interface: { outputs: { type: string }[] } };
+    expect(m.replicas).toBe("{{vars.n ?? 5}}");
+    // the list travels on the output: json, so nothing tells each sample to answer in JSON
+    expect(m.interface.outputs[0].type).toBe("json");
+    expect(await runDesignTool(d, "describe", { name: "Forest", description: "Votes.", result: "number" })).toMatch(/checked to be number/);
+    expect(d.doc.result).toEqual({ type: "number" });
+    expect(await runDesignTool(d, "describe", { name: "Forest", description: "Votes.", result: "essay" })).toMatch(/^Not done: result must be one of/);
+    expect(await runDesignTool(d, "update", { id: "samples", options: { replicas: 99 } })).toMatch(/^Not done: replicas must be a whole number/);
+    d.add("env", "chat", "Chat", { env_kind: "room", policy: "round_robin", end_after: 10 });
+    expect(d.doc.termination).toContain("posts >= 10");
+    await runDesignTool(d, "update", { id: "chat", options: { end_after: 6 } });
+    expect(d.doc.termination.filter((t) => t.startsWith("posts"))).toEqual(["posts >= 6"]);
+  });
+
   it("refuses what the canvas would refuse, and says why", async () => {
     const d = Draft.blank("X");
     d.add("agent", "a", "A");

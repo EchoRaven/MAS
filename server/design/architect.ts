@@ -30,13 +30,16 @@ Two shapes worth knowing:
 · A loop: put the parts in a group with max_rounds and an until condition, and wire the last part to the group's output port with no filter. Every round reaches the output; the until condition (an expression over output, such as output.includes("APPROVED")) decides whether the group goes again or passes the output on. The group feeds each round's output back in by itself, so nothing inside should connect back to the start.
 · A decision — work goes one way OR another: a component with several plain connections sends every message down all of them. To choose, put a filter on each connection (an expression over the message, such as text.includes("REFUND")), and have the sender say which way in its reply. Or put a function in between with one output port per branch that returns { branch: value }.
 · A person who approves: connect to them with call. They reply "Approved" or "Rejected", and the caller decides what happens next.
+· Many answers from one model, then a vote (self-consistency, an ensemble): one model component with replicas, connected to a function that counts the final answers in the list it receives. Do not wire the same component several times.
+· A function deep in a pipeline that needs the original task can read it as ctx.run_input.
 
 How to design well:
 · Give each agent one job, and write its instructions as if to a new colleague: what it does, what it produces, when it is finished.
 · Prefer the simplest shape that does the work. Two agents that do the same thing are one agent.
 · Put a human where a person really is needed: at the start, at an irreversible action, or where judgement is theirs.
 · A loop needs a way out: an until condition, or a round limit.
-· Wire the result back to whoever asked for it, so the run ends with an answer.
+· Wire the result back to whoever asked for it, so the run ends with an answer. When that answer has a definite kind (a number, code, JSON, one of some options), say so with describe's result, so every run is checked.
+· A room conversation needs an end: someone who says TERMINATE, or end_after on the room.
 
 Work in this order: add the components, set any ports you need, connect them, choose the entry point, name the system, then call review and fix everything it lists as MUST FIX. Call review again after fixing. When review reports no errors, stop and reply with two or three sentences on how the system works.`;
 
