@@ -128,7 +128,7 @@ export function ComparePage() {
               title="The table above as Markdown, for a write-up"
               onClick={() =>
                 void navigator.clipboard
-                  .writeText(markdownTable(exportRows))
+                  .writeText(markdownTable(exportRows, ref?.rec))
                   .then(() => flash("Copied"))
                   .catch(() => flash("Could not copy"))
               }

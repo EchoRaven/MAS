@@ -1,6 +1,6 @@
 // Evaluation results as text to take elsewhere: a Markdown table for a
 // write-up, and a CSV of which system got each question right.
-import { type EvalRecord, repeatStats } from "./evals";
+import { type EvalRecord, pairedDiff, repeatStats } from "./evals";
 
 export interface ExportRow {
   label: string;
@@ -12,14 +12,23 @@ const pct = (x: number) => `${Math.round(x * 1000) / 10}%`;
 const money = (n: number) => (n > 0 && n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`);
 const cellText = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
 
-/** One row per evaluation, as it reads on the Compare page. */
-export function markdownTable(rows: ExportRow[]): string {
-  const head = "| System | Models · variables | Accuracy | Per repeat | Cost | Per correct answer |\n| --- | --- | --- | --- | --- | --- |";
+/** "+4 −0 (p 0.13)": questions fixed and lost against the reference, and the exact McNemar p-value. */
+export function vsText(rec: EvalRecord, ref: EvalRecord): string {
+  if (rec === ref) return "reference";
+  const d = pairedDiff(rec, ref);
+  return `+${d.fixed.length} −${d.lost.length} (p ${d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)})`;
+}
+
+/** One row per evaluation, as it reads on the Compare page; with a reference, each row's fixed and lost questions against it. */
+export function markdownTable(rows: ExportRow[], ref?: EvalRecord): string {
+  const head = ref
+    ? "| System | Models · variables | Accuracy | Per repeat | vs reference | Cost | Per correct answer |\n| --- | --- | --- | --- | --- | --- | --- |"
+    : "| System | Models · variables | Accuracy | Per repeat | Cost | Per correct answer |\n| --- | --- | --- | --- | --- | --- |";
   const body = rows.map(({ label, setup, rec }) => {
     const st = repeatStats(rec);
     const acc = st.mean ?? (rec.graded ? rec.passed / rec.graded : 0);
     const per = st.per.length > 1 ? st.per.map((p) => Math.round(p * 100)).join(", ") + (st.sd !== null ? ` (sd ${Math.round(st.sd * 1000) / 10})` : "") : "one run";
-    return `| ${cellText(label)} | ${cellText(setup)} | ${pct(acc)} | ${per} | ${money(rec.usd)} | ${rec.passed ? money(rec.usd / rec.passed) : "–"} |`;
+    return `| ${cellText(label)} | ${cellText(setup)} | ${pct(acc)} | ${per} |${ref ? ` ${vsText(rec, ref)} |` : ""} ${money(rec.usd)} | ${rec.passed ? money(rec.usd / rec.passed) : "–"} |`;
   });
   return [head, ...body].join("\n");
 }

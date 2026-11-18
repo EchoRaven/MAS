@@ -23,6 +23,15 @@ describe("exporting evaluations", () => {
     expect(md.split("\n")[2]).toBe("| Debate \\| v2 | all on gemini_lite | 75% | 100, 50 (sd 35.4) | $0.30 | $0.10 |");
   });
 
+  it("with a reference, each row's questions fixed and lost against it, and McNemar's p", () => {
+    const base = rec([[false], [true], [false]], 0.01);
+    const better = rec([[true], [true], [true]], 0.1);
+    const md = markdownTable([{ label: "Debate", setup: "x", rec: better }, { label: "Single", setup: "x", rec: base }], base);
+    expect(md.split("\n")[0]).toContain("| vs reference |");
+    expect(md.split("\n")[2]).toBe("| Debate | x | 100% | one run | +2 −0 (p 0.50) | $0.10 | $0.03 |");
+    expect(md.split("\n")[3]).toContain("| reference |");
+  });
+
   it("a CSV with one row per question and the share of runs that passed", () => {
     const csv = csvGrid([
       { label: "A", setup: "x", rec: rec([[true, true], [true, false]], 0.1) },
