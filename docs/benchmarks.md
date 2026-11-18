@@ -87,6 +87,28 @@ The two stronger models miss different questions: 3-flash gets #8 and #10,
 reach 28/30. The question is whether ReConcile, with one seat on each model,
 gets above the strongest seat's 27.
 
+## ReConcile with three different models (first run)
+
+ReConcile with one seat on each model (lite, 3.8-flash and 3-flash), on the
+harder set, one run: **28/30** ($0.31, about 25 minutes). The strongest seat
+alone scored 27.
+
+| Question | 3.8-flash alone | 3-flash alone | ReConcile, mixed |
+| --- | --- | --- | --- |
+| #6 | ✗ | ✗ | ✓ after four rounds |
+| #7 | ✗ | ✗ | ✗ |
+| #8 | ✗ | ✓ | ✗ (talked out of the right answer) |
+| #9 | ✓ | ✗ | ✓ |
+| #10 | ✗ | ✓ | ✓ |
+
+- On #9 and #10, the discussion adopted the seat that was right.
+- On #6, it reached an answer neither strong model had alone.
+- On #8, it lost a right answer.
+
+One question in 30, from one run, is within run-to-run noise. This points the
+way the paper says but does not show it. Two more repeats of each arm are
+running.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
