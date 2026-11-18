@@ -115,7 +115,13 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   Agent Forest (five votes) reached 25, fixing the same nine questions. ReConcile
   reached 25 too. Whether
   a MAS helps depends on the model's error profile as much as on the protocol,
-  and voting captures nearly all of what discussion does.
+  and voting captures nearly all of what discussion does. On MMLU the same
+  debate on the same weaker model gained nothing (90 → 89): its errors there
+  are knowledge every copy of the model lacks, not slips that differ between
+  copies.
+- **Test-and-repair loops need something to repair.** On HumanEval with
+  flash-lite, AgentCoder and MapCoder scored 48 of 50, as did a single agent
+  (49 with a code runner); the papers' gains were over single gpt-3.5 calls.
 - **Sampling more stops paying after a few samples.** Agent Forest at N = 3
   matches the discussion systems (22 of 30); N = 10 and 20 add a question or
   lose one, at up to 20 times the cost. The questions every N misses are the

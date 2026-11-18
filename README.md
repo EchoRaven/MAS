@@ -56,7 +56,12 @@ Measured on this platform, every system on the same model and questions
 - **The gain depends on how often the model slips.** On Hard computation, debate
   and voting add 2–4 questions in 30 on gemini-3.1-flash-lite, and 8–9 on the
   weaker gemma-4-26b (17 → 25–26). On GSM8K and MATH-500 the strong model is
-  near the ceiling and nothing shows.
+  near the ceiling and nothing shows. On MMLU nothing shows even on gemma
+  (90 → 89): debate corrects slips that differ between agents, not knowledge
+  that all copies of a model lack.
+- **The coding systems do not beat one agent on HumanEval** with a current
+  small model: single agent 48/50, with a code runner 49, AgentCoder and
+  MapCoder 48, at 12–28 times the cost.
 - **Tools matter more than talk.** Questions no discussion fixed were solved
   every time once one agent could run code, and a single agent with the same
   sandbox scored as well as AutoGen's five-agent chat.

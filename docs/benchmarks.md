@@ -271,6 +271,47 @@ on #96 the debaters agreed on "A, B, C, and D" for a one-letter question). At
 95% there is little left for discussion to fix, as with GSM8K; the paper's
 setting is a model that gets a third of MMLU wrong.
 
+On gemma-4-26b, the weaker model where debate gained 9 of 30 on Hard
+computation, the same 100 questions:
+
+| System on gemma | Correct | Time |
+| --- | --- | --- |
+| Single agent | 90 | 21 min |
+| Multiagent Debate, 2 rounds | 89 | 62 min |
+
+Debate fixed 2 questions and lost 3 (McNemar p = 1). **Even on the weaker
+model, MMLU shows no gain.** gemma already gets 90% of these questions, and
+its errors are knowledge errors (which of four facts is right), which three
+copies of the same model share; on Hard computation its errors were slips in
+long arithmetic, which differ between copies and get corrected. Discussion
+fixes the errors that are independent between agents, and MMLU's are not.
+
+## HumanEval: four coding systems
+
+50 problems sampled from HumanEval (seed 1), all on gemini-3.1-flash-lite,
+graded by running each answer against the problem's tests in Docker.
+
+| System | Passed | Cost |
+| --- | --- | --- |
+| Single agent | 48 | $0.03 |
+| Single agent with a code runner | **49** | $0.18 |
+| AgentCoder (programmer, test designer, executor) | 48 | $0.69 |
+| MapCoder (one plan, up to 5 debugging rounds) | 48 | $0.37 |
+
+All four miss #47 (HumanEval/145, sorting by digit sum with negative
+numbers); the others differ by one problem each, which is noise. AgentCoder
+and MapCoder report large gains over a single gpt-3.5 call (to 79.9% and
+80.5%); on a model that already passes 96% of these problems alone there is
+nothing for a test-and-repair loop to repair, and they cost 12 to 28 times
+as much.
+
+The first grading had every system at 46–47: the grader copied an `import
+math` from inside HumanEval/115's function, and a docstring line starting
+"from any cell" from /129, to the top of the program, so right answers
+failed. Both were the grader's, found because every system failed the same
+two problems. After the fix, "Run the tests again" re-graded the stored
+answers in Docker without calling any model.
+
 ## Multiagent Debate: accuracy against the number of rounds
 
 Du et al.'s ablation varies the rounds of debate. The template's group takes
