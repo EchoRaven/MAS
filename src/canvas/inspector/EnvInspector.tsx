@@ -43,7 +43,16 @@ export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc:
         <>
           <SelectField label="Lifecycle" value={e.lifecycle} onChange={(lifecycle) => set({ lifecycle })} items={opts([["per_run", "New for each run"], ["per_session", "Per session"], ["persistent", "Persistent"]])} />
           <SelectField label="Snapshots" value={e.snapshot} onChange={(snapshot) => set({ snapshot })} items={opts([["never", "Never"], ["on_write", "On every write"], ["on_checkpoint", "At checkpoints"]])} hint={e.env_kind === "external" ? "External envs cannot be snapshotted; actions are only logged" : "Enables replay and forking"} />
-          <TextField label="Egress" hint="Hosts it may reach, comma-separated. Everything else is blocked." placeholder="none" value={e.egress.join(", ")} onChange={(v) => set({ egress: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />
+          <TextField label="Egress" hint="Hosts it may reach (through the egress proxy), comma-separated: example.com, *.github.com, host:8443. Everything else, and every private address, is blocked. Empty: no network at all." placeholder="none" value={e.egress.join(", ")} onChange={(v) => set({ egress: v.split(",").map((s) => s.trim()).filter(Boolean) })} mono />
+          {e.env_kind === "sandbox" && (
+            <SelectField
+              label="Machines"
+              value={e.share ?? "shared"}
+              onChange={(share) => set({ share })}
+              items={opts([["shared", "One, shared by every agent connected"], ["per_agent", "One per agent: own machine and /work"]])}
+              hint="Shared: agents see each other's files (a team on one repo). Per agent: each is isolated from the others."
+            />
+          )}
         </>
       )}
       {e.env_kind === "database" && <DbQueryEditor value={e.db ?? defaultDbQuery()} onChange={(db) => set({ db })} doc={doc} />}

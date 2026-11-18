@@ -219,7 +219,10 @@ export interface EnvData {
   image: string;
   lifecycle: "per_run" | "per_session" | "persistent";
   snapshot: "never" | "on_write" | "on_checkpoint";
+  /** hosts it may reach (through the egress proxy, nothing else); empty: no network */
   egress: string[];
+  /** sandbox: one machine for every agent connected to it (shared, the default), or each agent its own (per_agent) */
+  share?: "shared" | "per_agent";
   /** room only */
   room?: RoomSpec | null;
   /** imported envs: the contract it was imported with */

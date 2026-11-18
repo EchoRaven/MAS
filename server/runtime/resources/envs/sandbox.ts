@@ -1,13 +1,16 @@
-// Sandbox: a Docker container per run (or kept, for per_session /
-// persistent lifecycles) with a work folder mounted at /work. No network
-// unless the env lists egress. Without Docker, commands run on the host only
-// when MAS_ALLOW_LOCAL_EXEC=1.
+// Sandbox: a box per run (or kept, for per_session / persistent lifecycles)
+// with a work folder mounted at /work, from an isolation backend (Docker
+// today: not root, no capabilities, seccomp, read-only root). No network
+// unless the env lists egress hosts, and then only those, through the egress
+// proxy. With share: per_agent each agent gets its own box and folder.
+// Without a backend, commands run on the host only when MAS_ALLOW_LOCAL_EXEC=1.
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import type { EnvData, SysEdge, SysNode } from "@/model/types";
 import type { RunCtx } from "../../context";
 import { confine, hasWorkFolder, listFiles, sharedFolder } from "../plugins/workspace";
+import { type Box, DockerBackend, type SandboxBackend } from "../../isolation";
 import { S, schema, type Resource, type RtTool } from "../types";
 
 function exec(cmd: string, args: string[], opts: { timeout?: number; cwd?: string } = {}): Promise<{ code: number; out: string }> {
@@ -51,70 +54,98 @@ fi; s=$?; tail -60 /tmp/mas-tests.out; exit $s
 elif [ -f package.json ]; then npm test > /tmp/mas-tests.out 2>&1; s=$?; tail -40 /tmp/mas-tests.out; exit $s
 else echo 'no tests found'; fi`;
 
+/** One agent's (or every agent's, when shared) machine: a work folder and the box it is mounted in. */
+interface Seat {
+  dir: string;
+  box?: Promise<Box | null>;
+}
+
 export class SandboxEnv implements Resource {
-  private container?: Promise<string | null>;
+  private seats = new Map<string, Seat>();
+  private backend: SandboxBackend;
+  /** the shared seat's folder (with share: per_agent, each agent's is a folder under it) */
   readonly dir: string;
   constructor(
     private rc: RunCtx,
     private node: SysNode<EnvData>,
+    backend?: SandboxBackend,
   ) {
     const keep = node.data.lifecycle !== "per_run";
     // a workspace plugin with source /work is this folder, so agents can write code there and run it here
     this.dir = hasWorkFolder(rc) ? sharedFolder(rc, "/work")! : keep ? rc.store.stateDir(rc.doc.id, node.id, "work") : rc.store.stateDir(rc.doc.id, node.id, "runs", rc.runId);
+    this.backend = backend ?? new DockerBackend(rc.config.docker, rc.hosted?.egressGrant);
   }
   get id() {
     return this.node.id;
   }
 
-  private start(): Promise<string | null> {
-    this.container ??= (async () => {
-      const image = this.node.data.image || "python:3.12-slim";
-      const name = `mas-${this.rc.doc.id}-${this.node.id}-${this.node.data.lifecycle === "per_run" ? this.rc.runId : "keep"}`.replace(/[^a-zA-Z0-9_.-]/g, "-").slice(0, 120);
-      const probe = await exec(this.rc.config.docker, ["version", "--format", "{{.Server.Version}}"], { timeout: 10_000 });
-      if (probe.code !== 0) {
-        if (!this.rc.config.allowLocalExec) throw new Error("Docker is not available and MAS_ALLOW_LOCAL_EXEC is off, so sandbox commands cannot run");
-        this.rc.emit({ type: "log", node: this.id, level: "warn", text: "Docker unavailable: running sandbox commands on the host (MAS_ALLOW_LOCAL_EXEC=1)" });
-        return null;
-      }
-      const running = await exec(this.rc.config.docker, ["inspect", "-f", "{{.State.Running}}", name], { timeout: 10_000 });
-      if (running.code === 0 && running.out.trim() === "true") return name;
-      if (running.code === 0) await exec(this.rc.config.docker, ["rm", "-f", name]);
-      this.rc.emit({ type: "log", node: this.id, level: "info", text: `Starting sandbox ${image}` });
-      const net = this.node.data.egress.length ? [] : ["--network", "none"];
-      const r = await exec(this.rc.config.docker, ["run", "-d", "--name", name, ...net, "--memory", "2g", "--cpus", "2", "--pids-limit", "512", "-v", `${this.dir}:/work`, "-w", "/work", image, "sleep", "infinity"], { timeout: 600_000 });
-      if (r.code !== 0) throw new Error(`Could not start the sandbox: ${r.out.slice(-400)}`);
-      return name;
-    })();
-    return this.container;
+  /** Each agent its own machine (share: per_agent), or one for all of them. */
+  private seat(agent?: string): { key: string; seat: Seat } {
+    const own = this.node.data.share === "per_agent" && agent;
+    const key = own ? agent : "shared";
+    let seat = this.seats.get(key);
+    if (!seat) {
+      seat = { dir: own ? path.join(this.dir, "agents", agent.replace(/[^a-zA-Z0-9_.-]/g, "-")) : this.dir };
+      fs.mkdirSync(seat.dir, { recursive: true });
+      this.seats.set(key, seat);
+    }
+    return { key, seat };
   }
 
-  async sh(command: string, timeoutMs = 120_000): Promise<string> {
-    const c = await this.start();
-    const r = c ? await exec(this.rc.config.docker, ["exec", "-w", "/work", c, "sh", "-lc", command], { timeout: timeoutMs }) : await exec("sh", ["-lc", command], { timeout: timeoutMs, cwd: this.dir });
+  private start(agent?: string): { seat: Seat; box: Promise<Box | null> } {
+    const { key, seat } = this.seat(agent);
+    seat.box ??= (async () => {
+      const avail = await this.backend.available();
+      if (!avail.ok) {
+        if (!this.rc.config.allowLocalExec) throw new Error(`${avail.why}; MAS_ALLOW_LOCAL_EXEC is off, so sandbox commands cannot run`);
+        this.rc.emit({ type: "log", node: this.id, level: "warn", text: `${avail.why}: running sandbox commands on the host, without isolation (MAS_ALLOW_LOCAL_EXEC=1)` });
+        return null;
+      }
+      const d = this.node.data;
+      const scope = d.lifecycle === "per_run" ? this.rc.runId : "keep";
+      const name = `mas-${this.rc.doc.id}-${this.node.id}-${key === "shared" ? "" : `${key}-`}${scope}`.replace(/[^a-zA-Z0-9_.-]/g, "-").slice(0, 120);
+      const box = await this.backend.start({ name, image: d.image || "python:3.12-slim", workDir: seat.dir, egress: d.egress, labels: { "mas.system": this.rc.doc.id, "mas.env": this.node.id, "mas.run": this.rc.runId } });
+      this.rc.emit({ type: "log", node: this.id, level: "info", text: `Sandbox ${d.image || "python:3.12-slim"}${key === "shared" ? "" : ` for ${key}`}: ${box.isolation}` });
+      return box;
+    })();
+    return { seat, box: seat.box };
+  }
+
+  /** A shell command in the agent's machine (or the shared one). */
+  async sh(command: string, timeoutMs = 120_000, agent?: string): Promise<string> {
+    const { seat, box: pending } = this.start(agent);
+    const box = await pending;
+    const r = box ? await this.backend.exec(box, command, timeoutMs) : await exec("sh", ["-lc", command], { timeout: timeoutMs, cwd: seat.dir });
     const out = r.out.length > 30_000 ? `${r.out.slice(0, 15_000)}\n…\n${r.out.slice(-15_000)}` : r.out;
     return `exit ${r.code}\n${out}`;
   }
 
   async tools(edge: SysEdge): Promise<RtTool[]> {
     const ro = edge.access === "read";
+    const agent = edge.source;
+    const dir = () => this.seat(agent).seat.dir;
     const all: RtTool[] = [
-      { name: "bash", description: `Run a shell command in ${this.node.data.name} (cwd /work)`, input_schema: schema({ command: S }), effect: "write", source: this.id, run: async (a) => this.sh(String(a.command)) },
+      { name: "bash", description: `Run a shell command in ${this.node.data.name} (cwd /work)`, input_schema: schema({ command: S }), effect: "write", source: this.id, run: async (a) => this.sh(String(a.command), 120_000, agent) },
       { name: "edit_file", description: "Read or write a file under /work. Omit content to read.", input_schema: schema({ path: S, content: S }, ["path"]), effect: "write", source: this.id, run: async (a) => {
-        const f = confine(this.dir, String(a.path).replace(/^\/work\/?/, ""));
+        const f = confine(dir(), String(a.path).replace(/^\/work\/?/, ""));
         if (a.content == null) return fs.existsSync(f) ? fs.readFileSync(f, "utf8").slice(0, 50_000) : `no such file: ${a.path}`;
         fs.mkdirSync(path.dirname(f), { recursive: true });
         fs.writeFileSync(f, String(a.content));
         return `Wrote ${a.path}`;
       } },
-      { name: "run_tests", description: "Run the tests in /work. With no command: pytest when it is installed, else every test_* function in test*.py / *_test.py is called (plain asserts); npm test for a package.json", input_schema: schema({ command: S }, []), effect: "read", source: this.id, run: async (a) => this.sh(String(a.command || DEFAULT_TESTS), 600_000) },
-      { name: "list_work", description: "List files under /work", input_schema: schema({}), effect: "read", source: this.id, run: async () => listFiles(this.dir).join("\n") || "(empty)" },
+      { name: "run_tests", description: "Run the tests in /work. With no command: pytest when it is installed, else every test_* function in test*.py / *_test.py is called (plain asserts); npm test for a package.json", input_schema: schema({ command: S }, []), effect: "read", source: this.id, run: async (a) => this.sh(String(a.command || DEFAULT_TESTS), 600_000, agent) },
+      { name: "list_work", description: "List files under /work", input_schema: schema({}), effect: "read", source: this.id, run: async () => listFiles(dir()).join("\n") || "(empty)" },
     ];
     return all.filter((t) => !ro || t.effect === "read");
   }
 
   async close() {
-    if (this.node.data.lifecycle !== "per_run" || !this.container) return;
-    const c = await this.container.catch(() => null);
-    if (c) await exec(this.rc.config.docker, ["rm", "-f", c], { timeout: 30_000 });
+    if (this.node.data.lifecycle !== "per_run") return;
+    await Promise.all(
+      [...this.seats.values()].map(async (seat) => {
+        const box = await seat.box?.catch(() => null);
+        if (box) await this.backend.stop(box);
+      }),
+    );
   }
 }

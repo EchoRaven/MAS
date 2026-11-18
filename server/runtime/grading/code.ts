@@ -1,6 +1,7 @@
 // Grading code by running it: the model's code and the benchmark's tests go
 // into one program, run in a throwaway Docker container with no network,
 // little memory and a time limit. It passes when the program exits cleanly.
+import { SECCOMP_PROFILE } from "../isolation";
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -77,7 +78,7 @@ export async function runProgram(program: string, opts: { docker: string; image?
     const seconds = opts.seconds ?? 10;
     const r = await run(
       opts.docker,
-      ["run", "--rm", "--network", "none", "--memory", "512m", "--cpus", "1", "--pids-limit", "128", "--read-only", "--tmpfs", "/tmp", "-v", `${dir}:/work:ro`, opts.image ?? "python:3.12-slim", "timeout", String(seconds), "python", "/work/prog.py"],
+      ["run", "--rm", "--network", "none", "--memory", "512m", "--cpus", "1", "--pids-limit", "128", "--read-only", "--tmpfs", "/tmp", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--security-opt", `seccomp=${SECCOMP_PROFILE}`, "--user", `${process.getuid?.() ?? 65534}:${process.getgid?.() ?? 65534}`, "-e", "HOME=/tmp", "-v", `${dir}:/work:ro`, opts.image ?? "python:3.12-slim", "timeout", String(seconds), "python", "/work/prog.py"],
       (seconds + 30) * 1000,
     );
     if (r.code === 0) return { pass: true, why: "the tests pass" };

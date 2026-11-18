@@ -199,7 +199,8 @@ export class Engine implements TurnServices {
     } else if (/^check:/i.test(cond)) {
       const sandbox = rc.doc.nodes.find((n) => n.data.kind === "env" && n.data.env_kind === "sandbox");
       if (!sandbox) throw new Error(`gate ${g.name}: a check needs a sandbox env`);
-      const r = await (this.hub.get(sandbox.id) as unknown as { sh(c: string): Promise<string> }).sh(cond.slice(6).trim());
+      // run in the machine of the agent whose output is checked (its own, when the sandbox is per agent)
+      const r = await (this.hub.get(sandbox.id) as unknown as { sh(c: string, t?: number, agent?: string): Promise<string> }).sh(cond.slice(6).trim(), 120_000, from);
       passed = r.startsWith("exit 0");
       reason = r.split("\n").slice(-3).join(" ").slice(0, 200);
     } else if (cond) {

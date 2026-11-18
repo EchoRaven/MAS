@@ -7,6 +7,7 @@
 //   added     one internal network for the whole project (services reach each
 //             other by name, this server reaches the entry service by its
 //             address, nothing reaches out), no-new-privileges, a memory limit
+import { SECCOMP_PROFILE } from "../runtime/isolation";
 import path from "node:path";
 
 export interface ComposeCheck {
@@ -76,7 +77,7 @@ export function sanitizeCompose(raw: unknown, opts: { memory?: string; egress?: 
       if (Array.isArray(env)) s.environment = [...env.filter((e) => !/^(https?_proxy|no_proxy)=/i.test(String(e))), ...Object.entries(proxy).map(([k, v]) => `${k}=${v}`)];
       else s.environment = { ...((env as Record<string, unknown>) ?? {}), ...proxy };
     }
-    s.security_opt = [...((Array.isArray(s0?.security_opt) ? s0.security_opt : []) as string[]).filter((o) => !/unconfined|disable/i.test(String(o))), "no-new-privileges:true"];
+    s.security_opt = [...((Array.isArray(s0?.security_opt) ? s0.security_opt : []) as string[]).filter((o) => !/unconfined|disable|^seccomp[:=]/i.test(String(o))), "no-new-privileges:true", `seccomp:${SECCOMP_PROFILE}`];
     s.mem_limit = (s0?.mem_limit as string | undefined) ?? opts.memory ?? "512m";
     s.pids_limit = 256;
     services[name] = s;

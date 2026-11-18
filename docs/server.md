@@ -29,6 +29,20 @@ functions, and Docker sandboxes. Treat the token like a password.
 
 What agents reach is limited:
 - **Web pages:** the `fetch` tool, and knowledge sources that are web pages, only reach public addresses. Each address, including every redirect, is checked, and the connection is made to the address that was checked, so a name cannot be re-pointed at this machine between the check and the request.
+- **Isolation.** Everything that runs code an agent or a model wrote (sandbox
+  envs, the code grader, hosted services and compose projects) runs in a
+  container with no capabilities (`--cap-drop ALL`), no privilege gain, a
+  seccomp profile (`server/runtime/isolation/seccomp.json`: mounts,
+  namespaces, kernel modules, ptrace, BPF, keyrings, reboot and clock
+  changes are refused; the host's Docker default allows every call), and
+  limits on memory, CPUs and processes. Sandboxes and the grader also run as
+  the server's user, not root, with a read-only root and a private `/tmp`.
+  Network: none, or the declared hosts only through the egress proxy, which
+  never reaches private addresses (this server, the internal network) and
+  logs what it refuses. Sandboxes reach machines through a backend interface
+  (`server/runtime/isolation`): Docker now; a Firecracker microVM backend (a
+  kernel per box) fits the same interface where the server may open
+  `/dev/kvm`.
 - **Files:** workspace and sandbox file tools stay inside their folder, symbolic links included, and knowledge sources stay inside the knowledge folder.
 - **Addresses in a system:** URLs written into a system (HTTP tools, MCP servers, remote agents) are used as given. The validator points out any that are on this machine or a private network.
 
@@ -201,7 +215,7 @@ instead.
 | Board | Tasks with owner and state: `task_list`, `task_create`, `task_update` |
 | Custom plugin backends | `mcp` (tools from the server; `examples/mcp/notes-server.mjs` is a minimal stdio server to start from), `http` (`POST {url}/tools/{name}`, hooks at `{url}/hooks/{hook}`), `code` (a command, JSON on stdin) |
 | Room env | A shared transcript (kept across runs when `history: persistent`) and speaking policies |
-| Sandbox env | A Docker container per run (or kept, for other lifecycles) with `/work` mounted. No network unless `egress` is set. Tools: `bash`, `edit_file`, `run_tests` (pytest when installed, else a plain-assert runner; see [contracts](contracts.md#sandbox-tools)), `list_work` |
+| Sandbox env | A box per run (or kept, for other lifecycles) with `/work` mounted, from an isolation backend (Docker today; see Isolation above). No network unless `egress` lists hosts, and then only those, through the egress proxy. `share: per_agent` gives each connected agent its own box and `/work`; shared (the default) is one for all. Tools: `bash`, `edit_file`, `run_tests` (pytest when installed, else a plain-assert runner; see [contracts](contracts.md#sandbox-tools)), `list_work` |
 | Database env | SQLite (`image: sqlite:<path>`, or its own file). Named templates become tools; `text_to_sql` adds `ask_database`. Read-only envs only run SELECTs |
 | Imported env (mas-env/1) | Health check, start (with local exec), reset per run, then its MCP tools (HTTP or stdio, with a bearer token from secrets) |
 

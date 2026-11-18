@@ -1,0 +1,23 @@
+{
+  "comment": "MAS Studio sandbox profile: everything a program normally does is allowed; the calls a sandboxed program has no business making are refused with EPERM (mounts, namespaces, kernel modules and keyrings, tracing other processes, BPF, rebooting, setting the clock). A second layer under --cap-drop ALL, which already makes most of them fail: this host's Docker default profile allows every call.",
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "syscalls": [
+    {
+      "names": [
+        "mount", "umount", "umount2", "pivot_root", "chroot",
+        "move_mount", "open_tree", "fsopen", "fsconfig", "fsmount", "fspick", "mount_setattr",
+        "unshare", "setns",
+        "init_module", "finit_module", "delete_module", "kexec_load", "kexec_file_load",
+        "ptrace", "process_vm_readv", "process_vm_writev", "kcmp",
+        "bpf", "perf_event_open", "userfaultfd",
+        "add_key", "request_key", "keyctl",
+        "open_by_handle_at", "name_to_handle_at",
+        "reboot", "swapon", "swapoff", "acct", "quotactl", "lookup_dcookie",
+        "settimeofday", "clock_settime", "clock_adjtime", "adjtimex", "stime",
+        "syslog", "iopl", "ioperm", "vhangup", "nfsservctl"
+      ],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1
+    }
+  ]
+}

@@ -11,6 +11,7 @@
 // no route out of its own). Unprivileged user, no capabilities,
 // memory / CPU / process limits. Secrets go in as environment variables when
 // the container starts and are never written to disk.
+import { SECCOMP_PROFILE } from "../runtime/isolation";
 import { execFile } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -421,15 +422,23 @@ export class HostedServices {
    */
   private async proxyEnv(s: HostedService): Promise<Record<string, string>> {
     const hosts = s.manifest.egress ?? [];
-    if (!hosts.length) return {};
+    return hosts.length ? (await this.egressGrant(s.id, hosts)).env : {};
+  }
+
+  /**
+   * Egress for anything on the internal network (a hosted service, a sandbox box): proxy settings with
+   * credentials of its own, so it reaches the declared hosts and nothing else. A new grant for the same
+   * grantee replaces the old one.
+   */
+  readonly egressGrant = async (grantee: string, hosts: string[]): Promise<{ network: string; env: Record<string, string> }> => {
     await this.ensureNetwork(INTERNAL_NET, true);
     const gw = (await exec(this.docker, ["network", "inspect", INTERNAL_NET, "-f", "{{range .IPAM.Config}}{{.Gateway}}{{end}}"], { timeout: 20_000 })).out.trim();
     if (!gw) throw new Error("The internal network has no gateway address for the egress proxy");
     const at = await this.egress.listen(gw);
-    const { user, token } = this.egress.grant(s.id, hosts);
+    const { user, token } = this.egress.grant(grantee, hosts);
     const url = `http://${user}:${token}@${at.host}:${at.port}`;
-    return { HTTP_PROXY: url, HTTPS_PROXY: url, http_proxy: url, https_proxy: url, NO_PROXY: "", no_proxy: "" };
-  }
+    return { network: INTERNAL_NET, env: { HTTP_PROXY: url, HTTPS_PROXY: url, http_proxy: url, https_proxy: url, NO_PROXY: "", no_proxy: "" } };
+  };
 
   /** docker run flags shared by both ways of running: limits, no privileges, the network, the environment by name. */
   private runFlags(s: HostedService, env: Record<string, string>, network: string | null): string[] {
@@ -440,6 +449,7 @@ export class HostedServices {
       "--pids-limit", "256",
       "--cap-drop", "ALL",
       "--security-opt", "no-new-privileges",
+      "--security-opt", `seccomp=${SECCOMP_PROFILE}`,
       // values are passed through the client's environment, so secrets never appear on a command line
       ...Object.keys(env).flatMap((k) => ["-e", k]),
       "--label", `mas.service=${s.id}`,
