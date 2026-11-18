@@ -1193,6 +1193,10 @@ describe("runtime", () => {
     expect(usages(events, "s").length).toBe(5);
     expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("42 of 5");
     expect(validate(b.doc).filter((i) => i.severity !== "info").map((i) => i.message)).toEqual([]);
+    // one sample from the variable is still a list of one, so the vote reads the same shape
+    resetMock();
+    const one = await run(b.doc, "what is 6 x 7?", { mock: false, vars: { n: 1 } });
+    expect((one.events.find((e) => e.type === "output") as { text: string }).text).toMatch(/ of 1$/);
   });
 
   it("reads replicas as a plain call at 1, and refuses sizes out of range", () => {

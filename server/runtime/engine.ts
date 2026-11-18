@@ -19,7 +19,7 @@ import { textOf, userText } from "./models";
 import { Hub } from "./resources/hub";
 import type { RtTool } from "./resources/types";
 import { asText, clip, coerce, exprValue, syncMsg, type Msg } from "./values";
-import { replicaCount } from "@/model/replicas";
+import { parseReplicas, replicaCount } from "@/model/replicas";
 export { replicaCount };
 
 type Item = { value: unknown; via?: SysEdge };
@@ -341,14 +341,17 @@ export class Engine implements TurnServices {
         const m = n.data as ModelNodeData;
         const prompt = await renderTemplate(m.prompt || "{{input}}", { input: item.value, vars: rc.vars });
         const outSpec = m.interface.outputs[0];
-        const schema = outSpec?.type === "json" ? schemaById(rc.doc, outSpec.schema) : null;
-        const system = [m.system_prompt, outSpec?.type === "json" ? `Reply with only a JSON value${schema ? ` matching this JSON Schema:\n${JSON.stringify(schema)}` : "."}` : ""].filter(Boolean).join("\n\n");
+        // with replicas the output port carries the list of replies: it says nothing about what each reply looks like
+        const ensemble = parseReplicas(m.replicas).kind !== "one";
+        const asJson = outSpec?.type === "json" && !ensemble;
+        const schema = asJson ? schemaById(rc.doc, outSpec.schema) : null;
+        const system = [m.system_prompt, asJson ? `Reply with only a JSON value${schema ? ` matching this JSON Schema:\n${JSON.stringify(schema)}` : "."}` : ""].filter(Boolean).join("\n\n");
         const call = async () => {
           const { res, usage } = await rc.models.chat(m.model, { system: system || undefined, messages: [userText(prompt)], temperature: m.temperature, max_tokens: m.max_tokens, signal: rc.signal });
           rc.usage(n.id, usage);
           return textOf(res.content);
         };
-        const k = replicaCount(m.replicas, rc.vars);
+        const k = ensemble ? (replicaCount(m.replicas, rc.vars) ?? 1) : null;
         if (k === null) {
           reply = await call();
           if (!direct) await this.emitOutputs(n.id, { [m.interface.outputs[0]?.id ?? "out"]: reply });
