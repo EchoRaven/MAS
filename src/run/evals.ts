@@ -147,7 +147,8 @@ export function finalAnswer(raw: string): string {
 }
 
 /** Every number in a text, in order: 12, -3.5, 1,234, 1/3, 40%. */
-export function numbersIn(s: string): number[] {
+export function numbersIn(raw: string): number[] {
+  const s = raw.replace(/([-\u2212])\s*[$€£¥]\s*/g, "$1").replace(/[$€£¥]\s*-/g, "-");
   const out: number[] = [];
   for (const m of s.matchAll(/-?\d[\d,]*(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?%?/g)) {
     const v = parseNumber(m[0]);
@@ -238,7 +239,8 @@ export const normalize = (s: string) =>
 
 /** A number in a text: 12, -3.5, 1,234, 1/3, 40%. */
 export function parseNumber(s: string): number | null {
-  const t = s.replace(/,(?=\d{3})/g, "");
+  // a currency sign between the sign and the digits ("-$70,145,984", "$-5") still leaves a negative number
+  const t = s.replace(/([-\u2212])\s*[$€£¥]\s*/g, "$1").replace(/[$€£¥]\s*-/g, "-").replace(/,(?=\d{3})/g, "");
   const nums = [...t.matchAll(/-?\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?%?/g)].map((m) => m[0]);
   if (!nums.length) return null;
   const last = nums[nums.length - 1].replace(/\s/g, "");

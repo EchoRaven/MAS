@@ -24,6 +24,10 @@ describe("grading", () => {
     expect(gradeByRule("number", "Answer: 0.33", "1/3").pass).toBe(false);
     expect(gradeByRule("number", "Answer: 1/3", "0.3333333333333").pass).toBe(true);
     expect(gradeByRule("number", "Answer: 2 m/s", "1.5").why).toBe("2 ≠ 1.5");
+    // a currency sign between the minus and the digits (GSM-Hard's negative balances)
+    expect(gradeByRule("number", "Final: -$70,145,984", "-70145984").pass).toBe(true);
+    expect(gradeByRule("number", "Final: $-5.50", "-5.5").pass).toBe(true);
+    expect(gradeByRule("number", "Final: $70", "-70").pass).toBe(false);
     // a percentage answers an expected value written as the percent (GSM8K "What percent…? #### 40") or as a fraction
     // AutoGen's stop word after the answer is not the answer
     expect(gradeByRule("answer", "The capital is checked.\nParis\n\nTERMINATE", "Paris").pass).toBe(true);
