@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, failureReasons, finalAnswer, gradeByRule, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -166,5 +166,23 @@ describe("question sets", () => {
     expect(caseSetId(a)).toBe(caseSetId(b));
     expect(caseSetId(a)).not.toBe(caseSetId([a[0], { input: "2+2", expected: "5" }]));
     expect(caseSetId(a)).toMatch(/_2$/);
+  });
+});
+
+describe("paired comparison", () => {
+  it("gives the exact McNemar p-value", () => {
+    expect(mcnemarP(0, 0)).toBe(1);
+    expect(mcnemarP(4, 0)).toBeCloseTo(0.125, 10); // 2 × (1/2)^4
+    expect(mcnemarP(1, 10)).toBeCloseTo((2 * (1 + 11)) / 2048, 10); // d = 11: P(X ≤ 1) = 12 / 2^11
+    expect(mcnemarP(3, 3)).toBe(1);
+    expect(mcnemarP(200, 180)).toBeGreaterThan(0.3); // large counts stay finite
+  });
+
+  it("counts fixed and lost questions by their text, with repeats by majority", () => {
+    const c = (input: string, pass: boolean, repeat = 0, i = 0) => ({ case: i, repeat, input, expected: "", status: "done" as const, pass });
+    const ref = { cases: [c("q1", false, 0, 0), c("q2", true, 0, 1), c("q3", true, 0, 2), c("q4", false, 0, 3), c("q5", true, 0, 4)] };
+    // q1: 2 of 3 right → fixed; q2: 1 of 3 → lost; q3 right; q4 wrong; q5 only in ref (not shared)
+    const sys = { cases: [c("q2", true, 0, 1), c("q1", true, 0, 0), c("q3", true, 0, 2), c("q4", false, 0, 3), c("q1", true, 1, 0), c("q2", false, 1, 1), c("q1", false, 2, 0), c("q2", false, 2, 1)] };
+    expect(pairedDiff(sys, ref)).toEqual({ fixed: [0], lost: [1], both: 1, neither: 1, shared: 4, p: 1 });
   });
 });

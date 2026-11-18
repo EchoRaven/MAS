@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, repeatStats } from "@/run/evals";
+import { type EvalRecord, pairedDiff, repeatStats } from "@/run/evals";
 import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
 
@@ -19,6 +19,8 @@ const modelsLabel = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock" | "va
     .join(" · ");
 
 const incomplete = (e: EvalSummary) => e.status !== "finished" || e.graded < e.total;
+/** an evaluation in which no model ever answered (no key, a dead endpoint): a broken run, not a score of 0 */
+const noAnswers = (e: EvalSummary) => !e.mock && e.usd === 0 && e.passed === 0;
 
 export function ComparePage() {
   const connected = useServer((s) => s.status === "connected");
@@ -29,6 +31,9 @@ export function ComparePage() {
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState("");
+  // the evaluation the others are compared with question by question; null = a baseline, else the least accurate
+  const [refPick, setRefPick] = useState<string | null>(null);
+  const [onlyDiffer, setOnlyDiffer] = useState(false);
   const flash = (msg: string) => {
     setCopied(msg);
     window.setTimeout(() => setCopied(""), 1800);
@@ -55,7 +60,7 @@ export function ComparePage() {
     for (const e of [...members].sort((a, b) => b.started_at.localeCompare(a.started_at))) {
       const k = `${e.system_id}|${modelsLabel(e)}|${e.grader}`;
       // an evaluation that did not run every case (stopped, cut off) would rank on a part of the questions: off by default too
-      if (seen.has(k) || incomplete(e)) out.add(e.id);
+      if (seen.has(k) || incomplete(e) || noAnswers(e)) out.add(e.id);
       seen.add(k);
     }
     return out;
@@ -95,6 +100,8 @@ export function ComparePage() {
   const exportRows = rows.map(({ e, rec }) => ({ label: e.system_name, setup: modelsLabel(e), rec }));
   // the questions in set order, with each evaluation's pass count on it
   const questions = rows[0] ? [...new Map(rows[0].rec.cases.map((c, i) => [c.case ?? i, c.input])).entries()] : [];
+  const ref = rows.find((r) => r.e.id === refPick) ?? rows.find((r) => /baseline/i.test(r.e.system_id)) ?? rows[rows.length - 1];
+  const vsRef = new Map(rows.filter((r) => r !== ref && ref).map((r) => [r.e.id, pairedDiff(r.rec, ref!.rec)]));
   const cell = (rec: EvalRecord, input: string) => {
     const cs = rec.cases.filter((c) => c.input === input && c.pass !== undefined);
     return { passed: cs.filter((c) => c.pass).length, graded: cs.length };
@@ -144,6 +151,7 @@ export function ComparePage() {
               <th>Models · variables</th>
               <th className="text-right">Accuracy</th>
               <th className="hidden text-right sm:table-cell">Per repeat</th>
+              <th className="hidden text-right lg:table-cell" title="Questions this system got right that the reference got wrong (+), and the other way (−); p: exact McNemar test on those">vs reference</th>
               <th className="text-right">Cost</th>
               <th className="hidden text-right sm:table-cell">Per correct answer</th>
               <th className="hidden text-right md:table-cell">Run</th>
@@ -174,23 +182,49 @@ export function ComparePage() {
                   <td className="hidden py-2 text-right text-xs tabular-nums text-muted-foreground sm:table-cell">
                     {r && r.st.per.length > 1 ? `${r.st.per.map((p) => Math.round(p * 100)).join(" · ")}${r.st.sd !== null ? ` (sd ${Math.round(r.st.sd * 1000) / 10})` : ""}` : "one run"}
                   </td>
+                  <td className="hidden py-2 text-right text-xs tabular-nums lg:table-cell">
+                    {!on || !ref ? null : ref.e.id === e.id ? (
+                      <span className="text-muted-foreground">reference</span>
+                    ) : (
+                      (() => {
+                        const d = vsRef.get(e.id);
+                        if (!d) return "…";
+                        return (
+                          <button
+                            type="button"
+                            className="hover:underline"
+                            title={`Fixed: ${d.fixed.map((k) => `#${k + 1}`).join(" ") || "none"}\nLost: ${d.lost.map((k) => `#${k + 1}`).join(" ") || "none"}\nOn ${d.shared} shared questions. Click to make this the reference.`}
+                            onClick={() => setRefPick(e.id)}
+                          >
+                            <span className="text-emerald-700 dark:text-emerald-300">+{d.fixed.length}</span> <span className="text-destructive">−{d.lost.length}</span>
+                            <span className={cn("ml-1", d.p < 0.05 ? "font-medium text-foreground" : "text-muted-foreground")}>p {d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)}</span>
+                          </button>
+                        );
+                      })()
+                    )}
+                  </td>
                   <td className="py-2 text-right tabular-nums">{usd(e.usd)}</td>
                   <td className="hidden py-2 text-right tabular-nums text-muted-foreground sm:table-cell">{e.passed ? usd(e.usd / e.passed) : "–"}</td>
                   <td className="hidden py-2 text-right text-xs text-muted-foreground md:table-cell" title={e.started_at}>
                     {timeAgo(e.started_at)}
-                    {incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : superseded.has(e.id) ? " · older" : ""}
+                    {incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : noAnswers(e) ? " · no model answered" : superseded.has(e.id) ? " · older" : ""}
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        <p className="mt-2 text-[11px] text-muted-foreground">Sorted by accuracy. Older runs of the same system on the same models, and evaluations that did not finish, start unticked. With few questions or one repeat, differences of a point or two are within run-to-run noise: compare the spread.</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">Sorted by accuracy. Older runs of the same system on the same models, evaluations that did not finish, and ones where no model answered start unticked. With few questions or one repeat, differences of a point or two are within run-to-run noise: compare the spread. “vs reference” counts the questions each system fixed and lost against the reference (click one to make it the reference); p below 0.05 means a difference that size is unlikely by chance.</p>
       </section>
 
       {rows.length > 0 && (
         <section className="glass-panel overflow-x-auto rounded-xl p-4" aria-label="Question by question">
-          <h2 className="mb-2 text-sm font-semibold">Question by question</h2>
+          <div className="mb-2 flex items-center gap-3">
+            <h2 className="text-sm font-semibold">Question by question</h2>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <input type="checkbox" checked={onlyDiffer} onChange={(ev) => setOnlyDiffer(ev.target.checked)} /> Only questions where they differ
+            </label>
+          </div>
           <table className="text-[12px]">
             <thead>
               <tr>
@@ -209,6 +243,8 @@ export function ComparePage() {
               {questions.map(([k, input]) => {
                 const cells = rows.map(({ rec }) => cell(rec, input));
                 const allFail = cells.every((c) => c.graded && !c.passed);
+                const fractions = cells.filter((c) => c.graded).map((c) => c.passed / c.graded);
+                if (onlyDiffer && fractions.every((f) => f === fractions[0])) return null;
                 return (
                   <tr key={k} className={cn(allFail && "bg-destructive/5")}>
                     <td className="pr-2 text-right tabular-nums text-muted-foreground">{k + 1}</td>

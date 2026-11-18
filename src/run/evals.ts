@@ -123,6 +123,58 @@ export function repeatStats(rec: Pick<EvalRecord, "cases" | "repeats">) {
   return { per, mean, sd, byCase };
 }
 
+/** Two-sided exact McNemar p-value: of d discordant questions, `small` went one way (binomial, p = 1/2). */
+export function mcnemarP(fixed: number, lost: number): number {
+  const d = fixed + lost;
+  if (!d) return 1;
+  const k = Math.min(fixed, lost);
+  // P(X <= k) for X ~ Bin(d, 1/2), in logs so a few hundred questions do not overflow
+  const logC = (n: number, r: number) => {
+    let x = 0;
+    for (let i = 1; i <= r; i++) x += Math.log(n - r + i) - Math.log(i);
+    return x;
+  };
+  let tail = 0;
+  for (let i = 0; i <= k; i++) tail += Math.exp(logC(d, i) - d * Math.LN2);
+  return Math.min(1, 2 * tail);
+}
+
+/**
+ * A system against a reference on the same questions, question by question: the ones it fixed (the reference
+ * got wrong), the ones it lost, and whether that difference is more than chance (exact McNemar). With repeats, a
+ * question counts as right for a system when more than half its runs got it. Questions are matched by their text.
+ */
+export function pairedDiff(sys: Pick<EvalRecord, "cases">, ref: Pick<EvalRecord, "cases">) {
+  const right = (rec: Pick<EvalRecord, "cases">) => {
+    const by = new Map<string, { passed: number; graded: number; case: number }>();
+    rec.cases.forEach((c, i) => {
+      if (c.pass === undefined) return;
+      const e = by.get(c.input) ?? { passed: 0, graded: 0, case: c.case ?? i };
+      e.graded++;
+      if (c.pass) e.passed++;
+      by.set(c.input, e);
+    });
+    return new Map([...by].map(([k, e]) => [k, { ok: e.passed * 2 > e.graded, case: e.case }]));
+  };
+  const a = right(sys);
+  const b = right(ref);
+  const fixed: number[] = [];
+  const lost: number[] = [];
+  let both = 0;
+  let neither = 0;
+  for (const [q, x] of a) {
+    const y = b.get(q);
+    if (!y) continue;
+    if (x.ok && !y.ok) fixed.push(x.case);
+    else if (!x.ok && y.ok) lost.push(x.case);
+    else if (x.ok) both++;
+    else neither++;
+  }
+  fixed.sort((m, n) => m - n);
+  lost.sort((m, n) => m - n);
+  return { fixed, lost, both, neither, shared: fixed.length + lost.length + both + neither, p: mcnemarP(fixed.length, lost.length) };
+}
+
 const ANSWER_LINE = /(?:^|\n)\s*(?:\*\*)?(?:final answer|answer|final)(?:\*\*)?\s*[:：]\s*(?:\*\*)?([^\n]+)/gi;
 
 /**
