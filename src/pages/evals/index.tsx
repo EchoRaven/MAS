@@ -12,7 +12,8 @@ import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, type Grader, parseCases, repeatStats, SAMPLE_SETS } from "@/run/evals";
+import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
+import { type EvalRecord, type Grader, parseCases, repeatStats } from "@/run/evals";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars } from "@/run/vars";
 import { Input } from "@/components/ui/input";
@@ -48,6 +49,13 @@ function Evals({ systemId }: { systemId: string }) {
   const navigate = useNavigate();
   const connected = useServer((s) => s.status === "connected");
   const [text, setText] = useState("");
+  // a dataset to run on ("" = the questions written or loaded below), and the sample to draw from it
+  const [datasetId, setDatasetId] = useState("");
+  const [stored, setStored] = useState<DatasetSummary[]>([]);
+  const [sampleN, setSampleN] = useState("");
+  const [seed, setSeed] = useState("1");
+  const [saveName, setSaveName] = useState<string | null>(null);
+  const [notice, setNotice] = useState("");
   const [grader, setGrader] = useState<Grader>("number");
   const [concurrency, setConcurrency] = useState("2");
   const [repeats, setRepeats] = useState("1");
@@ -70,6 +78,16 @@ function Evals({ systemId }: { systemId: string }) {
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
   const [error, setError] = useState("");
   const parsed = useMemo(() => parseCases(text), [text]);
+  // the sets shipped with the app work without the server; stored ones come from it
+  const builtins = useMemo(() => builtinDatasets().map(summarize), []);
+  const loadDatasets = useCallback(() => void Api.datasets().then((r) => setStored(r.datasets.filter((d) => !d.builtin))).catch(() => setStored([])), []);
+  useEffect(() => {
+    if (connected) loadDatasets();
+  }, [connected, loadDatasets]);
+  const datasets = [...builtins, ...stored];
+  const chosen = datasets.find((d) => d.id === datasetId);
+  const sampleSize = Number(sampleN) > 0 ? Number(sampleN) : undefined;
+  const caseCount = chosen ? Math.min(sampleSize ?? chosen.total, chosen.total) : parsed.cases.length;
   const rpm = useServer((s) => s.rpm);
   // model calls one run makes, from a simulated run of the system (an estimate: real runs can loop more or less)
   const callsPerRun = useMemo(() => {
@@ -132,7 +150,8 @@ function Evals({ systemId }: { systemId: string }) {
   const start = async (force = false) => {
     setError("");
     try {
-      const rec = await Api.startEval({ doc, cases: parsed.cases, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force });
+      const source = chosen ? { dataset_id: chosen.id, ...(sampleSize && sampleSize < chosen.total ? { sample: { n: sampleSize, seed: Number(seed) || 1 } } : {}) } : { cases: parsed.cases };
+      const rec = await Api.startEval({ doc, ...source, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -164,19 +183,49 @@ function Evals({ systemId }: { systemId: string }) {
         >
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">New evaluation</h2>
-            <Select
-              value=""
-              placeholder="Load a sample set…"
-              onValueChange={(name) => {
-                const set = SAMPLE_SETS.find((x) => x.name === name);
-                if (set) (setText(set.text), setGrader(set.grader));
-              }}
-              items={SAMPLE_SETS.map((x) => ({ value: x.name, label: x.name }))}
-              ariaLabel="Load a sample set"
-              size="sm"
-              className="w-40"
-            />
           </div>
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+            Dataset
+            <Select
+              value={datasetId || "own"}
+              onValueChange={(v) => {
+                const id = v === "own" ? "" : v;
+                setDatasetId(id);
+                const d = datasets.find((x) => x.id === id);
+                if (d) setGrader(d.grader);
+              }}
+              items={[{ value: "own", label: "Write or load questions" }, ...datasets.map((d) => ({ value: d.id, label: `${d.name} · ${d.total}` }))]}
+              ariaLabel="Dataset"
+            />
+          </label>
+          {chosen && (
+            <div className="space-y-2 rounded-lg bg-secondary/50 p-2.5 text-[12px]">
+              <p className="text-muted-foreground">{chosen.description || "No description."}</p>
+              {(chosen.source.origin || chosen.source.license) && (
+                <p className="text-[11px] text-muted-foreground">
+                  {chosen.source.origin && <>From {chosen.source.origin}</>}
+                  {chosen.source.license && <> · {chosen.source.license}</>}
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                {chosen.total} questions · version {chosen.version}
+                {chosen.builtin ? " · built in" : ""}
+              </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                Sample
+                <Input value={sampleN} onChange={(e) => setSampleN(e.target.value.replace(/\D/g, ""))} placeholder={`all ${chosen.total}`} aria-label="Sample size" className="h-7 w-20 text-xs" />
+                seed
+                <Input value={seed} onChange={(e) => setSeed(e.target.value.replace(/\D/g, ""))} aria-label="Sample seed" className="h-7 w-16 text-xs" />
+              </div>
+              {!chosen.builtin && (
+                <button type="button" className="text-[11px] text-destructive hover:underline" onClick={() => void Api.deleteDataset(chosen.id).then(() => (setDatasetId(""), loadDatasets()))}>
+                  Delete this dataset
+                </button>
+              )}
+            </div>
+          )}
+          {!chosen && (
+          <>
           <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground" title="A CSV with question and answer columns, JSON lines, or one 'question | answer' per line">
             <Upload className="h-3.5 w-3.5" /> Load cases from a file…
             <input
@@ -199,17 +248,51 @@ function Evals({ systemId }: { systemId: string }) {
             placeholder={'One case per line: question | expected answer\nor JSON lines: {"input": "…", "expected": "…"}'}
             className="font-mono text-[12px]"
           />
+          {parsed.cases.length > 0 &&
+            (saveName === null ? (
+              <button type="button" className="text-[11px] text-primary hover:underline" onClick={() => setSaveName("")}>
+                Save these questions as a dataset…
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <Input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="Dataset name" aria-label="Dataset name" className="h-7 text-xs" autoFocus />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-7"
+                  disabled={!saveName.trim()}
+                  onClick={() =>
+                    void Api.createDataset({ name: saveName.trim(), text, grader })
+                      .then((d) => {
+                        setSaveName(null);
+                        setNotice(`Saved “${d.name}” (${d.total} questions)`);
+                        loadDatasets();
+                        setDatasetId(d.id);
+                      })
+                      .catch((e) => setError(e.message))
+                  }
+                >
+                  Save
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-7" onClick={() => setSaveName(null)}>
+                  Cancel
+                </Button>
+              </div>
+            ))}
+          </>
+          )}
+          {notice && <p className="text-[11px] text-success">{notice}</p>}
           <p className="text-xs text-muted-foreground">
-            {parsed.cases.length} case{parsed.cases.length === 1 ? "" : "s"}
-            {Number(repeats) > 1 ? ` × ${repeats} repeats = ${parsed.cases.length * Number(repeats)} runs` : ""}
-            {callsPerRun > 0 && parsed.cases.length > 0 && !dry && (
+            {caseCount} case{caseCount === 1 ? "" : "s"}
+            {Number(repeats) > 1 ? ` × ${repeats} repeats = ${caseCount * Number(repeats)} runs` : ""}
+            {callsPerRun > 0 && caseCount > 0 && !dry && (
               <span title="From a simulated run of the system; real runs can make more or fewer calls. Requests are capped per minute so the provider never sees a burst">
                 {" "}
-                · ≈{Math.min(parsed.cases.length * Number(repeats), MAX_RUNS) * callsPerRun} model calls, at least {Math.max(1, Math.ceil((Math.min(parsed.cases.length * Number(repeats), MAX_RUNS) * callsPerRun) / rpm))} min at {rpm}/min
+                · ≈{Math.min(caseCount * Number(repeats), MAX_RUNS) * callsPerRun} model calls, at least {Math.max(1, Math.ceil((Math.min(caseCount * Number(repeats), MAX_RUNS) * callsPerRun) / rpm))} min at {rpm}/min
               </span>
             )}
-            {parsed.cases.length * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
-            {parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
+            {caseCount * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
+            {!chosen && parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
           <div className="grid grid-cols-[1.5fr_1fr_1fr] gap-2">
             <label className="flex flex-col gap-1 text-xs text-muted-foreground">
@@ -262,7 +345,7 @@ function Evals({ systemId }: { systemId: string }) {
               <input type="checkbox" checked={dry} onChange={(e) => setDry(e.target.checked)} />
               <FlaskConical className="h-3.5 w-3.5" /> Dry run
             </label>
-            <Button type="submit" size="sm" disabled={!parsed.cases.length}>
+            <Button type="submit" size="sm" disabled={!caseCount}>
               <Play className="mr-1.5 h-3.5 w-3.5" /> Evaluate
             </Button>
           </div>

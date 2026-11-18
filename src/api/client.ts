@@ -1,6 +1,7 @@
 // The browser's side of the server API (served under /api on the same
 // origin; the dev and preview servers proxy it). Every call carries the
 // server token the person entered in Settings.
+import type { Dataset, DatasetSummary } from "@/run/datasets";
 import type { EvalCase, EvalRecord, Grader } from "@/run/evals";
 import type { RunEvent, RunRecord } from "@/run/events";
 import type { ModelSpec, SystemDoc } from "@/model/types";
@@ -85,7 +86,11 @@ export const Api = {
   answer: (id: string, request: string, answer: { approved?: boolean; text?: string }) => api("POST", `/runs/${id}/answer`, { request, ...answer }),
   stop: (id: string) => api("POST", `/runs/${id}/stop`),
   deleteRun: (id: string) => api("DELETE", `/runs/${id}`),
-  startEval: (body: { doc: SystemDoc; cases: EvalCase[]; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean }) => api<EvalRecord>("POST", "/evals", body),
+  datasets: () => api<{ datasets: DatasetSummary[] }>("GET", "/datasets"),
+  dataset: (id: string) => api<Dataset>("GET", `/datasets/${encodeURIComponent(id)}`),
+  createDataset: (body: { name: string; description?: string; text: string; format?: string; grader?: Grader; source?: Dataset["source"]; sample?: { n?: number; seed?: number } }) => api<DatasetSummary & { skipped: number }>("POST", "/datasets", body),
+  deleteDataset: (id: string) => api("DELETE", `/datasets/${encodeURIComponent(id)}`),
+  startEval: (body: { doc: SystemDoc; cases?: EvalCase[]; dataset_id?: string; sample?: { n?: number; seed?: number }; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean }) => api<EvalRecord>("POST", "/evals", body),
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
