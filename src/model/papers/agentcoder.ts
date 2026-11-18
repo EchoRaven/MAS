@@ -40,7 +40,7 @@ function build(): SystemDoc {
       role: "Runs the tests",
       model: "haiku",
       tools: ["run_tests"],
-      harness: { ...native(), loop: "react", max_steps: 3, instructions: "Run the tests with run_tests (command: python -m pytest -q). If every test passes reply ALL TESTS PASSED; otherwise reply with the failing tests and their error messages." },
+      harness: { ...native(), loop: "react", max_steps: 3, instructions: "Run the tests with run_tests (command: python -m pytest -q). If every test passes reply ALL TESTS PASSED; otherwise reply with the failing tests and their error messages. Either way, then read /work/solution.py with edit_file and end your reply with its full contents in one ```python block: the code is the result." },
     }, "loop")
     .node("sandbox", "env", 330, 260, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }, "loop")
     .edge("loop", "programmer", "message")
