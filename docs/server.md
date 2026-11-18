@@ -110,7 +110,7 @@ The scheduler is `server/runtime/engine.ts`.
 - **Rooms.** Posting wakes the next speaker(s) by the room's policy:
   - `round_robin`: the next member in turn.
   - `mention`: whoever is `@named`.
-  - `selector`: an LLM picks the next speaker (never itself).
+  - `selector`: an LLM picks the next speaker among the agents (never itself, never a person: a person speaks when `@named`).
   - `free`: every other agent.
 
   A post carries the message type its edge declares (`binding.write.tag`), and
@@ -119,7 +119,9 @@ The scheduler is `server/runtime/engine.ts`.
   `text`, `cause_by`). Without a filter a member hears everything.
   A person who opens a room without naming anyone reaches the first agent.
   A message containing `TERMINATE`, or a `termination` expression that holds,
-  ends the conversation.
+  ends the conversation. So does a post after which nobody is next (the
+  selector named no one, nobody was `@named`). The last message is then the
+  conversation's answer.
 - **People.**
   - A call to a human asks them: for approval if they approve, otherwise for
     a reply.
@@ -194,7 +196,7 @@ instead.
 | Board | Tasks with owner and state: `task_list`, `task_create`, `task_update` |
 | Custom plugin backends | `mcp` (tools from the server; `examples/mcp/notes-server.mjs` is a minimal stdio server to start from), `http` (`POST {url}/tools/{name}`, hooks at `{url}/hooks/{hook}`), `code` (a command, JSON on stdin) |
 | Room env | A shared transcript (kept across runs when `history: persistent`) and speaking policies |
-| Sandbox env | A Docker container per run (or kept, for other lifecycles) with `/work` mounted. No network unless `egress` is set. Tools: `bash`, `edit_file`, `run_tests`, `list_work` |
+| Sandbox env | A Docker container per run (or kept, for other lifecycles) with `/work` mounted. No network unless `egress` is set. Tools: `bash`, `edit_file`, `run_tests` (pytest when installed, else a plain-assert runner; see [contracts](contracts.md#sandbox-tools)), `list_work` |
 | Database env | SQLite (`image: sqlite:<path>`, or its own file). Named templates become tools; `text_to_sql` adds `ask_database`. Read-only envs only run SELECTs |
 | Imported env (mas-env/1) | Health check, start (with local exec), reset per run, then its MCP tools (HTTP or stdio, with a bearer token from secrets) |
 

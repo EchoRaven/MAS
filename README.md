@@ -38,7 +38,9 @@ npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public 
 
 The interfaces everything plugs into are documented in
 [docs/contracts.md](docs/contracts.md); the server and what a run does, in
-[docs/server.md](docs/server.md).
+[docs/server.md](docs/server.md). The overall map is
+[docs/architecture.md](docs/architecture.md), and what the rebuilt papers have
+in common, and which interfaces they needed, is [docs/survey.md](docs/survey.md).
 
 ## Papers rebuilt on the canvas
 

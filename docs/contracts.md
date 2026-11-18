@@ -240,6 +240,35 @@ A bare source file can be imported too. The language comes from the extension:
 
 A bare file gets the default interface (`in` → `out`). It is checked like any other function.
 
+## Bringing in outside code: every entry point
+
+Everything from outside joins through one of these. Each has a contract, and
+each is checked before it joins.
+
+| You have | Bring it in as | Contract | What it must provide |
+| --- | --- | --- | --- |
+| An agent program (any language) | `agent` with a harness adapter | `mas-agent/1` | A protocol (`stdio-jsonl`, `acp`, `a2a`, `claude-code`, `codex`, LangGraph), a launch command or URL, an interface (ports) |
+| A Claude Code subagent, A2A card, `langgraph.json` | `agent` | `mas-agent/1` (converted) | The file as it is |
+| A web app, API or MCP server with state | `env` | `mas-env/1` | A health check, an MCP server or HTTP base, ideally a reset |
+| A capability shared by agents (memory, search, a CRM) | `plugin` | `mas-plugin/1` | A backend (`mcp`, `http`, `code`), tools with declared effects, optional hooks |
+| A piece of code between components | `function` | `mas-function/1` | `f(input, ctx) -> output`, in `js`, `python`, `jsonata`, `template` or `llm` |
+| A single tool | catalog tool | [Catalog tools](#catalog-tools) | An adapter (`mcp`, `http`, `cli`, `code`), an argument schema, an effect |
+| A model endpoint | catalog model | [Models](#models) | An OpenAI-compatible, Anthropic or Gemini endpoint; the key stays in an env var |
+| A benchmark | dataset | [Datasets](#datasets) | JSON lines or text in a known format, or a JavaScript adapter |
+| A whole system | system YAML | `SystemDoc` 0.2 | Every component passes its contract |
+
+The rules are the same for all of them:
+
+- **Nothing runs on trust.** Importers convert to the contract first, then the
+  conformance rules decide; an error blocks the import.
+- **Secrets are never in the file.** Documents name the environment variable
+  that holds a key.
+- **Effects are declared.** Every tool says whether it is `pure`, `read`,
+  `write` or `irreversible`, so policies and read-only access can apply to
+  code the platform did not write.
+- **Outside harnesses use the platform's tools through MCP.** Hooks,
+  approvals, policies and events apply to them as to native agents.
+
 ## Import contracts
 
 Each contract has its own importer in `src/model/`.
@@ -313,6 +342,92 @@ hooks:
 The `memory`, `knowledge`, `workspace` and `board` presets fill in these
 fields for you. Switching a plugin to `custom` keeps its current values and
 makes them all editable.
+
+## Catalog tools
+
+A tool in the system's catalog (`tools`) that agents list by id:
+
+```yaml
+id: lookup_order
+description: Find an order by its number
+adapter: http | mcp | cli | code | builtin
+effect: pure | read | write | irreversible
+input_schema: '{"type":"object","properties":{"number":{"type":"string"}},"required":["number"]}'
+url: https://…            # http: POST the arguments as JSON · mcp: the server that has this tool
+command: ./lookup         # cli: arguments as JSON on stdin, stdout is the result
+fn: <FunctionSpec>        # code: fn(args, ctx)
+needs_env: database       # optional: served by a connected env of this kind instead
+```
+
+`cli` tools run on the host only with `MAS_ALLOW_LOCAL_EXEC=1`; otherwise give
+them a sandbox env.
+
+## Sandbox tools
+
+A sandbox env (Docker, `/work` mounted, no network unless `egress` lists
+hosts) gives the agents connected to it:
+
+| Tool | Contract |
+| --- | --- |
+| `bash` | `{command}` → `exit <code>\n<output>` (cwd `/work`, 2 min) |
+| `edit_file` | `{path, content?}`: write `content`, or read when it is left out |
+| `run_tests` | `{command?}` → `exit <code>\n<last lines>`. Without a command it finds `test*.py`, `*_test.py` or `tests/*.py` and runs pytest if the image has it, else calls every `test_*` function in them (plain `assert`s); `npm test` for a `package.json`. The exit code is the tests' |
+| `list_work` | the files under `/work` |
+
+Templates that write tests use plain `test_*` functions with `assert`, so they
+run in any Python image.
+
+## Results of a run
+
+What a run returns is the value that reaches the person who started it, the
+last message of a room conversation (on `TERMINATE`, a `termination`
+expression, or when nobody is next), an agent's `finish` answer, or the value
+an output policy ends the run on. Graders read that text:
+
+- **Answers:** the last `Answer:` / `Final:` line, else the last line;
+  `\boxed{…}` wins for numbers; a trailing `TERMINATE` is not the answer.
+- **Code:** the last ```` ```python ```` block, else the whole reply. A coding
+  system's last message has to contain the code, not a report about it.
+
+## Datasets
+
+A dataset is a list of cases `{input, expected}` with a name, a source
+(`origin`, `license`, `citation`), a default grader and a version (a hash of
+the cases). `POST /api/datasets` takes the raw text and a `format`:
+
+| Format | Each record | Becomes |
+| --- | --- | --- |
+| `auto` | any of the below, or `question \| answer` lines, CSV with question/answer columns | detected per record |
+| `gsm8k` | `{question, answer}` with the final answer after `####` | the number after `####` |
+| `mcq` | a question with `choices` or `options` (a list of 2–10) and `answer` as a letter or an index | lettered options; the expected letter |
+| `qa` | `{input \| question \| prompt \| problem, expected \| answer \| target \| label}` | as given |
+| HumanEval | `{prompt, test, entry_point}` | a code case (below), graded with `code` |
+| `custom` | anything | `adapter(record) → {input, expected}`, JavaScript, 2 s per record |
+
+Evaluations take `dataset_id` and an optional `sample: {n, seed}`; the same
+seed always draws the same cases, in their original order.
+
+## Graders
+
+| Grader | Passes when |
+| --- | --- |
+| `answer` | the final answer equals the expected one (normalised); an option letter matches "B. …" |
+| `number` | the number in the final answer equals the expected one (fractions; a percentage matches either 40 or 0.4) |
+| `contains` | the whole output contains the expected text |
+| `llm` | a judge model says the output gives the expected answer |
+| `code` | the code passes the case's tests in a fresh container (below) |
+
+A code case's `expected` is JSON:
+
+```json
+{"kind": "code", "prompt": "<signature and docstring>", "test": "def check(candidate): …", "entry_point": "f"}
+```
+
+The grader takes the last Python block of the answer. If it defines
+`entry_point`, it gets the prompt's imports in front; if it is only a body, it
+goes under the prompt. Then it runs `test` and `check(entry_point)` in
+`python:3.12-slim` with no network, 512 MB, one CPU, 128 processes, a
+read-only file system, for 10 seconds.
 
 ## Models
 
