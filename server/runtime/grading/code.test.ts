@@ -40,6 +40,20 @@ describe("code grading", () => {
     expect(body).toContain(`${PROMPT}    return sum(xs)`);
   });
 
+  it("takes only real imports from the prompt, at the top level (HumanEval/115 and /129)", () => {
+    const prompt = '\ndef max_fill(grid, capacity):\n    import math\n    """\n    Each well has a bucket\n    from any cell, you can move\n    import the data as you like\n    """\n';
+    const spec = { kind: "code" as const, prompt, test: "def check(f):\n    assert f([[1]], 1) == 1\n", entry_point: "max_fill" };
+    const prog = buildProgram(spec, "```python\nimport math\n\ndef max_fill(grid, capacity):\n    return sum(math.ceil(sum(r) / capacity) for r in grid)\n```");
+    expect(prog.startsWith("import math\n")).toBe(true);
+    expect(prog).not.toMatch(/^\s+import math/);
+    expect(prog).not.toContain("from any cell");
+    expect(prog).not.toContain("import the data");
+    // the forms an import can take still count
+    const forms = ["import os", "import numpy as np, sys", "from typing import List, Tuple", "from collections import (Counter, deque)", "from math import *", "from . import util"];
+    const all = buildProgram({ ...spec, prompt: forms.map((f) => `    ${f}`).join("\n") }, "```python\ndef max_fill(g, c):\n    return 1\n```");
+    for (const f of forms) expect(all).toContain(`${f}\n`);
+  });
+
   it.skipIf(!dockerWorks)("passes a right answer and fails a wrong one, a hang and a network call, in Docker", async () => {
     const expected = caseFromRecord(record)!.expected;
     const ok = await gradeCode(expected, "```python\ndef add_all(xs):\n    return sum(xs)\n```", "docker");

@@ -38,13 +38,19 @@ export function extractCode(output: string): string {
  * prompt's imports in front; when it is only a body, it is appended to the
  * prompt. Then the tests, and the call that runs them.
  */
+const NAME = String.raw`[A-Za-z_][\w.]*`;
+const IMPORT_LINE = new RegExp(String.raw`^(?:import\s+${NAME}(?:\s+as\s+\w+)?(?:\s*,\s*${NAME}(?:\s+as\s+\w+)?)*|from\s+(?:\.+(?:${NAME})?|${NAME})\s+import\s+(?:\*|\(?\s*\w+(?:\s+as\s+\w+)?(?:\s*,\s*\w+(?:\s+as\s+\w+)?)*\s*,?\s*\)?))\s*(?:#.*)?$`);
+
 export function buildProgram(spec: CodeSpec, answer: string): string {
   const code = extractCode(answer);
   const prompt = spec.prompt ?? "";
   const definesIt = spec.entry_point ? new RegExp(`^\\s*def\\s+${spec.entry_point}\\s*\\(`, "m").test(code) : true;
+  // only real import statements, moved to the top level: one inside the prompt's function ("    import math")
+  // would be an indentation error up there, and a docstring line ("    from any cell, …") is not an import at all
   const imports = prompt
     .split("\n")
-    .filter((l) => /^\s*(import|from)\s+\S+/.test(l))
+    .map((l) => l.trim())
+    .filter((l) => IMPORT_LINE.test(l))
     .join("\n");
   const solution = definesIt ? `${imports}\n\n${code}` : `${prompt}${code.startsWith("    ") || code.startsWith("\t") ? "" : "\n"}${code}`;
   return `${solution}\n\n${spec.test}\n${spec.entry_point ? `\ncheck(${spec.entry_point})\n` : ""}`;
