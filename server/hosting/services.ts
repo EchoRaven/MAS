@@ -21,7 +21,7 @@ import { parse as parseYaml } from "yaml";
 import { checkManifest, COMPOSE_FILES, DEFAULT_MANIFEST, detectRuntime, generatedDockerfile, type Endpoint, type HostManifest } from "@/model/hosting";
 import { sanitizeCompose } from "./compose";
 import type { Secrets } from "../store/secrets";
-import { EgressProxy } from "./egress";
+import { type EgressAccess, EgressProxy } from "./egress";
 import { HttpError } from "../store/files";
 
 const MAX_ARCHIVE = 15 * 1024 * 1024;
@@ -434,12 +434,12 @@ export class HostedServices {
    * credentials of its own, so it reaches the declared hosts and nothing else. A new grant for the same
    * grantee replaces the old one.
    */
-  readonly egressGrant = async (grantee: string, hosts: string[]): Promise<{ network: string; env: Record<string, string> }> => {
+  readonly egressGrant = async (grantee: string, hosts: string[], onAccess?: (a: EgressAccess) => void): Promise<{ network: string; env: Record<string, string> }> => {
     await this.ensureNetwork(INTERNAL_NET, true);
     const gw = (await exec(this.docker, ["network", "inspect", INTERNAL_NET, "-f", "{{range .IPAM.Config}}{{.Gateway}}{{end}}"], { timeout: 20_000 })).out.trim();
     if (!gw) throw new Error("The internal network has no gateway address for the egress proxy");
     const at = await this.egress.listen(gw);
-    const { user, token } = this.egress.grant(grantee, hosts);
+    const { user, token } = this.egress.grant(grantee, hosts, onAccess);
     const url = `http://${user}:${token}@${at.host}:${at.port}`;
     return { network: INTERNAL_NET, env: { HTTP_PROXY: url, HTTPS_PROXY: url, http_proxy: url, https_proxy: url, NO_PROXY: "", no_proxy: "" } };
   };

@@ -22,6 +22,8 @@ export interface BoxSpec {
   labels?: Record<string, string>;
   /** HOME inside the box (default /tmp, which does not outlive it) */
   home?: string;
+  /** every connection through the egress proxy, allowed or refused */
+  onEgress?: (a: { at: string; target: string; allowed: boolean; why?: string }) => void;
 }
 
 export interface Box {
@@ -46,7 +48,7 @@ export interface SandboxBackend {
 }
 
 /** Egress for a box: the network it joins and the proxy settings it starts with (its own credentials). */
-export type EgressGrant = (grantee: string, hosts: string[]) => Promise<{ network: string; env: Record<string, string> }>;
+export type EgressGrant = (grantee: string, hosts: string[], onAccess?: BoxSpec["onEgress"]) => Promise<{ network: string; env: Record<string, string> }>;
 
 export function run(cmd: string, args: string[], opts: { timeout?: number; env?: Record<string, string> } = {}): Promise<ExecResult> {
   return new Promise((resolve) => {
@@ -116,7 +118,7 @@ export class DockerBackend implements SandboxBackend {
     let env: Record<string, string> = {};
     if (spec.egress.length) {
       if (!this.egress) throw new Error("This box declares egress hosts, but this server has no egress proxy (hosting is off)");
-      ({ network, env } = await this.egress(spec.name, spec.egress));
+      ({ network, env } = await this.egress(spec.name, spec.egress, spec.onEgress));
     }
     const args = ["run", "-d", "--name", spec.name, ...hardenedFlags(spec, network, Object.keys(env)), "-v", `${spec.workDir}:/work`, "-w", "/work", spec.image, "sleep", "infinity"];
     const r = await run(this.docker, args, { timeout: 600_000, env });

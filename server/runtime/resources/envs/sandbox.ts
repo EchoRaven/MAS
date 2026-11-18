@@ -104,7 +104,9 @@ export class SandboxEnv implements Resource {
       const d = this.node.data;
       const scope = d.lifecycle === "per_run" ? this.rc.runId : "keep";
       const name = `mas-${this.rc.doc.id}-${this.node.id}-${key === "shared" ? "" : `${key}-`}${scope}`.replace(/[^a-zA-Z0-9_.-]/g, "-").slice(0, 120);
-      const box = await this.backend.start({ name, image: d.image || "python:3.12-slim", workDir: seat.dir, egress: d.egress, labels: { "mas.system": this.rc.doc.id, "mas.env": this.node.id, "mas.run": this.rc.runId } });
+      const box = await this.backend.start({ name, image: d.image || "python:3.12-slim", workDir: seat.dir, egress: d.egress, labels: { "mas.system": this.rc.doc.id, "mas.env": this.node.id, "mas.run": this.rc.runId },
+        onEgress: (a) => this.rc.emit({ type: "log", node: this.id, level: a.allowed ? "info" : "warn", text: `egress: ${a.target} ${a.allowed ? "allowed" : `refused (${a.why})`}` }),
+      });
       this.rc.emit({ type: "log", node: this.id, level: "info", text: `Sandbox ${d.image || "python:3.12-slim"}${key === "shared" ? "" : ` for ${key}`}: ${box.isolation}` });
       return box;
     })();

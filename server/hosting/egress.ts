@@ -15,6 +15,15 @@ interface Grant {
   service: string;
   token: string;
   hosts: string[];
+  /** told about every connection, allowed or refused (a run's log) */
+  onAccess?: (a: EgressAccess) => void;
+}
+
+export interface EgressAccess {
+  at: string;
+  target: string;
+  allowed: boolean;
+  why?: string;
 }
 
 /** Whether a declared host list allows host:port ("api.github.com", "*.example.com", "host:8443"). */
@@ -38,10 +47,10 @@ export class EgressProxy {
   readonly refused: { service: string; target: string; why: string; at: string }[] = [];
 
   /** Credentials for a service and its hosts; replaces earlier ones for the service. */
-  grant(service: string, hosts: string[]): { user: string; token: string } {
+  grant(service: string, hosts: string[], onAccess?: (a: EgressAccess) => void): { user: string; token: string } {
     for (const [k, g] of this.grants) if (g.service === service) this.grants.delete(k);
     const token = crypto.randomBytes(18).toString("hex");
-    this.grants.set(token, { service, token, hosts });
+    this.grants.set(token, { service, token, hosts, onAccess });
     return { user: service, token };
   }
 
@@ -60,7 +69,12 @@ export class EgressProxy {
     return ips[0];
   }
 
+  private allow(g: Grant, target: string) {
+    g.onAccess?.({ at: new Date().toISOString(), target, allowed: true });
+  }
+
   private refuse(service: string, target: string, why: string) {
+    for (const g of this.grants.values()) if (g.service === service) g.onAccess?.({ at: new Date().toISOString(), target, allowed: false, why });
     this.refused.push({ service, target, why, at: new Date().toISOString() });
     if (this.refused.length > 500) this.refused.shift();
   }
@@ -87,6 +101,7 @@ export class EgressProxy {
         }
         try {
           const address = await this.publicAddress(url.hostname);
+          this.allow(g, `${url.hostname}:${port}`);
           const headers = { ...req.headers };
           delete headers["proxy-authorization"];
           const up = http.request({ host: address, port, method: req.method, path: url.pathname + url.search, headers: { ...headers, host: url.host } }, (r) => {
@@ -113,6 +128,7 @@ export class EgressProxy {
         }
         try {
           const address = await this.publicAddress(host);
+          this.allow(g, `${host}:${port}`);
           const up = net.connect(port, address, () => {
             socket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
             if (head.length) up.write(head);
