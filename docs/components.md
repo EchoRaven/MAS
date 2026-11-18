@@ -190,7 +190,11 @@ print(json.dumps({"type": "output", "text": f"I read: {msg['input'][:200]}"}), f
 print(json.dumps({"type": "session", "id": str(turns)}), flush=True)
 ```
 
-Programs run on the server, so they need `MAS_ALLOW_LOCAL_EXEC=1`. Other
+Run this way the program is a command on the server, which needs
+`MAS_ALLOW_LOCAL_EXEC=1`. Hosted instead (section 11, `expose: { kind:
+agent-stdio }`, and `harness.endpoint: { hosted: { service } }`), it runs in
+its own container per turn and reaches the platform's MCP at the gateway
+address in `mcp.url`; `examples/hosted/tool-lister-agent` is one. Other
 ways in: a Claude Code subagent `.md`, an A2A agent card, `langgraph.json`,
 Codex or an ACP agent (see contracts.md).
 

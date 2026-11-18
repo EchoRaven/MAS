@@ -1,0 +1,7 @@
+# An agent program, hosted: a fresh container per turn. It reaches the platform's
+# tools for this agent over MCP (at the internal network's gateway), and nothing
+# else unless it declares egress hosts.
+name: Tool lister agent
+start: python agent.py
+expose: { kind: agent-stdio }
+egress: []

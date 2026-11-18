@@ -42,10 +42,7 @@ datasetRoutes(router, store);
 hostedRoutes(router, hosted);
 
 // MCP for harnesses: authenticated by the per-run exposure token, not the user token
-router.on(
-  "POST",
-  "/mcp",
-  async (req, res) => {
+const mcpPost = async (req: import("./http").Req, res: http.ServerResponse) => {
     const token = (req.headers.authorization ?? "").replace(/^Bearer /, "");
     const msg = (await req.body()) as Parameters<typeof handleMcp>[1] | Parameters<typeof handleMcp>[1][];
     const batch = Array.isArray(msg) ? msg : [msg];
@@ -55,9 +52,8 @@ router.on(
       return;
     }
     send(res, 200, Array.isArray(msg) ? out : out[0]);
-  },
-  { auth: false },
-);
+};
+router.on("POST", "/mcp", mcpPost, { auth: false });
 router.on("DELETE", "/mcp", () => ({ ok: true }), { auth: false });
 
 // user code can leave a promise rejected and unawaited; log it, never exit
@@ -65,6 +61,25 @@ process.on("unhandledRejection", (e) => console.error("unhandled rejection:", e 
 process.on("uncaughtException", (e) => console.error("uncaught exception:", e.message));
 
 const server = http.createServer((req, res) => void router.handle(req, res));
+
+// Hosted agent programs run in containers on the internal network: they reach the platform's MCP for agents
+// (and nothing else of this server) at the network's gateway, authenticated by the per-run tokens.
+const gatewayRouter = new Router(config.token);
+gatewayRouter.on("POST", "/mcp", mcpPost, { auth: false });
+gatewayRouter.on("DELETE", "/mcp", () => ({ ok: true }), { auth: false });
+void hosted
+  .gateway()
+  .then((gw) => {
+    if (!gw) return;
+    const port = Number(process.env.MAS_MCP_GATEWAY_PORT ?? config.port + 1);
+    const g = http.createServer((req, res) => void gatewayRouter.handle(req, res));
+    g.on("error", (e) => console.error(`MCP gateway for hosted agents: ${e.message}`));
+    g.listen(port, gw, () => {
+      hosted.mcpGateway = `http://${gw}:${port}`;
+      console.log(`MCP for hosted agents on ${hosted.mcpGateway}/mcp`);
+    });
+  })
+  .catch(() => undefined);
 server.listen(config.port, config.host, () => {
   console.log(`MAS Studio server on http://${config.host}:${config.port} (data: ${config.dataDir})`);
   console.log(`Token: ${config.dataDir}/token${process.env.MAS_TOKEN ? " (overridden by MAS_TOKEN)" : ""}`);

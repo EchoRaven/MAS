@@ -125,10 +125,27 @@ export const codex: Adapter = async (t) => {
  * · {type: "session", id}. A program that prints plain text is a one-shot command: its stdout is the reply.
  */
 export const customStdio: Adapter = async (t) => {
-  const command = t.agent.harness.command?.trim();
+  let command = t.agent.harness.command?.trim();
+  let mcp = t.mcp;
+  let env: Record<string, string> = {};
+  const hosted = t.agent.harness.endpoint && "hosted" in t.agent.harness.endpoint ? t.agent.harness.endpoint.hosted.service : null;
+  if (hosted) {
+    // a hosted agent program: its own container per turn; it reaches the platform's MCP at the internal network's gateway
+    if (!t.rc.hosted) throw new Error(`Hosted service ${hosted} is not available on this server`);
+    const c = await t.rc.hosted.agentCommand(hosted);
+    command = c.command;
+    env = c.env;
+    if (mcp) {
+      const gw = t.rc.hosted.mcpGateway;
+      if (!gw) throw new Error("The MCP gateway for hosted agents is not listening (is Docker available?)");
+      mcp = { ...mcp, url: `${gw}/mcp` };
+    }
+  } else {
+    if (!command) throw new Error("custom harness has no command");
+    if (!t.rc.config.allowLocalExec) throw new Error("custom programs run on the server: enable MAS_ALLOW_LOCAL_EXEC=1 to allow them, or host the program (Connections) and set the harness endpoint");
+  }
   if (!command) throw new Error("custom harness has no command");
-  if (!t.rc.config.allowLocalExec) throw new Error("custom programs run on the server: enable MAS_ALLOW_LOCAL_EXEC=1 to allow them");
-  const p = run("sh", ["-c", command], t, JSON.stringify({ type: "deliver", input: t.input, context: t.context, session: t.session, run_id: t.rc.runId, agent: t.node, mcp: t.mcp }) + "\n", t.mcp ? { MAS_MCP_URL: t.mcp.url, MAS_MCP_TOKEN: t.mcp.token } : {});
+  const p = run("sh", ["-c", command], t, JSON.stringify({ type: "deliver", input: t.input, context: t.context, session: t.session, run_id: t.rc.runId, agent: t.node, mcp }) + "\n", { ...env, ...(mcp ? { MAS_MCP_URL: mcp.url, MAS_MCP_TOKEN: mcp.token } : {}) });
   const outputs: string[] = [];
   const plain: string[] = [];
   let session = t.session;

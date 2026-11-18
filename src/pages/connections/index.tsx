@@ -17,6 +17,7 @@ const EXPOSE: { value: ExposeKind; label: string }[] = [
   { value: "mcp-stdio", label: "MCP over stdio (a fresh container per connection)" },
   { value: "mcp-http", label: "MCP over HTTP (one container, a port)" },
   { value: "http", label: "HTTP API (one container, a port)" },
+  { value: "agent-stdio", label: "Agent program (a fresh container per turn)" },
 ];
 
 function readAsBase64(file: File): Promise<string> {
@@ -79,13 +80,13 @@ function ServiceRow({ s, onChanged }: { s: HostedServiceInfo; onChanged: () => v
         </span>
         <span className="text-[11px] text-muted-foreground">
           v{s.current} · {v?.from === "git" ? v.source : v?.source} · {v?.build_ok ? "built" : v?.built_at ? "build failed" : "not built"}
-          {kind !== "mcp-stdio" && (s.state?.running ? ` · running at ${s.state.address ?? "?"}` : " · stopped")}
+          {kind !== "mcp-stdio" && kind !== "agent-stdio" && (s.state?.running ? ` · running at ${s.state.address ?? "?"}` : " · stopped")}
         </span>
         <div className="ml-auto flex items-center gap-1.5">
           <Button size="sm" variant="outline" className="h-7" disabled={!!busy} onClick={() => act("build", async () => setLog((await Api.buildHosted(s.id)).log))}>
             {busy === "build" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Hammer className="mr-1 h-3.5 w-3.5" />} Build
           </Button>
-          {kind !== "mcp-stdio" &&
+          {kind !== "mcp-stdio" && kind !== "agent-stdio" &&
             (s.state?.running ? (
               <Button size="sm" variant="outline" className="h-7" disabled={!!busy} onClick={() => act("stop", () => Api.stopHosted(s.id))}>
                 <Square className="mr-1 h-3.5 w-3.5" /> Stop
@@ -95,10 +96,12 @@ function ServiceRow({ s, onChanged }: { s: HostedServiceInfo; onChanged: () => v
                 {busy === "start" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-1 h-3.5 w-3.5" />} Start
               </Button>
             ))}
-          <Button size="sm" variant="outline" className="h-7" disabled={!!busy || !v?.build_ok} onClick={() => act("test", async () => setTest(await Api.testEndpoint({ hosted: { service: s.id } }, kind === "http" ? "http" : "mcp")))}>
-            {busy === "test" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Plug className="mr-1 h-3.5 w-3.5" />} Test
-          </Button>
-          {kind !== "mcp-stdio" && (
+          {kind !== "agent-stdio" && (
+            <Button size="sm" variant="outline" className="h-7" disabled={!!busy || !v?.build_ok} onClick={() => act("test", async () => setTest(await Api.testEndpoint({ hosted: { service: s.id } }, kind === "http" ? "http" : "mcp")))}>
+              {busy === "test" ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Plug className="mr-1 h-3.5 w-3.5" />} Test
+            </Button>
+          )}
+          {kind !== "mcp-stdio" && kind !== "agent-stdio" && (
             <Button size="sm" variant="ghost" className="h-7" onClick={() => act("logs", async () => setLog((await Api.hostedLogs(s.id)).logs))}>
               Logs
             </Button>
@@ -109,7 +112,7 @@ function ServiceRow({ s, onChanged }: { s: HostedServiceInfo; onChanged: () => v
         </div>
       </div>
       <p className="mt-1 text-[11px] text-muted-foreground">
-        Use it in a component as <code className="rounded bg-secondary px-1">endpoint: {`{ hosted: { service: ${s.id} } }`}</code>
+        Use it {kind === "agent-stdio" ? "as an agent's program (harness runner custom-stdio)" : "in a component"} as <code className="rounded bg-secondary px-1">endpoint: {`{ hosted: { service: ${s.id} } }`}</code>
         {s.manifest.start && (
           <>
             {" "}· starts with <code className="rounded bg-secondary px-1">{s.manifest.start}</code>
@@ -173,7 +176,7 @@ function HostForm({ onCreated }: { onCreated: () => void }) {
         Exposes
         <Select value={kind} onValueChange={(v) => setKind(v as ExposeKind)} items={EXPOSE} ariaLabel="Exposes" />
       </label>
-      {kind !== "mcp-stdio" && (
+      {kind !== "mcp-stdio" && kind !== "agent-stdio" && (
         <label className="flex flex-col gap-1 text-muted-foreground">
           Port it listens on
           <Input value={port} onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))} placeholder="8000" className="h-8 text-xs" aria-label="Port" />

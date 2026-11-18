@@ -80,6 +80,8 @@ export class HostedServices {
   private building = new Set<string>();
   /** the only way out for services that declare egress hosts */
   readonly egress = new EgressProxy();
+  /** where hosted agent programs reach the platform's MCP (set when the gateway listener starts) */
+  mcpGateway: string | null = null;
   /** when each long-running service was last used: idle ones are stopped, and start again on next use */
   private lastUsed = new Map<string, number>();
   private reaper?: NodeJS.Timeout;
@@ -350,6 +352,28 @@ export class HostedServices {
       ...Object.keys(env).flatMap((k) => ["-e", k]),
       "--label", `mas.service=${s.id}`,
     ];
+  }
+
+  /** The internal network's gateway: where this server listens for the containers on it (MCP for agents, the egress proxy). */
+  async gateway(): Promise<string | null> {
+    await this.ensureNetwork(INTERNAL_NET, true);
+    const gw = (await exec(this.docker, ["network", "inspect", INTERNAL_NET, "-f", "{{range .IPAM.Config}}{{.Gateway}}{{end}}"], { timeout: 20_000 })).out.trim();
+    return /^\d+\.\d+\.\d+\.\d+$/.test(gw) ? gw : null;
+  }
+
+  /**
+   * For agent-stdio: the command that runs the agent program for one turn, in a fresh
+   * container on the internal network, so it can reach the platform's MCP for agents
+   * (at the gateway) and, through the proxy, only the hosts it declares.
+   */
+  async agentCommand(id: string): Promise<{ command: string; env: Record<string, string> }> {
+    const s = this.must(id);
+    if (s.manifest.expose.kind !== "agent-stdio") throw new Error(`${s.name} exposes ${s.manifest.expose.kind}, not an agent program (agent-stdio)`);
+    const env = { ...this.envFor(s), ...(await this.proxyEnv(s)) };
+    const q = (a: string) => `'${a.replace(/'/g, "'\\''")}'`;
+    // the platform passes MAS_MCP_URL / MAS_MCP_TOKEN for the turn; they go in by name, like the rest
+    const args = ["run", "-i", "--rm", ...this.runFlags(s, { ...env, MAS_MCP_URL: "", MAS_MCP_TOKEN: "" }, INTERNAL_NET), this.image(s)];
+    return { command: [this.docker, ...args].map(q).join(" "), env };
   }
 
   /** For mcp-stdio: the command (and environment) that starts a fresh container speaking MCP on stdio. */

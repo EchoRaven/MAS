@@ -7,7 +7,8 @@
 // At run time either one resolves to a URL to call, or to a command that
 // speaks MCP on stdio.
 
-export type ExposeKind = "mcp-stdio" | "mcp-http" | "http";
+/** agent-stdio: an agent program (the custom-stdio protocol), a fresh container per turn */
+export type ExposeKind = "mcp-stdio" | "mcp-http" | "http" | "agent-stdio";
 
 export type Endpoint =
   | { remote: { url: string; headers?: Record<string, string>; bearer_env?: string } }
@@ -45,9 +46,9 @@ export const DEFAULT_MANIFEST: HostManifest = { runtime: "auto", expose: { kind:
 /** What is wrong with a manifest, if anything: the reasons, for the person who wrote it. */
 export function checkManifest(m: HostManifest): string[] {
   const why: string[] = [];
-  const kinds: ExposeKind[] = ["mcp-stdio", "mcp-http", "http"];
+  const kinds: ExposeKind[] = ["mcp-stdio", "mcp-http", "http", "agent-stdio"];
   if (!m.expose || !kinds.includes(m.expose.kind)) why.push(`expose.kind must be one of ${kinds.join(", ")}`);
-  if (m.expose && m.expose.kind !== "mcp-stdio" && !(Number.isInteger(m.expose.port) && m.expose.port! > 0 && m.expose.port! < 65536)) why.push(`${m.expose.kind} needs expose.port (the port the service listens on)`);
+  if (m.expose && m.expose.kind !== "mcp-stdio" && m.expose.kind !== "agent-stdio" && !(Number.isInteger(m.expose.port) && m.expose.port! > 0 && m.expose.port! < 65536)) why.push(`${m.expose.kind} needs expose.port (the port the service listens on)`);
   if (m.runtime && !["auto", "dockerfile", "python", "node"].includes(m.runtime)) why.push("runtime must be auto, dockerfile, python or node");
   if (m.runtime !== "dockerfile" && m.start !== undefined && !String(m.start).trim()) why.push("start is empty");
   for (const h of m.egress ?? []) if (!/^[A-Za-z0-9.-]+(:\d+)?$/.test(h)) why.push(`egress host "${h}" is not a host name`);

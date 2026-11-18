@@ -121,6 +121,8 @@ export interface HarnessSpec {
   runner?: string;
   /** process: launch command; remote: endpoint URL */
   command?: string;
+  /** custom-stdio: the program is a hosted service (expose agent-stdio), run in its own container per turn, instead of command */
+  endpoint?: Endpoint;
   url?: string;
   instructions: string;
   max_steps?: number;

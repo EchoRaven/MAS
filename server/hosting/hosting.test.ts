@@ -32,6 +32,8 @@ describe("hosted services", () => {
     expect(checkManifest({ expose: { kind: "mcp-stdio" }, start: "python server.py" })).toEqual([]);
     expect(checkManifest({ expose: { kind: "http" }, start: "x" }).join()).toMatch(/needs expose.port/);
     expect(checkManifest({ expose: { kind: "mcp-stdio" }, egress: ["evil host"], env: { "1BAD": "x" } }).length).toBe(2);
+    // an agent program needs no port: it runs per turn on stdio
+    expect(checkManifest({ expose: { kind: "agent-stdio" }, start: "python agent.py" })).toEqual([]);
   });
 
   it("tells the runtime from the files, and writes a Dockerfile that installs and runs as a plain user", () => {

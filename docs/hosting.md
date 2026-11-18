@@ -53,9 +53,12 @@ list of those that speak the right protocol, with a test button.
 | `mcp-stdio` | a fresh container per connection (`docker run -i --rm`), gone when the connection closes | MCP over the container's stdin/stdout |
 | `mcp-http` | one long-running container, started on first use (or Start) | `http://<container address>:<port><path>`, from this server only |
 | `http` | the same | the same; plugin backends get `POST /tools/<name>` and `/hooks/<hook>` |
+| `agent-stdio` | an agent program (the custom-stdio protocol): a fresh container per turn | as an agent's program: `harness: { runner: custom-stdio, endpoint: { hosted: { service } } }`. It reaches the platform's tools for that agent over MCP at the internal network's gateway (`$MAS_MCP_URL`), a listener that serves only `/mcp`, with the per-run token |
 
-`examples/hosted/` has one of each: `notes-mcp` (an MCP server on stdio, no
-dependencies) and `word-count-http` (a plugin backend over HTTP).
+`examples/hosted/` has one of each: `notes-mcp` (an MCP server on stdio),
+`word-count-http` (a plugin backend over HTTP) and `tool-lister-agent` (an
+agent program that asks the platform for its tools over MCP), all without
+dependencies.
 
 ## Isolation
 
@@ -71,6 +74,12 @@ dependencies) and `word-count-http` (a plugin backend over HTTP).
 A hosted endpoint needs no `MAS_ALLOW_LOCAL_EXEC`: nothing runs on the host
 itself. (`MAS_ALLOW_LOCAL_EXEC` still gates the older `command:` fields,
 which do.)
+
+A hosted agent program checked end to end (2026-11-18), on a separate
+server instance: it ran in its own container, reached the platform's MCP at
+the gateway, listed its one tool (`fetch`) and replied; the gateway answered
+404 to every path but `/mcp`, even with the user token, and refused an
+unknown run token.
 
 Egress checked against real Docker (2026-11-18), a service declaring
 `example.com`: `https://example.com` through the proxy → 200;
@@ -98,6 +107,7 @@ port and no route to the internet; an agent used both (`add_note`,
 
 - **Compose projects**: whole application envs (`mas-env/1` `runtime.compose`)
   hosted the same way, instead of `lifecycle.start` on the host.
-- **Moving the host-run paths onto hosting**: stdio MCP `command:`, custom
-  agent programs and env `start` commands as hosted services, leaving
-  `MAS_ALLOW_LOCAL_EXEC` as a developer escape hatch.
+- **Moving the remaining host-run paths onto hosting**: env `start`
+  commands (with Compose, above), leaving `MAS_ALLOW_LOCAL_EXEC` as a
+  developer escape hatch. (MCP servers, plugin backends, tools and agent
+  programs can already be hosted.)
