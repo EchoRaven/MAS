@@ -106,6 +106,10 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   matches the discussion systems (22 of 30); N = 10 and 20 add a question or
   lose one, at up to 20 times the cost. The questions every N misses are the
   ones that need computation.
+- **One round of discussion is all that pays.** Multiagent Debate goes from
+  19 (no exchange) to 23 after one exchange, then stays at 22 for rounds 3 and
+  4. Agent Forest flattens after three samples. Both stop at the questions
+  that need computation.
 - **Discussion helps a little, and voting is the bar to beat.** On a set with
   room to improve, Multiagent Debate and ReConcile gain 2–3 questions in 30
   over a single agent. Self-consistency (five samples and a vote) gains as

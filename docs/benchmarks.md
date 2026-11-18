@@ -184,6 +184,31 @@ type (the list) was read as "each reply is JSON", so every sample answered
 with a bare number and no reasoning (1 of 30). Each sample now replies as
 text, and the component always sends a list.
 
+## Multiagent Debate: accuracy against the number of rounds
+
+Du et al.'s ablation varies the rounds of debate. The template's group takes
+its round limit from the run variable `rounds` (`max_rounds: "{{vars.rounds
+?? 2}}"`), so this is one system with four settings. Hard computation (30),
+gemini-3.1-flash-lite, three debaters, one run per setting:
+
+| Rounds | Correct | Cost | Time |
+| --- | --- | --- | --- |
+| 1 (three answers and a vote, no exchange) | 19 | $0.18 | 190 s |
+| 2 (one exchange) | **23** | $0.22 | 150 s |
+| 3 | 22 | $0.41 | 290 s |
+| 4 | 22 | $0.64 | 360 s |
+
+- **One exchange brings the whole gain.** Round 1 is three independent answers
+  and a vote, and scores like a single agent (19). After the debaters read
+  each other once, the score reaches 23, the best of any system without a
+  tool on this set. More rounds hold it at 22, at up to three times the cost.
+- **The same plateau as Agent Forest, at the same place.** Every setting
+  misses #6–#8, #10 and #26–#28, the questions that need computation. The
+  paper reports gains up to about four rounds on arithmetic, with weaker models;
+  here the debaters agree after one exchange.
+- **The Rounds tab shows it per run.** A round's value is the three answers,
+  and from round 2 on they are usually the same.
+
 ## AutoGen with a code executor: 30/30
 
 The four systems above all miss the digit sums of powers and the binomial
