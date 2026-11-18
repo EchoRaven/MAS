@@ -60,7 +60,7 @@ export const RES_PORT = "res";
 //   f(input, ctx) -> output | null
 //
 // input  — the value arriving (for function nodes: { <input port id>: value })
-// ctx    — { run_id, node, edge?, vars, now }
+// ctx    — { run_id, run_input (what the run started with), node, edge?, vars, now }
 // output — the value to emit (function nodes: { <output port id>: value },
 //          so returning one key routes to one port); null drops it.
 

@@ -56,7 +56,7 @@ function build(): SystemDoc {
     .node("sandbox", "env", 170, 220, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }, "repair")
     .edge("user", "retrieval", "message", { label: "Problem" })
     .edge("retrieval", "planner", "handoff", { carry: "full" })
-    .edge("planner", "repair", "message", { transform: { lang: "template", code: "Plan (confidence {{input.confidence}}, based on {{input.based_on}}):\n{{input.plan}}" } })
+    .edge("planner", "repair", "message", { transform: { lang: "template", code: "Problem:\n{{run_input}}\n\nPlan (confidence {{input.confidence}}, based on {{input.based_on}}):\n{{input.plan}}" } })
     .edge("repair", "coder", "message")
     .edge("coder", "debugger", "handoff", { carry: "full" })
     .edge("debugger", "repair", "message")

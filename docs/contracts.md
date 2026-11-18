@@ -91,7 +91,7 @@ A value on a `message` port is `{ role, text, content, from, meta }`.
 | `llm` | The code is a template prompt; the reply is the output |
 
 `ctx` always has:
-- `run_id`, `node`, `edge`
+- `run_id`, `run_input` (the text the run was started with, so a step deep in a pipeline can still see the original task), `node`, `edge`
 - `vars`: shared by the whole run, writable
 - `now`: milliseconds
 - `llm(prompt, data?, model?)`

@@ -31,6 +31,7 @@ export function fnContext(rc: RunCtx, scope: FnScope): Record<string, unknown> {
   const node = scope.node ?? "";
   return {
     run_id: rc.runId,
+    run_input: rc.input ?? "",
     node,
     edge: scope.edge,
     vars: rc.vars,

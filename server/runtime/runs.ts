@@ -92,6 +92,7 @@ export class RunManager {
       signal: ctrl.signal,
       stop,
       vars: { ...(opts.vars ?? {}) },
+      input: opts.input,
       emit,
       usage: (node, u, estimated = false) => {
         rec.usd += u.usd;

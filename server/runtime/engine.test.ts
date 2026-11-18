@@ -1156,6 +1156,18 @@ describe("runtime", () => {
     expect(out.text).toBe("<HI>!");
   });
 
+  it("lets a transform deep in a pipeline see the run's original input", async () => {
+    const b = new Builder("Input", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("f1", "function", 200, 0, { name: "Shorten", join: "any", fn: { lang: "js", code: "return 'plan';" }, interface: { inputs: [{ id: "in", type: "message" }], outputs: [{ id: "out", type: "text" }] } })
+      .node("sink", "human", 400, 0, { name: "Sink", role: "", approves: false })
+      .edge("me", "f1", "message")
+      .edge("f1", "sink", "message", { transform: { lang: "template", code: "Problem: {{run_input}} / {{input}}" } });
+    const { events } = await run(b.doc, "add two numbers");
+    expect(errors(events)).toEqual([]);
+    expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("Problem: add two numbers / plan");
+  });
+
   it("stops at the round limit", async () => {
     const b = new Builder("Loop", "");
     b.agent("a", 0, 0, { name: "A", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } })

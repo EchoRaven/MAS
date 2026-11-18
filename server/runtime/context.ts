@@ -14,6 +14,8 @@ export interface HumanAnswer {
 
 export interface RunCtx {
   runId: string;
+  /** what the run was started with: a step deep in a pipeline can still see the original task (ctx.run_input) */
+  input?: string;
   doc: SystemDoc;
   byId: Map<string, SysNode>;
   models: Models;
