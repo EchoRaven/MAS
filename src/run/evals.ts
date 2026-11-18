@@ -48,7 +48,8 @@ export interface EvalRecord {
   dataset?: { id: string; name: string; version: string; n?: number; seed?: number };
   /** chosen models of the system served by others */
   model_map?: Record<string, string>;
-  status: "running" | "finished" | "stopped";
+  /** queued: waiting for the evaluations started before it in the same batch */
+  status: "queued" | "running" | "finished" | "stopped";
   /** why it stopped on its own, when it did */
   stop_reason?: string;
   started_at: string;

@@ -109,6 +109,23 @@ describe("evaluations", () => {
     expect(done.cases[0]).toMatchObject({ pass: true, output: "Answer: 7" });
   });
 
+  it("runs queued evaluations one at a time, in order, and can stop one before its turn", async () => {
+    const cases = [{ input: "4", expected: "4" }, { input: "5", expected: "5" }];
+    const a = evals.start(echo(), { grader: "number", cases }, true);
+    const b = evals.start(echo(), { grader: "number", cases }, true);
+    const c = evals.start(echo(), { grader: "number", cases }, true);
+    expect([a.status, b.status, c.status]).toEqual(["queued", "queued", "queued"]);
+    expect(evals.stop(c.id)).toBe(true);
+    expect(evals.get(c.id)).toMatchObject({ status: "stopped" });
+    const [da, db] = [await finish(a.id), await finish(b.id)];
+    expect([da.status, db.status, da.passed, db.passed]).toEqual(["finished", "finished", 2, 2]);
+    // b started after a was done: never two at once
+    expect(new Date(db.started_at).getTime()).toBeGreaterThanOrEqual(new Date(da.finished_at!).getTime());
+    const dc = await finish(c.id);
+    expect(dc.status).toBe("stopped");
+    expect(dc.cases.every((x) => x.status === "pending" && !x.run_id)).toBe(true);
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

@@ -40,6 +40,8 @@ const ACCOUNT_ERROR = /\b(401|403)\b|api key|service account|credit|billing|quot
 export class EvalManager {
   private stopped = new Set<string>();
   private active = new Set<string>();
+  /** queued evaluations run one at a time, in the order they were queued */
+  private queue: Promise<void> = Promise.resolve();
   constructor(
     private store: Store,
     private runs: RunManager,
@@ -48,7 +50,8 @@ export class EvalManager {
     private docker = "docker",
   ) {}
 
-  start(original: SystemDoc, opts: EvalOptions): EvalRecord {
+  /** With `queued`, it waits for the queued evaluations before it (a batch of systems on the same questions runs one by one). */
+  start(original: SystemDoc, opts: EvalOptions, queued = false): EvalRecord {
     let doc = opts.on_model ? runAllOn(original, opts.on_model, DEFAULT_MODELS) : original;
     if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
     const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
@@ -65,7 +68,7 @@ export class EvalManager {
       ...(opts.vars && Object.keys(opts.vars).length ? { vars: opts.vars } : {}),
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
       ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),
-      status: "running",
+      status: queued ? "queued" : "running",
       started_at: new Date().toISOString(),
       // repeat 1 of every question first, then repeat 2…: a stopped evaluation still has whole repeats
       cases: Array.from({ length: repeats }, (_, r) => cases.map((c, i) => ({ case: i, repeat: r, input: String(c.input), expected: String(c.expected ?? ""), status: "pending" as const }))).flat(),
@@ -75,14 +78,27 @@ export class EvalManager {
     };
     this.store.putEval(rec);
     this.active.add(rec.id);
-    void this.execute(rec, doc, opts).finally(() => this.active.delete(rec.id));
+    if (!queued) {
+      void this.execute(rec, doc, opts).finally(() => this.active.delete(rec.id));
+      return rec;
+    }
+    this.queue = this.queue
+      .then(async () => {
+        if (this.stopped.has(rec.id)) return; // stopped while it waited: stop() already recorded it
+        rec.status = "running";
+        rec.started_at = new Date().toISOString();
+        this.store.putEval(rec);
+        await this.execute(rec, doc, opts);
+      })
+      .catch(() => {})
+      .finally(() => this.active.delete(rec.id));
     return rec;
   }
 
   /** Evaluations cut off by a restart are marked stopped, with what they finished. */
   recover() {
     for (const rec of this.store.listEvals()) {
-      if (rec.status !== "running") continue;
+      if (rec.status !== "running" && rec.status !== "queued") continue;
       rec.status = "stopped";
       rec.finished_at = new Date().toISOString();
       for (const c of rec.cases) if (c.status === "pending" || c.status === "running") Object.assign(c, { status: "error", why: "the server restarted" });
@@ -117,6 +133,15 @@ export class EvalManager {
   stop(id: string) {
     if (!this.active.has(id)) return false;
     this.stopped.add(id);
+    const rec = this.store.getEval(id);
+    if (rec?.status === "queued") {
+      // it never started: record it as stopped now, with nothing run
+      Object.assign(rec, { status: "stopped", finished_at: new Date().toISOString() });
+      for (const c of rec.cases) c.why = "not run (stopped before its turn)";
+      this.store.putEval(rec);
+      this.active.delete(id);
+      return true;
+    }
     // a case is "running" until it is graded, so its run may already have ended: stop only live ones, and never let one stop the rest
     for (const c of this.store.getEval(id)?.cases ?? []) {
       if (c.status !== "running" || !c.run_id || !this.runs.isActive(c.run_id)) continue;

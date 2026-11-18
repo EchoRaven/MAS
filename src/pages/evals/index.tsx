@@ -12,6 +12,7 @@ import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
+import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
 import { type EvalRecord, type Grader, parseCases, repeatStats } from "@/run/evals";
 import { simulate } from "@/run/simulate";
@@ -90,14 +91,17 @@ function Evals({ systemId }: { systemId: string }) {
   const sampleSize = Number(sampleN) > 0 ? Number(sampleN) : undefined;
   const caseCount = chosen ? Math.min(sampleSize ?? chosen.total, chosen.total) : parsed.cases.length;
   const rpm = useServer((s) => s.rpm);
+  // other systems to run on the same questions, one after another
+  const [also, setAlso] = useState<string[]>([]);
+  const alsoDocs = useMemo(() => also.map((id) => systems.find((s) => s.id === id)).filter((s): s is SystemDoc => !!s && s.id !== doc.id), [also, systems, doc.id]);
   // model calls one run makes, from a simulated run of the system (an estimate: real runs can loop more or less)
   const callsPerRun = useMemo(() => {
     try {
-      return simulate(doc).events.filter((e) => e.type === "usage").length;
+      return [doc, ...alsoDocs].reduce((n, d) => n + simulate(d).events.filter((e) => e.type === "usage").length, 0);
     } catch {
       return 0;
     }
-  }, [doc]);
+  }, [doc, alsoDocs]);
   // the system as the evaluation will run it, for the model warnings
   const effective = useMemo(() => {
     try {
@@ -152,7 +156,8 @@ function Evals({ systemId }: { systemId: string }) {
     setError("");
     try {
       const source = chosen ? { dataset_id: chosen.id, ...(sampleSize && sampleSize < chosen.total ? { sample: { n: sampleSize, seed: Number(seed) || 1 } } : {}) } : { cases: parsed.cases };
-      const rec = await Api.startEval({ doc, ...source, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force });
+      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force };
+      const rec = alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -284,6 +289,7 @@ function Evals({ systemId }: { systemId: string }) {
           )}
           {notice && <p className="text-[11px] text-success">{notice}</p>}
           <p className="text-xs text-muted-foreground">
+            {alsoDocs.length > 0 && `${alsoDocs.length + 1} systems, one after another · `}
             {caseCount} case{caseCount === 1 ? "" : "s"}
             {Number(repeats) > 1 ? ` × ${repeats} repeats = ${caseCount * Number(repeats)} runs` : ""}
             {callsPerRun > 0 && caseCount > 0 && !dry && (
@@ -340,6 +346,20 @@ function Evals({ systemId }: { systemId: string }) {
               {vars.bad.length > 0 && <span className="text-destructive">not name=value: {vars.bad[0]}</span>}
             </label>
           )}
+          <details className="text-xs text-muted-foreground" open={also.length > 0}>
+            <summary className="cursor-pointer hover:text-foreground">Compare with other systems{alsoDocs.length ? ` (${alsoDocs.length})` : ""}</summary>
+            <p className="mt-1">They run on the same questions and models, one after another, and show up together under Compare systems.</p>
+            <div className="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto rounded-md border border-border/70 p-1.5" role="group" aria-label="Systems to compare with">
+              {systems
+                .filter((s) => s.id !== doc.id)
+                .map((s) => (
+                  <label key={s.id} className="flex cursor-pointer items-center gap-1.5 rounded px-1 py-0.5 hover:bg-secondary/60 hover:text-foreground">
+                    <input type="checkbox" checked={also.includes(s.id)} onChange={(e) => setAlso((a) => (e.target.checked ? [...a, s.id] : a.filter((x) => x !== s.id)))} disabled={!also.includes(s.id) && alsoDocs.length >= 9} />
+                    <span className="truncate">{s.name}</span>
+                  </label>
+                ))}
+            </div>
+          </details>
           <ModelWarnings doc={effective} skip={dry} hint="or pick other models above" />
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">
@@ -386,7 +406,7 @@ function Evals({ systemId }: { systemId: string }) {
                   {e.vars ? ` · ${formatVars(e.vars)}` : ""}
                 </span>
               </span>
-              <span className="shrink-0 text-xs text-muted-foreground">{e.status === "running" ? "running…" : timeAgo(e.started_at)}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{e.status === "running" ? "running…" : e.status === "queued" ? "queued" : timeAgo(e.started_at)}</span>
             </button>
           ))}
         </section>
@@ -414,7 +434,7 @@ function Evals({ systemId }: { systemId: string }) {
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />
               {ev.vars && <Stat label="Variables" value={formatVars(ev.vars)} />}
               {(ev.on_model || ev.model_map) && <Stat label="Models" value={[ev.on_model && `all on ${ev.on_model}`, ...Object.entries(ev.model_map ?? {}).map(([a, b]) => `${a} → ${b}`)].filter(Boolean).join(", ")} />}
-              <Stat label="Status" value={record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}` : ev.status} />
+              <Stat label="Status" value={ev.status === "queued" ? "queued: starts when the one before it ends" : record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}` : ev.status} />
               <div className="ml-auto flex gap-1.5">
                 {record?.active ? (
                   <Button variant="outline" size="sm" onClick={() => void Api.stopEval(ev.id).catch((e) => setError(e.message))}>
