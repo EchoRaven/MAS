@@ -138,6 +138,13 @@ each, through the built-in dataset (2026-11-18):
 | MAD (Liang et al.; angel, devil, judge) | 14, 14 | 14.0 | $0.23 |
 | AgentVerse (recruit experts, execute, evaluate) | 20 | 20.0 | $0.29 |
 | AutoAgents (generated team, observers, execution loop) | 13 | 13.0 | $0.13 |
+| Exchange-of-Thought | 23 | 23.0 | $0.29 |
+| DyLAN | 22 | 22.0 | $0.17 |
+| Mixture-of-Agents | 17 | 17.0 | $0.24 |
+| MedAgents | 15 | 15.0 | $0.34 |
+| CAMEL role-playing | 12 | 12.0 | $0.11 |
+| ChatEval | 12 | 12.0 | $0.19 |
+| Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
 
 - **MAD loses 5 to the single agent, in both runs.** Its debaters are an
   "angel" and a "devil" who must disagree, and a judge decides. On the long
@@ -147,6 +154,19 @@ each, through the built-in dataset (2026-11-18):
   counter-intuitive questions, where forced disagreement breaks a first wrong
   idea; on exact computation it adds errors. (MAD was run later than the
   others in this table, on the same set.)
+- **The whole table, in three groups.** Systems that run code solve
+  everything: Magentic-One 30 (and AutoGen with its executor, 30, below).
+  Systems that exchange or vote on answers gain 2–4: EoT 23, ReConcile and
+  self-consistency 22, DyLAN 22, debate 21, AgentVerse 20. Systems built
+  around roles, personas or long pipelines lose to one agent: MoA 17,
+  MedAgents 15, MAD 14, AutoAgents 13, CAMEL 12, ChatEval 12; each hand-off
+  is another chance to restate a long number wrongly, and none of them
+  checks by computing. (The rows after ReConcile were run later, once each,
+  on the same 30 questions, with every answer checked for an answer line.)
+- **Magentic-One first scored 15**: its ComputerTerminal was a program on
+  the server, which an isolated server does not run, so the team multiplied
+  by hand and missed all ten products. As a sandboxed agent that only runs
+  the coder's code, it solves all 30 for less than half the cost.
 - **AgentVerse matches the single agent; AutoAgents falls 6 below it.**
   Both first scored lower for the rebuild's reasons: AgentVerse's result was
   its evaluator's feedback whenever the evaluator stayed unsatisfied, and

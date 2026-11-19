@@ -62,6 +62,11 @@ Measured on this platform, every system on the same model and questions
 - **The coding systems do not beat one agent on HumanEval** with a current
   small model: single agent 48/50, with a code runner 49, AgentCoder and
   MapCoder 48, at 12–28 times the cost.
+- **On one 30-question set, every paper system side by side:** those that run
+  code solve all 30 (Magentic-One, AutoGen); those that exchange or vote on
+  answers gain 2–4 over one agent's 19 (EoT 23, ReConcile 22, DyLAN 22); those
+  built on roles and long pipelines score below it (MoA 17, MedAgents 15,
+  MAD 14, AutoAgents 13, CAMEL 12, ChatEval 12).
 - **Tools matter more than talk.** Questions no discussion fixed were solved
   every time once one agent could run code, and a single agent with the same
   sandbox scored as well as AutoGen's five-agent chat.
