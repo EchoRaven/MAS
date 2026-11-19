@@ -63,7 +63,8 @@ Measured on this platform, every system on the same model and questions
   question in almost every setting, at a fraction of the cost.
 - **The gain depends on how often the model slips.** On Hard computation, debate
   and voting add 2–4 questions in 30 on gemini-3.1-flash-lite, and 8–9 on the
-  weaker gemma-4-26b (17 → 25–26). On GSM8K and MATH-500 the strong model is
+  weaker gemma-4-26b (17 → 25–26), where one agent with a code runner solves
+  all 30 in a fourteenth of the time. On GSM8K and MATH-500 the strong model is
   near the ceiling and nothing shows. On MMLU nothing shows even on gemma
   (90 → 89): debate corrects slips that differ between agents, not knowledge
   that all copies of a model lack.

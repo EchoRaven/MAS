@@ -141,7 +141,9 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   (digit sums of large powers, binomials mod p) were solved every time once
   one agent could run code. A single agent with the same sandbox scored the
   same 30/30 as AutoGen's five-agent chat, faster and cheaper, and so did
-  Magentic-One once its terminal ran code in the sandbox (15 → 30). Where the
+  Magentic-One once its terminal ran code in the sandbox (15 → 30). On the
+  weaker gemma, where debate and voting reached 25–26, one agent with a code
+  runner scored 30 in 8.5 minutes against debate's 116. Where the
   arithmetic is short the edge shrinks: on 100 MATH-500 problems a code
   runner fixed 6 and lost 2 (p ≈ 0.29), and on GSM-Hard's well-posed
   questions it changed nothing.
