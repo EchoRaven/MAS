@@ -277,6 +277,18 @@ the math grader:
 | Agent Forest, N = 5 | 45 | $0.21 |
 | Multiagent Debate, 2 rounds | 46 | $0.31 |
 
+Later, with code (the same 50, answer lines checked):
+
+| System | Correct | vs single agent (44 this time) | Cost |
+| --- | --- | --- | --- |
+| Single agent with a code runner | **47** | +3 −0 (p 0.25) | $0.29 |
+| Magentic-One (sandboxed terminal) | 45 | +2 −1 | $0.29 |
+
+Running code fixed three problems no text-only system got (#8, #13, #34)
+and lost none: the best score on this sample, though three problems is not
+yet significant. Magentic-One's orchestration added nothing over one agent
+with the same sandbox, as AutoGen's five agents did on Hard computation.
+
 At about 90%, neither voting nor debate gains more than a question in 50.
 The misses are mostly wrong answers that every system gives
 (`2\sqrt{61}` for `2\sqrt{113}`), which is the same plateau as on Hard
