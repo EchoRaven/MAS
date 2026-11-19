@@ -50,7 +50,14 @@ function build(): SystemDoc {
     .agent("websurfer", 640, -80, { name: "WebSurfer", role: "Operates a browser", model: "sonnet", tools: ["browser"], harness: { ...native(), instructions: "Navigate, click, type, scroll and read pages; report what you see." } })
     .agent("filesurfer", 640, 90, { name: "FileSurfer", role: "Reads local files", model: "sonnet", harness: { ...native(), instructions: "Open and read files of any type; navigate folders." } })
     .agent("coder", 640, 260, { name: "Coder", role: "Writes code", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "Write Python or shell code that solves the step; another agent runs it." } })
-    .agent("terminal", 640, 430, { name: "ComputerTerminal", role: "Runs code (no model)", tools: ["bash"], harness: { ...native(), tier: "process", runner: "custom-stdio", loop: undefined, command: "python executor.py --sandbox", instructions: "" } })
+    // the paper's terminal runs code with no model; here a small model only moves the code into the sandbox and reports
+    // what it printed (as AutoGen's user proxy): a program on the server would run without isolation
+    .agent("terminal", 640, 430, {
+      name: "ComputerTerminal",
+      role: "Runs code in the sandbox",
+      model: "haiku",
+      harness: { ...native(), loop: "react", max_steps: 4, instructions: "You only execute. When given a ```python (or ```sh) block, save it to main.py (or main.sh) with bash (cat > main.py <<'EOF' … EOF), run it, and reply with exactly what it printed and its exit status. Never compute anything yourself; with no code given, say there is no code to run." },
+    })
     .node("browser", "env", 1000, -70, { name: "Browser", env_kind: "browser", image: "" })
     .plugin("files", "workspace", 1000, 100, { name: "Files", scope: "system", sources: ["/task"] })
     .node("sandbox", "env", 1000, 440, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" })
@@ -76,11 +83,12 @@ export const magenticOne: TemplateInfo = {
     mapped: [
       "Code the Coder writes goes straight to ComputerTerminal, which runs it in the sandbox: in Magentic-One the Coder only writes, and execution is the terminal's job.",
       "The Orchestrator's outer (task ledger) and inner (progress ledger) loops are a custom agent loop, including re-planning after three stalled steps.",
-      "Specialists are called agents; ComputerTerminal is a process agent that runs code without a model; the ledgers are kept on a board plugin.",
+      "Specialists are called agents; the ledgers are kept on a board plugin.",
       "A before_tool hook holds irreversible actions for the user.",
     ],
     differs: [
       "WebSurfer's set-of-marks screenshots and accessibility tree are behind the browser env; they are not modelled separately.",
+      "ComputerTerminal runs code without a model in the paper; here a small model moves the code into the sandbox's bash and reports its output verbatim, so execution stays isolated. It was a program on the server before, which an isolated server refuses to run: the team then multiplied by hand (15 of 30 on Hard computation).",
     ],
   },
 };
