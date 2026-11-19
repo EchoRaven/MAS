@@ -28,11 +28,11 @@ npm run build && npx vite preview   # serve dist/ on 127.0.0.1:5181 (the public 
 | Page | What it does |
 | --- | --- |
 | Systems | Every system in one list: create one from a template or by describing it to the Architect, import or export YAML, duplicate, delete. Built-in systems nobody has edited follow fixes to their template; deleting a system reaches every browser |
-| Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. **Architect** designs or changes the system from a description; **Tidy** lays it out; **History** restores an earlier version. The issues menu jumps to each problem; a paper system's panel cites the paper and says how it maps and where it differs |
-| Runs | Live: start a run with an input and optional run variables (or a dry run on the test model), watch it on the graph and in the log, answer approvals and questions, stop it, reopen past runs; for groups that repeat, a Rounds tab shows each round's cost, the value it ended with, and why the group went on, stopped or gave up. A warning shows first when a model it uses has no key or a refused one. Simulated: replay a generated event stream |
-| Evaluate | Run a system over a dataset (built in, saved, or questions you paste or load from CSV / JSON lines; GSM8K, multiple choice and HumanEval records are read as they come), on a seeded sample if you like, graded by number, final answer, containment, an LLM judge, or by running the code against its tests in Docker. Repeats show the spread; a system can be run on other models (all on one, or per model), and other systems can be queued on the same questions. Failures are grouped by reason, so a systematic problem shows as one large group. **Datasets** lists every dataset with its source, license, grader and version, and shows its first questions. **Compare** puts evaluations of the same questions side by side, question by question, and exports a Markdown table or CSV |
+| Canvas | Build a system from components (agent, model call, function, human, environment, plugin, group) and connect their typed ports. Double-click a group to open its canvas, or an agent to see its internals. **Architect** designs or changes the system from a description; **Tidy** lays it out; **History** restores an earlier version. Env and plugin nodes show their tools, network, lifecycle and who uses them; their inspector shows what is inside (a sandbox's files per run, a database's tables) and **Try it** calls each tool by hand on a throwaway copy. Group nodes show their loop settings. The issues menu jumps to each problem; a paper system's panel cites the paper and says how it maps and where it differs |
+| Runs | Live: start a run with an input and optional run variables (or a dry run on the test model), watch it on the graph and in the log (envs show their machine, last command and refused connections; repeating groups their round), answer approvals and questions, stop it, reopen past runs; for groups that repeat, a Rounds tab shows each round's cost, the value it ended with, and why the group went on, stopped or gave up. A warning shows first when a model it uses has no key or a refused one. Simulated: replay a generated event stream |
+| Evaluate | Run a system over a dataset (built in, saved, or questions you paste or load from CSV / JSON lines; GSM8K, multiple choice and HumanEval records are read as they come), on a seeded sample if you like, graded by number, final answer, containment, an LLM judge, or by running the code against its tests in Docker. Repeats show the spread; a system can be run on other models (all on one, or per model), and other systems can be queued on the same questions. Failures are grouped by reason, so a systematic problem shows as one large group; every answer is checked for an answer line ("Answer: …"), and a system whose model has no key is refused before it starts. Code evaluations can be regraded by running the stored answers again. **Datasets** lists every dataset with its source, license, grader and version, and shows its first questions. **Compare** puts evaluations of the same questions side by side, question by question, with each system's questions fixed and lost against a reference and McNemar's p, a model filter, and questions flagged as broken left out; it exports a Markdown table or CSV |
 | Demos | Real recorded runs of the paper reproductions, replayable by anyone: the canvas animates, the log fills, and each demo shows its result, its mapping and the models it ran on. Static files under `public/demos`, recorded with `npm run record-demos` |
-| Templates | Twenty-six papers rebuilt from the components (see below), two baselines (a single agent, and self-consistency) and patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
+| Templates | Twenty-seven papers rebuilt from the components (see below), two baselines (a single agent, and self-consistency) and patterns: coding team, research team, support triage, invoice extraction, supervisor and workers, blackboard |
 | Library | Models (with API settings and a connection test), tools (with how the runtime calls them), JSON schemas, and the integration contracts |
 | Connections | Host a project here (an archive or a git URL, built and run in Docker, isolated) as an MCP server or HTTP backend, and test any endpoint, hosted or remote, before a component uses it. See [docs/hosting.md](docs/hosting.md) |
 | Settings | Server connection, API keys, model status (which models work, why one fails, a test button for each), and the knowledge folder |
@@ -43,6 +43,14 @@ The interfaces everything plugs into are documented in
 [docs/components.md](docs/components.md). The overall map is
 [docs/architecture.md](docs/architecture.md), and what the rebuilt papers have
 in common, and which interfaces they needed, is [docs/survey.md](docs/survey.md).
+
+Everything that runs code an agent or a model wrote runs isolated: sandboxes,
+the code grader, hosted services, and Claude Code / Codex agents run in
+containers that are not root, have no capabilities and a seccomp profile, and
+reach nothing but the hosts they declare (through an egress proxy) and this
+server's gateways; a model gateway puts API keys on requests outside the
+container, so none is ever inside one. Every connection, allowed or refused,
+is in the run's log. See [docs/server.md](docs/server.md).
 
 ## What the reproductions found so far
 
@@ -95,13 +103,13 @@ Results of running these systems against a single agent and self-consistency on 
 | [Generative Agents](https://arxiv.org/abs/2304.03442) | A memory stream: recency + importance + relevance retrieval, importance scoring, reflection, daily plans |
 | [Mixture-of-Agents](https://arxiv.org/abs/2406.04692) | Layers of model calls with no agents, joined and aggregated |
 | [Agent Forest](https://arxiv.org/abs/2402.05120) (More Agents Is All You Need) | One model sampled N times in a single component (`replicas`, N from a run variable), then a majority vote |
-| [Magentic-One](https://arxiv.org/abs/2411.04468) | A custom orchestrator loop with a task ledger and a progress ledger, calling specialists |
+| [Magentic-One](https://arxiv.org/abs/2411.04468) | A custom orchestrator loop with a task ledger and a progress ledger, calling specialists; its ComputerTerminal is a function that runs code in the sandbox with no model |
 | [CAMEL](https://arxiv.org/abs/2303.17760) | Role-play between two agents until a completion token |
-| [AutoGen](https://arxiv.org/abs/2308.08155) | A group chat whose manager picks the next speaker; a user proxy runs the code |
+| [AutoGen](https://arxiv.org/abs/2308.08155) | A group chat whose manager picks the next speaker; a user proxy with no model (a function in the room) runs the code |
 | [AgentCoder](https://arxiv.org/abs/2312.13010) | A programmer and a test designer in parallel, then a test-and-repair loop |
 | [AgentVerse](https://arxiv.org/abs/2308.10848) | Experts recruited by spawning, a merged decision, execution, evaluation feedback |
 | [ChatEval](https://arxiv.org/abs/2308.07201) | Referee personas debating one by one, each handed the whole discussion |
-| [MapCoder](https://arxiv.org/abs/2405.11403) | Recall similar problems, a scored plan, code, and a debugging loop |
+| [MapCoder](https://arxiv.org/abs/2405.11403) | Recall similar problems, k scored plans tried best first (`iterate.over`), each with its own debugging loop |
 | [Voyager](https://arxiv.org/abs/2305.16291) | An automatic curriculum and a skill library that grows only with programs a critic verified |
 | [Reflexion](https://arxiv.org/abs/2303.11366) | Actor, evaluator and self-reflection, with lessons kept in an episodic memory between trials |
 | [DyLAN](https://arxiv.org/abs/2310.02170) | Agents in layers: a ranker keeps the best for the next layer, early stop at two-thirds agreement, importance scores |
