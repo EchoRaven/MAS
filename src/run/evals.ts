@@ -339,7 +339,8 @@ export function answerNumber(raw: string, question = ""): number | null {
  */
 export function mathForm(raw: string): string {
   let s = raw.trim();
-  s = s.replace(/\\!|\\,|\\;|\\:|\\ /g, "").replace(/\s+/g, "");
+  // thin spaces (\, \! \; \: and "\ "), but not a matrix's row break "\\ "
+  s = s.replace(/(?<!\\)\\[!,;: ]/g, "").replace(/\s+/g, "");
   s = s.replace(/\\left|\\right/g, "").replace(/\\[dt]frac/g, "\\frac");
   s = s.replace(/\^\{?\\circ\}?/g, "").replace(/\\circ/g, "").replace(/\\?\$/g, "").replace(/\\%|%/g, "");
   // a unit after the answer ("270\text{ degrees}", "5\mbox{ cm}") is not part of it; a word alone (\text{Evelyn}) is the answer
@@ -355,19 +356,50 @@ export function mathForm(raw: string): string {
   const slash = /^(-?)([^/+\-,()]+)\/([^/+\-,()]+)$/.exec(s);
   if (slash) s = `${slash[1]}\\frac{${slash[2]}}{${slash[3]}}`;
   if (s === ".5") s = "\\frac{1}{2}";
+  // "3<\lambda\le4" is the interval (3,4], as MATH writes it
+  const between = /^([^<>=,]+?)(<|\\leq?|\\le)\\?[a-zA-Z]+(<|\\leq?|\\le)([^<>=,]+)$/.exec(s);
+  if (between) s = `${between[2] === "<" ? "(" : "["}${between[1]},${between[4]}${between[3] === "<" ? ")" : "]"}`;
   return s;
+}
+
+/** The entries of a matrix or vector, in order (\begin{pmatrix}1/5\\-18/5\end{pmatrix}), or null. */
+function matrixEntries(form: string): string[] | null {
+  const m = /^\\begin\{[pbvB]?matrix\}(.*)\\end\{[pbvB]?matrix\}$/.exec(form);
+  return m ? m[1].split(/\\\\|&/).map((x) => mathForm(x)).filter(Boolean) : null;
+}
+
+/** Two answers (or entries) are the same: the same form, or the same number (0.2 and 1/5). */
+function sameMath(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [x, y] = [mathValue(a), mathValue(b)];
+  return x !== null && y !== null && Math.abs(x - y) <= 1e-6 * Math.max(1, Math.abs(y));
+}
+
+/** Lists that hold the same items in any order, each matched once (by form or by value). */
+function sameItemsAnyOrder(a: string[], b: string[]): boolean {
+  if (a.length < 2 || a.length !== b.length) return false;
+  const left = [...b];
+  return a.every((x) => {
+    const i = left.findIndex((y) => sameMath(x, y));
+    return i >= 0 && left.splice(i, 1).length === 1;
+  });
 }
 
 /** The forms an answer stands for: "a \pm b" is both a+b and a-b; a list is its items, in any order. */
 function mathItems(form: string): string[] {
-  const pm = /^(.*)\\pm(.*)$/.exec(form);
-  const items = pm ? [`${pm[1]}+${pm[2]}`, `${pm[1]}-${pm[2]}`] : form.split(",");
+  // a set's braces are not part of its items: \{1\pm\sqrt{5},-2\}
+  const inner = /^\\\{(.*)\\\}$/.exec(form)?.[1] ?? form;
+  const items = inner.split(",").flatMap((x) => {
+    const pm = /^(.*)\\pm(.*)$/.exec(x);
+    return pm ? [`${pm[1]}+${pm[2]}`, `${pm[1]}-${pm[2]}`] : [x];
+  });
   return items.map((x) => mathForm(x)).filter(Boolean).sort();
 }
 
 function mathValue(s: string): number | null {
   // \frac43 and \frac{4}{3} both read as 4/3
-  const t = plain(mathForm(s)).replace(/[{}\s]/g, "");
+  // mathForm writes 0.25 as .25; parseNumber needs the leading zero back
+  const t = plain(mathForm(s)).replace(/[{}\s]/g, "").replace(/^(-?)\./, "$10.");
   if (!/^-?[\d.,/]+$/.test(t)) return null;
   return parseNumber(t);
 }
@@ -410,8 +442,11 @@ export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: str
     const [na, ne] = [mathValue(got), mathValue(want)];
     const [ia, ie] = [mathItems(a), mathItems(e)];
     // a list (or a ±) matches the same items in any order, or the same numbers
-    const sameItems = ia.length > 1 && ia.length === ie.length && ia.every((x, i) => x === ie[i]);
-    const pass = a === e || sameItems || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
+    const sameItems = (ia.length > 1 && ia.length === ie.length && ia.every((x, i) => x === ie[i])) || sameItemsAnyOrder(ia, ie);
+    // a matrix or vector matches entry by entry, in order
+    const [ma, me] = [matrixEntries(a), matrixEntries(e)];
+    const sameMatrix = !!ma && !!me && ma.length === me.length && ma.every((x, i) => sameMath(x, me[i]));
+    const pass = a === e || sameItems || sameMatrix || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
     return { pass, answer: got.trim(), why: pass ? `${got.trim()} = ${want}` : `${got.trim().slice(0, 80)} ≠ ${want}` };
   }
   if (grader === "number") {

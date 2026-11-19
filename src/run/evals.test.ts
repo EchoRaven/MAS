@@ -63,6 +63,18 @@ describe("grading", () => {
 });
 
 describe("math answers", () => {
+  it("reads intervals, sets, matrices and decimals as MATH's answer key writes them", () => {
+    const m = (got: string, want: string) => gradeByRule("math", `Answer: ${got}`, want).pass;
+    expect(m("3 < \\lambda \\le 4", "(3,4]")).toBe(true);
+    expect(m("3 \\le x < 4", "(3,4]")).toBe(false);
+    expect(m("\\{-2, 1+\\sqrt{5}, 1-\\sqrt{5}\\}", "\\{1\\pm\\sqrt{5},-2\\}")).toBe(true);
+    expect(m("3+2\\sqrt{2}, 3-2\\sqrt{2}, -3+2\\sqrt{2}, -3-2\\sqrt{2}", "3 \\pm 2 \\sqrt{2}")).toBe(false);
+    expect(m("\\begin{pmatrix} 0.2 \\\\ -3.6 \\end{pmatrix}", "\\begin{pmatrix} 1/5 \\\\ -18/5 \\end{pmatrix}")).toBe(true);
+    expect(m("\\begin{pmatrix} -3.6 \\\\ 0.2 \\end{pmatrix}", "\\begin{pmatrix} 1/5 \\\\ -18/5 \\end{pmatrix}")).toBe(false);
+    expect(m("0.25", "\\frac14")).toBe(true);
+    expect(m("0.2", "2")).toBe(false);
+  });
+
   const g = (out: string, exp: string) => gradeByRule("math", out, exp).pass;
   it("compares answers after the MATH benchmark's normalisation", () => {
     expect(g("so the answer is $\\boxed{\\dfrac{14}{3}}$.", "\\frac{14}{3}")).toBe(true);
