@@ -671,8 +671,8 @@ each one a system in the library, and each has explained away some gain:
 | One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (17 → 25) and on medical MMLU |
 | One agent with the same tools | Single agent with code | that the agents, not the tool, did the work | it matched AutoGen, Magentic-One and tool-equipped debate |
 
-Run them on the same questions and models (Compare with other systems, or a
-batch), with repeats when the gaps are small, and read the paired column
+Run them on the same questions and models (on the Evaluate page, Compare with
+other systems → Add the four controls, or a batch), with repeats when the gaps are small, and read the paired column
 (fixed, lost, p) on Compare rather than the accuracies alone.
 
 To sweep a run variable, write its values with `|` in the Evaluate page's
