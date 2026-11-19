@@ -173,6 +173,10 @@ each, through the built-in dataset (2026-11-18):
   merges several independent solutions (22, 21), as voting and exchange do.
   The paper also finds denser topologies ahead of the chain; here the gain is
   the same 2–3 questions the other aggregating systems get, at more cost.
+  Its scaling claim does not show at this size: a star of 2, 4 and 8 nodes
+  scores 19, 22 and 21, at $0.12, $0.44 and $0.80. As with Agent Forest's
+  samples, the gain comes from the first few independent solutions, and every
+  size misses the same questions that need computation (#6–10, #26–28).
 - **Magentic-One first scored 15**: its ComputerTerminal was a program on
   the server, which an isolated server does not run, so the team multiplied
   by hand and missed all ten products. As a sandboxed agent that only runs

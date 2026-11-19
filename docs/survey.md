@@ -125,7 +125,9 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **Test-and-repair loops need something to repair.** On HumanEval with
   flash-lite, AgentCoder and MapCoder scored 48 of 50, as did a single agent
   (49 with a code runner); the papers' gains were over single gpt-3.5 calls.
-- **Sampling more stops paying after a few samples.** Agent Forest at N = 3
+- **Sampling more stops paying after a few samples.** MacNet's star grows
+  from 19 (2 nodes) to 22 (4) and then gives one back (21 at 8 nodes, at
+  nearly twice the cost of 4). Agent Forest at N = 3
   matches the discussion systems (22 of 30); N = 10 and 20 add a question or
   lose one, at up to 20 times the cost. The questions every N misses are the
   ones that need computation.
