@@ -16,6 +16,7 @@ import path from "node:path";
 import { TEMPLATES } from "@/model/templates";
 import type { ModelSpec, SystemDoc } from "@/model/types";
 import type { RunEvent, RunRecord } from "@/run/events";
+import { hasMarkedAnswer } from "@/run/evals";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT = path.join(ROOT, "public", "demos");
@@ -194,18 +195,12 @@ const DEMOS: Record<string, DemoConfig> = {
   "paper-magentic-one": {
     input: "Using Python, compute the 25th Fibonacci number and the sum of the first 100 prime numbers. Report both numbers.",
     adapt: (doc) => {
-      const term = node(doc, "terminal").data;
-      if (term.kind === "agent") {
-        term.harness = { ...term.harness, tier: "native", runner: "native", loop: "react", command: undefined, instructions: "Run the code you are given in the sandbox with bash (python3 is installed) and report the output exactly." };
-        term.model = "haiku";
-      }
       const web = node(doc, "websurfer").data;
       if (web.kind === "agent") web.tools = ["fetch"];
       const orch = node(doc, "orchestrator").data;
       if (orch.kind === "agent") orch.harness.max_steps = 30;
       capRounds(doc, 30);
       return [
-        "ComputerTerminal runs as a platform agent with the sandbox's bash tool (the template drives an external executor program).",
         "WebSurfer reads pages with the fetch tool (the template's browser env has no MCP server configured here).",
         "The Orchestrator takes at most 5 rounds before it must write its answer.",
       ];
@@ -219,7 +214,7 @@ const CHECK = process.argv.includes("--check");
 if (CHECK && !process.env.MAS_DEMO_MODELS) for (const id of Object.keys(GEMINI)) if (GEMINI[id].kind !== "embedding") GEMINI[id] = { ...GEMINI[id], model: "gemini-3.1-flash-lite", price_in: 0.25, price_out: 1.5 };
 for (const [id, model] of Object.entries(OVERRIDE)) if (GEMINI[id]) GEMINI[id] = { ...GEMINI[id], model };
 
-interface CheckRow { id: string; status: string; reason: string; answer: boolean; errors: string[]; asked: number; calls: number; usd: number; seconds: number }
+interface CheckRow { id: string; status: string; reason: string; answer: boolean; marked: boolean; errors: string[]; asked: number; calls: number; usd: number; seconds: number }
 const checks: CheckRow[] = [];
 
 function onGemini(doc: SystemDoc): Record<string, string> {
@@ -266,10 +261,13 @@ async function record(id: string, cfg: DemoConfig) {
     const errors = g.events.filter((e) => e.type === "log" && e.level === "error").map((e) => (e as { text: string }).text);
     // a called agent that failed (the provider refused) shows up as a tool error, not a run error: that is not a clean demo either
     for (const e of g.events) if (e.type === "tool" && e.error && /^Error: (google|openai|anthropic|openai_compatible|local) \d{3}\b/.test(String((e as { result?: string }).result))) errors.push(`${(e as { tool: string }).tool}: ${String((e as { result?: string }).result).slice(7, 160)}`);
-    const answer = g.events.some((e) => e.type === "output" && String((e as { text?: string }).text ?? "").trim().length > 0);
+    const outputs = g.events.filter((e) => e.type === "output").map((e) => String((e as { text?: string }).text ?? ""));
+    const answer = outputs.some((t) => t.trim().length > 0);
+    // whether the answer is marked ("Answer: …" or \boxed{}): graders read an unmarked one from its last line
+    const marked = outputs.some(hasMarkedAnswer);
     const last = g.events[g.events.length - 1] as { t?: number } | undefined;
     if (CHECK) {
-      checks.push({ id, status: g.run.status, reason: String(g.run.reason ?? ""), answer, errors, asked: answered.size, calls, usd: g.run.usd, seconds: Math.round(last?.t ?? 0) });
+      checks.push({ id, status: g.run.status, reason: String(g.run.reason ?? ""), answer, marked, errors, asked: answered.size, calls, usd: g.run.usd, seconds: Math.round(last?.t ?? 0) });
       console.log(`\n  ${g.run.status} (${g.run.reason}) · ${answer ? "answered" : "NO ANSWER"} · ${calls} calls · $${g.run.usd.toFixed(4)}${errors.length ? `\n  errors: ${errors.join(" | ").slice(0, 300)}` : ""}`);
       return;
     }
@@ -301,7 +299,7 @@ for (const id of ids) {
     await record(id, DEMOS[id]);
   } catch (e) {
     console.log(`\n  failed: ${(e as Error).message}`);
-    if (CHECK) checks.push({ id, status: "failed", reason: (e as Error).message.slice(0, 80), answer: false, errors: [], asked: 0, calls: 0, usd: 0, seconds: 0 });
+    if (CHECK) checks.push({ id, status: "failed", reason: (e as Error).message.slice(0, 80), answer: false, marked: false, errors: [], asked: 0, calls: 0, usd: 0, seconds: 0 });
   }
   if (!CHECK) writeIndex();
 }
@@ -311,7 +309,7 @@ if (CHECK) {
   const ok = (c: CheckRow) => c.status === "finished" && c.answer && !c.errors.length && !limited(c);
   console.log("\n\ntemplate                     result  calls     cost   time  notes");
   for (const c of checks) {
-    const notes = [!c.answer && "no answer", c.errors.length && `${c.errors.length} error(s): ${c.errors[0].slice(0, 60)}`, c.asked && `asked a person ${c.asked}x`, c.status !== "finished" && c.status, limited(c) && c.reason].filter(Boolean).join("; ");
+    const notes = [!c.answer && "no answer", c.answer && !c.marked && "answer not marked (no Answer: line)", c.errors.length && `${c.errors.length} error(s): ${c.errors[0].slice(0, 60)}`, c.asked && `asked a person ${c.asked}x`, c.status !== "finished" && c.status, limited(c) && c.reason].filter(Boolean).join("; ");
     console.log(`${c.id.padEnd(28)} ${(ok(c) ? "ok" : "CHECK").padEnd(7)} ${String(c.calls).padStart(5)} ${("$" + c.usd.toFixed(3)).padStart(8)} ${String(c.seconds).padStart(5)}s  ${notes}`);
   }
   const bad = checks.filter((c) => !ok(c)).length;
