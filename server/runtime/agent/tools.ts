@@ -49,6 +49,9 @@ export async function agentTools(svc: ToolServices, node: SysNode<AgentData>, tr
       // a catalog tool an env already serves (bash through the sandbox) is not offered twice
       tools.push(...ts.filter((t) => !tools.some((x) => x.name === t.name && x.source === t.source)));
     } catch (err) {
+      // an env is where the agent acts: without it, the turn fails rather than letting the agent narrate actions it
+      // cannot take (two agents "walked to the park" in a town that never started); a plugin only helps, so it warns
+      if (target.data.kind === "env") throw new Error(`${nameOf(rc, e.target)} is unavailable, so ${nameOf(rc, node.id)} cannot act in it: ${(err as Error).message}`);
       rc.emit({ type: "log", node: node.id, level: "warn", text: `${nameOf(rc, e.target)}: ${(err as Error).message}` });
     }
   }

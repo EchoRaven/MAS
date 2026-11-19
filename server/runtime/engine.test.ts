@@ -1114,6 +1114,25 @@ describe("runtime", () => {
     expect(await out()).toBe("run 2");
   });
 
+  it("an agent whose env cannot start fails its turn instead of acting without it", async () => {
+    const b = new Builder("No env", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Walker", model: "w", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .node("town", "env", 200, 200, {
+        name: "Town",
+        env_kind: "service",
+        image: "",
+        manifest: { contract: "mas-env/1", id: "t", name: "Town", source: { format: "mas-env" }, kind: "service", runtime: { services: [] }, lifecycle: { health: "http://127.0.0.1:9/health" }, exposes: { mcp: { transport: "http", url: "http://127.0.0.1:9/mcp", auth: "none", tools: ["look"] }, http: [] } },
+      })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message")
+      .edge("a", "town", "access", { access: "read_write" });
+    b.doc.models.push({ id: "w", provider: "mock", model: "mock", api: { params: { script: ["I walk to the park."] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    expect(errors(events).join(" ")).toMatch(/Town is unavailable, so Walker cannot act in it/);
+    expect(events.some((e) => e.type === "output" && /walk to the park/.test((e as { text: string }).text))).toBe(false);
+  });
+
   it("ctx.tool names what a function is connected to when the tool is not there", async () => {
     const b = new Builder("Fn tool", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
