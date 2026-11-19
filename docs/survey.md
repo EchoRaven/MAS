@@ -175,6 +175,13 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   On MMLU's medical questions it scored 73 of 75, as MedAgents' specialist
   panel and debate did, missing the same two. What discussion adds does not
   need separate agents.
+- **Debate or vote depends on the model.** Voting over the debaters' first
+  answers, before any exchange, already gives all of debate's gain on the
+  weaker gemma (26 = 26 on Hard computation), as Choi et al. (2025) argue;
+  on flash-lite the first-round vote is no better than one agent, and the
+  exchange is what lifts it (nine verdicts turned right, none wrong, over a
+  rounds sweep). On MMLU the rounds only add risk (gemma: four right
+  verdicts turned wrong, one fixed).
 - **Mixing models reaches the best member, not beyond it.** ReConcile with one
   seat per model averaged 27.3 over three runs, as its strongest seat did alone
   (gemini-3-flash, 27.3), at about four times the cost. Mixture-of-Agents

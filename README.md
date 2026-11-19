@@ -80,6 +80,11 @@ Measured on this platform, every system on the same model and questions
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models, including the weaker one's 18 → 25.
+- **Debate's gain is the vote on a weak model, the exchange on a strong
+  one**: on gemma a vote over the debaters' first answers already scores
+  what the whole debate does; on flash-lite the rounds turn nine wrong
+  verdicts right and none wrong (reproducing and qualifying "Debate or
+  Vote", Choi et al. 2025).
 - **Mixing models mostly reaches the best member, not beyond it**: ReConcile
   with one seat per model ties its strongest model alone, at four times the
   cost; Mixture-of-Agents with three models scored 28 against its best

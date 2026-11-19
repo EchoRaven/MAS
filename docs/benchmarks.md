@@ -671,6 +671,47 @@ evaluations were regraded without calling a model again.
 To show the paper's effect, the next step is a weaker model, or harder
 problems (GSM-Hard, MATH), where the single agent leaves room.
 
+## Debate or vote? What the rounds add
+
+"Debate or Vote" (Choi et al. 2025) argues that majority voting accounts for
+most of what multi-agent debate gains, and that the exchange rounds add
+little. Every stored debate run keeps each debater's answer in each round,
+so the claim can be checked without new model calls: vote over the
+debaters' *first-round* answers (the same samples, before any exchange) and
+compare with the debate's final answer on the same question.
+
+| Debate evaluation | Cases | Vote on round 1 | Debate's final | Rounds turned the vote wrong → right / right → wrong | Debater accuracy by round |
+|---|---|---|---|---|---|
+| Hard computation, gemma, 2 rounds | 30 | **26** | **26** | 0 / 0 | 87% → 87% |
+| Hard computation, flash-lite, 2 rounds (two runs) | 60 | 42 | 42 | 1 / 1 | 61% → 72% |
+| Hard computation, flash-lite, rounds sweep 2, 3, 4 | 90 | 58 | 67 | 9 / 0 | 60% → 74% (→ 73%) |
+| Exact computation, flash-lite (three runs) | 90 | 75 | 79 | 4 / 0 | 81% → 87% |
+| MATH-500 (50), flash-lite | 50 | 45 | 46 | 1 / 0 | 90% → 93% |
+| GSM8K (100), flash-lite | 100 | 96 | 98 | 2 / 0 | 97% → 98% |
+| GSM-Hard (50), flash-lite | 50 | 37 | 36 | 1 / 2 | 71% → 71% |
+| MMLU (100), flash-lite, two runs | 200 | 191 | 191 | 1 / 1 | 95% → 95–96% |
+| MMLU (100), gemma | 100 | **92** | **89** | 1 / 4 | 91% → 89% |
+| MMLU medical (75), flash-lite | 75 | 72 | 73 | 1 / 0 | 95% → 97% |
+
+- **On the weaker model the paper is right, entirely.** Debate's gain on
+  gemma (one agent 18, debate 26) is all in the vote: the three debaters'
+  first answers, counted, already give 26, and two rounds of reading each
+  other change no verdict. That is why Agent Forest's five votes reached 25
+  on the same questions.
+- **On flash-lite the rounds do the work.** There the first-round vote is
+  where one agent is (18–20 of 30 on hard computation, against one agent's
+  19), and the exchange lifts each debater from about 60% to 74%: nine
+  verdicts turned right and none wrong over the rounds sweep. The exchange
+  helps where the debaters' slips differ and each can check the others'
+  arithmetic, and only in the first exchange (73–74% after round 2, 3 or 4).
+- **Where the model knows the answer or not (MMLU), rounds only add risk.**
+  On gemma's MMLU they turned four right verdicts wrong for one fixed: a
+  debater talked into a wrong option by two others.
+- Over all nineteen debate evaluations the rounds turned 22 wrong votes
+  right and 8 right ones wrong (p ≈ 0.02): a real but small effect, almost
+  all of it on long computation with the stronger model. Measured by
+  `.probe/debate_rounds.mts` over the stored runs.
+
 ## Answers the team had and lost
 
 Each miss graded by rule now says whether a member marked the right answer
