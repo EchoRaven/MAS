@@ -70,6 +70,18 @@ Host it, then give an env `endpoint: { hosted: { service } }` and connect the
 agents that live in it: a town for Generative Agents-style systems, a game
 board, a simulated office.
 
+Two agents in it, on flash-lite, reproduce Generative Agents' party in
+miniature: Isabella resets the world, walks to the park at 08:10 and announces
+her Valentine's party; Klaus, arriving at 08:32, hears it there (the park
+keeps what was said), answers, walks to the cafe and offers to help. The env
+is an imported one whose MCP endpoint is the hosted service:
+
+```yaml
+manifest:
+  exposes: { mcp: { transport: http, auth: none, tools: [look, move, take, drop, say, wait, time, reset],
+                    endpoint: { hosted: { service: svc_text_world_… } } } }
+```
+
 ## Compose projects
 
 An application env (an app, its database, its MCP server…) is hosted as its
