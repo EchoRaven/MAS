@@ -659,6 +659,22 @@ or questions you paste), optionally a seeded sample of it, choose
 "Everything on <model>", and press Evaluate. Each case is an ordinary run you
 can open and replay.
 
+### The controls a multi-agent system should beat
+
+Every claimed gain on this page was checked against the same four controls,
+each one a system in the library, and each has explained away some gain:
+
+| Control | System | What it rules out | Where it mattered |
+| --- | --- | --- | --- |
+| One agent | Single agent (baseline) | that the task needed more than one call | the reference for everything |
+| Several samples and a vote | Self-consistency, or Agent Forest with `n` | that discussion beat plain voting | voting matched debate on both models |
+| One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (17 → 25) and on medical MMLU |
+| One agent with the same tools | Single agent with code | that the agents, not the tool, did the work | it matched AutoGen, Magentic-One and tool-equipped debate |
+
+Run them on the same questions and models (Compare with other systems, or a
+batch), with repeats when the gaps are small, and read the paired column
+(fixed, lost, p) on Compare rather than the accuracies alone.
+
 To sweep a run variable, write its values with `|` in the Evaluate page's
 variables: `n=2|4|8` queues one evaluation per value (per system, when others
 are compared), one after another (`sweep: {name, values}` on
