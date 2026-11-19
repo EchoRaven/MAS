@@ -112,6 +112,10 @@ export const Api = {
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
+  /** Questions flagged as broken in a dataset (left out of scores on Compare). */
+  datasetFlags: (id: string) => api<{ flags: DatasetFlag[] }>("GET", `/datasets/${encodeURIComponent(id)}/flags`),
+  /** Flag a question (a reason) or clear its flag (reason null). */
+  flagQuestion: (id: string, input: string, reason: string | null) => api<{ flags: DatasetFlag[] }>("PUT", `/datasets/${encodeURIComponent(id)}/flags`, { input, reason }),
   /** Try an env's tools: a preview session on a throwaway copy (an imported env: the real service). */
   envPreview: (systemId: string, envId: string) => api<{ session: string; copy: boolean; tools: PreviewTool[] }>("POST", `/systems/${encodeURIComponent(systemId)}/envs/${encodeURIComponent(envId)}/preview`, {}),
   envPreviewCall: (systemId: string, envId: string, session: string, body: { tool: string; args: Record<string, unknown>; confirm?: boolean }) =>
@@ -166,4 +170,10 @@ export interface PreviewTool {
   input_schema: { properties?: Record<string, { type?: string; description?: string }>; required?: string[] };
   effect: string;
   needs_confirm: boolean;
+}
+
+export interface DatasetFlag {
+  input: string;
+  reason: string;
+  at: string;
 }

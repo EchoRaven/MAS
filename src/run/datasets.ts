@@ -32,6 +32,13 @@ export interface Dataset {
   cases: EvalCase[];
 }
 
+/** A question marked as broken: its key cannot be right, or it has no sensible answer. Compare leaves it out. */
+export interface DatasetFlag {
+  input: string;
+  reason: string;
+  at: string;
+}
+
 export type DatasetSummary = Omit<Dataset, "cases" | "adapter"> & { total: number };
 
 /** A short hash of the cases, as the dataset's version. */

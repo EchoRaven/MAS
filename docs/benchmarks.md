@@ -620,6 +620,14 @@ same bug on their first run, all fixed:
 The other ten (Debate, ReConcile, Agent Forest, EoT, DyLAN, MAD, MedAgents,
 AgentVerse, AutoAgents, MoA) marked every answer.
 
+**Flagged questions.** A question whose key cannot be right (or that has no
+sensible answer) can be flagged as broken from Compare's grid (the flag
+button, with a reason; `PUT /api/datasets/:id/flags`). A flag is a note on the
+dataset, not a change to it: its version, and every evaluation of it, stay as
+they are. Compare leaves flagged questions out of scores, spreads, paired
+tests and exports ("Leave out N flagged questions", on by default) and shows
+them struck through. The nine broken GSM-Hard questions below are flagged.
+
 An evaluation whose system calls a model with no key here is refused before
 it starts, with the model and the component that uses it; use "Everything on
 <model>" to run it on one you have.

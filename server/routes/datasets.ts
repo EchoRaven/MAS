@@ -1,6 +1,8 @@
 // Datasets: question sets kept on the server, plus the ones shipped with the app.
 import crypto from "node:crypto";
-import { builtinDatasets, type Dataset, type DatasetFormat, datasetVersion, sampleCases, summarize } from "@/run/datasets";
+import fs from "node:fs";
+import path from "node:path";
+import { builtinDatasets, type Dataset, type DatasetFlag, type DatasetFormat, datasetVersion, sampleCases, summarize } from "@/run/datasets";
 import { type EvalCase, type Grader, parseCases } from "@/run/evals";
 import type { Router } from "../http";
 import { runJs } from "../runtime/functions/sandbox";
@@ -73,6 +75,32 @@ export function datasetRoutes(r: Router, store: Store) {
     };
     store.putDataset(d);
     return { ...summarize(d), skipped: parsed.skipped };
+  });
+  // Questions flagged as broken (a key that cannot be right, a question with no sensible answer): a note on the
+  // dataset, not a change to it, so its version and every evaluation of it stay as they are; Compare leaves
+  // flagged questions out of scores
+  const flagsFile = (id: string) => path.join(store.stateDir("_datasets", id), "flags.json");
+  const readFlags = (id: string): DatasetFlag[] => {
+    try {
+      return JSON.parse(fs.readFileSync(flagsFile(id), "utf8")) as DatasetFlag[];
+    } catch {
+      return [];
+    }
+  };
+  r.on("GET", "/api/datasets/:id/flags", (req) => {
+    if (!findDataset(store, req.params.id)) throw new HttpError(404, "No such dataset");
+    return { flags: readFlags(req.params.id) };
+  });
+  r.on("PUT", "/api/datasets/:id/flags", async (req) => {
+    const d = findDataset(store, req.params.id);
+    if (!d) throw new HttpError(404, "No such dataset");
+    const b = ((await req.body()) ?? {}) as { input?: string; reason?: string | null };
+    const input = String(b.input ?? "");
+    if (!d.cases.some((c) => c.input === input)) throw new HttpError(400, "That question is not in this dataset");
+    const rest = readFlags(d.id).filter((f) => f.input !== input);
+    const flags = b.reason == null || !String(b.reason).trim() ? rest : [...rest, { input, reason: String(b.reason).trim().slice(0, 300), at: new Date().toISOString() }];
+    fs.writeFileSync(flagsFile(d.id), JSON.stringify(flags, null, 1));
+    return { flags };
   });
   r.on("DELETE", "/api/datasets/:id", (req) => {
     if (req.params.id.startsWith("builtin-")) throw new HttpError(400, "A built-in dataset cannot be deleted");

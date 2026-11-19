@@ -2,8 +2,8 @@
 // accuracy with its spread over repeats, cost, and which question each got right.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Copy, Download } from "lucide-react";
-import { Api, type EvalSummary } from "@/api/client";
+import { ArrowLeft, Copy, Download, Flag } from "lucide-react";
+import { Api, type DatasetFlag, type EvalSummary } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
@@ -82,6 +82,25 @@ export function ComparePage() {
     }
   }, [members, records]);
 
+  // questions flagged as broken in the set's dataset: left out of scores unless asked for
+  const datasetId = useMemo(() => members.map((e) => records[e.id]?.dataset?.id).find(Boolean) ?? null, [members, records]);
+  const [flags, setFlags] = useState<DatasetFlag[]>([]);
+  const [leaveOut, setLeaveOut] = useState(true);
+  useEffect(() => {
+    setFlags([]);
+    if (!datasetId) return;
+    Api.datasetFlags(datasetId)
+      .then((r) => setFlags(r.flags))
+      .catch(() => undefined);
+  }, [datasetId]);
+  const flagged = useMemo(() => new Map(flags.map((f) => [f.input, f.reason])), [flags]);
+  const flag = (input: string, reason: string | null) => {
+    if (!datasetId) return;
+    Api.flagQuestion(datasetId, input, reason)
+      .then((r) => setFlags(r.flags))
+      .catch((e) => setError(e.message));
+  };
+
   if (!connected)
     return (
       <p className="p-6 text-sm text-muted-foreground">
@@ -97,16 +116,20 @@ export function ComparePage() {
   const allRows = shown
     .filter((e) => records[e.id])
     .map((e) => {
-      const rec = records[e.id];
+      const full = records[e.id];
+      // scores, spreads, exports and paired tests leave flagged questions out; the grid still shows them
+      const rec = leaveOut && flagged.size ? { ...full, cases: full.cases.filter((c) => !flagged.has(c.input)) } : full;
       const st = repeatStats(rec);
-      return { e, rec, st, acc: st.mean ?? (rec.graded ? rec.passed / rec.graded : 0) };
+      const passed = rec.cases.filter((c) => c.pass).length;
+      const graded = rec.cases.filter((c) => c.pass !== undefined).length;
+      return { e, rec, full, st, acc: st.mean ?? (graded ? passed / graded : 0) };
     })
     .sort((a, b) => b.acc - a.acc || a.e.usd - b.e.usd);
   const rows = allRows.filter((r) => !off.has(r.e.id));
   // the ticked evaluations, as the exports describe them
   const exportRows = rows.map(({ e, rec }) => ({ label: e.system_name, setup: modelsLabel(e), rec }));
   // the questions in set order, with each evaluation's pass count on it
-  const questions = rows[0] ? [...new Map(rows[0].rec.cases.map((c, i) => [c.case ?? i, c.input])).entries()] : [];
+  const questions = rows[0] ? [...new Map(rows[0].full.cases.map((c, i) => [c.case ?? i, c.input])).entries()] : [];
   // the reference: the one picked, else the plain single agent on the model most rows use, else any baseline
   const counts = new Map<string, number>();
   for (const r of rows) counts.set(modelKey(r.e), (counts.get(modelKey(r.e)) ?? 0) + 1);
@@ -244,8 +267,13 @@ export function ComparePage() {
 
       {rows.length > 0 && (
         <section className="glass-panel overflow-x-auto rounded-xl p-4" aria-label="Question by question">
-          <div className="mb-2 flex items-center gap-3">
+          <div className="mb-2 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-semibold">Question by question</h2>
+            {flagged.size > 0 && (
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title={flags.map((f) => `${f.reason}: ${f.input.slice(0, 80)}`).join("\n")}>
+                <input type="checkbox" checked={leaveOut} onChange={(ev) => setLeaveOut(ev.target.checked)} /> Leave out {flagged.size} flagged question{flagged.size === 1 ? "" : "s"}
+              </label>
+            )}
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <input type="checkbox" checked={onlyDiffer} onChange={(ev) => setOnlyDiffer(ev.target.checked)} /> Only questions where they differ
             </label>
@@ -266,15 +294,31 @@ export function ComparePage() {
             </thead>
             <tbody>
               {questions.map(([k, input]) => {
-                const cells = rows.map(({ rec }) => cell(rec, input));
+                const cells = rows.map(({ full }) => cell(full, input));
+                const why = flagged.get(input);
                 const allFail = cells.every((c) => c.graded && !c.passed);
                 const fractions = cells.filter((c) => c.graded).map((c) => c.passed / c.graded);
                 if (onlyDiffer && fractions.every((f) => f === fractions[0])) return null;
                 return (
-                  <tr key={k} className={cn(allFail && "bg-destructive/5")}>
+                  <tr key={k} className={cn(allFail && !why && "bg-destructive/5", why && "opacity-50")}>
                     <td className="pr-2 text-right tabular-nums text-muted-foreground">{k + 1}</td>
-                    <td className="max-w-[28rem] truncate py-0.5 pr-3" title={input}>
-                      {input}
+                    <td className="max-w-[28rem] truncate py-0.5 pr-3" title={why ? `Flagged: ${why}\n\n${input}` : input}>
+                      {datasetId && (
+                        <button
+                          type="button"
+                          className={cn("mr-1.5 align-middle", why ? "text-amber-600" : "text-muted-foreground/40 hover:text-amber-600")}
+                          aria-label={why ? `Clear the flag on question ${k + 1}` : `Flag question ${k + 1} as broken`}
+                          title={why ? `Flagged: ${why} (click to clear)` : "Flag as broken: its key cannot be right, or it has no sensible answer"}
+                          onClick={() => {
+                            if (why) return flag(input, null);
+                            const reason = window.prompt("Why is this question broken? (it will be left out of scores)", "the key cannot be right");
+                            if (reason) flag(input, reason);
+                          }}
+                        >
+                          <Flag className="inline h-3 w-3" />
+                        </button>
+                      )}
+                      <span className={cn(why && "line-through")}>{input}</span>
                     </td>
                     {cells.map((c, i) => {
                       const f = c.graded ? c.passed / c.graded : null;
