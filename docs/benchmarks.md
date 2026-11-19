@@ -286,7 +286,11 @@ Later, with code (the same 50, answer lines checked):
 
 Running code fixed three problems no text-only system got (#8, #13, #34)
 and lost none: the best score on this sample, though three problems is not
-yet significant. Magentic-One's orchestration added nothing over one agent
+yet significant. On 50 more problems (seed 2) the gap nearly closed (single
+45, with code 46: +3 −2). Over the 100, code fixes 6 and loses 2 (p ≈ 0.29):
+a small edge, not a demonstrated one. MATH's problems are mostly reasoning
+with short arithmetic, so a code runner matters far less than on Hard
+computation's long exact chains. Magentic-One's orchestration added nothing over one agent
 with the same sandbox, as AutoGen's five agents did on Hard computation.
 
 At about 90%, neither voting nor debate gains more than a question in 50.
