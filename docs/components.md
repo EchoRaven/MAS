@@ -62,6 +62,10 @@ return await ctx.tool("bash", { command: "python3 main.py" });
 A read-only access edge gives read-only tools; each call is a tool event in the
 run, like an agent's.
 
+A function connected to a room is an auto-replier: it runs on each message it
+hears, its non-empty return is posted as its reply, and `null` keeps it silent
+(AutoGen's user proxy runs the code blocks it sees this way).
+
 State across rounds goes in `ctx.vars` (DyLAN keeps its agents' importance
 scores there):
 

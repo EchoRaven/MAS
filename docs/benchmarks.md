@@ -507,6 +507,17 @@ This is the clearest result so far. How the agents talk matters less than
 whether one of them can run code, and the right baseline for a system with
 tools is a single agent with the same tools.
 
+### With a user proxy that has no model
+
+AutoGen's UserProxyAgent runs code without a model call; here it was a small
+model with the sandbox's bash until rooms could seat functions. As a function
+in the room (it runs each python block it sees, and stays silent otherwise),
+AutoGen scored 28 of 30 on Hard computation at $0.024, a fifth of the
+$0.12 with the small model. Its two misses (#19, #20, counting letters) are
+not arithmetic: the coder retyped the sentence into its code with different
+words, and the code counted the wrong text correctly. Running code fixes
+computing, not copying.
+
 ## Coding: five systems on 31 problems
 
 Two sets written for this (`benchmarks/mas-code/`, no download): 19

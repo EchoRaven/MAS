@@ -196,8 +196,10 @@ the vocabulary:
   Magentic-One's terminal run code without a model call. A function component
   connected to a sandbox calls its tools with `ctx.tool(name, args)`: Magentic-One's
   ComputerTerminal is now that, as in the paper (30 of 30 on Hard computation,
-  cheaper than the small model that stood in). AutoGen's proxy still speaks in a
-  room, which only agents join.
+  cheaper than the small model that stood in). A function in a room replies on
+  its own when it returns something: AutoGen's user proxy is now that, running
+  each python block it sees (28 of 30 on Hard computation at a fifth of the
+  cost).
 - **Data the papers had.** TradingAgents' market feeds, STORM's Wikipedia
   tables of contents and Werewolf's experience pool are connectable (MCP envs,
   knowledge and memory plugins) but not bundled.
