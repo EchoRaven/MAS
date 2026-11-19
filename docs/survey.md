@@ -168,8 +168,10 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   attempt missed.
 - **A simulated discussion does as well as a real one.** One model playing
   several personas in a single call (Solo Performance Prompting) scored as
-  Multiagent Debate does (21 of 30 on average), at a fifth of the cost: on
-  these questions, what discussion adds does not need separate agents.
+  Multiagent Debate does (21 of 30 on average on flash-lite, at a fifth of the
+  cost), and on the weaker gemma, where real debate gained 9, it gained the
+  same: 17 → 25 (+9 −1, p = 0.02), agreeing with debate on 29 of 30 questions.
+  What discussion adds does not need separate agents.
 - **Mixing models reaches the best member, not beyond it.** ReConcile with one
   seat per model averaged 27.3 over three runs, as its strongest seat did alone
   (gemini-3-flash, 27.3), at about four times the cost; and

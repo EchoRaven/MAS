@@ -77,6 +77,9 @@ Measured on this platform, every system on the same model and questions
   p ≈ 0.02 for the best); those built on roles and long pipelines are no better
   than one agent (MoA 17, MedAgents 15, MAD 14, AutoAgents 13, CAMEL 12,
   ChatEval 12: lower, but they fix about as many questions as they lose).
+- **A simulated discussion does as well as a real one**: one model playing
+  several personas in a single call (Solo Performance Prompting) matches
+  Multiagent Debate on both models, including the weaker one's 17 → 25.
 - **Mixing models reaches the best member, not beyond it**: ReConcile and
   Mixture-of-Agents with one seat per model tie their strongest model alone,
   at three to four times the cost.

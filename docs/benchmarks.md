@@ -274,6 +274,7 @@ length. Hard computation (30), one run each:
 | Agent Forest, N = 5 (vote) | 25 | 92 min |
 | Multiagent Debate, 2 rounds | **26** | 116 min |
 | ReConcile, 3 rounds | 25 | 112 min |
+| Solo Performance Prompting (one call, simulated personas) | 25 | 77 min |
 | Single agent with a code runner | **30** | 8.5 min |
 
 **+9 questions in 30: the first large gain from discussion on this platform.**
@@ -296,7 +297,11 @@ lands in the same place: 25, missing #6–#10 (the digit sums and a long
 product). One of those (#8) ended on a cut-off stream ("terminated") that
 every system missed; model calls now retry a dropped connection three times.
 Voting, debate and ReConcile all sit 8–9 above the single agent, and within
-one question of each other. One agent that can run code solves all 30, in
+one question of each other. One model playing all the personas in a single call
+(Solo Performance Prompting) gets the same gain: 25, fixing 9 questions and
+losing 1 against the single agent (p = 0.02), and agreeing with real debate on
+29 of the 30 questions. The weaker model's gain from discussion does not need
+separate agents. One agent that can run code solves all 30, in
 a fourteenth of the time: the weaker model's slips are in long exact
 arithmetic, and code removes them where three copies of the model only
 outvote them.
