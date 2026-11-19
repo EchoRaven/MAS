@@ -66,6 +66,12 @@ A function connected to a room is an auto-replier: it runs on each message it
 hears, its non-empty return is posted as its reply, and `null` keeps it silent
 (AutoGen's user proxy runs the code blocks it sees this way).
 
+State across runs goes in `ctx.state` (`get(key)`, `set(key, value)`, `all()`),
+kept per system: what one run learned, for the next. DyLAN adds its agents'
+importance there and, with `team_size = k`, sends later questions to its k
+most important agents. `GET /api/systems/:id/state` shows it, `DELETE` clears
+it.
+
 State across rounds goes in `ctx.vars` (DyLAN keeps its agents' importance
 scores there):
 

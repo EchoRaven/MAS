@@ -13,8 +13,18 @@ const AGENTS: [string, string, string][] = [
 ];
 
 // sends the question to the agents chosen for this layer (all of them in the first)
-const DISPATCH = `// a ranking that chose no one would leave the next layer waiting forever: fall back to the full team
-const chosen = ctx.vars.selected?.length ? ctx.vars.selected : ["a1", "a2", "a3", "a4"];
+const DISPATCH = `// team optimization (the paper's first stage): with the run variable team_size = k, the first layer goes only to
+// the k agents with the most importance accumulated over earlier runs (ctx.state), once there are some
+const ALL = ["a1", "a2", "a3", "a4"];
+let team = ALL;
+const k = Number(ctx.vars.team_size);
+const learned = ctx.state.get("importance") ?? {};
+if (!ctx.vars.selected?.length && k >= 1 && k < ALL.length && (ctx.state.get("runs") ?? 0) >= 3) {
+  team = [...ALL].sort((x, y) => (learned[y] ?? 0) - (learned[x] ?? 0)).slice(0, k);
+  ctx.log("Team chosen by importance over " + ctx.state.get("runs") + " earlier runs: " + team.join(", "));
+}
+// a ranking that chose no one would leave the next layer waiting forever: fall back to the team
+const chosen = ctx.vars.selected?.length ? ctx.vars.selected : team;
 ctx.vars.expected = chosen.length;
 ctx.vars.got = {};
 ctx.vars.layer = (ctx.vars.layer ?? 0) + 1;
@@ -41,6 +51,11 @@ const counts = {};
 for (const f of finals) counts[f] = (counts[f] ?? 0) + 1;
 const [top, n] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
 if (n >= Math.ceil((2 / 3) * Object.keys(got).length) && Object.keys(got).length > 1) {
+  // what this run learned about its agents goes to the system's state, for team optimization in later runs
+  const total = ctx.state.get("importance") ?? {};
+  for (const [a, v] of Object.entries(ctx.vars.importance ?? {})) total[a] = (total[a] ?? 0) + Number(v);
+  ctx.state.set("importance", total);
+  ctx.state.set("runs", (ctx.state.get("runs") ?? 0) + 1);
   return { done: "CONSENSUS after layer " + ctx.vars.layer + ": " + top + "\\nAgent importance: " + JSON.stringify(ctx.vars.importance ?? {}) + "\\nFinal: " + top };
 }
 return { rank: got };`;
@@ -110,7 +125,7 @@ export const dylan: TemplateInfo = {
     ],
     differs: [
       "The paper computes Agent Importance Scores by propagating ratings backward through the layers; here each layer's ranker scores are summed.",
-      "The paper uses those scores afterwards to pick a smaller team for a task; this template reports them but does not prune the team for later runs.",
+      "Importance accumulates in the system's state across runs (ctx.state; runs that end by consensus count). With the run variable team_size = k, once three runs have been recorded, the first layer goes only to the k most important agents: the paper's team optimization, done online rather than in a separate selection stage.",
     ],
   },
 };

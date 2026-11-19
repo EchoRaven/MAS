@@ -12,8 +12,8 @@ describe("run variables", () => {
   it("finds the variables a system reads but never sets", () => {
     const eot = TEMPLATES.find((t) => t.id === "paper-eot")!.build();
     expect(readVars(eot)).toEqual(["paradigm"]);
-    // DyLAN's functions only pass state to each other through ctx.vars
-    expect(readVars(TEMPLATES.find((t) => t.id === "paper-dylan")!.build())).toEqual([]);
+    // DyLAN's functions pass state to each other through ctx.vars; the one it reads is team_size (team optimization)
+    expect(readVars(TEMPLATES.find((t) => t.id === "paper-dylan")!.build())).toEqual(["team_size"]);
     // and the ones written as {{vars.x}}: round limits, ensemble sizes, instructions
     expect(readVars(TEMPLATES.find((t) => t.id === "paper-debate")!.build())).toContain("rounds");
     expect(readVars(TEMPLATES.find((t) => t.id === "paper-agent-forest")!.build())).toContain("n");

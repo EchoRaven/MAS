@@ -77,6 +77,22 @@ export function envRoutes(r: Router, store: Store, dataDir: string, previews?: E
     return { ok: true };
   });
 
+  // what a system's code kept across runs (ctx.state): read it, or clear it to start learning again
+  const stateFile = (id: string) => path.join(state(id, "_state"), "state.json");
+  r.on("GET", "/api/systems/:id/state", (req) => {
+    if (!store.getSystem(req.params.id)) throw new HttpError(404, "No such system");
+    try {
+      return { state: JSON.parse(fs.readFileSync(stateFile(req.params.id), "utf8")) };
+    } catch {
+      return { state: {} };
+    }
+  });
+  r.on("DELETE", "/api/systems/:id/state", (req) => {
+    if (!store.getSystem(req.params.id)) throw new HttpError(404, "No such system");
+    fs.rmSync(stateFile(req.params.id), { force: true });
+    return { ok: true };
+  });
+
   r.on("GET", "/api/systems/:id/envs/:env/contents", async (req) => {
     const doc = store.getSystem(req.params.id);
     if (!doc) throw new HttpError(404, "No such system");

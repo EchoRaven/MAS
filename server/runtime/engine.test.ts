@@ -1102,6 +1102,18 @@ describe("runtime", () => {
     expect(events.some((e) => e.type === "transform" && e.at === "proxy" && e.detail === "stays silent")).toBe(true);
   });
 
+  it("ctx.state keeps what a system's code learned from one run to the next", async () => {
+    const b = new Builder("Learns", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("count", "function", 200, 0, { name: "Count", fn: { lang: "js", code: 'const n = (ctx.state.get("runs") ?? 0) + 1;\nctx.state.set("runs", n);\nreturn "run " + n;' } })
+      .edge("me", "count", "message")
+      .edge("count", "me", "message");
+    const doc = { ...b.doc, id: "sys_learns" };
+    const out = async () => ((await run(doc, "go", { mock: false })).events.find((e) => e.type === "output") as { text: string }).text;
+    expect(await out()).toBe("run 1");
+    expect(await out()).toBe("run 2");
+  });
+
   it("ctx.tool names what a function is connected to when the tool is not there", async () => {
     const b = new Builder("Fn tool", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

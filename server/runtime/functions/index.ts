@@ -1,4 +1,6 @@
 // Run any FunctionSpec: f(input, ctx) -> output | null.
+import fs from "node:fs";
+import path from "node:path";
 import jsonata from "jsonata";
 import type { FunctionSpec } from "@/model/types";
 import type { RunCtx } from "../context";
@@ -27,6 +29,33 @@ export async function llmCall(rc: RunCtx, node: string, prompt: string, model?: 
   return textOf(res.content);
 }
 
+/**
+ * A system's own store across runs: ctx.state.get(key), ctx.state.set(key, value), ctx.state.all(). JSON values,
+ * kept in the system's state folder; GET / DELETE /api/systems/:id/state reads or clears it.
+ */
+export function systemState(rc: RunCtx) {
+  const file = path.join(rc.store.stateDir(rc.doc.id, "_state"), "state.json");
+  const read = (): Record<string, unknown> => {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  };
+  return {
+    get: (key: string) => read()[String(key)],
+    set: (key: string, value: unknown) => {
+      const all = read();
+      all[String(key)] = JSON.parse(JSON.stringify(value ?? null));
+      const text = JSON.stringify(all);
+      if (text.length > 1_000_000) throw new Error("ctx.state holds at most 1 MB");
+      fs.writeFileSync(file, text);
+      return value;
+    },
+    all: () => read(),
+  };
+}
+
 export function fnContext(rc: RunCtx, scope: FnScope): Record<string, unknown> {
   const node = scope.node ?? "";
   return {
@@ -39,6 +68,8 @@ export function fnContext(rc: RunCtx, scope: FnScope): Record<string, unknown> {
     /** ctx.llm(prompt, data?, model?): data is appended as text or JSON */
     llm: (prompt: string, data?: unknown, model?: string) => llmCall(rc, node, data === undefined ? String(prompt) : `${prompt}\n\n${typeof data === "string" ? data : JSON.stringify(data, null, 1)}`, model),
     log: (text: string) => rc.emit({ type: "log", node, level: "info", text: String(text).slice(0, 2000) }),
+    /** ctx.state: values kept by the system across runs (what one run learned, for the next: DyLAN's agent importance) */
+    state: systemState(rc),
     ...scope.vars,
     ...scope.helpers,
   };

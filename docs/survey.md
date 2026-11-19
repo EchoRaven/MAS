@@ -198,10 +198,11 @@ the vocabulary:
   Minecraft and Werewolf's game are a room, a Python sandbox and a custom
   loop. A world with space, objects and a clock has no component of its own;
   an imported env (`mas-env/1`) is the way in.
-- **Learned components.** Agents' Room fine-tunes its agents; DyLAN learns
-  agent importance across tasks. The platform runs prompted models, and does
-  not carry what is learned from one task to the next, except through memory
-  plugins.
+- **Learned components** (in part). Agents' Room fine-tunes its agents, which
+  the platform does not (it runs prompted models). What is learned from one
+  task to the next can now be carried: code keeps values across runs in
+  `ctx.state`, and DyLAN accumulates its agents' importance there and, with
+  `team_size`, picks its team from it, as the paper's team optimization does.
 - **Agents without a model** (now expressed). AutoGen's user proxy and
   Magentic-One's terminal run code without a model call. A function component
   connected to a sandbox calls its tools with `ctx.tool(name, args)`: Magentic-One's
