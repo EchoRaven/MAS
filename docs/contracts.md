@@ -446,7 +446,9 @@ misses group as "a member had it, the team lost it": the team found the
 answer and its way of combining lost it, which a better aggregator could
 fix; the other misses nobody found. A system that calls its models from
 inside a function (MacNet) logs no member messages, so nothing is found
-there. The Evaluate page warns before a run when the declared
+there. Regrading an evaluation by rule checks again from the runs' logs,
+which fills `reached` in for evaluations from before it was recorded; Compare
+shows each one's count ("Had it, lost": 3 of 9). The Evaluate page warns before a run when the declared
 type does not fit the grader (a system that returns a number, graded by
 running code). `choice` without `choices` means an option letter.
 

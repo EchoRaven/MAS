@@ -133,6 +133,12 @@ describe("evaluations", () => {
     expect(done.cases.map((c) => c.pass)).toEqual([false, false]);
     expect(done.cases[0].reached).toEqual(["Solver"]); // the solver said 7; the team answered 0
     expect(done.cases[1].reached).toEqual([]); // nobody said 6
+    // an evaluation from before this was recorded gets it by regrading, from the runs' logs
+    const old = store.getEval(done.id)!;
+    for (const c of old.cases) delete c.reached;
+    store.putEval(old);
+    const again = await evals.regrade(done.id);
+    expect(again.cases.map((c) => c.reached)).toEqual([["Solver"], []]);
   });
 
   it("retries only the cases that gave no answer, in place, and keeps the others", async () => {

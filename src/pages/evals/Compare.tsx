@@ -200,6 +200,7 @@ export function ComparePage() {
               <th className="text-right">Accuracy</th>
               <th className="hidden text-right sm:table-cell">Per repeat</th>
               <th className="hidden text-right lg:table-cell" title="Questions this system got right that the reference got wrong (+), and the other way (−); p: exact McNemar test on those">vs reference</th>
+              <th className="hidden text-right lg:table-cell" title="Of the misses checked, those where a member marked the right answer during the run and the team's answer lost it. An evaluation from before this was recorded shows –; regrade it on the Evaluate page to check its runs">Had it, lost</th>
               <th className="text-right">Cost</th>
               <th className="hidden text-right sm:table-cell">Per correct answer</th>
               <th className="hidden text-right md:table-cell">Run</th>
@@ -250,6 +251,14 @@ export function ComparePage() {
                         );
                       })()
                     )}
+                  </td>
+                  <td className="hidden py-2 text-right text-xs tabular-nums lg:table-cell">
+                    {(() => {
+                      const checked = r ? r.rec.cases.filter((c) => c.pass === false && c.reached) : [];
+                      if (!checked.length) return <span className="text-muted-foreground">–</span>;
+                      const lost = checked.filter((c) => c.reached!.length).length;
+                      return <span className={cn(!lost && "text-muted-foreground")}>{lost} of {checked.length}</span>;
+                    })()}
                   </td>
                   <td className="py-2 text-right tabular-nums">{usd(e.usd)}</td>
                   <td className="hidden py-2 text-right tabular-nums text-muted-foreground sm:table-cell">{(() => { const ok = r ? r.rec.cases.filter((c) => c.pass).length : e.passed; return ok ? usd(e.usd / ok) : "–"; })()}</td>

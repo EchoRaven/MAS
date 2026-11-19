@@ -172,7 +172,14 @@ export class EvalManager {
     }
     // the judge's verdicts were paid for and cannot be had back by regrading: keep them
     if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
-    for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, gradeByRule(g as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
+    for (const c of rec.cases) {
+      if (c.status !== "done" || !c.output) continue;
+      Object.assign(c, gradeByRule(g as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
+      // who had the answer on a miss, from the run's log as it was kept (evaluations from before this was recorded too)
+      delete c.reached;
+      const sys = c.pass === false && c.run_id ? this.store.getRunSystem(c.run_id) : null;
+      if (sys) c.reached = reachedBy(memberMessages(this.store.events(c.run_id!) as RunEvent[]), memberName(sys), g, c.expected, c.input);
+    }
     rec.grader = g;
     rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
     rec.passed = rec.cases.filter((c) => c.pass).length;
