@@ -189,19 +189,21 @@ each, through the built-in dataset (2026-11-18):
   Multiagent Debate's 21 and 21, at a fifth of the cost ($0.05 a run against
   $0.25). On these questions the separate agents add nothing that one model
   imagining them does not.
-- **Mixture-of-Agents with three different models ties its best one.** As its
-  paper intends, the proposers were different models (gemini-3.8-flash,
-  gemma, flash-lite, in two layers) and 3.8-flash aggregated: 26 of 30, the
-  same as 3.8-flash alone on these questions, at about three times the cost
-  ($0.28) and 88 minutes (gemma's long thinking). With all slots on flash-lite
-  it scored 17. Mixing models brings the answer up to the best member's, not
-  above it, as with mixed-model ReConcile. Self-MoA (Li et al. 2025,
-  "Rethinking Mixture-of-Agents") claims the opposite of mixing: every slot
-  on the best model. With all seven on 3.8-flash it scored 26 again
-  ($0.44, 15 minutes instead of 88), missing four questions, three of them
-  the mixed run's; on none of its misses did any proposer have the answer.
-  Neither mixing nor self-mixing beats the best model alone here: what the
-  layers add is the best member's answer, which it gives by itself.
+- **Mixture-of-Agents with three different models: 28, two above its best
+  one, in one run.** As its paper intends, the proposers were different
+  models (gemini-3.8-flash, gemma, flash-lite, in two layers) and 3.8-flash
+  aggregated. It was first reported here as 26, "the same as 3.8-flash
+  alone"; three of its four misses were in fact Google 503s with no output.
+  Retried in place (Evaluate → Retry), they gave two right answers: 28 of 30,
+  for $0.30. Against 3.8-flash alone (26) it fixes two questions and loses
+  none (p = 0.5: one run each, not significant). With all slots on flash-lite
+  it scored 17. Self-MoA (Li et al. 2025, "Rethinking Mixture-of-Agents")
+  claims the best model in every slot beats mixing; with all seven on
+  3.8-flash it scored 26 ($0.44, 15 minutes instead of 88), missing exactly
+  the four questions 3.8-flash alone misses, and no proposer had the answer
+  on any of them. Here, then, the paper's claim does not reproduce: more
+  calls to one model change nothing, and the mixture, alone of the two,
+  fixes questions the best model cannot, though too few to be sure.
 - **DyLAN's team optimization learns the obvious team.** Over one pass of the
   30 questions it accumulated importance (`ctx.state`): Programmer 51,
   Mathematician 49, Skeptic 18, Generalist 8. With `team_size = 2` the later

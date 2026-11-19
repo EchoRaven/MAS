@@ -80,9 +80,11 @@ Measured on this platform, every system on the same model and questions
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models, including the weaker one's 17 → 25.
-- **Mixing models reaches the best member, not beyond it**: ReConcile and
-  Mixture-of-Agents with one seat per model tie their strongest model alone,
-  at three to four times the cost.
+- **Mixing models mostly reaches the best member, not beyond it**: ReConcile
+  with one seat per model ties its strongest model alone, at four times the
+  cost; Mixture-of-Agents with three models scored 28 against its best
+  model's 26 (one run, not significant), and the best model in every slot
+  (Self-MoA) 26.
 - **Tools matter more than talk.** Questions no discussion fixed were solved
   every time once one agent could run code, and a single agent with the same
   sandbox scored as well as AutoGen's five-agent chat.
