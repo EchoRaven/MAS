@@ -8,7 +8,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import type { EnvData, SysEdge, SysNode, SystemDoc } from "@/model/types";
+import type { EnvData, PluginData, SysEdge, SysNode, SystemDoc } from "@/model/types";
 import type { HostedServices } from "../hosting/services";
 import type { Config } from "../config";
 import type { Store } from "../store/files";
@@ -19,6 +19,7 @@ import { DatabaseEnv } from "./resources/envs/database";
 import { McpEnv } from "./resources/envs/mcpEnv";
 import { RoomEnv } from "./resources/envs/room";
 import { SandboxEnv } from "./resources/envs/sandbox";
+import { createPlugin } from "./resources/plugins";
 import type { Resource, RtTool } from "./resources/types";
 
 const IDLE_MS = 10 * 60_000;
@@ -65,13 +66,15 @@ export class EnvPreviews {
     return { id: `preview-${envId}`, source: "preview", target: envId, kind: "access", access: "read_write" } as SysEdge;
   }
 
-  /** Start a preview of an env of a stored system. */
+  /** Start a preview of an env or a plugin of a stored system. */
   open(doc: SystemDoc, envId: string): Session {
-    const node = doc.nodes.find((n) => n.id === envId && n.data.kind === "env") as SysNode<EnvData> | undefined;
-    if (!node) throw new Error("No such env in this system");
+    const found = doc.nodes.find((n) => n.id === envId && (n.data.kind === "env" || n.data.kind === "plugin"));
+    if (!found) throw new Error("No such env or plugin in this system");
     const id = crypto.randomBytes(6).toString("hex");
     const dir = path.join(this.dataDir, "previews", id);
     fs.mkdirSync(dir, { recursive: true });
+    if (found.data.kind === "plugin") return this.openPlugin(doc, found as SysNode<PluginData>, id, dir);
+    const node = found as SysNode<EnvData>;
     const e = node.data;
     let data: EnvData = { ...e };
     let copy = true;
@@ -91,6 +94,31 @@ export class EnvPreviews {
       id: `${doc.id}__preview_${id}`,
       nodes: doc.nodes.filter((n) => !(n.data.kind === "plugin" && n.data.preset === "workspace")).map((n) => (n.id === envId ? pnode : n)),
     };
+    const { session, rc } = this.context(doc, pdoc, envId, id, dir, copy);
+    session.resource =
+      e.manifest?.exposes.mcp ? new McpEnv(rc, pnode) : e.env_kind === "sandbox" ? new SandboxEnv(rc, pnode) : e.env_kind === "database" ? new DatabaseEnv(rc, pnode) : e.env_kind === "room" ? new RoomEnv(rc, pnode) : (null as unknown as Resource);
+    if (!session.resource) throw new Error(`A ${e.env_kind} env has no tools to try`);
+    this.sessions.set(id, session);
+    return session;
+  }
+
+  /**
+   * A plugin on a copy of its state: its own folder and the system's shared folders (workspaces) are copied
+   * into the preview's, so a memory written or a file changed in the preview stays there. A plugin with an
+   * external backend (MCP, HTTP) is the real service.
+   */
+  private openPlugin(doc: SystemDoc, node: SysNode<PluginData>, id: string, dir: string): Session {
+    const pdoc: SystemDoc = { ...doc, id: `${doc.id}__preview_${id}` };
+    const from = path.join(this.dataDir, "state", doc.id);
+    const to = path.join(this.dataDir, "state", pdoc.id);
+    for (const part of [node.id, "fs"]) if (fs.existsSync(path.join(from, part))) fs.cpSync(path.join(from, part), path.join(to, part), { recursive: true });
+    const { session, rc } = this.context(doc, pdoc, node.id, id, dir, node.data.spec.backend.kind === "builtin");
+    session.resource = createPlugin(rc, { ...node });
+    this.sessions.set(id, session);
+    return session;
+  }
+
+  private context(doc: SystemDoc, pdoc: SystemDoc, envId: string, id: string, dir: string, copy: boolean): { session: Session; rc: RunCtx } {
     const ctrl = new AbortController();
     const session = { id, systemId: doc.id, envId, copy, log: [], usd: 0, touched: Date.now(), dir, ctrl } as unknown as Session;
     const rc: RunCtx = {
@@ -116,11 +144,7 @@ export class EnvPreviews {
         throw new Error("A preview cannot ask a person");
       },
     };
-    session.resource =
-      e.manifest?.exposes.mcp ? new McpEnv(rc, pnode) : e.env_kind === "sandbox" ? new SandboxEnv(rc, pnode) : e.env_kind === "database" ? new DatabaseEnv(rc, pnode) : e.env_kind === "room" ? new RoomEnv(rc, pnode) : (null as unknown as Resource);
-    if (!session.resource) throw new Error(`A ${e.env_kind} env has no tools to try`);
-    this.sessions.set(id, session);
-    return session;
+    return { session, rc };
   }
 
   get(id: string, systemId: string, envId: string): Session {

@@ -55,7 +55,7 @@ function ToolForm({ tool, onRun, busy }: { tool: PreviewTool; onRun: (args: Reco
   );
 }
 
-export function EnvTry({ systemId, envId }: { systemId: string; envId: string }) {
+export function EnvTry({ systemId, envId, what = "env" }: { systemId: string; envId: string; what?: "env" | "plugin" }) {
   const connected = useServer((s) => s.status === "connected");
   const [session, setSession] = useState<{ id: string; copy: boolean; tools: PreviewTool[] } | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -95,7 +95,11 @@ export function EnvTry({ systemId, envId }: { systemId: string; envId: string })
   if (!session)
     return (
       <div className="flex flex-col gap-1.5">
-        <p className="text-[11px] text-muted-foreground">Call each tool yourself, as an agent would, on a throwaway copy of this env: a machine of its own, a copy of the database. Nothing real changes.</p>
+        <p className="text-[11px] text-muted-foreground">
+          {what === "plugin"
+            ? "Call each tool yourself, as an agent would, on a copy of this plugin's state (its memories, files, index). Nothing real changes; a plugin served by an outside backend is the real service."
+            : "Call each tool yourself, as an agent would, on a throwaway copy of this env: a machine of its own, a copy of the database. Nothing real changes."}
+        </p>
         <Button size="sm" variant="outline" className="self-start" onClick={start} disabled={busy}>
           <Play className="mr-1.5 h-3.5 w-3.5" /> {busy ? "Starting…" : "Start a preview"}
         </Button>

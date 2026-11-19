@@ -1,4 +1,5 @@
 import { Trash2 } from "lucide-react";
+import { EnvTry } from "./EnvTry";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ function PipelineTab({ label, on, setOn, children }: { label: string; on: boolea
   );
 }
 
-export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc; set: (next: PluginData) => void }) {
+export function PluginInspector({ id, p, doc, set }: { id: string; p: PluginData; doc: SystemDoc; set: (next: PluginData) => void }) {
   const spec = p.spec;
   const setSpec = (patch: Partial<PluginSpec>) => set({ ...p, preset: p.preset === "custom" ? "custom" : p.preset, spec: { ...spec, ...patch } });
   const setTool = (i: number, patch: Partial<PluginSpec["tools"][number]>) => setSpec({ tools: spec.tools.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
@@ -37,6 +38,7 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
     ...(p.preset === "knowledge" || spec.index ? ([["index", "Indexing"]] as [string, string][]) : []),
     ...(p.preset === "memory" || spec.memory ? ([["memory", "Memory"]] as [string, string][]) : []),
     ["hooks", "Hooks"],
+    ["try", "Try it"],
   ];
   return (
     <Tabs defaultValue="settings" className="flex min-h-0 flex-1 flex-col">
@@ -109,6 +111,9 @@ export function PluginInspector({ p, doc, set }: { p: PluginData; doc: SystemDoc
         </RowList>
       </Section>
       <Note>Per-agent settings (which tools, top K, overrides of any retrieval step) live on the access edge to each agent.</Note>
+        </TabsContent>
+        <TabsContent value="try" className="mt-0 space-y-2">
+          <EnvTry systemId={doc.id} envId={id} what="plugin" />
         </TabsContent>
         <TabsContent value="hooks" className="mt-0 space-y-2">
       <Section title="Hooks" aside={<Hint>Hooks run around the pipelines: before_turn can replace retrieval entirely; after_turn can replace the memory lifecycle.</Hint>}>

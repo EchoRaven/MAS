@@ -23,6 +23,7 @@ beforeAll(async () => {
     .node("box", "env", 0, 0, { name: "Box", env_kind: "sandbox", image: "python:3.12-slim", lifecycle: "per_run" })
     .node("own", "env", 0, 0, { name: "Own", env_kind: "sandbox", image: "python:3.12-slim", lifecycle: "persistent", share: "per_agent" })
     .node("db", "env", 0, 0, { name: "DB", env_kind: "database", image: "" })
+    .plugin("notes", "workspace", 0, 0, { name: "Notes", scope: "system", sources: ["/notes"] })
     .node("dbw", "env", 0, 0, { name: "Writable DB", env_kind: "database", image: "", db: { mode: "tools", templates: [], tables: [], read_only: false, row_limit: 50, model: null, fn: null } });
   store.putSystem({ ...b.doc, id: "sys_envs" });
   const st = (...p: string[]) => path.join(dir, "state", ...p);
@@ -38,6 +39,9 @@ beforeAll(async () => {
   const db = new DatabaseSync(st("sys_envs", "db", "db.sqlite"));
   db.exec("CREATE TABLE orders (id INTEGER, total REAL); INSERT INTO orders VALUES (1, 9.5), (2, 3);");
   db.close();
+  // a workspace whose source is /notes keeps its files in the system's shared folder for /notes
+  fs.mkdirSync(st("sys_envs", "fs", "notes"), { recursive: true });
+  fs.writeFileSync(st("sys_envs", "fs", "notes", "plan.md"), "the real plan");
   fs.mkdirSync(st("sys_envs", "dbw"), { recursive: true });
   fs.copyFileSync(st("sys_envs", "db", "db.sqlite"), st("sys_envs", "dbw", "db.sqlite"));
   const r = new Router("t");
@@ -104,5 +108,21 @@ describe("env contents", () => {
     expect(open.tools.map((t) => t.name)).toEqual(["bash", "edit_file", "run_tests", "list_work"]);
     const call = await fetch(`${base}/api/systems/sys_envs/envs/box/preview/${open.session}/call`, { method: "POST", headers: { authorization: "Bearer t", "content-type": "application/json" }, body: JSON.stringify({ tool: "bash", args: { command: "id" } }) });
     expect(((await call.json()) as { result: string; error: boolean })).toMatchObject({ error: true, result: expect.stringMatching(/MAS_ALLOW_LOCAL_EXEC is off/) });
+  });
+
+  it("previews a plugin on a copy of its state: it sees the real files, and writes stay in the preview", async () => {
+    const post = async (p: string, body: unknown = {}) => {
+      const r = await fetch(`${base}/api/systems/sys_envs/envs/${p}`, { method: "POST", headers: { authorization: "Bearer t", "content-type": "application/json" }, body: JSON.stringify(body) });
+      return (await r.json()) as Record<string, unknown>;
+    };
+    const open = (await post("notes/preview")) as { session: string; copy: boolean; tools: { name: string }[] };
+    expect(open.copy).toBe(true);
+    const names = open.tools.map((t) => t.name);
+    expect(names).toEqual(expect.arrayContaining(["read_file", "write_file"]));
+    const read = names.find((n) => n === "read_file")!;
+    expect(((await post(`notes/preview/${open.session}/call`, { tool: read, args: { path: "plan.md" } })) as { result: string }).result).toContain("the real plan");
+    await post(`notes/preview/${open.session}/call`, { tool: "write_file", args: { path: "plan.md", content: "changed in the preview" } });
+    expect(((await post(`notes/preview/${open.session}/call`, { tool: read, args: { path: "plan.md" } })) as { result: string }).result).toContain("changed in the preview");
+    expect(fs.readFileSync(path.join(dir, "state", "sys_envs", "fs", "notes", "plan.md"), "utf8")).toBe("the real plan");
   });
 });

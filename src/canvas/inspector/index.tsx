@@ -49,7 +49,7 @@ function NodeBody({ id, data, p }: { id: string; data: NodeData; p: InspectorPro
     case "env":
       return <EnvInspector id={id} e={data as EnvData} doc={p.doc} set={set} />;
     case "plugin":
-      return <PluginInspector p={data as PluginData} doc={p.doc} set={(next) => set(next)} />;
+      return <PluginInspector id={id} p={data as PluginData} doc={p.doc} set={(next) => set(next)} />;
   }
 }
 
