@@ -629,6 +629,12 @@ or questions you paste), optionally a seeded sample of it, choose
 "Everything on <model>", and press Evaluate. Each case is an ordinary run you
 can open and replay.
 
+To sweep a run variable, write its values with `|` in the Evaluate page's
+variables: `n=2|4|8` queues one evaluation per value (per system, when others
+are compared), one after another (`sweep: {name, values}` on
+`POST /api/evals/batch`). The sweeps in this page (Agent Forest's N, debate's
+rounds, MacNet's size) can be run that way.
+
 To see systems side by side, open **Evaluate → Compare systems**. The page
 groups every evaluation by the questions it ran. For each group it shows
 accuracy, each repeat's score and the spread, the cost, and the cost per
