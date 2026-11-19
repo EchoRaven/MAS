@@ -287,6 +287,7 @@ Later, with code (the same 50, answer lines checked):
 | --- | --- | --- | --- |
 | Single agent with a code runner | **47** | +3 −0 (p 0.25) | $0.29 |
 | Magentic-One (sandboxed terminal) | 45 | +2 −1 | $0.29 |
+| Multiagent Debate, each debater with its own sandbox | 47 | +3 −0 | $1.14 |
 
 Running code fixed three problems no text-only system got (#8, #13, #34)
 and lost none: the best score on this sample, though three problems is not
@@ -296,6 +297,11 @@ a small edge, not a demonstrated one. MATH's problems are mostly reasoning
 with short arithmetic, so a code runner matters far less than on Hard
 computation's long exact chains. Magentic-One's orchestration added nothing over one agent
 with the same sandbox, as AutoGen's five agents did on Hard computation.
+Neither did discussion: Multiagent Debate with a sandbox for each debater
+(a system built for this comparison, not a template) scored the same 47 as
+one agent with a sandbox, missing almost the same problems, at four times
+the cost. Once the single agent has the same tool, three debaters exchanging
+answers fix nothing it does not.
 
 At about 90%, neither voting nor debate gains more than a question in 50.
 The misses are mostly wrong answers that every system gives
