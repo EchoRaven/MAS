@@ -33,7 +33,7 @@ function build(): SystemDoc {
       },
     }, "panel"),
   );
-  b.agent("chair", 980, 180, { name: "Chair", role: "Writes the verdict", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "You read a referees' debate. Weigh their arguments, then give the verdict: which answer wins (or a tie), the main reason, and any point the panel got wrong." } })
+  b.agent("chair", 980, 180, { name: "Chair", role: "Writes the verdict", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "You read a referees' debate. Weigh their arguments, then give the verdict: which answer wins (or a tie), the main reason, and any point the panel got wrong. When the case is a question with one right value rather than answers to compare, end with a line 'Answer: X' giving the value the panel's arguments support." } })
     // the debate travels with the handoff: each referee sees the whole discussion
     .edge("panel", "general", "message")
     .edge("general", "critic", "handoff", { carry: "full" })
