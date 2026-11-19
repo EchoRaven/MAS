@@ -212,4 +212,19 @@ describe("compose egress", () => {
     expect(doc.services.b.environment).toMatchObject({ MODE: "dev", HTTPS_PROXY: "${MAS_EGRESS_PROXY}" });
     expect(JSON.stringify(doc)).not.toMatch(/http:\/\/[^$]/);
   });
+
+  it("starts the idle clock of a service still running from before a restart, so it is stopped in time", async () => {
+    const home = fs.mkdtempSync(path.join(dir, "idle-restart-"));
+    // a stand-in for docker: "ps" lists the services named in a file, everything else succeeds
+    const running = path.join(home, "running.txt");
+    const docker = path.join(home, "docker.sh");
+    fs.writeFileSync(docker, `#!/bin/sh\nif [ "$1" = ps ]; then cat ${running}; fi\nexit 0\n`, { mode: 0o755 });
+    const h = new HostedServices(home, docker, secrets);
+    const a = await h.create({ name: "api c", filename: "c.tar.gz", archive_base64: tarOf({ "app.py": "", "mas-host.yaml": "start: python app.py\nexpose: { kind: http, port: 8000 }\nidle_minutes: 10\n" }) });
+    fs.writeFileSync(running, `${a.id}\n`);
+    const t0 = 2_000_000;
+    // never touched since this server started: the first pass starts its clock instead of ignoring it
+    expect(await h.stopIdle(t0)).toEqual([]);
+    expect(await h.stopIdle(t0 + 11 * 60_000)).toEqual([a.id]);
+  });
 });

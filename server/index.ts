@@ -1,5 +1,6 @@
 // MAS Studio server: stores systems, runs them, streams their events.
 //   npm run server        (MAS_PORT, MAS_HOST, MAS_DATA_DIR, MAS_TOKEN…; see docs/server.md)
+import { sweepRunBoxes } from "./runtime/isolation";
 import http from "node:http";
 import path from "node:path";
 import { loadConfig } from "./config";
@@ -26,6 +27,8 @@ const store = new Store(config.dataDir);
 const secrets = new Secrets(config.dataDir);
 const hosted = new HostedServices(config.dataDir, config.docker, secrets);
 hosted.startReaper();
+// boxes of runs a previous server left behind (runs do not survive a restart)
+void sweepRunBoxes(config.docker).then((gone) => gone.length && console.log(`Removed ${gone.length} sandbox box(es) left by runs before this start`));
 const runs = new RunManager(store, secrets, config, hosted);
 persistHealth(path.join(config.dataDir, "model-health.json"));
 runs.recover();

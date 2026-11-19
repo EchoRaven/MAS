@@ -92,6 +92,18 @@ export function hardenedFlags(spec: BoxSpec, network: string | null, envNames: s
   ];
 }
 
+/**
+ * Runs do not survive a restart, so their boxes should not either: at start, remove the boxes of runs (labelled
+ * mas.run) except those kept on purpose (a kept lifecycle, named …-keep). Agent boxes (mas.agent) go too.
+ */
+export async function sweepRunBoxes(docker: string): Promise<string[]> {
+  const ps = await run(docker, ["ps", "-a", "--filter", "label=mas.run", "--format", "{{.Names}}"], { timeout: 20_000 });
+  if (ps.code !== 0) return [];
+  const gone = ps.out.split("\n").map((l) => l.trim()).filter((n) => n && !n.endsWith("-keep"));
+  if (gone.length) await run(docker, ["rm", "-f", ...gone], { timeout: 120_000 });
+  return gone;
+}
+
 export class DockerBackend implements SandboxBackend {
   readonly kind = "docker" as const;
   constructor(

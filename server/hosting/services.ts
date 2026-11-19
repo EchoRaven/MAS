@@ -109,6 +109,10 @@ export class HostedServices {
   /** Stop long-running services idle for longer than their idle_minutes (default 30; 0 = never). Returns the ones stopped. */
   async stopIdle(now = Date.now()): Promise<string[]> {
     const stopped: string[] = [];
+    // the idle clock is kept in memory: a service still running from before a restart starts its clock now, or it
+    // would never be stopped (one ran 18 hours this way)
+    const ps = await exec(this.docker, ["ps", "--filter", "label=mas.service", "--format", '{{.Label "mas.service"}}'], { timeout: 20_000 });
+    if (ps.code === 0) for (const id of ps.out.split("\n").map((l) => l.trim()).filter(Boolean)) if (!this.lastUsed.has(id)) this.lastUsed.set(id, now);
     for (const [id, at] of this.lastUsed) {
       const s = this.get(id);
       if (!s) {
