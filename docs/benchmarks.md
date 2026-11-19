@@ -147,6 +147,7 @@ each, through the built-in dataset (2026-11-18):
 | Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
 | Solo Performance Prompting (one call, simulated personas) | 20, 22 | 21.0 | $0.10 |
 | Corex, Retrieve (5 chains, a retriever picks one) | 22, 22 | 22.0 | $0.49 |
+| Multi-Agent Verification (5 chains, 3 aspect verifiers approve or reject each) | 22, 22 | 22.0 | $0.95 |
 | MacNet, chain of 4 | 19 | 19.0 | $0.31 |
 | MacNet, star of 4 | 22 | 22.0 | $0.44 |
 | MacNet, mesh of 4 | 21 | 21.0 | $0.47 |
@@ -173,8 +174,14 @@ each, through the built-in dataset (2026-11-18):
 - **Reading the chains picks what counting them does.** Corex's retriever
   reads five independent chains and picks the most faithful one: 22 and 22,
   the same as self-consistency's vote over five samples, missing the same
-  eight questions, at about 1.6 times the cost. Where every chain makes the
-  same mistake, no way of choosing among them helps.
+  eight questions, at about 1.6 times the cost. Multi-Agent Verification,
+  three verifiers (arithmetic, reasoning, the answer) approving or rejecting
+  each of the five chains, scores 22 and 22 on the same eight misses, at three
+  times the vote's cost. Its approvals show why: on the misses the chains
+  disagree (five different answers, typically) and the right one was among
+  them in only 1 of 16 cases; the verifiers rejected every chain in 4. On the
+  questions answered, the majority was already right every time. Choosing
+  among samples cannot add an answer no sample has.
 - **One call that simulates a discussion matches a real one.** Solo
   Performance Prompting has one model name the personas a task needs (here a
   mathematician, a "calculator expert" and a critic) and play out their
