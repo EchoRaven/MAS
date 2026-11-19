@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Builder, native } from "@/model/builder";
 import type { RunEvent } from "./events";
-import { envLiveAt } from "./envLive";
+import { envLiveAt, groupRoundsAt } from "./envLive";
 
 describe("env live state", () => {
   it("attributes tool calls to the env that serves them, with the last exit code, isolation and refusals", () => {
@@ -19,5 +19,17 @@ describe("env live state", () => {
     ] as RunEvent[];
     expect(envLiveAt(ev, 3, b.doc).box).toMatchObject({ state: "ready", isolation: "docker · no network · not root", calls: 1, last: { tool: "bash", exit: 1 } });
     expect(envLiveAt(ev, ev.length, b.doc).box).toMatchObject({ state: "stopped", calls: 2, refused: 1, last: { tool: "run_tests", exit: 0 } });
+  });
+
+  it("follows a repeating group's rounds and says why it stopped", () => {
+    const b = new Builder("G", "");
+    b.group("loop", 0, 0, { name: "Loop", iterate: { max_rounds: 3, until: 'output.includes("DONE")', feed: "output" } });
+    const ev = [
+      { t: 0, type: "transform", at: "loop", label: "round 2 of ≤3", detail: "until … — not yet" },
+      { t: 1, type: "transform", at: "loop", label: "round 3 of ≤3", detail: "until … — not yet" },
+      { t: 2, type: "transform", at: "loop", label: "rounds done", detail: "3 rounds" },
+    ] as RunEvent[];
+    expect(groupRoundsAt(ev, 1, b.doc).loop).toEqual({ round: 2, limit: 3 });
+    expect(groupRoundsAt(ev, 3, b.doc).loop).toEqual({ round: 3, limit: 3, done: "3 rounds" });
   });
 });

@@ -7,6 +7,12 @@ import type { GroupData } from "@/model/types";
 import type { FlowNode } from "../convert";
 import { HANDLE, OpenHint, padFor, Ports, Shell, StatusLine, TYPE_DOT } from "./parts";
 
+/** "{{vars.k ?? 3}}" reads as "3 (k)", a number as itself. */
+function roundLimitLabel(r: number | string): string {
+  const m = /^\{\{\s*vars\.(\w+)(?:\s*\?\?\s*(\d+))?\s*\}\}$/.exec(String(r).trim());
+  return m ? (m[2] ? `${m[2]} (${m[1]})` : m[1]) : String(r);
+}
+
 export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<FlowNode>) {
   const g = data.sys as GroupData;
   return (
@@ -25,9 +31,21 @@ export const GroupNode = memo(function GroupNode({ data, selected }: NodeProps<F
               <p className="truncate text-[13px] font-semibold">{g.name}</p>
               <StatusLine status={data.status} />
             </div>
-            <p className="truncate text-[11px] text-muted-foreground">
+            <p className="truncate text-[11px] text-muted-foreground" title={g.iterate ? [`Repeats up to ${g.iterate.max_rounds} rounds`, g.iterate.over && `one round per item of ${g.iterate.over}`, g.iterate.until && `until ${g.iterate.until}`].filter(Boolean).join("\n") : undefined}>
               Group · {data.members ?? 0} inside{g.budget_usd != null ? ` · $${g.budget_usd}` : ""}
+              {g.iterate ? ` · ${g.iterate.over ? "one per item" : "rounds"} ≤${roundLimitLabel(g.iterate.max_rounds)}` : ""}
             </p>
+            {data.rounds && (
+              <p className={cn("mt-0.5 truncate text-[11px] font-medium", data.rounds.done ? (/holds/.test(data.rounds.done) || !g.iterate?.until ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300") : "text-info")} title={data.rounds.done}>
+                {data.rounds.done
+                  ? /holds/.test(data.rounds.done)
+                    ? `done in round ${data.rounds.round}: condition held`
+                    : g.iterate?.until
+                      ? `stopped after ${data.rounds.round} of ${data.rounds.limit ?? "?"} rounds: limit reached`
+                      : `ran all ${data.rounds.round} rounds`
+                  : `round ${data.rounds.round} of ${data.rounds.limit ?? "?"}`}
+              </p>
+            )}
           </div>
         </div>
       </Shell>

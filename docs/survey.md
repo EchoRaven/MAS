@@ -211,8 +211,9 @@ the vocabulary:
   repeats. The run page now has a Rounds tab: each round's calls and cost, the
   value it ended with, and why the group went on, stopped, or gave up at the
   round limit. A loop that never passes (MapCoder before its fixes: five
-  rounds, then "gave up") is visible at a glance. What is still missing is a
-  per-round view on the canvas itself.
+  rounds, then "gave up") is visible at a glance. Group nodes on the canvas now show it too:
+  their loop settings always, and during a run or replay the round they are
+  on, then whether the condition held, the rounds ran out, or all rounds ran.
 - **Templates need behaviour checks, not only structure checks.** Structural
   tests check that a template has the paper's parts; only running it on real
   models found the bugs above. `record-demos.mts --check` now runs every

@@ -1,4 +1,5 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import type { GroupRounds } from "@/run/envLive";
 import { usersOf } from "@/model/envTools";
 import { ENTRY_REASON, entryPoints } from "@/model/entry";
 import { edgeScope, interfaceOf } from "@/model/ports";
@@ -28,6 +29,8 @@ export interface FlowNodeData extends Record<string, unknown> {
   users?: { id: string; name: string; access: "read" | "read_write" }[];
   /** envs, during or after a run: what it is doing (the last command, its exit code, the files it holds) */
   live?: EnvLive;
+  /** repeating groups, during or after a run: the round, its limit, and why it stopped */
+  rounds?: GroupRounds;
 }
 
 export interface EnvLive {
@@ -79,7 +82,7 @@ const inScope = (scope: string | undefined) => (n: { parent?: string }) => n.par
 export function toFlowNodes(
   doc: SystemDoc,
   scope: string | undefined,
-  opts: { selected?: Set<string>; status?: Record<string, RunStatus>; issues?: Record<string, number>; readOnly?: boolean; live?: Record<string, EnvLive> } = {},
+  opts: { selected?: Set<string>; status?: Record<string, RunStatus>; issues?: Record<string, number>; readOnly?: boolean; live?: Record<string, EnvLive>; rounds?: Record<string, GroupRounds> } = {},
 ): FlowNode[] {
   const nodes = doc.nodes.filter(inScope(scope));
   const wiredOf = (id: string) => doc.edges.flatMap((e) => [e.source === id ? e.source_port : null, e.target === id ? e.target_port : null]).filter(Boolean) as string[];
@@ -101,6 +104,7 @@ export function toFlowNodes(
       entry: entries.get(n.id),
       users: n.data.kind === "env" || n.data.kind === "plugin" ? usersOf(doc, n.id) : undefined,
       live: opts.live?.[n.id],
+      rounds: opts.rounds?.[n.id],
     },
   }));
   const group = scope ? doc.nodes.find((n) => n.id === scope) : undefined;

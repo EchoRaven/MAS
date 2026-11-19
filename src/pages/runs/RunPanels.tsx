@@ -1,6 +1,6 @@
 // The body shared by simulated and live runs: the canvas with live status on
 // the left, the message log / cost / raw events on the right.
-import { envLiveAt } from "@/run/envLive";
+import { envLiveAt, groupRoundsAt } from "@/run/envLive";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +21,7 @@ export function RunPanels({ doc, events, upto = events.length, top, empty, estim
   const listRef = useRef<HTMLDivElement>(null);
   const st = useMemo(() => stateAt(events, upto, doc), [events, upto, doc]);
   const envLive = useMemo(() => envLiveAt(events, upto, doc), [events, upto, doc]);
+  const groupRounds = useMemo(() => groupRoundsAt(events, upto, doc), [events, upto, doc]);
   // groups that repeat: their rounds, as far as the replay has got
   const rounds = useMemo(() => roundsOf(events.slice(0, upto), doc), [events, upto, doc]);
   const shown = events.slice(0, upto).filter((e) => {
@@ -58,6 +59,7 @@ export function RunPanels({ doc, events, upto = events.length, top, empty, estim
           readOnly
           status={st.status}
           live={envLive}
+          rounds={groupRounds}
           activeEdges={st.activeEdges}
           blockedEdges={st.blockedEdges}
           onSelect={(s) => setFilter(s.nodeId ?? "all")}

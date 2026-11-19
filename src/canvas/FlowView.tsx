@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import type { GroupRounds } from "@/run/envLive";
 import {
   Background,
   BackgroundVariant,
@@ -42,6 +43,7 @@ export function FlowView({
   readOnly = false,
   status,
   live,
+  rounds,
   activeEdges,
   blockedEdges,
   issueCounts,
@@ -57,6 +59,8 @@ export function FlowView({
   status?: Record<string, RunStatus>;
   /** envs during a run: what each is doing */
   live?: Record<string, EnvLive>;
+  /** repeating groups during a run: their round */
+  rounds?: Record<string, GroupRounds>;
   activeEdges?: Set<string>;
   blockedEdges?: Set<string>;
   issueCounts?: { nodes: Record<string, number>; edges: Record<string, number> };
@@ -73,10 +77,10 @@ export function FlowView({
   const [edges, setEdges] = useState<FlowEdge[]>(() => toFlowEdges(doc, scope));
 
   useEffect(() => {
-    setNodes(toFlowNodes(doc, scope, { selected: selected.nodes, status, issues: issueCounts?.nodes, readOnly, live }));
+    setNodes(toFlowNodes(doc, scope, { selected: selected.nodes, status, issues: issueCounts?.nodes, readOnly, live, rounds }));
     // selection is tracked separately; rebuilding on it would fight React Flow
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, scope, status, issueCounts, readOnly, live]);
+  }, [doc, scope, status, issueCounts, readOnly, live, rounds]);
   useEffect(() => {
     setEdges(toFlowEdges(doc, scope, { selected: selected.edges, active: activeEdges, blocked: blockedEdges, issues: issueCounts?.edges }));
     // eslint-disable-next-line react-hooks/exhaustive-deps

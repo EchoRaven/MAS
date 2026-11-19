@@ -7,6 +7,26 @@ import { envToolNames } from "@/model/envTools";
 import type { EnvData, SystemDoc } from "@/model/types";
 import type { RunEvent } from "./events";
 
+/** A repeating group at a point in a run: its round, the limit it runs to, and once it ended, why. */
+export interface GroupRounds {
+  round: number;
+  limit: number | null;
+  /** "until … holds (round 2)" or "3 rounds": set when the group has finished */
+  done?: string;
+}
+
+export function groupRoundsAt(events: RunEvent[], upto: number, doc: SystemDoc): Record<string, GroupRounds> {
+  const groups = new Set(doc.nodes.filter((n) => n.data.kind === "group" && n.data.iterate).map((n) => n.id));
+  const out: Record<string, GroupRounds> = {};
+  for (const e of events.slice(0, upto)) {
+    if (e.type !== "transform" || !groups.has(e.at)) continue;
+    const m = /^round (\d+) of ≤(\d+)/.exec(e.label);
+    if (m) out[e.at] = { round: Number(m[1]), limit: Number(m[2]) };
+    else if (e.label === "rounds done") out[e.at] = { ...(out[e.at] ?? { round: 1, limit: null }), done: e.detail };
+  }
+  return out;
+}
+
 export function envLiveAt(events: RunEvent[], upto: number, doc: SystemDoc): Record<string, EnvLive> {
   const envs = doc.nodes.filter((n) => n.data.kind === "env");
   if (!envs.length) return {};
