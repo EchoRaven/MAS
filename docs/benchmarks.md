@@ -145,6 +145,7 @@ each, through the built-in dataset (2026-11-18):
 | CAMEL role-playing | 12 | 12.0 | $0.11 |
 | ChatEval | 12 | 12.0 | $0.19 |
 | Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
+| Solo Performance Prompting (one call, simulated personas) | 20, 22 | 21.0 | $0.10 |
 | MacNet, chain of 4 | 19 | 19.0 | $0.31 |
 | MacNet, star of 4 | 22 | 22.0 | $0.44 |
 | MacNet, mesh of 4 | 21 | 21.0 | $0.47 |
@@ -168,6 +169,13 @@ each, through the built-in dataset (2026-11-18):
   +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+- **One call that simulates a discussion matches a real one.** Solo
+  Performance Prompting has one model name the personas a task needs (here a
+  mathematician, a "calculator expert" and a critic) and play out their
+  discussion in a single response: 20 and 22 in two runs, the same as
+  Multiagent Debate's 21 and 21, at a fifth of the cost ($0.05 a run against
+  $0.25). On these questions the separate agents add nothing that one model
+  imagining them does not.
 - **Mixture-of-Agents with three different models ties its best one.** As its
   paper intends, the proposers were different models (gemini-3.8-flash,
   gemma, flash-lite, in two layers) and 3.8-flash aggregated: 26 of 30, the
