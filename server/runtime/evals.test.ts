@@ -141,6 +141,21 @@ describe("evaluations", () => {
     expect(again.cases.map((c) => c.reached)).toEqual([["Solver"], []]);
   });
 
+  it("runs a case a provider failed in passing once more at the end", async () => {
+    // the first call for "busy" meets an overloaded provider; the second answers
+    const b = new Builder("Busy", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("f", "function", 200, 0, { name: "F", fn: { lang: "js", code: 'const q = String(input?.text ?? input);\nconst k = "busy_" + q;\nconst n = (ctx.state.get(k) ?? 0) + 1;\nctx.state.set(k, n);\nif (q === "busy" && n === 1) throw new Error("google 503: This model is currently overloaded");\nif (q === "broken") throw new Error("google 503: still overloaded");\nreturn "Answer: " + q;' } })
+      .edge("me", "f", "message")
+      .edge("f", "me", "message");
+    const doc = { ...b.doc, id: "sys_busy" };
+    store.putSystem(doc);
+    const done = await finish(evals.start(doc, { grader: "contains", cases: [{ input: "busy", expected: "busy" }, { input: "calm", expected: "calm" }, { input: "broken", expected: "broken" }] }).id);
+    expect(done.cases.map((c) => c.pass)).toEqual([true, true, false]); // a second failure stands
+    expect(done.auto_retried).toBe(2);
+    expect(done.status).toBe("finished");
+  });
+
   it("retries only the cases that gave no answer, in place, and keeps the others", async () => {
     // a function that fails the first time it sees "flaky" (a dropped connection, say) and answers after that
     const b = new Builder("Flaky", "");

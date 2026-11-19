@@ -63,6 +63,8 @@ export interface EvalRecord {
   status: "queued" | "running" | "finished" | "stopped";
   /** why it stopped on its own, when it did */
   stop_reason?: string;
+  /** how many cases a provider failed in passing (a 503, a dropped stream) and that ran once more at the end */
+  auto_retried?: number;
   started_at: string;
   finished_at?: string;
   cases: EvalCaseResult[];

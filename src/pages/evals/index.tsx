@@ -604,6 +604,11 @@ function Evals({ systemId }: { systemId: string }) {
                 )}
               </div>
             </div>
+            {!!ev.auto_retried && (
+              <p className="mt-3 text-xs text-muted-foreground">
+                {ev.auto_retried === 1 ? "One case" : `${ev.auto_retried} cases`} failed for the provider (overloaded, a dropped connection) and ran once more at the end; a second failure counts.
+              </p>
+            )}
             {ev.stop_reason && (
               <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive" role="alert">
                 {ev.stop_reason}

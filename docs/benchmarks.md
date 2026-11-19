@@ -793,6 +793,12 @@ they are. Compare leaves flagged questions out of scores, spreads, paired
 tests and exports ("Leave out N flagged questions", on by default) and shows
 them struck through. The nine broken GSM-Hard questions below are flagged.
 
+A case a provider fails in passing (overloaded, a 5xx, a dropped stream, a
+rate limit) runs once more at the end of the evaluation, on its own; a second
+failure counts. (Before this, three scores here counted such failures as
+wrong answers: Mixture-of-Agents with three models, and the single agent and
+ReConcile on gemma; each rose when retried.)
+
 When a few cases of a long evaluation fail for want of an answer (a dropped
 connection, a provider error, a stop or a restart), **Retry N failed** runs
 only those again, in place, with the same models and settings; wrong answers

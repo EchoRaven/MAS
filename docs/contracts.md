@@ -436,6 +436,12 @@ Evaluations mark such cases (`result_ok: false`) and group them first under
 "Why cases failed", since the wrong kind of answer is a bug in the system,
 not a wrong answer.
 
+A case that gave no output because a provider failed in passing (a 5xx,
+overloaded, a dropped stream, a 429) runs once more after the others; the
+record counts them (`auto_retried`) and a second failure stands. Account
+errors (a bad key, no credit) are not retried: three in a row stop the
+evaluation.
+
 On a miss graded by rule (answer, number, math), the evaluation also reads
 the messages the run's members (model and agent components) sent and records
 which of them marked the right answer on the way (`reached: [names]`; empty

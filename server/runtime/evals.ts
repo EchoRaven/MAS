@@ -41,6 +41,15 @@ const MAX_CASES = 200;
 /** errors no retry fixes: a rejected or disabled key, no credit, a used-up quota, a model that is gone */
 const ACCOUNT_ERROR = /\b(401|403)\b|api[ _]key|service account|credit|billing|quota|permission denied|no longer available|model .*not found|does not exist/i;
 
+/** A provider's passing failure (overloaded, a 5xx, a dropped stream, a rate limit), not the system's answer. */
+const TRANSIENT = /^no output: .*(\b(429|5\d\d)\b|overloaded|unavailable|terminated|ECONNRESET|socket hang up|fetch failed|timed? ?out|rate limit)/i;
+
+/** Forget a case's result so that it runs again. */
+function resetCase(c: EvalRecord["cases"][number]) {
+  for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer", "reached"] as const) delete (c as unknown as Record<string, unknown>)[k];
+  c.status = "pending";
+}
+
 export class EvalManager {
   private stopped = new Set<string>();
   private active = new Set<string>();
@@ -247,11 +256,7 @@ export class EvalManager {
       ...(rec.expect ? { expect: rec.expect } : {}),
     };
     const prepared = this.prepare(doc, opts);
-    for (const i of again) {
-      const c = rec.cases[i];
-      for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer", "reached"] as const) delete (c as unknown as Record<string, unknown>)[k];
-      c.status = "pending";
-    }
+    for (const i of again) resetCase(rec.cases[i]);
     rec.status = "running";
     delete rec.finished_at;
     this.store.putEval(rec);
@@ -260,7 +265,8 @@ export class EvalManager {
     return rec;
   }
 
-  private async execute(rec: EvalRecord, doc: SystemDoc, opts: EvalOptions, only?: Set<number>) {
+  private async execute(rec: EvalRecord, doc: SystemDoc, opts: EvalOptions, cases?: Set<number>) {
+    let only = cases;
     const judge = opts.grader === "llm" ? new Models(doc.models.length ? doc.models : DEFAULT_MODELS, this.secrets, !!opts.mock) : null;
     const save = () => {
       rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
@@ -324,6 +330,17 @@ export class EvalManager {
     const workers = Number.isFinite(Number(opts.concurrency)) ? Math.max(1, Math.min(Math.floor(Number(opts.concurrency)), 8)) : 2;
     try {
       await Promise.all(Array.from({ length: workers }, worker));
+      // cases a provider failed in passing (a 503, a dropped stream) run once more at the end, so a busy hour does not
+      // count as wrong answers; a second failure stands
+      const again = new Set(rec.cases.map((c, i) => (c.pass === false && TRANSIENT.test(c.why ?? "") && !ACCOUNT_ERROR.test(c.why ?? "") ? i : -1)).filter((i) => i >= 0));
+      if (again.size && !opts.mock && !this.stopped.has(rec.id)) {
+        for (const i of again) resetCase(rec.cases[i]);
+        rec.auto_retried = (rec.auto_retried ?? 0) + again.size;
+        save();
+        only = again;
+        next = 0;
+        await Promise.all(Array.from({ length: workers }, worker));
+      }
     } finally {
       // whatever happened above, the evaluation leaves "running"
       rec.status = this.stopped.has(rec.id) ? "stopped" : "finished";
