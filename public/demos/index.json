@@ -156,6 +156,18 @@
   "recorded_at": "2026-11-17T11:12:48.495Z"
  },
  {
+  "id": "paper-macnet",
+  "name": "MacNet",
+  "input": "A train leaves at 9:40 and arrives at 13:15 the same day, with a 25-minute stop on the way. How many minutes is it moving? Give the number.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 7,
+  "tokens": 4729,
+  "usd": 0.0034747500000000004,
+  "seconds": 3.5,
+  "recorded_at": "2026-11-19T09:06:52.118Z"
+ },
+ {
   "id": "paper-mad",
   "name": "MAD",
   "input": "Alice walks up a hill at 1 m/s and comes back down the same path at 3 m/s. What is her average speed for the whole trip?",
