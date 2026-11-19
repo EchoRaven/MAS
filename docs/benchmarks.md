@@ -195,7 +195,13 @@ each, through the built-in dataset (2026-11-18):
   same as 3.8-flash alone on these questions, at about three times the cost
   ($0.28) and 88 minutes (gemma's long thinking). With all slots on flash-lite
   it scored 17. Mixing models brings the answer up to the best member's, not
-  above it, as with mixed-model ReConcile.
+  above it, as with mixed-model ReConcile. Self-MoA (Li et al. 2025,
+  "Rethinking Mixture-of-Agents") claims the opposite of mixing: every slot
+  on the best model. With all seven on 3.8-flash it scored 26 again
+  ($0.44, 15 minutes instead of 88), missing four questions, three of them
+  the mixed run's; on none of its misses did any proposer have the answer.
+  Neither mixing nor self-mixing beats the best model alone here: what the
+  layers add is the best member's answer, which it gives by itself.
 - **DyLAN's team optimization learns the obvious team.** Over one pass of the
   30 questions it accumulated importance (`ctx.state`): Programmer 51,
   Mathematician 49, Skeptic 18, Generalist 8. With `team_size = 2` the later
