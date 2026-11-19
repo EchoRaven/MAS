@@ -404,10 +404,13 @@ on gemini-3.1-flash-lite, one run each:
 | Single agent | 71 | | $0.02 |
 | Multiagent Debate | 73 | +2 −0 (p 0.5) | $0.21 |
 | MedAgents (specialists, report, voted consultation) | 73 | +2 −0 (p 0.5) | $0.21 |
+| Solo Performance Prompting (one call, simulated personas; two runs) | 73, 73 | +2 −0 | $0.05 |
 
 Both fixed the same two questions (#17 and #50) and missed the same two
 (#20 and #25): a panel of named specialists does what three plain debaters
-do, at the same cost. Two questions in 75 is within run-to-run noise.
+do, at the same cost. One model imagining the panel in a single call (Solo
+Performance Prompting) scored the same 73 in two runs, missing the same two
+questions, at a quarter of the cost. Two questions in 75 is within run-to-run noise.
 
 The first MedAgents evaluation graded 0 of 57: its decision maker gave the
 option first and a sentence of why last, and graders read the last line.
