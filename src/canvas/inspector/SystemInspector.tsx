@@ -1,5 +1,8 @@
 import { RESULT_TYPES, type ResultType } from "@/run/result";
+import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
+import { Api } from "@/api/client";
+import { useServer } from "@/store/server";
 import { Select } from "@/components/ui/select";
 import { entryCandidates, entryPoints } from "@/model/entry";
 import { interfaceOf, nodeName } from "@/model/ports";
@@ -11,6 +14,34 @@ import { AddButton, Body, IssueList, type Update } from "./shared";
 
 /** Old "stops when" keywords that are not expressions: a run always ends idle or at a limit, so they mean nothing on their own. */
 const KEYWORDS = new Set(["agents_can_finish", "any_agent_calls_finish", "all_idle", "budget_exceeded", "max_rounds", "judge_outputs_verdict"]);
+
+/** What the system's code keeps across runs (ctx.state): shown when there is any, with a way to start over. */
+function KeptState({ systemId }: { systemId: string }) {
+  const connected = useServer((s) => s.status === "connected");
+  const [state, setState] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => {
+    if (!connected) return;
+    Api.systemState(systemId)
+      .then((r) => setState(r.state))
+      .catch(() => setState(null));
+  }, [connected, systemId]);
+  if (!state || !Object.keys(state).length) return null;
+  return (
+    <Section title="Kept across runs" aside={<span className="text-[11px] text-muted-foreground">ctx.state</span>}>
+      <pre className="max-h-48 overflow-auto rounded-md bg-muted/50 p-2 font-mono text-[11px]">{JSON.stringify(state, null, 1)}</pre>
+      <button
+        type="button"
+        className="self-start text-xs text-destructive hover:underline"
+        onClick={() => {
+          if (!window.confirm("Clear what this system has kept across runs? Its code starts learning again.")) return;
+          void Api.clearSystemState(systemId).then(() => setState({}));
+        }}
+      >
+        Clear
+      </button>
+    </Section>
+  );
+}
 
 export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDoc; update: Update; issues: Issue[]; onPick: (i: Issue) => void }) {
   const set = (patch: Partial<SystemDoc>) => update((d) => ({ ...d, ...patch }));
@@ -134,6 +165,7 @@ export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDo
             );
           })}
         </Section>
+        <KeptState systemId={doc.id} />
         <Section title={`Issues (${issues.length})`}>{issues.length === 0 ? <p className="text-xs text-success">No issues found.</p> : <IssueList issues={issues} onPick={onPick} />}</Section>
       </Body>
     </>

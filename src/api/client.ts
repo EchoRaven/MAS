@@ -112,6 +112,9 @@ export const Api = {
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
+  /** What a system's code kept across runs (ctx.state), and clearing it. */
+  systemState: (id: string) => api<{ state: Record<string, unknown> }>("GET", `/systems/${encodeURIComponent(id)}/state`),
+  clearSystemState: (id: string) => api<{ ok: true }>("DELETE", `/systems/${encodeURIComponent(id)}/state`),
   /** Questions flagged as broken in a dataset (left out of scores on Compare). */
   datasetFlags: (id: string) => api<{ flags: DatasetFlag[] }>("GET", `/datasets/${encodeURIComponent(id)}/flags`),
   /** Flag a question (a reason) or clear its flag (reason null). */
