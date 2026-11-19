@@ -398,6 +398,22 @@ function Evals({ systemId }: { systemId: string }) {
           <details className="text-xs text-muted-foreground" open={also.length > 0}>
             <summary className="cursor-pointer hover:text-foreground">Compare with other systems{alsoDocs.length ? ` (${alsoDocs.length})` : ""}</summary>
             <p className="mt-1">They run on the same questions and models, one after another, and show up together under Compare systems.</p>
+            {(() => {
+              // the four controls a multi-agent system should beat (docs/benchmarks.md): one agent, a vote, one call
+              // imagining the discussion, one agent with the same tools
+              const controls = ["sys_baseline", "sys_self_consistency", "sys_paper_spp", "sys_baseline_code"].filter((id) => id !== doc.id && systems.some((x) => x.id === id));
+              if (!controls.length || controls.every((id) => also.includes(id))) return null;
+              return (
+                <button
+                  type="button"
+                  className="mt-1 text-primary hover:underline"
+                  title="One agent, several samples and a vote, one call imagining the discussion (Solo Performance Prompting), one agent with code: each has explained away a claimed gain"
+                  onClick={() => setAlso((a) => [...new Set([...a, ...controls])].slice(0, 9))}
+                >
+                  Add the four controls
+                </button>
+              );
+            })()}
             <div className="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto rounded-md border border-border/70 p-1.5" role="group" aria-label="Systems to compare with">
               {systems
                 .filter((s) => s.id !== doc.id)
