@@ -157,11 +157,13 @@ each, through the built-in dataset (2026-11-18):
 - **The whole table, in three groups.** Systems that run code solve
   everything: Magentic-One 30 (and AutoGen with its executor, 30, below).
   Systems that exchange or vote on answers gain 2–4: EoT 23, ReConcile and
-  self-consistency 22, DyLAN 22, debate 21, AgentVerse 20. Systems built
-  around roles, personas or long pipelines lose to one agent: MoA 17,
-  MedAgents 15, MAD 14, AutoAgents 13, CAMEL 12, ChatEval 12; each hand-off
-  is another chance to restate a long number wrongly, and none of them
-  checks by computing. (The rows after ReConcile were run later, once each,
+  self-consistency 22, DyLAN 22, debate 21, AgentVerse 20; against the single
+  agent (Compare, McNemar) EoT, debate and Agent Forest at N = 10 fix 7 and
+  lose none (p = 0.02). Systems built around roles, personas or long
+  pipelines score lower (MoA 17, MedAgents 15, MAD 14, AutoAgents 13, CAMEL
+  12, ChatEval 12), but they fix about as many questions as they lose (MoA
+  +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
+  not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
 - **Magentic-One first scored 15**: its ComputerTerminal was a program on
   the server, which an isolated server does not run, so the team multiplied

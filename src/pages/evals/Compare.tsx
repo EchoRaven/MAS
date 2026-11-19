@@ -18,6 +18,9 @@ const modelsLabel = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock" | "va
     .filter(Boolean)
     .join(" · ");
 
+/** The models an evaluation ran on, as one key for the filter: "gemini_lite", "mixed models", "its own models". */
+const modelKey = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock">) => (e.mock ? "dry run" : e.on_model ? e.on_model : e.model_map && Object.keys(e.model_map).length ? "mixed models" : "its own models");
+
 const incomplete = (e: EvalSummary) => e.status !== "finished" || e.graded < e.total;
 /** an evaluation in which no model ever answered (no key, a dead endpoint): a broken run, not a score of 0 */
 const noAnswers = (e: EvalSummary) => !e.mock && e.usd === 0 && e.passed === 0;
@@ -34,6 +37,8 @@ export function ComparePage() {
   // the evaluation the others are compared with question by question; null = a baseline, else the least accurate
   const [refPick, setRefPick] = useState<string | null>(null);
   const [onlyDiffer, setOnlyDiffer] = useState(false);
+  // show the evaluations on one model only; "all" shows every one
+  const [modelFilter, setModelFilter] = useState("all");
   const flash = (msg: string) => {
     setCopied(msg);
     window.setTimeout(() => setCopied(""), 1800);
@@ -87,7 +92,9 @@ export function ComparePage() {
   if (!all) return <p className="p-6 text-sm text-muted-foreground">Loading…</p>;
   if (!sets.length) return <p className="p-6 text-sm text-muted-foreground">No finished evaluations yet. Run some on the Evaluate page, on the same questions, to compare them here.</p>;
 
-  const allRows = members
+  const models = [...new Set(members.map(modelKey))];
+  const shown = modelFilter === "all" || !models.includes(modelFilter) ? members : members.filter((e) => modelKey(e) === modelFilter);
+  const allRows = shown
     .filter((e) => records[e.id])
     .map((e) => {
       const rec = records[e.id];
@@ -100,7 +107,16 @@ export function ComparePage() {
   const exportRows = rows.map(({ e, rec }) => ({ label: e.system_name, setup: modelsLabel(e), rec }));
   // the questions in set order, with each evaluation's pass count on it
   const questions = rows[0] ? [...new Map(rows[0].rec.cases.map((c, i) => [c.case ?? i, c.input])).entries()] : [];
-  const ref = rows.find((r) => r.e.id === refPick) ?? rows.find((r) => /baseline/i.test(r.e.system_id)) ?? rows[rows.length - 1];
+  // the reference: the one picked, else the plain single agent on the model most rows use, else any baseline
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(modelKey(r.e), (counts.get(modelKey(r.e)) ?? 0) + 1);
+  const common = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const ref =
+    rows.find((r) => r.e.id === refPick) ??
+    rows.find((r) => r.e.system_id === "sys_baseline" && modelKey(r.e) === common) ??
+    rows.find((r) => r.e.system_id === "sys_baseline") ??
+    rows.find((r) => /baseline/i.test(r.e.system_id)) ??
+    rows[rows.length - 1];
   const vsRef = new Map(rows.filter((r) => r !== ref && ref).map((r) => [r.e.id, pairedDiff(r.rec, ref!.rec)]));
   const cell = (rec: EvalRecord, input: string) => {
     const cs = rec.cases.filter((c) => c.input === input && c.pass !== undefined);
@@ -120,6 +136,15 @@ export function ComparePage() {
           ariaLabel="Question set"
           className="max-w-xl"
         />
+        {models.length > 1 && (
+          <Select
+            value={models.includes(modelFilter) ? modelFilter : "all"}
+            onValueChange={setModelFilter}
+            items={[{ value: "all", label: `All models (${models.length})` }, ...models.map((m) => ({ value: m, label: m === "its own models" || m === "mixed models" || m === "dry run" ? m : `all on ${m}` }))]}
+            ariaLabel="Models"
+            className="max-w-[14rem]"
+          />
+        )}
         {rows.length > 0 && (
           <div className="ml-auto flex gap-1.5">
             <Button
@@ -158,7 +183,7 @@ export function ComparePage() {
             </tr>
           </thead>
           <tbody>
-            {[...members]
+            {[...shown]
               .sort((a, b) => {
                 const ra = allRows.find((x) => x.e.id === a.id);
                 const rb = allRows.find((x) => x.e.id === b.id);
