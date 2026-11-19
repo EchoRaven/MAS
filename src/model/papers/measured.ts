@@ -5,7 +5,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
     "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against 18.",
     "MMLU (100): 95.5 against 95.0 on flash-lite, 89 against 90 on gemma: no gain where errors are missing knowledge.",
-    "With a sandbox per debater, MATH-500 (50): 47, the same as one agent with a sandbox, at four times the cost.",
+    "With a sandbox per debater, MATH-500 (50): 48, the same as one agent with a sandbox, at four times the cost.",
   ],
   "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 18.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
   "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25."],
@@ -18,7 +18,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-medagents": ["Hard computation (flash-lite): 15.", "MMLU medical (75): 73 against one agent's 71, the same as plain debate."],
   "paper-camel": ["Hard computation (flash-lite): 12."],
   "paper-chateval": ["Hard computation (flash-lite): 12 (it is built to judge answers, not to give them)."],
-  "paper-magentic-one": ["Hard computation (flash-lite): 30 of 30, its terminal running code in the sandbox.", "MATH-500 (50): 45; GSM-Hard (50): 39."],
+  "paper-magentic-one": ["Hard computation (flash-lite): 30 of 30, its terminal running code in the sandbox.", "MATH-500 (50): 46; GSM-Hard (50): 39."],
   "paper-autogen": ["Hard computation (flash-lite): 30 with its executor; 28 with the model-free user proxy, at a fifth of the cost."],
   "paper-agentcoder": ["HumanEval (50): 48, as one agent; coding problems (31, two runs): 60 of 62."],
   "paper-mapcoder": ["HumanEval (50): 48, with one plan or three (a second plan was never needed)."],

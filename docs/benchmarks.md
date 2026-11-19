@@ -342,17 +342,17 @@ the math grader:
 
 | System | Correct | Cost |
 | --- | --- | --- |
-| Single agent | 45 | $0.04 |
-| Agent Forest, N = 5 | 45 | $0.21 |
-| Multiagent Debate, 2 rounds | 46 | $0.31 |
+| Single agent | 46 | $0.04 |
+| Agent Forest, N = 5 | 46 | $0.21 |
+| Multiagent Debate, 2 rounds | 47 | $0.31 |
 
 Later, with code (the same 50, answer lines checked):
 
-| System | Correct | vs single agent (44 this time) | Cost |
+| System | Correct | vs single agent (45 this time) | Cost |
 | --- | --- | --- | --- |
-| Single agent with a code runner | **47** | +3 −0 (p 0.25) | $0.29 |
-| Magentic-One (sandboxed terminal) | 45 | +2 −1 | $0.29 |
-| Multiagent Debate, each debater with its own sandbox | 47 | +3 −0 | $1.14 |
+| Single agent with a code runner | **48** | +3 −0 (p 0.25) | $0.29 |
+| Magentic-One (sandboxed terminal) | 46 | +2 −1 | $0.29 |
+| Multiagent Debate, each debater with its own sandbox | 48 | +3 −0 | $1.14 |
 
 Running code fixed three problems no text-only system got (#8, #13, #34)
 and lost none: the best score on this sample, though three problems is not
@@ -363,12 +363,16 @@ with short arithmetic, so a code runner matters far less than on Hard
 computation's long exact chains. Magentic-One's orchestration added nothing over one agent
 with the same sandbox, as AutoGen's five agents did on Hard computation.
 Neither did discussion: Multiagent Debate with a sandbox for each debater
-(a system built for this comparison, not a template) scored the same 47 as
+(a system built for this comparison, not a template) scored the same 48 as
 one agent with a sandbox, missing almost the same problems, at four times
 the cost. Once the single agent has the same tool, three debaters exchanging
 answers fix nothing it does not.
 
-At about 90%, neither voting nor debate gains more than a question in 50.
+At about 92%, neither voting nor debate gains more than a question in 50.
+(All MATH-500 scores here were regraded on 2026-11-19 after a grader fix:
+every system had answered problem #10 as `3 < \lambda \le 4`, which the
+key writes `(3,4]`, and been marked wrong; each seed-1 score rose by one,
+no comparison changed.)
 The misses are mostly wrong answers that every system gives
 (`2\sqrt{61}` for `2\sqrt{113}`), which is the same plateau as on Hard
 computation.
@@ -686,7 +690,8 @@ compare with the debate's final answer on the same question.
 | Hard computation, flash-lite, 2 rounds (two runs) | 60 | 42 | 42 | 1 / 1 | 61% → 72% |
 | Hard computation, flash-lite, rounds sweep 2, 3, 4 | 90 | 58 | 67 | 9 / 0 | 60% → 74% (→ 73%) |
 | Exact computation, flash-lite (three runs) | 90 | 75 | 79 | 4 / 0 | 81% → 87% |
-| MATH-500 (50), flash-lite | 50 | 45 | 46 | 1 / 0 | 90% → 93% |
+| MATH-500 (50), flash-lite | 50 | 46 | 47 | 1 / 0 | 91% → 95% |
+| MATH-500 level 5 (50), flash-lite | 50 | 42 | 44 | 2 / 0 | 79% → 87% |
 | GSM8K (100), flash-lite | 100 | 96 | 98 | 2 / 0 | 97% → 98% |
 | GSM-Hard (50), flash-lite | 50 | 37 | 36 | 1 / 2 | 71% → 71% |
 | MMLU (100), flash-lite, two runs | 200 | 191 | 191 | 1 / 1 | 95% → 95–96% |
