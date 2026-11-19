@@ -14,6 +14,7 @@ import type { Config } from "../config";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
 import type { RunCtx } from "./context";
+import { run } from "./isolation";
 import { Models } from "./models";
 import { DatabaseEnv } from "./resources/envs/database";
 import { McpEnv } from "./resources/envs/mcpEnv";
@@ -60,6 +61,18 @@ export class EnvPreviews {
   ) {
     this.timer = setInterval(() => void this.reap(), 60_000);
     this.timer.unref();
+    void this.sweep();
+  }
+
+  /** Previews do not outlive the server: what earlier ones left (folders, a box) is removed at start. */
+  private async sweep() {
+    fs.rmSync(path.join(this.dataDir, "previews"), { recursive: true, force: true });
+    const state = path.join(this.dataDir, "state");
+    if (fs.existsSync(state)) for (const d of fs.readdirSync(state)) if (/__preview_[0-9a-f]+$/.test(d)) fs.rmSync(path.join(state, d), { recursive: true, force: true });
+    const ps = await run(this.config.docker, ["ps", "-a", "--filter", "label=mas.run", "--format", '{{.Names}} {{.Label "mas.run"}}'], { timeout: 20_000 });
+    if (ps.code !== 0) return;
+    const boxes = ps.out.split("\n").filter((l) => / preview_[0-9a-f]+$/.test(l.trim())).map((l) => l.split(" ")[0]);
+    if (boxes.length) await run(this.config.docker, ["rm", "-f", ...boxes], { timeout: 60_000 });
   }
 
   private edge(envId: string): SysEdge {

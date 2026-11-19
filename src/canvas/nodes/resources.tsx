@@ -91,7 +91,7 @@ export const PluginNode = memo(function PluginNode({ data, selected }: NodeProps
   const p = data.sys as PluginData;
   const Icon = PLUGIN_ICON[p.preset] ?? Puzzle;
   return (
-    <Shell selected={selected} status={data.status} issues={data.issues} className="w-[190px] border border-dashed border-border bg-secondary/40">
+    <Shell selected={selected} status={data.status} issues={data.issues} className="w-[220px] border border-dashed border-border bg-secondary/40">
       <ResHandle role="resource" hidden={data.readOnly} />
       <div className="flex items-center gap-2.5 p-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-card text-muted-foreground shadow-[var(--ring-shadow)]">
@@ -100,9 +100,21 @@ export const PluginNode = memo(function PluginNode({ data, selected }: NodeProps
         <div className="min-w-0">
           <p className="truncate text-[13px] font-semibold">{p.name}</p>
           <p className="truncate text-[11px] text-muted-foreground">
-            {p.preset} · {p.spec.scope} · {p.spec.tools.length} tools
+            {p.preset} · {p.spec.scope}
+            {p.spec.backend.kind !== "builtin" ? ` · ${p.spec.backend.kind}` : ""}
           </p>
         </div>
+      </div>
+      <div className="flex flex-col gap-1 border-t border-dashed border-border/70 px-3 py-2">
+        {p.spec.tools.length > 0 && (
+          <Row icon={Wrench} title={p.spec.tools.map((t) => t.name).join(", ")}>
+            {p.spec.tools.slice(0, 3).map((t) => t.name).join(" · ")}
+            {p.spec.tools.length > 3 ? ` +${p.spec.tools.length - 3}` : ""}
+          </Row>
+        )}
+        <Row icon={Users} title={(data.users ?? []).map((u) => `${u.name} ${ACCESS_LABEL[u.access]}`).join("\n") || "Nobody is connected: draw an access edge from an agent"} tone={data.users?.length ? undefined : "warn"}>
+          {data.users?.length ? data.users.map((u) => `${u.name}${u.access === "read" ? " (read)" : ""}`).join(", ") : "nobody connected"}
+        </Row>
       </div>
     </Shell>
   );
