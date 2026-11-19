@@ -120,6 +120,14 @@ describe("who had the answer", () => {
     // graders it cannot apply to a message say nothing
     expect(reachedBy(msgs, nameOf, "contains", "42")).toEqual([]);
   });
+  it("says why a run ended without an answer", () => {
+    const r = failureReasons([
+      { pass: false, status: "done", why: "no output (finished: Round limit reached)" },
+      { pass: false, status: "done", why: "no output (finished: Round limit reached)" },
+      { pass: false, status: "done", why: "no output: google 503: overloaded" },
+    ]);
+    expect(r.map((x) => `${x.count} ${x.reason}`)).toEqual(["2 no output: round limit reached", "1 no output"]);
+  });
   it("groups the misses a member had under their own reason", () => {
     const r = failureReasons([
       { pass: false, status: "done", why: "0 ≠ 7", reached: ["Solver"] },
@@ -154,7 +162,7 @@ describe("failure reasons", () => {
     const r = failureReasons(cases as never);
     expect(r[0]).toEqual({ reason: "tests fail: AssertionError", count: 3, cases: [0, 2, 8] });
     expect(r.map((x) => x.reason)).toContain("wrong answer");
-    expect(r.map((x) => x.reason)).toContain("no output");
+    expect(r.map((x) => x.reason)).toContain("no output: all idle");
     expect(r.map((x) => x.reason)).toContain("tests fail: SyntaxError");
     expect(r.map((x) => x.reason)).toContain("timed out");
     expect(r.find((x) => x.reason.startsWith("the run asked a person"))?.count).toBe(1);
