@@ -168,6 +168,13 @@ each, through the built-in dataset (2026-11-18):
   +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+- **DyLAN's team optimization learns the obvious team.** Over one pass of the
+  30 questions it accumulated importance (`ctx.state`): Programmer 51,
+  Mathematician 49, Skeptic 18, Generalist 8. With `team_size = 2` the later
+  questions went to the Programmer and the Mathematician only: 20 of 30
+  instead of 22, for 24% less ($0.13 against $0.17). The ranking is the one
+  the task calls for (computation); dropping the other two costs a little
+  accuracy here, as the paper also finds pruning saves cost first.
 - **MacNet's topology matters the way voting does.** A chain refines one
   solution from node to node and scores like one agent (19); a star or a mesh
   merges several independent solutions (22, 21), as voting and exchange do.
