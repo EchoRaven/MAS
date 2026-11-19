@@ -534,6 +534,26 @@ function Evals({ systemId }: { systemId: string }) {
                   </Button>
                 ) : (
                   <>
+                    {(() => {
+                      // cases that gave no answer (an error, no output, never run): run only those again
+                      const n = ev.cases.filter((c) => c.status === "error" || c.status === "pending" || (c.pass === false && /^no output|^not run|the server restarted/.test(c.why ?? ""))).length;
+                      if (!n || ev.grader === "llm") return null;
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title="Run again only the cases that gave no answer (an error, no output, never run), with the same models and settings; the others keep their results"
+                          onClick={() =>
+                            void Api.retryEval(ev.id)
+                              .then((r) => setRecord({ eval: r.eval, active: true }))
+                              .then(refresh)
+                              .catch((e) => setError(e.message))
+                          }
+                        >
+                          Retry {n} failed
+                        </Button>
+                      );
+                    })()}
                     {grader !== "llm" && ev.grader !== "llm" && (grader === "code") === (ev.grader === "code") && (
                       <Button
                         variant="outline"

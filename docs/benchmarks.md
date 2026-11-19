@@ -735,6 +735,11 @@ they are. Compare leaves flagged questions out of scores, spreads, paired
 tests and exports ("Leave out N flagged questions", on by default) and shows
 them struck through. The nine broken GSM-Hard questions below are flagged.
 
+When a few cases of a long evaluation fail for want of an answer (a dropped
+connection, a provider error, a stop or a restart), **Retry N failed** runs
+only those again, in place, with the same models and settings; wrong answers
+are results and are not retried.
+
 An evaluation whose system calls a model with no key here is refused before
 it starts, with the model and the component that uses it; use "Everything on
 <model>" to run it on one you have.

@@ -111,6 +111,8 @@ export const Api = {
   startEvalBatch: (body: { docs: SystemDoc[]; cases?: EvalCase[]; dataset_id?: string; sample?: { n?: number; seed?: number }; grader: Grader; mock?: boolean; concurrency?: number; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; force?: boolean; expect?: import("@/model/types").ResultSpec; sweep?: { name: string; values: unknown[] } }) => api<{ evals: EvalRecord[] }>("POST", "/evals/batch", body),
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
+  /** Run again only the cases that gave no answer (errors, no output, never run), in place. */
+  retryEval: (id: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/retry`, {}),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
   /** What a system's code kept across runs (ctx.state), and clearing it. */
   systemState: (id: string) => api<{ state: Record<string, unknown> }>("GET", `/systems/${encodeURIComponent(id)}/state`),

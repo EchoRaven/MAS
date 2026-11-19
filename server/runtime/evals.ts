@@ -210,7 +210,50 @@ export class EvalManager {
     return true;
   }
 
-  private async execute(rec: EvalRecord, doc: SystemDoc, opts: EvalOptions) {
+  /** The cases a retry runs again: errors, runs that gave no output, and cases a stop or a restart left unrun. */
+  static retryable(c: EvalRecord["cases"][number]): boolean {
+    return c.status === "error" || c.status === "pending" || (c.pass === false && /^no output|^not run|the server restarted/.test(c.why ?? ""));
+  }
+
+  /**
+   * Run again only the cases that failed for want of an answer (an error, no output, never run), in place, with
+   * the options the evaluation ran with: hours of a slow model are not redone for a few dropped connections.
+   */
+  retry(id: string, concurrency = 2): EvalRecord {
+    const rec = this.store.getEval(id);
+    if (!rec) throw new Error("No such evaluation");
+    if (this.active.has(id)) throw new Error("The evaluation is still running");
+    if (rec.grader === "llm") throw new Error("An evaluation graded by the LLM judge cannot be retried in place; start a new one");
+    const doc = this.store.getSystem(rec.system_id);
+    if (!doc) throw new Error("Its system no longer exists");
+    const again = new Set(rec.cases.map((c, i) => (EvalManager.retryable(c) ? i : -1)).filter((i) => i >= 0));
+    if (!again.size) throw new Error("No case to retry: every case gave an answer (wrong answers are results, not failures)");
+    const opts: EvalOptions = {
+      cases: [],
+      grader: rec.grader,
+      mock: rec.mock,
+      concurrency,
+      ...(rec.vars ? { vars: rec.vars } : {}),
+      ...(rec.on_model ? { on_model: rec.on_model } : {}),
+      ...(rec.time_limit_min != null ? { time_limit_min: rec.time_limit_min } : {}),
+      ...(rec.model_map ? { model_map: rec.model_map } : {}),
+      ...(rec.expect ? { expect: rec.expect } : {}),
+    };
+    const prepared = this.prepare(doc, opts);
+    for (const i of again) {
+      const c = rec.cases[i];
+      for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer"] as const) delete (c as unknown as Record<string, unknown>)[k];
+      c.status = "pending";
+    }
+    rec.status = "running";
+    delete rec.finished_at;
+    this.store.putEval(rec);
+    this.active.add(rec.id);
+    void this.execute(rec, prepared, opts, again).finally(() => this.active.delete(rec.id));
+    return rec;
+  }
+
+  private async execute(rec: EvalRecord, doc: SystemDoc, opts: EvalOptions, only?: Set<number>) {
     const judge = opts.grader === "llm" ? new Models(doc.models.length ? doc.models : DEFAULT_MODELS, this.secrets, !!opts.mock) : null;
     const save = () => {
       rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
@@ -223,7 +266,10 @@ export class EvalManager {
     let fatalStreak = 0;
     const worker = async () => {
       while (next < rec.cases.length && !this.stopped.has(rec.id)) {
-        const c = rec.cases[next++];
+        const idx = next++;
+        // a retry runs only the cases it reset
+        if (only && !only.has(idx)) continue;
+        const c = rec.cases[idx];
         const t0 = Date.now();
         c.status = "running";
         try {

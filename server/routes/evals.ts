@@ -111,6 +111,14 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       throw new HttpError(400, (e as Error).message);
     }
   });
+  r.on("POST", "/api/evals/:id/retry", async (req) => {
+    const b = ((await req.body()) ?? {}) as { concurrency?: number };
+    try {
+      return { eval: evals.retry(req.params.id, Number(b.concurrency) || 2) };
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  });
   r.on("POST", "/api/evals/:id/stop", (req) => ({ stopped: evals.stop(req.params.id) }));
   r.on("DELETE", "/api/evals/:id", (req) => {
     if (evals.isActive(req.params.id)) throw new HttpError(409, "Stop the evaluation first");

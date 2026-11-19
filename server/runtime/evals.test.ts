@@ -117,6 +117,25 @@ describe("evaluations", () => {
     expect(done.cases.map((c) => [c.pass, c.result_ok])).toEqual([[true, true], [true, false]]);
   });
 
+  it("retries only the cases that gave no answer, in place, and keeps the others", async () => {
+    // a function that fails the first time it sees "flaky" (a dropped connection, say) and answers after that
+    const b = new Builder("Flaky", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("f", "function", 200, 0, { name: "F", fn: { lang: "js", code: 'const q = String(input?.text ?? input);\nconst k = "seen_" + q;\nconst n = (ctx.state.get(k) ?? 0) + 1;\nctx.state.set(k, n);\nif (q === "flaky" && n === 1) throw new Error("connection dropped");\nreturn "Answer: " + q;' } })
+      .edge("me", "f", "message")
+      .edge("f", "me", "message");
+    const doc = { ...b.doc, id: "sys_flaky" };
+    store.putSystem(doc);
+    const done = await finish(evals.start(doc, { grader: "contains", cases: [{ input: "steady", expected: "steady" }, { input: "flaky", expected: "flaky" }] }).id);
+    expect(done.cases.map((c) => c.pass)).toEqual([true, false]);
+    const steadyRun = done.cases[0].run_id;
+    const again = await finish(evals.retry(done.id).id);
+    expect(again.cases.map((c) => c.pass)).toEqual([true, true]);
+    expect(again.cases[0].run_id).toBe(steadyRun); // the case that answered was not run again
+    expect([again.passed, again.graded, again.status]).toEqual([2, 2, "finished"]);
+    expect(() => evals.retry(done.id)).toThrow(/No case to retry/);
+  });
+
   it("starts every run with the evaluation's variables", async () => {
     const b = new Builder("Vars", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
