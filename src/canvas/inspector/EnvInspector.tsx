@@ -5,6 +5,7 @@ import type { EnvData, SystemDoc } from "@/model/types";
 import { opts, Section, SelectField, TextField } from "../fields";
 import { DbQueryEditor } from "./DbQueryEditor";
 import { EnvContents } from "./EnvContents";
+import { EnvTry } from "./EnvTry";
 import { Body, IssueList, Note } from "./shared";
 
 const SOURCE: Record<string, string> = { dtap: "DT (DecodingTrust)", envgen: "env-gen", compose: "docker compose", "mas-env": "mas-env manifest" };
@@ -60,6 +61,11 @@ export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc:
       <Section title="Contents" defaultOpen>
         <EnvContents systemId={doc.id} envId={id} />
       </Section>
+      {e.env_kind !== "room" && (
+        <Section title="Try it">
+          <EnvTry systemId={doc.id} envId={id} />
+        </Section>
+      )}
       {m && (
         <Section title="Imported contract">
           <Note tone="info">

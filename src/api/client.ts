@@ -112,6 +112,11 @@ export const Api = {
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
+  /** Try an env's tools: a preview session on a throwaway copy (an imported env: the real service). */
+  envPreview: (systemId: string, envId: string) => api<{ session: string; copy: boolean; tools: PreviewTool[] }>("POST", `/systems/${encodeURIComponent(systemId)}/envs/${encodeURIComponent(envId)}/preview`, {}),
+  envPreviewCall: (systemId: string, envId: string, session: string, body: { tool: string; args: Record<string, unknown>; confirm?: boolean }) =>
+    api<{ result: string; error: boolean; seconds: number; log: { at: string; level: string; text: string }[]; usd: number }>("POST", `/systems/${encodeURIComponent(systemId)}/envs/${encodeURIComponent(envId)}/preview/${session}/call`, body),
+  envPreviewClose: (systemId: string, envId: string, session: string) => api<{ ok: true }>("DELETE", `/systems/${encodeURIComponent(systemId)}/envs/${encodeURIComponent(envId)}/preview/${session}`),
   /** What is inside an env: a sandbox's files (by run, by agent), one file's text, a database's tables and rows. */
   envContents: (systemId: string, envId: string, q: { run?: string; agent?: string; path?: string; table?: string } = {}) =>
     api<EnvContents>("GET", `/systems/${encodeURIComponent(systemId)}/envs/${encodeURIComponent(envId)}/contents${Object.keys(q).length ? `?${new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][])}` : ""}`),
@@ -154,3 +159,11 @@ export type EnvContents =
   | { kind: "database"; tables: { name: string; rows: number; columns: string[] }[]; table?: string; sample?: Record<string, unknown>[]; note?: string }
   | { kind: "imported"; manifest: { name: string; services: { name: string; image?: string; port?: number | null }[]; health: string; tools: string[]; http: unknown[] } }
   | { kind: "room" | "none" };
+
+export interface PreviewTool {
+  name: string;
+  description: string;
+  input_schema: { properties?: Record<string, { type?: string; description?: string }>; required?: string[] };
+  effect: string;
+  needs_confirm: boolean;
+}

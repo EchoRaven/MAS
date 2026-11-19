@@ -62,6 +62,9 @@ What agents reach is limited:
 | Method and path | Purpose |
 | --- | --- |
 | `GET /api/health` | Liveness (no token) |
+| `POST /api/systems/:id/envs/:env/preview` | Try an env's tools: opens a preview session on a throwaway copy (a sandbox gets a box and folder of its own, a database a copy of its file; an imported MCP env is the real one) and lists each tool with its description, parameters and effect |
+| `POST /api/systems/:id/envs/:env/preview/:session/call` | `{tool, args, confirm?}`: one call in the session (calls share state); on an imported env, a tool that is not read-only runs only with `confirm` |
+| `DELETE /api/systems/:id/envs/:env/preview/:session` | End a preview: its box and copy are removed (also after 10 idle minutes) |
 | `GET /api/systems/:id/envs/:env/contents` | What is inside an env, read-only: a sandbox's `/work` files for a run (`?run=`, latest by default) or one agent's (`?agent=`, per-agent sandboxes), one file's text (`?path=`, first 100 KB), a database's tables with row counts and a table's first 50 rows (`?table=`), an imported env's services and tools |
 | `GET/PUT/DELETE /api/systems[/:id]` | Systems (the browser syncs automatically) |
 | `GET /api/systems/:id/versions` · `GET …/versions/:version` · `POST …/versions/:version/restore` | Earlier versions of a system. One is kept when a save changes the system, at most one every 5 minutes, the newest 50. A restore keeps the current version first |

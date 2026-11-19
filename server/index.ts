@@ -10,6 +10,7 @@ import { evalRoutes } from "./routes/evals";
 import { hostedRoutes } from "./routes/hosted";
 import { HostedServices } from "./hosting/services";
 import { envRoutes } from "./routes/envs";
+import { EnvPreviews } from "./runtime/preview";
 import { runRoutes } from "./routes/runs";
 import { settingsRoutes } from "./routes/settings";
 import { systemRoutes } from "./routes/systems";
@@ -36,7 +37,8 @@ router.on("GET", "/api/health", () => ({ ok: true, server: "mas-studio", version
 router.on("GET", "/api/session", () => ({ ok: true, data_dir: config.dataDir, local_exec: config.allowLocalExec, rpm: Number(process.env.MAS_RPM ?? 60) }));
 systemRoutes(router, store);
 runRoutes(router, store, runs);
-envRoutes(router, store, config.dataDir);
+const previews = new EnvPreviews(store, secrets, config, config.dataDir, hosted);
+envRoutes(router, store, config.dataDir, previews);
 settingsRoutes(router, store, secrets, config);
 designRoutes(router, store, secrets, config, hosted);
 evalRoutes(router, store, evals);

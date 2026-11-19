@@ -7,6 +7,7 @@ import path from "node:path";
 import type { EnvData, SysNode } from "@/model/types";
 import type { Router } from "../http";
 import { confine } from "../runtime/resources/plugins/workspace";
+import type { EnvPreviews } from "../runtime/preview";
 import { HttpError, safeId, type Store } from "../store/files";
 
 const MAX_FILES = 500;
@@ -35,8 +36,46 @@ function children(dir: string): string[] {
     .map((e) => e.name);
 }
 
-export function envRoutes(r: Router, store: Store, dataDir: string) {
+export function envRoutes(r: Router, store: Store, dataDir: string, previews?: EnvPreviews) {
   const state = (...parts: string[]) => path.join(dataDir, "state", ...parts.map(safeId));
+
+  // Try an env's tools: a preview session on a throwaway copy (an imported env: the real one, write tools confirmed)
+  const fail = (e: unknown, status = 400): never => {
+    throw new HttpError(status, (e as Error).message);
+  };
+  r.on("POST", "/api/systems/:id/envs/:env/preview", async (req) => {
+    if (!previews) throw new HttpError(501, "Previews are not available on this server");
+    const doc = store.getSystem(req.params.id);
+    if (!doc) throw new HttpError(404, "No such system: save it first");
+    let s;
+    try {
+      s = previews.open(doc, req.params.env);
+    } catch (e) {
+      return fail(e);
+    }
+    return { session: s.id, copy: s.copy, tools: await previews.tools(s).catch((e) => (void previews.close(s.id), fail(e))) };
+  });
+  r.on("POST", "/api/systems/:id/envs/:env/preview/:sid/call", async (req) => {
+    if (!previews) throw new HttpError(501, "Previews are not available on this server");
+    const b = ((await req.body()) ?? {}) as { tool?: string; args?: Record<string, unknown>; confirm?: boolean };
+    let s;
+    try {
+      s = previews.get(req.params.sid, req.params.id, req.params.env);
+    } catch (e) {
+      return fail(e, 404);
+    }
+    const before = s.log.length;
+    try {
+      const out = await previews.call(s, String(b.tool ?? ""), b.args && typeof b.args === "object" ? b.args : {}, !!b.confirm);
+      return { ...out, log: s.log.slice(before), usd: s.usd };
+    } catch (e) {
+      return fail(e, 409);
+    }
+  });
+  r.on("DELETE", "/api/systems/:id/envs/:env/preview/:sid", async (req) => {
+    await previews?.close(req.params.sid);
+    return { ok: true };
+  });
 
   r.on("GET", "/api/systems/:id/envs/:env/contents", async (req) => {
     const doc = store.getSystem(req.params.id);
