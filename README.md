@@ -62,8 +62,8 @@ Measured on this platform, every system on the same model and questions
   several samples, a vote) match Multiagent Debate and ReConcile within a
   question in almost every setting, at a fraction of the cost.
 - **The gain depends on how often the model slips.** On Hard computation, debate
-  and voting add 2–4 questions in 30 on gemini-3.1-flash-lite, and 8–9 on the
-  weaker gemma-4-26b (17 → 25–26), where one agent with a code runner solves
+  and voting add 2–4 questions in 30 on gemini-3.1-flash-lite, and 7–8 on the
+  weaker gemma-4-26b (18 → 25–26), where one agent with a code runner solves
   all 30 in a fourteenth of the time. On GSM8K and MATH-500 the strong model is
   near the ceiling and nothing shows. On MMLU nothing shows even on gemma
   (90 → 89): debate corrects slips that differ between agents, not knowledge
@@ -79,7 +79,7 @@ Measured on this platform, every system on the same model and questions
   ChatEval 12: lower, but they fix about as many questions as they lose).
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
-  Multiagent Debate on both models, including the weaker one's 17 → 25.
+  Multiagent Debate on both models, including the weaker one's 18 → 25.
 - **Mixing models mostly reaches the best member, not beyond it**: ReConcile
   with one seat per model ties its strongest model alone, at four times the
   cost; Mixture-of-Agents with three models scored 28 against its best

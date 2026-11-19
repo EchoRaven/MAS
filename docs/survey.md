@@ -115,10 +115,10 @@ Each one became a general interface, not a fix for one paper:
 From [benchmarks.md](benchmarks.md), all on the same model:
 
 - **Discussion pays when the model is weak enough to need it.** On a weaker
-  model (gemma-4-26b), Multiagent Debate went from 17 to 26 of 30 on Hard
+  model (gemma-4-26b), Multiagent Debate went from 18 to 26 of 30 on Hard
   computation, fixing the long exact computations that a single answer gets
   wrong in different places; on the stronger model the same debate gained 4.
-  Agent Forest (five votes) reached 25, fixing the same nine questions. ReConcile
+  Agent Forest (five votes) reached 25, fixing the same questions but one. ReConcile
   reached 25 too. Whether
   a MAS helps depends on the model's error profile as much as on the protocol,
   and voting captures nearly all of what discussion does. On MMLU the same
@@ -170,8 +170,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **A simulated discussion does as well as a real one.** One model playing
   several personas in a single call (Solo Performance Prompting) scored as
   Multiagent Debate does (21 of 30 on average on flash-lite, at a fifth of the
-  cost), and on the weaker gemma, where real debate gained 9, it gained the
-  same: 17 → 25 (+9 −1, p = 0.02), agreeing with debate on 29 of 30 questions.
+  cost), and on the weaker gemma, where real debate gained 8, it gained the
+  same: 18 → 25 (+8 −1, p = 0.04), agreeing with debate on 29 of 30 questions.
   On MMLU's medical questions it scored 73 of 75, as MedAgents' specialist
   panel and debate did, missing the same two. What discussion adds does not
   need separate agents.

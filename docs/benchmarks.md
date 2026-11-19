@@ -291,24 +291,27 @@ length. Hard computation (30), one run each:
 
 | System on gemma | Correct | Time |
 | --- | --- | --- |
-| Single agent | 17 | 48 min |
+| Single agent | 18 | 48 min |
 | Agent Forest, N = 5 (vote) | 25 | 92 min |
 | Multiagent Debate, 2 rounds | **26** | 116 min |
 | ReConcile, 3 rounds | 25 | 112 min |
 | Solo Performance Prompting (one call, simulated personas) | 25 | 77 min |
 | Single agent with a code runner | **30** | 8.5 min |
 
-**+9 questions in 30: the first large gain from discussion on this platform.**
-The debate fixed 10 questions and lost 1: all five date spans (#11–#15), all
-four binomial coefficients mod p (#26–#29) and one digit sum (#9). On the
+**+8 questions in 30: the first large gain from discussion on this platform.**
+The debate fixed 9 questions and lost 1 (p = 0.02): four of the five date
+spans (#11, #13–#15), all four binomial coefficients mod p (#26–#29) and one
+digit sum (#9). (The single agent was first reported as 17: one of its
+cases, #12, had ended on a dropped connection; retried in place, it gave the
+right date span, so 18, and every comparison below is against 18.) On the
 stronger model, debate gained 4 at most (19 → 23), and no system without a
 tool ever solved the binomials. Here three gemma debaters, each slipping in
 different places on long exact computations, correct each other: the setting
 the paper describes.
 
-Agent Forest fixed **the same nine questions** (all date spans and all
-binomials); debate fixed one more (a digit sum, #9). So on the weaker model
-both gain about 8–9 in 30, and five votes come within a question of three
+Agent Forest fixed **the same eight questions** (those four date spans and
+all binomials; +8 −1, p = 0.04); debate fixed one more (a digit sum, #9). So
+on the weaker model both gain about 7–8 in 30, and five votes come within a question of three
 debaters exchanging answers, as on the stronger model (where both gained
 2–4). The gain grows with how often the model slips, and voting captures
 almost all of it.
@@ -317,10 +320,10 @@ ReConcile (three gemma seats, confidence-weighted vote over three rounds)
 lands in the same place: 25, missing #6–#10 (the digit sums and a long
 product). One of those (#8) ended on a cut-off stream ("terminated") that
 every system missed; model calls now retry a dropped connection three times.
-Voting, debate and ReConcile all sit 8–9 above the single agent, and within
+Voting, debate and ReConcile all sit 7–8 above the single agent, and within
 one question of each other. One model playing all the personas in a single call
-(Solo Performance Prompting) gets the same gain: 25, fixing 9 questions and
-losing 1 against the single agent (p = 0.02), and agreeing with real debate on
+(Solo Performance Prompting) gets the same gain: 25, fixing 8 questions and
+losing 1 against the single agent (p = 0.04), and agreeing with real debate on
 29 of the 30 questions. The weaker model's gain from discussion does not need
 separate agents. One agent that can run code solves all 30, in
 a fourteenth of the time: the weaker model's slips are in long exact
@@ -399,7 +402,7 @@ on #96 the debaters agreed on "A, B, C, and D" for a one-letter question). At
 95% there is little left for discussion to fix, as with GSM8K; the paper's
 setting is a model that gets a third of MMLU wrong.
 
-On gemma-4-26b, the weaker model where debate gained 9 of 30 on Hard
+On gemma-4-26b, the weaker model where debate gained 8 of 30 on Hard
 computation, the same 100 questions:
 
 | System on gemma | Correct | Time |
@@ -727,7 +730,7 @@ each one a system in the library, and each has explained away some gain:
 | --- | --- | --- | --- |
 | One agent | Single agent (baseline) | that the task needed more than one call | the reference for everything |
 | Several samples and a vote | Self-consistency, or Agent Forest with `n` | that discussion beat plain voting | voting matched debate on both models |
-| One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (17 → 25) and on medical MMLU |
+| One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (18 → 25) and on medical MMLU |
 | One agent with the same tools | Single agent with code | that the agents, not the tool, did the work | it matched AutoGen, Magentic-One and tool-equipped debate |
 
 Run them on the same questions and models (on the Evaluate page, Compare with

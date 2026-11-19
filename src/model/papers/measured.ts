@@ -3,7 +3,7 @@
 // 30-question set; flash-lite is gemini-3.1-flash-lite, where a single agent scores 19.
 export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
-    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against 17.",
+    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against 18.",
     "MMLU (100): 95.5 against 95.0 on flash-lite, 89 against 90 on gemma: no gain where errors are missing knowledge.",
     "With a sandbox per debater, MATH-500 (50): 47, the same as one agent with a sandbox, at four times the cost.",
   ],
@@ -27,7 +27,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-corex": ["Hard computation (flash-lite): 22, 22, the same as a majority vote over five samples, missing the same questions, at 1.6 times its cost."],
   "paper-mav": ["Hard computation (flash-lite): 22, 22, the same eight misses as the vote and Corex, at three times the vote's cost: on the misses the right answer was among the five candidates once in 16."],
   "paper-spp": [
-    "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (as debate, against one agent's 17).",
+    "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (as debate, against one agent's 18).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",
   ],
 };
