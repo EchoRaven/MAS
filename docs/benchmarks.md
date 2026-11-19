@@ -145,6 +145,9 @@ each, through the built-in dataset (2026-11-18):
 | CAMEL role-playing | 12 | 12.0 | $0.11 |
 | ChatEval | 12 | 12.0 | $0.19 |
 | Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
+| MacNet, chain of 4 | 19 | 19.0 | $0.31 |
+| MacNet, star of 4 | 22 | 22.0 | $0.44 |
+| MacNet, mesh of 4 | 21 | 21.0 | $0.47 |
 
 - **MAD loses 5 to the single agent, in both runs.** Its debaters are an
   "angel" and a "devil" who must disagree, and a judge decides. On the long
@@ -165,6 +168,11 @@ each, through the built-in dataset (2026-11-18):
   +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+- **MacNet's topology matters the way voting does.** A chain refines one
+  solution from node to node and scores like one agent (19); a star or a mesh
+  merges several independent solutions (22, 21), as voting and exchange do.
+  The paper also finds denser topologies ahead of the chain; here the gain is
+  the same 2–3 questions the other aggregating systems get, at more cost.
 - **Magentic-One first scored 15**: its ComputerTerminal was a program on
   the server, which an isolated server does not run, so the team multiplied
   by hand and missed all ten products. As a sandboxed agent that only runs
