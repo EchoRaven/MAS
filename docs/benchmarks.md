@@ -146,6 +146,7 @@ each, through the built-in dataset (2026-11-18):
 | ChatEval | 12 | 12.0 | $0.19 |
 | Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
 | Solo Performance Prompting (one call, simulated personas) | 20, 22 | 21.0 | $0.10 |
+| Corex, Retrieve (5 chains, a retriever picks one) | 22, 22 | 22.0 | $0.49 |
 | MacNet, chain of 4 | 19 | 19.0 | $0.31 |
 | MacNet, star of 4 | 22 | 22.0 | $0.44 |
 | MacNet, mesh of 4 | 21 | 21.0 | $0.47 |
@@ -169,6 +170,11 @@ each, through the built-in dataset (2026-11-18):
   +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+- **Reading the chains picks what counting them does.** Corex's retriever
+  reads five independent chains and picks the most faithful one: 22 and 22,
+  the same as self-consistency's vote over five samples, missing the same
+  eight questions, at about 1.6 times the cost. Where every chain makes the
+  same mistake, no way of choosing among them helps.
 - **One call that simulates a discussion matches a real one.** Solo
   Performance Prompting has one model name the personas a task needs (here a
   mathematician, a "calculator expert" and a critic) and play out their

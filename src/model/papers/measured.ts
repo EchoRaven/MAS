@@ -24,6 +24,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-mapcoder": ["HumanEval (50): 48, with one plan or three (a second plan was never needed)."],
   "paper-reflexion": ["HumanEval (50): 48, as one agent."],
   "paper-macnet": ["Hard computation (flash-lite), four nodes: chain 19, star 22, mesh 21; a star of 2, 4, 8 nodes: 19, 22, 21."],
+  "paper-corex": ["Hard computation (flash-lite): 22, 22, the same as a majority vote over five samples, missing the same questions, at 1.6 times its cost."],
   "paper-spp": [
     "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (as debate, against one agent's 17).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",
