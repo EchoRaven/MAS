@@ -166,6 +166,15 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   AgentCoder (60) and ahead of MapCoder (58), at a quarter to a third of their cost. Writing tests separately
   from the code (AgentCoder) is the one mechanism that caught bugs a single
   attempt missed.
+- **Mixing models reaches the best member, not beyond it.** ReConcile with one
+  seat per model tied its strongest seat (27.3 against 28, 28, 26), and
+  Mixture-of-Agents with three different proposers scored 26 of 30, exactly
+  what its best model scores alone, at three times the cost. The papers' gains
+  over a single model came from models weaker than their best member.
+- **What a system learns can choose its team.** DyLAN, carrying its agents'
+  importance across runs, ranked the Programmer and the Mathematician far above
+  the Skeptic and the Generalist on computation questions; a team of those two
+  scored 20 of 30 instead of 22, at 24% less.
 - **The fair baseline has the same tools.** A system with a code executor has
   to be compared with one agent that has the same executor, not with a bare
   model. Matched that way, discussion adds nothing here: Multiagent Debate
