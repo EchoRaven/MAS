@@ -130,6 +130,9 @@ export class Draft {
         if (options.env_kind === "room" || !options.env_kind) {
           data = defaultRoom(name);
           if (options.policy) data.room = { ...data.room!, policy: options.policy as NonNullable<typeof data.room>["policy"] };
+          // the agent that picks who speaks next in a selector room (a group chat manager); "moderator" is taken too
+          const sel = options.selector ?? options.moderator;
+          if (typeof sel === "string" && sel.trim()) data.room = { ...data.room!, selector: sel.trim() };
           if (options.end_after != null) this.setEndAfter(options.end_after);
         } else {
           data = { ...(defaultData("env") as Extract<NodeData, { kind: "env" }>), name, env_kind: options.env_kind as Extract<NodeData, { kind: "env" }>["env_kind"] };
@@ -229,6 +232,14 @@ export class Draft {
         break;
       case "env":
         if (str("policy") && n.data.room) (n.data.room = { ...n.data.room, policy: options.policy as NonNullable<typeof n.data.room>["policy"] }, changed.push("policy"));
+        {
+          const sel = options.selector ?? options.moderator;
+          if (typeof sel === "string" && sel.trim() && n.data.room) {
+            if (this.doc.nodes.find((x) => x.id === sel.trim())?.data.kind !== "agent") throw new DraftError(`selector must be the id of an agent in this system (got ${JSON.stringify(sel)})`);
+            n.data.room = { ...n.data.room, selector: sel.trim() };
+            changed.push("selector");
+          }
+        }
         if (str("image")) (n.data.image = String(options.image), changed.push("image"));
         if (options.end_after != null && n.data.room) (this.setEndAfter(options.end_after), changed.push("end_after"));
         break;

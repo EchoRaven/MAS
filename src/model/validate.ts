@@ -209,7 +209,7 @@ export function validate(doc: SystemDoc): Issue[] {
     if (d.kind === "env" && d.env_kind === "room") {
       const members = doc.edges.filter((e) => e.kind === "access" && e.target === n.id).length;
       if (members < 2) add("warning", `Room ${q(n)} has only ${members} member(s)`, { nodeId: n.id });
-      if (d.room?.policy === "selector" && !d.room.selector) add("warning", `Room ${q(n)} uses the selector policy and needs a moderator`, { nodeId: n.id });
+      if (d.room?.policy === "selector" && !d.room.selector) add("warning", `Room ${q(n)} uses the selector policy and needs a moderator: set its selector to the agent that picks who speaks next`, { nodeId: n.id });
     } else if ((d.kind === "plugin" || d.kind === "env") && !touching(n.id).length) {
       add("info", `${q(n)} is not used by anyone`, { nodeId: n.id });
     }

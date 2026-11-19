@@ -165,6 +165,18 @@ describe("the draft the architect edits", () => {
     expect(g().iterate).toMatchObject({ max_rounds: 2, over: "input.candidates" });
   });
 
+  it("sets a selector room's manager, at add or later, and refuses one that is not an agent", async () => {
+    const d = Draft.blank("Chat");
+    d.add("agent", "manager", "Manager", {});
+    d.add("env", "chat", "Chat", { env_kind: "room", policy: "selector", selector: "manager" });
+    const room = () => (d.doc.nodes.find((n) => n.id === "chat")!.data as { room: { selector?: string } }).room;
+    expect(room().selector).toBe("manager");
+    d.add("agent", "boss", "Boss", {});
+    expect(await runDesignTool(d, "update", { id: "chat", options: { moderator: "boss" } })).toMatch(/selector/);
+    expect(room().selector).toBe("boss");
+    expect(await runDesignTool(d, "update", { id: "chat", options: { selector: "nobody" } })).toMatch(/^Not done: selector must be the id of an agent/);
+  });
+
   it("catches a filter that would stall a loop", () => {
     const d = Draft.blank("Review");
     d.add("group", "loop", "Loop", { max_rounds: 3, until: 'output.includes("APPROVED")' });
