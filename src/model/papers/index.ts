@@ -9,6 +9,7 @@ import { agentverse } from "./agentverse";
 import { autogen } from "./autogen";
 import { camel } from "./camel";
 import { chatdev } from "./chatdev";
+import { corex } from "./corex";
 import { chainOfAgents } from "./chainOfAgents";
 import { chateval } from "./chateval";
 import { debate } from "./debate";
@@ -31,7 +32,7 @@ import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp];
+const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex];
 
 // each with what it scored here, beside how it maps to its paper
 export const PAPER_TEMPLATES: TemplateInfo[] = PAPERS.map((t) => (t.notes && MEASURED[t.id] ? { ...t, notes: { ...t.notes, measured: MEASURED[t.id] } } : t));
