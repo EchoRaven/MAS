@@ -108,6 +108,18 @@
   "recorded_at": "2026-11-19T05:13:57.884Z"
  },
  {
+  "id": "paper-corex",
+  "name": "Corex (Retrieve)",
+  "input": "How many positive divisors does 360 have? Give the number.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 6,
+  "tokens": 2766,
+  "usd": 0.004503,
+  "seconds": 9.5,
+  "recorded_at": "2026-11-19T19:21:55.145Z"
+ },
+ {
   "id": "paper-debate",
   "name": "Multiagent debate",
   "input": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? End with 'Final: <answer>'.",
