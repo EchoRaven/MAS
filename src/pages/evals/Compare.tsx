@@ -252,7 +252,7 @@ export function ComparePage() {
                     )}
                   </td>
                   <td className="py-2 text-right tabular-nums">{usd(e.usd)}</td>
-                  <td className="hidden py-2 text-right tabular-nums text-muted-foreground sm:table-cell">{e.passed ? usd(e.usd / e.passed) : "–"}</td>
+                  <td className="hidden py-2 text-right tabular-nums text-muted-foreground sm:table-cell">{(() => { const ok = r ? r.rec.cases.filter((c) => c.pass).length : e.passed; return ok ? usd(e.usd / ok) : "–"; })()}</td>
                   <td className="hidden py-2 text-right text-xs text-muted-foreground md:table-cell" title={e.started_at}>
                     {timeAgo(e.started_at)}
                     {incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : noAnswers(e) ? " · no model answered" : superseded.has(e.id) ? " · older" : ""}
