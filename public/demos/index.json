@@ -264,6 +264,18 @@
   "recorded_at": "2026-11-17T11:54:38.699Z"
  },
  {
+  "id": "paper-spp",
+  "name": "Solo Performance Prompting",
+  "input": "Use the numbers 4, 7, 8 and 8 with + - * / and brackets to make 24. Give the expression.",
+  "status": "finished",
+  "reason": "All idle",
+  "calls": 1,
+  "tokens": 611,
+  "usd": 0.0013705,
+  "seconds": 11.5,
+  "recorded_at": "2026-11-19T13:52:02.790Z"
+ },
+ {
   "id": "paper-storm",
   "name": "STORM",
   "input": "The history of the printing press",
