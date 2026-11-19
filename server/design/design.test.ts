@@ -171,9 +171,12 @@ describe("the draft the architect edits", () => {
     d.add("env", "chat", "Chat", { env_kind: "room", policy: "selector", selector: "manager" });
     const room = () => (d.doc.nodes.find((n) => n.id === "chat")!.data as { room: { selector?: string } }).room;
     expect(room().selector).toBe("manager");
+    // the manager reads the room to pick who speaks: connected, read-only
+    expect(d.doc.edges.find((e) => e.source === "manager" && e.target === "chat")).toMatchObject({ kind: "access", access: "read" });
     d.add("agent", "boss", "Boss", {});
     expect(await runDesignTool(d, "update", { id: "chat", options: { moderator: "boss" } })).toMatch(/selector/);
     expect(room().selector).toBe("boss");
+    expect(d.doc.edges.some((e) => e.source === "boss" && e.target === "chat" && e.access === "read")).toBe(true);
     expect(await runDesignTool(d, "update", { id: "chat", options: { selector: "nobody" } })).toMatch(/^Not done: selector must be the id of an agent/);
   });
 

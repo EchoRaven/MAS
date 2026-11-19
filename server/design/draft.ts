@@ -108,6 +108,7 @@ export class Draft {
       if (g.data.kind !== "group") throw new DraftError(`"${parent}" is not a group, so nothing can live inside it`);
     }
     let data: NodeData;
+    let pendingSelector: string | null = null;
     switch (kind as NodeKind) {
       case "agent": {
         const a = defaultAgent(name);
@@ -132,7 +133,10 @@ export class Draft {
           if (options.policy) data.room = { ...data.room!, policy: options.policy as NonNullable<typeof data.room>["policy"] };
           // the agent that picks who speaks next in a selector room (a group chat manager); "moderator" is taken too
           const sel = options.selector ?? options.moderator;
-          if (typeof sel === "string" && sel.trim()) data.room = { ...data.room!, selector: sel.trim() };
+          if (typeof sel === "string" && sel.trim()) {
+            data.room = { ...data.room!, selector: sel.trim() };
+            pendingSelector = sel.trim();
+          }
           if (options.end_after != null) this.setEndAfter(options.end_after);
         } else {
           data = { ...(defaultData("env") as Extract<NodeData, { kind: "env" }>), name, env_kind: options.env_kind as Extract<NodeData, { kind: "env" }>["env_kind"] };
@@ -167,7 +171,19 @@ export class Draft {
     const node: SysNode = { id, position: place(this.doc, parent), data };
     if (parent) node.parent = parent;
     this.doc.nodes.push(node);
-    return `Added ${kind} "${id}"${parent ? ` inside ${parent}` : ""}.${swapped.length ? ` Models with no key here were swapped: ${swapped.join(", ")}.` : ""}`;
+    const linked = pendingSelector ? this.linkSelector(id, pendingSelector) : "";
+    return `Added ${kind} "${id}"${parent ? ` inside ${parent}` : ""}.${linked}${swapped.length ? ` Models with no key here were swapped: ${swapped.join(", ")}.` : ""}`;
+  }
+
+  /**
+   * A selector room's manager reads the room to pick who speaks: connect it (read access) when it exists; when it
+   * is added later, say so. A manager is never a member that speaks.
+   */
+  private linkSelector(room: string, selector: string): string {
+    const agent = this.doc.nodes.find((x) => x.id === selector);
+    if (agent?.data.kind !== "agent") return ` Its selector ${selector} does not exist yet: add that agent, then connect it to ${room} with read access.`;
+    if (!this.doc.edges.some((e) => e.kind === "access" && e.source === selector && e.target === room)) this.connect(selector, room, "access", { access: "read" });
+    return ` ${selector} picks who speaks and is connected to it (read).`;
   }
 
   /** Change a component in place; its connections stay. Only the keys given change. */
@@ -237,6 +253,7 @@ export class Draft {
           if (typeof sel === "string" && sel.trim() && n.data.room) {
             if (this.doc.nodes.find((x) => x.id === sel.trim())?.data.kind !== "agent") throw new DraftError(`selector must be the id of an agent in this system (got ${JSON.stringify(sel)})`);
             n.data.room = { ...n.data.room, selector: sel.trim() };
+            this.linkSelector(id, sel.trim());
             changed.push("selector");
           }
         }
