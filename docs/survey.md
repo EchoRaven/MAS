@@ -139,7 +139,20 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **Tools matter more than talk.** Questions no discussion fixed in any run
   (digit sums of large powers, binomials mod p) were solved every time once
   one agent could run code. A single agent with the same sandbox scored the
-  same 30/30 as AutoGen's five-agent chat, faster and cheaper.
+  same 30/30 as AutoGen's five-agent chat, faster and cheaper, and so did
+  Magentic-One once its terminal ran code in the sandbox (15 → 30). Where the
+  arithmetic is short the edge shrinks: on 100 MATH-500 problems a code
+  runner fixed 6 and lost 2 (p ≈ 0.29), and on GSM-Hard's well-posed
+  questions it changed nothing.
+- **On one 30-question set, every paper system side by side** (Hard
+  computation, flash-lite): those that run code solve all 30; those that
+  exchange or vote on answers gain 2–4 over one agent's 19 (EoT 23, ReConcile
+  and DyLAN 22, debate 21; p ≈ 0.02 for the best); those built on roles,
+  personas or long pipelines are no better than one agent (MoA 17, MedAgents
+  15, MAD 14, AutoAgents 13, CAMEL 12, ChatEval 12: they fix about as many
+  questions as they lose). MAD's devil, made to disagree, talks its judge out
+  of right products; reviewers that recompute by hand (AgentVerse,
+  AutoAgents) confirm wrong ones.
 - **Test-and-fix loops do not pay on easy code.** On 31 coding problems a
   single agent with a sandbox (59 of 62) scored within one problem of
   AgentCoder (60) and ahead of MapCoder (58), at a quarter to a third of their cost. Writing tests separately
@@ -149,9 +162,20 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   to be compared with one agent that has the same executor, not with a bare
   model.
 - **A paper's gain needs room to show.** On GSM8K the single agent already
-  scores 97, so a debate cannot show the paper's 77 → 85.
+  scores 97, so a debate cannot show the paper's 77 → 85; on MMLU, 95 against
+  the paper's 64 (debate 95.5, no gain). Even a benchmark meant to leave room
+  can be capped by its key: every question all systems missed on GSM-Hard was
+  broken, which is why datasets can now flag questions.
+- **A score of one run needs its spread.** A 4-point gain for debate on MMLU
+  (92 → 96) vanished when the single agent was run twice more (96, 97). The
+  paired test on the Compare page (questions fixed and lost, McNemar) is what
+  says whether a gap is more than noise.
 - **Most "failures" of a rebuilt system were the rebuild.** Every bug in the
-  table above first looked like the paper's method doing badly. A
+  table above first looked like the paper's method doing badly. The most
+  common single cause was the result's form: eight templates first lost
+  points because their last message was not the answer (a critique, a check,
+  code, "Next request."), which is why evaluations now check every answer for
+  an answer line. A
   reproduction is not done until it has been run on a benchmark and its
   failures have been read one by one.
 
