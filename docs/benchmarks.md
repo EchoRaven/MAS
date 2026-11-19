@@ -352,7 +352,7 @@ Later, with code (the same 50, answer lines checked):
 | --- | --- | --- | --- |
 | Single agent with a code runner | **48** | +3 −0 (p 0.25) | $0.29 |
 | Magentic-One (sandboxed terminal) | 46 | +2 −1 | $0.29 |
-| Multiagent Debate, each debater with its own sandbox | 48 | +3 −0 | $1.14 |
+| Multiagent Debate, each debater with its own sandbox | 49 | +4 −0 | $1.14 |
 
 Running code fixed three problems no text-only system got (#8, #13, #34)
 and lost none: the best score on this sample, though three problems is not
@@ -363,10 +363,10 @@ with short arithmetic, so a code runner matters far less than on Hard
 computation's long exact chains. Magentic-One's orchestration added nothing over one agent
 with the same sandbox, as AutoGen's five agents did on Hard computation.
 Neither did discussion: Multiagent Debate with a sandbox for each debater
-(a system built for this comparison, not a template) scored the same 48 as
-one agent with a sandbox, missing almost the same problems, at four times
-the cost. Once the single agent has the same tool, three debaters exchanging
-answers fix nothing it does not.
+(a system built for this comparison, not a template) scored 49 against one
+agent with a sandbox's 48, one problem more and none fewer (p = 1), at four
+times the cost. Once the single agent has the same tool, three debaters
+exchanging answers fix almost nothing it does not.
 
 At about 92%, neither voting nor debate gains more than a question in 50.
 (All MATH-500 scores here were regraded on 2026-11-19 after a grader fix:
@@ -401,6 +401,7 @@ grader:
 | MACM (Thinker, Judge, Executor; up to 4 mining rounds) | 43 | +4 −1 (p 0.38) | $0.25 |
 | Multiagent Debate, 2 rounds | 44 | | $0.39 |
 | Agent Forest, 5 samples | **45** | | $0.26 |
+| Single agent with a code runner | **45** | +6 −1 (p 0.13) | $0.39 |
 
 MACM (Lei et al. 2024) has a Thinker list the conditions and the objective
 and mine new conditions one at a time, a Judge keep only those it verifies
@@ -412,7 +413,10 @@ condition in 43 of the 50 problems (2 rounds in 5, 3 or 4 in 2), so in
 practice it was plan-then-execute with one verified step, not the long
 mining the paper describes. The paper's gains were with GPT-4 and a code
 executor and over plain chain of thought; against a vote over five samples
-at the same cost there is none here.
+at the same cost there is none here. A code runner does as well as the
+best of them (45: +6 −1 against one agent, and 2 fixed, 2 lost against
+Agent Forest): even on the hardest problems, MATH's errors are mostly
+reasoning, which code and voting fix about equally.
 
 Two notes on measuring it. Every call to a role is a turn, and the
 template's first limit (10) cut two runs short; at 40 they gave two right

@@ -198,8 +198,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **The fair baseline has the same tools.** A system with a code executor has
   to be compared with one agent that has the same executor, not with a bare
   model. Matched that way, discussion adds nothing here: Multiagent Debate
-  with a sandbox per debater scored 48 of 50 on MATH-500, as did one agent
-  with a sandbox, at four times the cost.
+  with a sandbox per debater scored 49 of 50 on MATH-500 against one agent
+  with a sandbox's 48 (one problem, p = 1), at four times the cost.
 - **A paper's gain needs room to show.** On GSM8K the single agent already
   scores 97, so a debate cannot show the paper's 77 → 85; on MMLU, 95 against
   the paper's 64 (debate 95.5, no gain). Even a benchmark meant to leave room

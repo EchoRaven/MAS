@@ -5,7 +5,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
     "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against 18.",
     "MMLU (100): 95.5 against 95.0 on flash-lite, 89 against 90 on gemma: no gain where errors are missing knowledge.",
-    "With a sandbox per debater, MATH-500 (50): 48, the same as one agent with a sandbox, at four times the cost.",
+    "With a sandbox per debater, MATH-500 (50): 49, against one agent with a sandbox's 48, at four times the cost.",
   ],
   "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 18.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
   "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25."],
