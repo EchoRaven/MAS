@@ -559,6 +559,20 @@ result type: no answer line") and listed first among the failures. Grades do
 not change. Four rebuilt papers (MedAgents, AgentVerse, AutoAgents,
 AgentCoder) first lost points this way.
 
+Run across the 14 paper templates that answer questions (5 questions of
+Exact computation each, on flash-lite), the check found four more with the
+same bug on their first run, all fixed:
+
+| Template | Unmarked before | What it ended with | After the fix |
+| --- | --- | --- | --- |
+| CAMEL | 5 of 5 | "Solution: the task is fully complete. Next request." (the user's end marker never reached the stop condition: 40 rounds, $0.41) | 0 of 5, $0.01 |
+| AutoGen | 2 of 5 | the code and TERMINATE, without its result | 0 of 5 |
+| Magentic-One | 5 of 5 | the answer in prose; once graded on a digit from its working | 0 of 5 |
+| ChatEval | 5 of 5 | a verdict with no value (it is built to judge answers, not to give one) | 0 of 5 |
+
+The other ten (Debate, ReConcile, Agent Forest, EoT, DyLAN, MAD, MedAgents,
+AgentVerse, AutoAgents, MoA) marked every answer.
+
 An evaluation whose system calls a model with no key here is refused before
 it starts, with the model and the component that uses it; use "Everything on
 <model>" to run it on one you have.
