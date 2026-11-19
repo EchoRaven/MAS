@@ -98,6 +98,10 @@ A value on a `message` port is `{ role, text, content, from, meta }`.
 - `now`: milliseconds
 - `llm(prompt, data?, model?)`
 - `log(text)`
+- `state`: `get(key)`, `set(key, value)`, `all()`: the system's own JSON store, kept across runs (at most 1 MB; `GET/DELETE /api/systems/:id/state`)
+
+A function component also has:
+- `tool(name, args)`: a tool of an env or plugin it is connected to by an access edge, run with no model (read-only access gives read-only tools); each call is a tool event in the run
 
 Where it applies, `ctx` also has:
 

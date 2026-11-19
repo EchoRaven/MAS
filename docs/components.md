@@ -23,7 +23,8 @@ All code that runs inside the platform has the same contract,
 `f(input, ctx) → output | null` (null drops the value), in `js`, `python`,
 `jsonata`, `template` or `llm`. `ctx` always has `run_id`, `run_input` (what
 the run started with), `node`, `vars` (shared by the run, writable), `now`,
-`llm(prompt, data?, model?)` and `log(text)`.
+`llm(prompt, data?, model?)`, `log(text)` and `state` (kept across runs). A
+function component connected to an env or plugin also has `tool(name, args)`.
 
 ## 1. Function nodes
 
