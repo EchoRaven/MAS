@@ -1084,6 +1084,24 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "usage")).toHaveLength(0);
   });
 
+  it("a function in a room replies on its own when it has something to say, and stays silent otherwise", async () => {
+    const b = new Builder("Room fn", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("coder", 200, 0, { name: "Coder", model: "w", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .node("proxy", "function", 200, 200, { name: "Proxy", fn: { lang: "js", code: 'return /```/.test(String(input)) ? "output: 42" : null;' } })
+      .node("chat", "env", 400, 100, { name: "Chat", env_kind: "room", image: "", room: { policy: "round_robin", history: "persistent" } })
+      .edge("me", "chat", "access", { access: "read_write" })
+      .edge("coder", "chat", "access", { access: "read_write" })
+      .edge("proxy", "chat", "access", { access: "read_write" });
+    b.doc.termination = ['text.includes("DONE")'];
+    b.doc.models.push({ id: "w", provider: "mock", model: "mock", api: { params: { script: ["```python\nprint(6*7)\n```", "The answer is 42. DONE"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "compute 6*7", { mock: false });
+    expect(errors(events)).toEqual([]);
+    const said = events.filter((e): e is Extract<typeof e, { type: "message" }> => e.type === "message" && e.to === "chat").map((e) => `${e.from}: ${e.text.split("\n")[0]}`);
+    expect(said).toEqual(["me: compute 6*7", "coder: ```python", "proxy: output: 42", "coder: The answer is 42. DONE"]);
+    expect(events.some((e) => e.type === "transform" && e.at === "proxy" && e.detail === "stays silent")).toBe(true);
+  });
+
   it("ctx.tool names what a function is connected to when the tool is not there", async () => {
     const b = new Builder("Fn tool", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

@@ -644,6 +644,26 @@ export class Engine implements TurnServices {
     }
     // members only hear what their subscription accepts (binding.read.filter over msg)
     const members = room.members().filter((m) => m !== from && room.accepts(m, posted));
+    // a function in the room replies on its own when it has something to say (AutoGen's user proxy runs the code
+    // it sees, with no model): its non-empty return is posted, and the room goes on from there; functions do not
+    // answer each other, so two of them cannot loop
+    if (rc.byId.get(from)?.data.kind !== "function") {
+      for (const m of members.filter((x) => rc.byId.get(x)?.data.kind === "function")) {
+        const f = rc.byId.get(m)!.data as FunctionNodeData;
+        let out: unknown;
+        try {
+          out = await runFn(f.fn, text, rc, { node: m, helpers: { tool: (name: string, args?: Record<string, unknown>) => this.fnTool(m, name, args ?? {}) } });
+        } catch (e) {
+          out = `Error: ${(e as Error).message}`;
+        }
+        const reply = out == null ? "" : asText(out).trim();
+        rc.emit({ type: "transform", at: m, label: `${f.fn.lang} function in ${nameOf(rc, roomId)}`, detail: reply ? `replies: ${clip(reply, 160)}` : "stays silent" });
+        if (reply) {
+          await this.post(roomId, m, reply);
+          return;
+        }
+      }
+    }
     let next: string[] = [];
     switch (room.policy) {
       case "round_robin":

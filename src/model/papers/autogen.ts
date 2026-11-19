@@ -14,12 +14,20 @@ function build(): SystemDoc {
     .agent("planner", 260, 0, { name: "Planner", role: "Breaks the task into steps", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Suggest a short plan. Revise it when the critic or the code output shows a problem. Do not write code." } })
     .agent("coder", 580, 0, { name: "Coder", role: "Writes Python in code blocks", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "Write complete Python in one ```python block that prints its results. Fix it when the executor reports an error. Never say TERMINATE yourself: the code has to run first." } })
     .agent("critic", 900, 120, { name: "Critic", role: "Checks plans and results", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Check the plan, the code and the executor's output for mistakes, and say what must change. The executor's output is what the code really printed: never redo its arithmetic by hand. If you doubt a result, say what check the coder should add to the code. Only once the executor has run the code and its output answers the task, reply with the final answer and then TERMINATE. When the task asks for code, the final answer is the final code in one ```python block; otherwise it is the result taken from that output, not the code: end with a line 'Answer: X', then TERMINATE." } })
-    .agent("executor", 900, 380, {
+    // the user proxy runs every code block it sees and posts what it printed, with no model, as in AutoGen:
+    // a function in the room, silent when a message has no code
+    .node("executor", "function", 900, 380, {
       name: "User proxy",
-      role: "Executes code blocks",
-      model: "haiku",
-      tools: ["bash"],
-      harness: { ...native(), loop: "react", max_steps: 4, instructions: "When the last message contains a ```python block, save it to main.py with bash (cat > main.py <<'EOF' … EOF), run python3 main.py, and post exactly the output. Otherwise say there is no code to run." },
+      fn: {
+        lang: "js",
+        code: `// auto-reply: run the last python block of the message in the sandbox; stay silent without one
+const text = String(input?.text ?? input ?? "");
+const blocks = [...text.matchAll(/\\\`\\\`\\\`(?:python|py)?[^\\n]*\\n([\\s\\S]*?)\\\`\\\`\\\`/g)];
+if (!blocks.length) return null;
+await ctx.tool("edit_file", { path: "main.py", content: blocks[blocks.length - 1][1] });
+const out = await ctx.tool("bash", { command: "python3 main.py" });
+return "Execution output:\\n" + out;`,
+      },
     })
     .node("sandbox", "env", 1220, 380, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" })
     .edge("user", "chat", "access", { access: "read_write", binding: { mode: "tool", write: { when: "agent_tool" } } });
@@ -40,7 +48,7 @@ export const autogen: TemplateInfo = {
     mapped: [
       "The group chat is a room env with the selector policy; the GroupChatManager is the selector agent, which reads the transcript and names the next speaker (never itself).",
       "Every participant pins the shared transcript into its context, as in AutoGen's broadcast of all messages.",
-      "The UserProxyAgent's code execution is an agent with the sandbox's bash tool. Only the critic may say TERMINATE, and only after the code has run, so the chat cannot end on unexecuted code; its last message is the run's answer.",
+      "The UserProxyAgent is a function in the room, with no model, as in AutoGen: it runs every python block it sees in the sandbox (ctx.tool) and posts the output, and stays silent otherwise. Only the critic may say TERMINATE, and only after the code has run, so the chat cannot end on unexecuted code; its last message is the run's answer.",
     ],
     differs: [
       "AutoGen's user proxy runs code without a model call; here a small model extracts the code block and runs it with bash.",
