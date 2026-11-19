@@ -98,7 +98,23 @@ export async function design(opts: { models: Models; model?: string | null; prom
       log.push({ tool: c.name, args: JSON.stringify(c.input).slice(0, 2000), result: result.slice(0, 2000) });
       results.push({ type: "tool_result", id: c.id, content: result });
     }
+    // the steps run out: say so while there is room to finish (wire up, describe, explain) instead of stopping mid-edit
+    const left = max - step - 1;
+    if (left === 4) results.push({ type: "text", text: `${left} steps left. Finish now: fix what review reports, call describe (name, description, result), then reply with your summary.` } as Part);
     messages.push({ role: "user", content: results });
+  }
+
+  // out of steps with no explanation: ask for one, with no tools, so the person always learns what was built
+  if (!summary) {
+    const { res, usage: u } = await opts.models.chat(opts.model ?? null, {
+      system: SYSTEM,
+      messages: [...messages, userText("You are out of steps. In a few sentences, say what the system you built does, how its parts work together, and anything left to finish.")],
+      signal: opts.signal,
+    });
+    usage.tokens_in += u.tokens_in;
+    usage.tokens_out += u.tokens_out;
+    usage.usd += u.usd;
+    summary = textOf(res.content);
   }
 
   const { errors, warnings } = draft.problems();

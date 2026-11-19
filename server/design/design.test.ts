@@ -284,4 +284,12 @@ describe("the architect's loop", () => {
     expect(r.doc.edges).toHaveLength(1);
     expect(r.errors).toEqual([]);
   });
+
+  it("is told when its steps run low, and always explains what it built, even out of steps", async () => {
+    // it reviews forever; the mock's script repeats its last entry, so the last call (with no tools) answers in text
+    const script: unknown[] = [{ tool: "add", input: { kind: "agent", id: "a", name: "A" } }, ...Array.from({ length: 7 }, () => ({ tool: "review", input: {} })), "A single agent A; it still needs a way to start."];
+    const r = await design({ models: models(script), model: "m", prompt: "an agent", maxSteps: 8 });
+    expect(r.log).toHaveLength(8);
+    expect(r.summary).toBe("A single agent A; it still needs a way to start.");
+  });
 });
