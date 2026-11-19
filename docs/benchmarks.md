@@ -168,6 +168,13 @@ each, through the built-in dataset (2026-11-18):
   +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+- **Mixture-of-Agents with three different models ties its best one.** As its
+  paper intends, the proposers were different models (gemini-3.8-flash,
+  gemma, flash-lite, in two layers) and 3.8-flash aggregated: 26 of 30, the
+  same as 3.8-flash alone on these questions, at about three times the cost
+  ($0.28) and 88 minutes (gemma's long thinking). With all slots on flash-lite
+  it scored 17. Mixing models brings the answer up to the best member's, not
+  above it, as with mixed-model ReConcile.
 - **DyLAN's team optimization learns the obvious team.** Over one pass of the
   30 questions it accumulated importance (`ctx.state`): Programmer 51,
   Mathematician 49, Skeptic 18, Generalist 8. With `team_size = 2` the later
