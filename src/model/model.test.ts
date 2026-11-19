@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Builder, native } from "./builder";
 import { simulate, stateAt } from "@/run/simulate";
 import { TEMPLATES } from "./templates";
 import { validate } from "./validate";
@@ -192,5 +193,17 @@ describe("local addresses", () => {
     expect(msgs.some((m) => m.startsWith("Tool peek reaches http://127.0.0.1:4311/data"))).toBe(true);
     // the model catalog's local entries (a local model server) are not counted
     expect(validate(TEMPLATES.find((t) => t.id === "baseline")!.build()).some((i) => /private network/.test(i.message))).toBe(false);
+  });
+
+  it("warns when two agents who talk in a room are also wired to each other", () => {
+    const b = new Builder("Room", "");
+    b.agent("a", 0, 0, { name: "A", harness: { ...native(), instructions: "" } })
+      .agent("c", 200, 0, { name: "C", harness: { ...native(), instructions: "" } })
+      .node("chat", "env", 100, 200, { name: "Chat", env_kind: "room", image: "", room: { policy: "round_robin", history: "persistent" } })
+      .edge("a", "chat", "access", { access: "read_write" })
+      .edge("c", "chat", "access", { access: "read_write" });
+    expect(validate(b.doc).some((i) => /already talk in room/.test(i.message))).toBe(false);
+    b.edge("a", "c", "message");
+    expect(validate(b.doc).find((i) => /already talk in room/.test(i.message))).toMatchObject({ severity: "warning", message: expect.stringMatching(/"A" and "C" already talk in room "Chat"/) });
   });
 });

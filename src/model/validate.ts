@@ -210,6 +210,15 @@ export function validate(doc: SystemDoc): Issue[] {
       const members = doc.edges.filter((e) => e.kind === "access" && e.target === n.id).length;
       if (members < 2) add("warning", `Room ${q(n)} has only ${members} member(s)`, { nodeId: n.id });
       if (d.room?.policy === "selector" && !d.room.selector) add("warning", `Room ${q(n)} uses the selector policy and needs a moderator: set its selector to the agent that picks who speaks next`, { nodeId: n.id });
+      // two agents who talk in the room and are also wired to each other hear every turn twice (not in a mention
+      // room, where a post reaches only whoever it @names)
+      const speakers = d.room?.policy === "mention" ? new Set<string>() : new Set(doc.edges.filter((e) => e.kind === "access" && e.target === n.id && e.access !== "read").map((e) => e.source));
+      for (const e of doc.edges) {
+        if (e.kind === "access" || !speakers.has(e.source) || !speakers.has(e.target)) continue;
+        const [a, b] = [byId.get(e.source), byId.get(e.target)];
+        if (a?.data.kind !== "agent" || b?.data.kind !== "agent") continue;
+        add("warning", `${q(a)} and ${q(b)} already talk in room ${q(n)}; the ${e.kind} edge between them sends each turn a second time. Remove it, unless it carries something the room does not`, { edgeId: e.id });
+      }
     } else if ((d.kind === "plugin" || d.kind === "env") && !touching(n.id).length) {
       add("info", `${q(n)} is not used by anyone`, { nodeId: n.id });
     }
