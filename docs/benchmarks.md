@@ -710,7 +710,7 @@ compare with the debate's final answer on the same question.
 - Over all nineteen debate evaluations the rounds turned 22 wrong votes
   right and 8 right ones wrong (p ≈ 0.02): a real but small effect, almost
   all of it on long computation with the stronger model. Measured by
-  `.probe/debate_rounds.mts` over the stored runs.
+  `scripts/debate-rounds.mts` over the stored runs.
 
 ## Answers the team had and lost
 
