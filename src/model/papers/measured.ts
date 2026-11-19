@@ -26,6 +26,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-macnet": ["Hard computation (flash-lite), four nodes: chain 19, star 22, mesh 21; a star of 2, 4, 8 nodes: 19, 22, 21."],
   "paper-corex": ["Hard computation (flash-lite): 22, 22, the same as a majority vote over five samples, missing the same questions, at 1.6 times its cost."],
   "paper-mav": ["Hard computation (flash-lite): 22, 22, the same eight misses as the vote and Corex, at three times the vote's cost: on the misses the right answer was among the five candidates once in 16."],
+  "paper-macm": ["MATH level 5 (50, flash-lite): 43, against one agent's 40, debate's 44 and a five-sample vote's 45 at the same cost; its Judge called the conditions sufficient after one mined condition in 43 of 50."],
   "paper-spp": [
     "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (as debate, against one agent's 18).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",

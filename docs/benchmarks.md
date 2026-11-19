@@ -388,6 +388,39 @@ compares lists in any order and drops a trailing unit, and still passes the
 all truly equal). A grader is checked against what models write, not only
 against the answer key's own forms.
 
+## MATH level 5: condition mining (MACM)
+
+MATH-500's general sample leaves little room (about 92%), so a set of its
+134 level-5 problems (the hardest; built from the same file,
+`benchmarks/math-500/test.jsonl`), 50 of them (seed 1), flash-lite, math
+grader:
+
+| System | Correct | vs single agent | Cost |
+| --- | --- | --- | --- |
+| Single agent | 40 | | $0.05 |
+| MACM (Thinker, Judge, Executor; up to 4 mining rounds) | 43 | +4 −1 (p 0.38) | $0.25 |
+| Multiagent Debate, 2 rounds | 44 | | $0.39 |
+| Agent Forest, 5 samples | **45** | | $0.26 |
+
+MACM (Lei et al. 2024) has a Thinker list the conditions and the objective
+and mine new conditions one at a time, a Judge keep only those it verifies
+and say when they suffice, and an Executor carry out the Thinker's plan
+(here a function calling the three roles with `ctx.call`). It scores between
+one agent and the voters, at a vote's cost; against Agent Forest it fixes 1
+and loses 3. Its Judge declared the conditions sufficient after one mined
+condition in 43 of the 50 problems (2 rounds in 5, 3 or 4 in 2), so in
+practice it was plan-then-execute with one verified step, not the long
+mining the paper describes. The paper's gains were with GPT-4 and a code
+executor and over plain chain of thought; against a vote over five samples
+at the same cost there is none here.
+
+Two notes on measuring it. Every call to a role is a turn, and the
+template's first limit (10) cut two runs short; at 40 they gave two right
+answers (retried in place). And the first grading marked right answers
+wrong on this set (`3 < \lambda \le 4` for `(3,4]`, a vector in decimals,
+a set in braces) for every system; the grader was fixed and all MATH
+evaluations regraded, with no model calls.
+
 ## MMLU: single agent vs Multiagent Debate
 
 Du et al. report MMLU going from 63.9 to 71.1 with debate (gpt-3.5). Here:

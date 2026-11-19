@@ -56,7 +56,8 @@ function build(): SystemDoc {
     .edge("macm", "judge", "call", { label: "Verify" })
     .edge("macm", "executor", "call", { label: "Carry out" })
     .edge("macm", "asker", "message", { label: "Answer" });
-  b.doc.budget = { usd: 2, max_rounds: 10, wallclock_min: 20 };
+  // every call to a role is a turn: 1 + 3 per mining round + 2, so 8 rounds need 27
+  b.doc.budget = { usd: 2, max_rounds: 40, wallclock_min: 20 };
   b.doc.termination = ["all_idle", "budget_exceeded"];
   b.doc.result = { type: "text", description: "the Executor's solution, ending with \\boxed{} and 'Answer: X'" };
   return b.doc;
