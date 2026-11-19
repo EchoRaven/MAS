@@ -64,16 +64,22 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   // several systems on the same questions, one after another (never at once, to keep the request rate low)
   r.on("POST", "/api/evals/batch", async (req) => {
     // the systems by id, or as the browser has them now (which also stores them, as a single evaluation does)
-    const b = (await req.body()) as StartBody & { system_ids?: string[]; docs?: unknown[] };
+    const b = (await req.body()) as StartBody & { system_ids?: string[]; docs?: unknown[]; sweep?: { name?: string; values?: unknown[] } };
     const given = Array.isArray(b.docs) ? b.docs.map((d) => checkDoc(d)) : null;
     const docs = given ?? (Array.isArray(b.system_ids) ? [...new Set(b.system_ids.map(String))].map((id) => store.getSystem(id) ?? (() => { throw new HttpError(404, `No system ${id}`); })()) : []);
     if (!docs.length || docs.length > 10) throw new HttpError(400, "Give system_ids or docs: one to ten systems");
     const opts = prepare(b);
+    // a sweep: each system once per value of one run variable (n = 2, 4, 8), one after another, to compare on Compare
+    const sweep = b.sweep;
+    const values = Array.isArray(sweep?.values) ? sweep.values : null;
+    if (sweep && (!sweep.name || !/^[A-Za-z_]\w*$/.test(String(sweep.name)) || !values?.length || values.length > 10)) throw new HttpError(400, "sweep needs a variable name and one to ten values");
+    if (values && docs.length * values.length > 20) throw new HttpError(400, `A sweep of ${values.length} values over ${docs.length} systems is ${docs.length * values.length} evaluations; at most 20 at once`);
+    const variants = values ? values.map((v) => ({ ...opts, vars: { ...(opts.vars ?? {}), [String(sweep!.name)]: v } })) : [opts];
     for (const d of docs) checkValid(d, b.force); // all or none: a batch that stops halfway compares less than it says
     if (given) for (const d of given) store.putSystem(d);
     try {
       for (const d of docs) evals.prepare(d, opts); // a model with no key in any of them refuses the whole batch
-      return { evals: docs.map((d) => evals.start(d, opts, true)) };
+      return { evals: variants.flatMap((o) => docs.map((d) => evals.start(d, o, true))) };
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }

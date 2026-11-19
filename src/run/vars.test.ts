@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TEMPLATES } from "@/model/templates";
-import { fillVars, formatVars, parseVars, readVars } from "./vars";
+import { fillVars, formatVars, parseVars, readVars, sweepOf } from "./vars";
 
 describe("run variables", () => {
   it("parses key=value lists, with numbers, booleans and JSON", () => {
@@ -26,5 +26,12 @@ describe("run variables", () => {
     expect(fillVars('Tone: {{vars.tone ?? "plain"}}', {})).toBe("Tone: plain");
     expect(fillVars("Use {{input}} and {{vars.missing}} and {x: 1}", {})).toBe("Use {{input}} and {{vars.missing}} and {x: 1}");
     expect(fillVars("Weights {{vars.w}}", { w: [1, 2] })).toBe("Weights [1,2]");
+  });
+
+  it("reads a sweep, n=2|4|8, as one variable over several values", () => {
+    expect(sweepOf(parseVars("n=2|4|8, topology=star").vars)).toEqual({ name: "n", values: [2, 4, 8], rest: { topology: "star" } });
+    expect(sweepOf(parseVars("paradigm=memory|relay").vars)).toMatchObject({ name: "paradigm", values: ["memory", "relay"] });
+    expect(sweepOf(parseVars("n=4").vars)).toBeNull();
+    expect(sweepOf(parseVars("n=2|4, k=1|3").vars)).toMatchObject({ error: expect.stringMatching(/one variable at a time/) });
   });
 });

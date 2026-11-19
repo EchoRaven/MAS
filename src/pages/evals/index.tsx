@@ -17,7 +17,7 @@ import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets"
 import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats } from "@/run/evals";
 import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
-import { formatVars, parseVars, readVars } from "@/run/vars";
+import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
 import { Input } from "@/components/ui/input";
 import { useServer } from "@/store/server";
 import { useSystems } from "@/store/systems";
@@ -188,8 +188,12 @@ function Evals({ systemId }: { systemId: string }) {
     try {
       const source = chosen ? { dataset_id: chosen.id, ...(sampleSize && sampleSize < chosen.total ? { sample: { n: sampleSize, seed: Number(seed) || 1 } } : {}) } : { cases: parsed.cases };
       const expect = markedAnswers ? expectFor(grader) : null;
-      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(vars.vars).length ? { vars: vars.vars } : {}), force };
-      const rec = alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
+      // n=2|4|8: one evaluation per value, queued one after another (and per system, with others to compare)
+      const sw = sweepOf(vars.vars);
+      if (sw && "error" in sw) throw new Error(sw.error);
+      const theVars = sw ? sw.rest : vars.vars;
+      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(theVars).length ? { vars: theVars } : {}), force };
+      const rec = sw ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts, sweep: { name: sw.name, values: sw.values } })).evals[0] : alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
       await refresh();
       setSelected(rec.id);
     } catch (e) {
@@ -378,10 +382,17 @@ function Evals({ systemId }: { systemId: string }) {
             </div>
           )}
           {(wanted.length > 0 || varsText) && (
-            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Values every run starts with; the system's code reads them as ctx.vars">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Values every run starts with; the system's code reads them as ctx.vars. n=2|4|8 sweeps n: one evaluation per value, one after another">
               Variables
               <Input value={varsText} onChange={(e) => setVarsText(e.target.value)} placeholder={wanted.map((w) => `${w}=…`).join(", ")} aria-label="Run variables" className="h-8 text-xs" />
               {vars.bad.length > 0 && <span className="text-destructive">not name=value: {vars.bad[0]}</span>}
+              {(() => {
+                const sw = sweepOf(vars.vars);
+                if (!sw) return null;
+                if ("error" in sw) return <span className="text-destructive">{sw.error}</span>;
+                const n = sw.values.length * (1 + alsoDocs.length);
+                return <span>Sweeps {sw.name} over {sw.values.join(", ")}: {n} evaluation{n === 1 ? "" : "s"}, one after another, compared under Compare systems</span>;
+              })()}
             </label>
           )}
           <details className="text-xs text-muted-foreground" open={also.length > 0}>

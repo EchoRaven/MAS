@@ -31,6 +31,21 @@ export function parseVars(text: string): { vars: Record<string, unknown>; bad: s
   return { vars, bad };
 }
 
+/**
+ * A sweep written in the variables: "n=2|4|8" runs one evaluation per value. Returns the variable, its values
+ * (numbers parsed) and the other variables, or null when nothing is swept; more than one swept variable is an error.
+ */
+export function sweepOf(vars: Record<string, unknown>): { name: string; values: unknown[]; rest: Record<string, unknown> } | { error: string } | null {
+  const swept = Object.entries(vars).filter(([, v]) => typeof v === "string" && v.includes("|") && v.split("|").filter((x) => x.trim()).length > 1);
+  if (!swept.length) return null;
+  if (swept.length > 1) return { error: `Sweep one variable at a time (${swept.map(([k]) => k).join(", ")} all have |)` };
+  const [name, raw] = swept[0] as [string, string];
+  const values = raw.split("|").map((x) => x.trim()).filter(Boolean).map((x) => (/^-?\d+(\.\d+)?$/.test(x) ? Number(x) : x === "true" || x === "false" ? x === "true" : x));
+  const rest = { ...vars };
+  delete rest[name];
+  return { name, values, rest };
+}
+
 export const formatVars = (vars: Record<string, unknown> | undefined) =>
   Object.entries(vars ?? {})
     .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
