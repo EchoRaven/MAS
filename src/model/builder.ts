@@ -91,5 +91,5 @@ export interface TemplateInfo {
   /** reproductions of published systems carry their source and how they were mapped */
   paper?: PaperRef;
   /** how the paper maps onto components, and where this reproduction departs from it */
-  notes?: { mapped: string[]; differs: string[] };
+  notes?: { mapped: string[]; differs: string[]; /** what it scored on this platform (docs/benchmarks.md) */ measured?: string[] };
 }

@@ -1,5 +1,6 @@
 // Multi-agent systems from published papers, rebuilt with the framework's components.
 import type { TemplateInfo } from "../builder";
+import { MEASURED } from "./measured";
 import { agentcoder } from "./agentcoder";
 import { agentForest } from "./agentForest";
 import { autoagents } from "./autoagents";
@@ -30,4 +31,7 @@ import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp];
+const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp];
+
+// each with what it scored here, beside how it maps to its paper
+export const PAPER_TEMPLATES: TemplateInfo[] = PAPERS.map((t) => (t.notes && MEASURED[t.id] ? { ...t, notes: { ...t.notes, measured: MEASURED[t.id] } } : t));

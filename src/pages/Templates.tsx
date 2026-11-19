@@ -12,7 +12,7 @@ function Notes({ t }: { t: TemplateInfo }) {
   if (!t.notes) return null;
   return (
     <details className="mt-3 rounded-lg bg-secondary/40 text-[12px] ring-1 ring-border/50">
-      <summary className="cursor-pointer px-3 py-2 text-muted-foreground hover:text-foreground">How it is mapped · where it differs</summary>
+      <summary className="cursor-pointer px-3 py-2 text-muted-foreground hover:text-foreground">How it is mapped · where it differs{t.notes.measured ? " · measured here" : ""}</summary>
       <div className="space-y-2 border-t border-border/50 px-3 py-2">
         <ul className="list-disc space-y-1 pl-4">
           {t.notes.mapped.map((m, i) => (
@@ -25,6 +25,16 @@ function Notes({ t }: { t: TemplateInfo }) {
             <li key={i}>{m}</li>
           ))}
         </ul>
+        {t.notes.measured && (
+          <>
+            <p className="font-medium text-muted-foreground">Measured here</p>
+            <ul className="list-disc space-y-1 pl-4">
+              {t.notes.measured.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </details>
   );

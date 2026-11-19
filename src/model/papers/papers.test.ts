@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { simulate } from "@/run/simulate";
 import { TEMPLATES } from "../templates";
 import { PAPER_TEMPLATES } from ".";
+import { MEASURED } from "./measured";
 
 const calls = (id: string) => {
   const t = PAPER_TEMPLATES.find((x) => x.id === id)!;
@@ -72,6 +73,14 @@ describe("paper reproductions", () => {
     for (const id of ["paper-camel", "paper-chatdev"]) {
       const ev = simulate({ ...PAPER_TEMPLATES.find((x) => x.id === id)!.build(), id: "fixed" }).events;
       expect(ev.some((e) => e.type === "transform" && e.label === "rounds done")).toBe(true);
+    }
+  });
+
+  it("every measurement belongs to a template, and reaches it", () => {
+    for (const id of Object.keys(MEASURED)) {
+      const t = PAPER_TEMPLATES.find((x) => x.id === id);
+      expect(t, id).toBeTruthy();
+      expect(t!.notes?.measured, id).toEqual(MEASURED[id]);
     }
   });
 });

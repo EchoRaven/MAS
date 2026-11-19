@@ -92,6 +92,16 @@ export function SystemInspector({ doc, update, issues, onPick }: { doc: SystemDo
                     ))}
                   </ul>
                 </div>
+                {paper.notes.measured && (
+                  <div>
+                    <p className="font-medium">Measured here</p>
+                    <ul className="mt-0.5 list-disc space-y-1 pl-4 text-muted-foreground">
+                      {paper.notes.measured.map((m, i) => (
+                        <li key={i}>{m}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
           </Section>
