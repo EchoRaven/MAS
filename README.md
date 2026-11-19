@@ -79,7 +79,7 @@ Measured on this platform, every system on the same model and questions
   ChatEval 12: lower, but they fix about as many questions as they lose).
 - **Mixing models reaches the best member, not beyond it**: ReConcile and
   Mixture-of-Agents with one seat per model tie their strongest model alone,
-  at two to four times the cost.
+  at three to four times the cost.
 - **Tools matter more than talk.** Questions no discussion fixed were solved
   every time once one agent could run code, and a single agent with the same
   sandbox scored as well as AutoGen's five-agent chat.

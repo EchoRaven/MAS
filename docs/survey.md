@@ -167,7 +167,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   from the code (AgentCoder) is the one mechanism that caught bugs a single
   attempt missed.
 - **Mixing models reaches the best member, not beyond it.** ReConcile with one
-  seat per model tied its strongest seat (27.3 against 28, 28, 26), and
+  seat per model averaged 27.3 over three runs, as its strongest seat did alone
+  (gemini-3-flash, 27.3), at about four times the cost; and
   Mixture-of-Agents with three different proposers scored 26 of 30, exactly
   what its best model scores alone, at three times the cost. The papers' gains
   over a single model came from models weaker than their best member.
