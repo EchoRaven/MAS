@@ -349,6 +349,31 @@ option first and a sentence of why last, and graders read the last line.
 The template now ends with "Answer: X", and the Evaluate page groups such
 failures as "a sentence, not an answer" instead of "wrong answer".
 
+## GSM-Hard: does running code help?
+
+GSM-Hard replaces GSM8K's numbers with large ones, to test computing over
+reasoning in text. 50 questions (seed 1), flash-lite, every answer checked
+for an answer line:
+
+| System | All 50 | The 41 well-posed | Cost |
+| --- | --- | --- | --- |
+| Single agent | 38 | 38 | $0.02 |
+| Single agent with code | 38 | 38 | $0.21 |
+| Magentic-One (sandboxed terminal) | 39 | 39 | $0.14 |
+| Multiagent Debate | 36 | 36 | $0.18 |
+
+**All nine questions every system missed are broken.** The numbers were
+swapped in mechanically, so the keys can be nonsense: the "change" from a
+$1,956,511 bill is −1,173,896.6; doing 4 million of 100 problems leaves
+−13,394,694; Joe with $50 is left with −$1,895,420; a key of 289,934,000
+does not follow from its question. The models answer what the question
+sensibly means and cannot match them. On the 41 well-posed questions every
+system is within 3 of all of them, and code changes nothing: these are long
+multiplications a model gets right in one or two steps, unlike Hard
+computation's chains of exact arithmetic. Scores on GSM-Hard measure its
+answer key as much as the systems; a cleaned subset would be needed to
+compare them.
+
 ## HumanEval: five coding systems
 
 50 problems sampled from HumanEval (seed 1), all on gemini-3.1-flash-lite,
