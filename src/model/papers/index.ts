@@ -15,6 +15,7 @@ import { dylan } from "./dylan";
 import { eot } from "./eot";
 import { generativeAgents } from "./generativeAgents";
 import { mad } from "./mad";
+import { macnet } from "./macnet";
 import { magenticOne } from "./magenticOne";
 import { mapcoder } from "./mapcoder";
 import { medagents } from "./medagents";
@@ -28,4 +29,4 @@ import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest];
+export const PAPER_TEMPLATES: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet];

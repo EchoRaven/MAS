@@ -260,6 +260,11 @@ export function simulate(doc: SystemDoc, maxActivations = 60): SimResult {
       const f = d as FunctionNodeData;
       rounds++;
       emit({ type: "status", node: node.id, status: "working" }, 0.2);
+      // code that calls models (protocol as code: ctx.llm, an llm function) costs a call for each one written in it;
+      // a call inside a loop runs more often than that, so this is the least it costs
+      const llmCalls = f.fn.lang === "llm" ? 1 : (f.fn.code.match(/ctx\.llm\(/g) ?? []).length;
+      const fnModel = f.fn.lang === "llm" ? f.fn.model : null;
+      for (let i = 0; i < llmCalls; i++) usage(node.id, fnModel ?? doc.models.find((m) => (m.kind ?? "chat") === "chat")?.id ?? "", 4000, undefined, 0.5);
       const outs = f.interface.outputs;
       const routed = outs.length > 1 ? pick(outs).id : undefined;
       emit({ type: "transform", at: node.id, label: `${f.fn.lang} function`, detail: routed ? `returned { ${routed}: … }` : "returned a value" }, 0.2);
