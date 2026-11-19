@@ -672,6 +672,7 @@ function Evals({ systemId }: { systemId: string }) {
                           </span>
                           <span className="block text-xs text-muted-foreground">
                             {c.why}
+                            {!!c.reached?.length && <span className="text-amber-700 dark:text-amber-300" title="A member marked the right answer in a message during the run; the team's final answer lost it">{" · "}had it: {c.reached.join(", ")}</span>}
                             {c.run_id && (
                               <>
                                 {" · "}

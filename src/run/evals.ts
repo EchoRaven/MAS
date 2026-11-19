@@ -32,6 +32,11 @@ export interface EvalCaseResult {
   why?: string;
   usd?: number;
   seconds?: number;
+  /**
+   * On a miss graded by rule, the members (model and agent components) that marked the right answer in a message
+   * they sent during the run: the team had it and lost it. Empty when none did: nobody found it.
+   */
+  reached?: string[];
 }
 
 export interface EvalRecord {
@@ -80,7 +85,7 @@ export function caseSetId(cases: Pick<EvalCaseResult, "input" | "expected">[]): 
  * tests fail: AssertionError", "5 × no output") instead of scattered rows.
  * Groups are sorted by size; each lists the indices of its cases.
  */
-export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why" | "result_ok">[]): { reason: string; count: number; cases: number[] }[] {
+export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why" | "result_ok" | "reached">[]): { reason: string; count: number; cases: number[] }[] {
   const reasonOf = (why: string, status: string) => {
     const w = why.trim();
     if (/ ≠ /.test(w)) return "wrong answer";
@@ -106,7 +111,7 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
   cases.forEach((c, i) => {
     if (c.pass !== false && c.status !== "error") return;
     // the wrong kind of answer explains a failure before its details do
-    const r = c.result_ok === false ? "not the declared result type" : reasonOf(c.why ?? "", c.status);
+    const r = c.result_ok === false ? "not the declared result type" : c.reached?.length ? "a member had it, the team lost it" : reasonOf(c.why ?? "", c.status);
     by.set(r, [...(by.get(r) ?? []), i]);
   });
   return [...by].map(([reason, idx]) => ({ reason, count: idx.length, cases: idx })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
@@ -250,6 +255,50 @@ export function plain(s: string): string {
 /** Whether an output marks its answer: a line "Answer: …" / "Final answer: …" / "Final: …", or \boxed{…}. */
 export function hasMarkedAnswer(output: string): boolean {
   return [...output.matchAll(ANSWER_LINE)].length > 0 || boxedContent(output) !== null;
+}
+
+/**
+ * Which members reached the expected answer during a run, from the messages they sent: a miss the team had and
+ * lost, against one nobody found. A message counts only where it marks an answer ("Final:", "Answer:", \boxed{}),
+ * so a number met in passing does not; a message that is a list (a component's replicas) counts item by item.
+ */
+export function reachedBy(
+  messages: { from: string; text: string }[],
+  nameOf: (id: string) => string | null,
+  grader: Grader,
+  expected: string,
+  question = "",
+): string[] {
+  if (grader !== "answer" && grader !== "number" && grader !== "math") return [];
+  const out = new Set<string>();
+  const seen = new Set<string>();
+  for (const m of messages) {
+    const name = nameOf(m.from);
+    if (!name || out.has(name)) continue;
+    let texts: unknown[] = [m.text];
+    if (/^\s*\["/.test(m.text)) {
+      try {
+        const v = JSON.parse(m.text);
+        if (Array.isArray(v)) texts = v;
+      } catch {
+        // a list of strings cut short in the log (messages are kept to 6000 characters): split it at its item
+        // boundaries and read each item as written, so the items before the cut still count
+        texts = m.text
+          .replace(/^\s*\["/, "")
+          .split(/(?<!\\)"\s*,\s*"/)
+          .map((t) => t.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+      }
+    }
+    for (const t of texts) {
+      if (typeof t !== "string" || seen.has(t)) continue;
+      seen.add(t);
+      if (hasMarkedAnswer(t) && gradeByRule(grader, t, expected, question).pass) {
+        out.add(name);
+        break;
+      }
+    }
+  }
+  return [...out];
 }
 
 /** What the last \boxed{…} holds, braces balanced. */

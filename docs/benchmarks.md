@@ -658,6 +658,43 @@ evaluations were regraded without calling a model again.
 To show the paper's effect, the next step is a weaker model, or harder
 problems (GSM-Hard, MATH), where the single agent leaves room.
 
+## Answers the team had and lost
+
+Each miss graded by rule now says whether a member marked the right answer
+during the run (contracts: `reached`). Applied to the stored runs of the
+evaluations above (hard computation on flash-lite unless noted), it splits
+each system's misses in two:
+
+| System | Misses where a member had it | Who had it most |
+|---|---|---|
+| DyLAN | 13 of 45 (29%) | the Skeptic (8), the Mathematician (6) |
+| Multiagent debate | 20 of 98 (20%) | each debater, about equally |
+| Multiagent debate, gemma | 4 of 15 | |
+| ReConcile (three models) | 5 of 28 | |
+| Exchange-of-Thought | 3 of 19 | |
+| Self-consistency, 5 samples | 5 of 32 | a minority sample |
+| Agent Forest | 6 of 49; on gemma 3 of 5 | a minority sample |
+| Corex (Retrieve) | 2 of 16 | one of the candidates |
+| Multi-Agent Verification | 1 of 16 | one of the candidates |
+| MedAgents, CAMEL, Mixture-of-Agents | 2 of 18, 2 of 25, 1 of 20 | |
+| MAD, AgentVerse, AutoAgents, ChatEval, AutoGen, Magentic-One, SPP | none | |
+
+- **Discussion loses answers it finds.** In a fifth of debate's misses
+  (over all its evaluations, sweeps included) a debater marked the right
+  product and the team's final answer was another; DyLAN loses more, most
+  often an answer its Skeptic gave. Kept, those would be worth about two
+  questions in thirty for each, the size of the gains discussion gives at
+  all here: an upper bound for any better way of combining the same
+  debaters.
+- **Choosing among samples has little left to choose.** For the vote,
+  Corex and Multi-Agent Verification, the right answer was among the
+  samples in 1 to 2 of 16 misses (Corex, MAV) and a few of 32 or 49 (the
+  vote), so better selection is worth one question at most: the
+  misses are questions no sample solves, as the earlier table showed.
+- **MAD's devil found nothing to lose.** Its members marked answers in 64
+  messages over 34 misses, none of them right: MAD's misses are not the
+  judge overruling a right answer but nobody having one.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
@@ -670,7 +707,8 @@ see the git log).
 On the Evaluate page, pick a system and a dataset (a built-in set, one you saved,
 or questions you paste), optionally a seeded sample of it, choose
 "Everything on <model>", and press Evaluate. Each case is an ordinary run you
-can open and replay.
+can open and replay. A miss where a member marked the right answer on the way
+says "had it: <member>" and groups under "a member had it, the team lost it".
 
 ### The controls a multi-agent system should beat
 

@@ -434,7 +434,19 @@ Each finished run's answer is checked against it. The check is stored on the
 run (`result_check: {type, ok, why}`) and logged as a warning when it fails.
 Evaluations mark such cases (`result_ok: false`) and group them first under
 "Why cases failed", since the wrong kind of answer is a bug in the system,
-not a wrong answer. The Evaluate page warns before a run when the declared
+not a wrong answer.
+
+On a miss graded by rule (answer, number, math), the evaluation also reads
+the messages the run's members (model and agent components) sent and records
+which of them marked the right answer on the way (`reached: [names]`; empty
+when none did). Only marked answers count (a "Final:" or "Answer:" line, a
+`\boxed{}`), each message's last one, and a list (a component's replicas)
+item by item, even where the log cut it short at 6000 characters. Such
+misses group as "a member had it, the team lost it": the team found the
+answer and its way of combining lost it, which a better aggregator could
+fix; the other misses nobody found. A system that calls its models from
+inside a function (MacNet) logs no member messages, so nothing is found
+there. The Evaluate page warns before a run when the declared
 type does not fit the grader (a system that returns a number, graded by
 running code). `choice` without `choices` means an option letter.
 

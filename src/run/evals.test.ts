@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, reachedBy, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -87,6 +87,33 @@ describe("math answers", () => {
     expect(g("\\boxed{\\text{Evelyn}}", "\\text{Evelyn}")).toBe(true);
     expect(g("\\boxed{\\frac{14}{5}}", "\\frac{14}{3}")).toBe(false);
     expect(g("\\boxed{(3, \\pi)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(false);
+  });
+});
+
+describe("who had the answer", () => {
+  const nameOf = (id: string) => ({ a: "Alice", b: "Bob" } as Record<string, string>)[id] ?? null;
+  it("counts only members that marked the right answer, item by item in a list", () => {
+    const msgs = [
+      { from: "me", text: "Final: 42" }, // not a member
+      { from: "a", text: "I tried 42 once but\nFinal: 41" },
+      { from: "b", text: JSON.stringify(["Final: 40", "steps…\nFinal: 42"]) },
+    ];
+    expect(reachedBy(msgs, nameOf, "number", "42")).toEqual(["Bob"]);
+    // a list cut short in the log still counts the items before the cut
+    const cut = JSON.stringify(["work \"quoted\"\nFinal: 42", "more work\nFinal: 40"]).slice(0, -8);
+    expect(reachedBy([{ from: "a", text: cut }], nameOf, "number", "42")).toEqual(["Alice"]);
+    expect(reachedBy([{ from: "a", text: cut }], nameOf, "number", "40")).toEqual([]);
+    // a number in passing, with no answer line, does not count
+    expect(reachedBy([{ from: "a", text: "42 is close" }], nameOf, "number", "42")).toEqual([]);
+    // graders it cannot apply to a message say nothing
+    expect(reachedBy(msgs, nameOf, "contains", "42")).toEqual([]);
+  });
+  it("groups the misses a member had under their own reason", () => {
+    const r = failureReasons([
+      { pass: false, status: "done", why: "0 ≠ 7", reached: ["Solver"] },
+      { pass: false, status: "done", why: "0 ≠ 6", reached: [] },
+    ]);
+    expect(r.map((x) => x.reason).sort()).toEqual(["a member had it, the team lost it", "wrong answer"]);
   });
 });
 

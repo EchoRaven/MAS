@@ -117,6 +117,24 @@ describe("evaluations", () => {
     expect(done.cases.map((c) => [c.pass, c.result_ok])).toEqual([[true, true], [true, false]]);
   });
 
+  it("tells a miss the team had and lost from one nobody found", async () => {
+    // the agent answers with its input; a function after it throws that away and answers 0
+    const b = new Builder("Loser", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Solver", model: "echo_l", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .node("f", "function", 400, 0, { name: "Lose", fn: { lang: "js", code: 'return "Answer: 0";' } })
+      .edge("me", "a", "message")
+      .edge("a", "f", "message")
+      .edge("f", "me", "message");
+    b.doc.models.push({ id: "echo_l", provider: "mock", model: "mock", api: { params: { script: ["Answer: {{input}}"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const doc = { ...b.doc, id: "sys_loser" };
+    store.putSystem(doc);
+    const done = await finish(evals.start(doc, { grader: "number", concurrency: 1, cases: [{ input: "7", expected: "7" }, { input: "5", expected: "6" }] }).id);
+    expect(done.cases.map((c) => c.pass)).toEqual([false, false]);
+    expect(done.cases[0].reached).toEqual(["Solver"]); // the solver said 7; the team answered 0
+    expect(done.cases[1].reached).toEqual([]); // nobody said 6
+  });
+
   it("retries only the cases that gave no answer, in place, and keeps the others", async () => {
     // a function that fails the first time it sees "flaky" (a dropped connection, say) and answers after that
     const b = new Builder("Flaky", "");

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule, reachedBy } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -242,7 +242,7 @@ export class EvalManager {
     const prepared = this.prepare(doc, opts);
     for (const i of again) {
       const c = rec.cases[i];
-      for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer"] as const) delete (c as unknown as Record<string, unknown>)[k];
+      for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer", "reached"] as const) delete (c as unknown as Record<string, unknown>)[k];
       c.status = "pending";
     }
     rec.status = "running";
@@ -300,6 +300,8 @@ export class EvalManager {
             Object.assign(c, await gradeCode(c.expected, c.output, this.docker));
           } else {
             Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
+            // a miss: did a member have the right answer on the way, and the team lose it?
+            if (c.pass === false) c.reached = reachedBy(memberMessages(events), memberName(doc), opts.grader, c.expected, c.input);
           }
           if (c.output) fatalStreak = 0;
           c.status = "done";
@@ -346,4 +348,15 @@ export class EvalManager {
     const verdict = textOf(res.content).trim();
     return { pass: /^\W*pass\b/i.test(verdict), answer: finalAnswer(output), why: `judge: ${verdict.slice(0, 300)}`, usd: usage.usd };
   }
+}
+
+/** The messages a run's components sent to one another (not the system's output). */
+function memberMessages(events: RunEvent[]): { from: string; text: string }[] {
+  return events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message").map((e) => ({ from: e.from, text: e.text }));
+}
+
+/** The name of a member that reasons (a model or an agent component, group members included), or null for anything else. */
+function memberName(doc: SystemDoc): (id: string) => string | null {
+  const names = new Map(doc.nodes.filter((n) => n.data.kind === "model" || n.data.kind === "agent").map((n) => [n.id, n.data.name || n.id]));
+  return (id) => names.get(id) ?? null;
 }
