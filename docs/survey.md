@@ -16,20 +16,22 @@ replicas and a vote.
 
 | Part | Papers | Used for |
 | --- | --- | --- |
-| `agent` | 25 of 26 | every role (only Mixture-of-Agents uses bare model calls throughout) |
+| `agent` | 25 of 28 | every role (Mixture-of-Agents and Agent Forest use bare model calls, MacNet calls models from code) |
+| `message` edge | 24 | pipelines and fan-out |
 | `single_shot` loop | 21 | roles that answer once per turn: debaters, judges, planners |
-| `message` edge | 22 | pipelines and fan-out |
-| `group` with `iterate` | **16** | every kind of "rounds": debate rounds, consensus loops, test-and-fix loops, drafting and review |
-| `react` loop | 13 | roles that use tools: coders, executors, orchestrators |
+| `group` with `iterate` | **16** | every kind of "rounds": debate rounds, consensus loops, test-and-fix loops, drafting and review, plans tried in turn (`over`) |
+| `function` | 14 | votes, consensus checks, dispatch, recalibration: the protocol's rules as code |
+| `react` loop | 12 | roles that use tools: coders, orchestrators |
 | access edges (envs, plugins) | 11 | shared spaces: chat rooms, sandboxes, memories, workspaces |
-| `function` | 10 | votes, consensus checks, dispatch, recalibration: the protocol's rules as code |
 | sandbox env | 8 | running code: every coding paper |
-| `handoff` (`carry: full`) | 7 | one-by-one discussion, where each speaker reads all that came before |
+| `handoff` (`carry: full`) | 6 | one-by-one discussion, where each speaker reads all that came before |
 | `call` edge | 6 | an orchestrator using other agents as tools |
 | room env | 4 | group chats: `free`, `selector`, `round_robin` |
+| model calls from code (`ctx.llm`) | 3 | a protocol whose shape changes per run: MacNet's network, MedAgents' gathering |
 | memory plugin | 3 | skill library, episodic memory, memory stream |
 | spawn | 3 | teams whose size depends on the task |
 | `custom` loop | 3 | protocols that are game rules or document chains |
+| tools called from code (`ctx.tool`) | 2 | actors with no model: AutoGen's user proxy, Magentic-One's terminal |
 
 Two parts carry most of the field: an agent with a simple loop, and a group
 that repeats until a condition holds. The differences between papers are
