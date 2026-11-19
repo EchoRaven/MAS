@@ -98,6 +98,16 @@ function Evals({ systemId }: { systemId: string }) {
   useEffect(() => setOnlyReason(null), [selected]);
   const [record, setRecord] = useState<{ eval: EvalRecord; active: boolean } | null>(null);
   const [regrading, setRegrading] = useState(false);
+  // questions flagged as broken in this evaluation's dataset: shown, and scored apart
+  const [flagged, setFlagged] = useState<Set<string>>(new Set());
+  const flagDataset = record?.eval.dataset?.id;
+  useEffect(() => {
+    setFlagged(new Set());
+    if (!flagDataset) return;
+    Api.datasetFlags(flagDataset)
+      .then((r) => setFlagged(new Set(r.flags.map((f) => f.input))))
+      .catch(() => undefined);
+  }, [flagDataset]);
   const [error, setError] = useState("");
   const parsed = useMemo(() => parseCases(text), [text]);
   // the sets shipped with the app work without the server; stored ones come from it
@@ -478,6 +488,12 @@ function Evals({ systemId }: { systemId: string }) {
                 )}
               </div>
               <Stat label="Passed" value={`${ev.passed} of ${ev.cases.length}`} />
+              {(() => {
+                const kept = ev.cases.filter((c) => !flagged.has(c.input));
+                if (kept.length === ev.cases.length) return null;
+                const ok = kept.filter((c) => c.pass).length;
+                return <Stat label="Without flagged" value={`${ok} of ${kept.length} (${Math.round((ok / Math.max(1, kept.length)) * 1000) / 10}%): ${ev.cases.length - kept.length} flagged as broken, left out`} />;
+              })()}
               <Stat label="Cost" value={usd(ev.usd)} />
               <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : "–"} />
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />
@@ -586,7 +602,8 @@ function Evals({ systemId }: { systemId: string }) {
                     <td className="py-2 pr-3" title={c.input}>
                       {first ? (
                         <>
-                          <span className="line-clamp-3">{c.input}</span>
+                          <span className={cn("line-clamp-3", flagged.has(c.input) && "line-through opacity-60")}>{c.input}</span>
+                          {flagged.has(c.input) && <span className="text-xs text-amber-700 dark:text-amber-300">flagged as broken: left out of scores</span>}
                           {(ev.repeats ?? 1) > 1 && q && <span className="text-xs text-muted-foreground">passed {q.passed} of {q.graded}</span>}
                         </>
                       ) : (
