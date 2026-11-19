@@ -33,7 +33,10 @@ export class McpEnv implements Resource {
   private prepare() {
     this.ready ??= (async () => {
       const m = this.m;
-      if (m.lifecycle.health && !(await this.healthy())) {
+      // an env reached through an endpoint (a hosted service, a remote server) is started and checked by what
+      // serves it: its health path is relative to that service, not a URL this env can fetch
+      const viaEndpoint = !!m.exposes.mcp?.endpoint;
+      if (!viaEndpoint && m.lifecycle.health && !(await this.healthy())) {
         if (!m.lifecycle.start || !this.rc.config.allowLocalExec) throw new Error(`${this.node.data.name} is not running (health check ${m.lifecycle.health} failed)${m.lifecycle.start ? "; start it with: " + m.lifecycle.start : ""}`);
         this.rc.emit({ type: "log", node: this.id, level: "info", text: `Starting ${this.node.data.name}: ${m.lifecycle.start}` });
         await runCommand(m.lifecycle.start, "", 600_000);
