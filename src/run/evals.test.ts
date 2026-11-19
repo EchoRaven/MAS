@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -193,5 +193,14 @@ describe("paired comparison", () => {
     // q1: 2 of 3 right → fixed; q2: 1 of 3 → lost; q3 right; q4 wrong; q5 only in ref (not shared)
     const sys = { cases: [c("q2", true, 0, 1), c("q1", true, 0, 0), c("q3", true, 0, 2), c("q4", false, 0, 3), c("q1", true, 1, 0), c("q2", false, 1, 1), c("q1", false, 2, 0), c("q2", false, 2, 1)] };
     expect(pairedDiff(sys, ref)).toEqual({ fixed: [0], lost: [1], both: 1, neither: 1, shared: 4, p: 1 });
+  });
+});
+
+describe("time left", () => {
+  it("is the mean case time, times the cases left, over the cases running at once", () => {
+    const c = (status: string, seconds?: number) => ({ case: 0, input: "q", expected: "", status, seconds }) as never;
+    expect(etaSeconds({ cases: [c("pending"), c("running")] })).toBeNull();
+    // done in 100 s and 200 s on average 150; four left, two running at once: 300 s
+    expect(etaSeconds({ cases: [c("done", 100), c("done", 200), c("running"), c("running"), c("pending"), c("pending")] })).toBe(300);
   });
 });

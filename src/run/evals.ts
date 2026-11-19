@@ -112,6 +112,19 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
   return [...by].map(([reason, idx]) => ({ reason, count: idx.length, cases: idx })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
 }
 
+/**
+ * Seconds left in a running evaluation: the mean time of the cases done, times the cases left, over the cases
+ * running at once. Null until a case has finished.
+ */
+export function etaSeconds(rec: Pick<EvalRecord, "cases">): number | null {
+  const done = rec.cases.filter((c) => (c.status === "done" || c.status === "error") && typeof c.seconds === "number");
+  if (!done.length) return null;
+  const mean = done.reduce((n, c) => n + (c.seconds ?? 0), 0) / done.length;
+  const left = rec.cases.filter((c) => c.status === "pending" || c.status === "running").length;
+  const width = Math.max(1, rec.cases.filter((c) => c.status === "running").length);
+  return Math.round((mean * left) / width);
+}
+
 /** Accuracy of each repeat, their mean and standard deviation, and how often each question passed. */
 export function repeatStats(rec: Pick<EvalRecord, "cases" | "repeats">) {
   const n = rec.repeats ?? 1;
