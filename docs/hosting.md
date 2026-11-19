@@ -61,6 +61,15 @@ list of those that speak the right protocol, with a test button.
 agent program that asks the platform for its tools over MCP), all without
 dependencies.
 
+`text-world-mcp` is a world of its own (places, things, people, what was said
+where, a clock that moves with every action) as an MCP server over HTTP. A
+world has to be shared by every agent and last between their calls, so it is
+`mcp-http`: one long-running container, not one per connection. Each tool call
+names who acts (`look`, `move`, `take`, `drop`, `say`, `wait`, `time`, `reset`).
+Host it, then give an env `endpoint: { hosted: { service } }` and connect the
+agents that live in it: a town for Generative Agents-style systems, a game
+board, a simulated office.
+
 ## Compose projects
 
 An application env (an app, its database, its MCP server…) is hosted as its

@@ -213,7 +213,9 @@ the vocabulary:
 - **Environments with their own world.** Generative Agents' town, Voyager's
   Minecraft and Werewolf's game are a room, a Python sandbox and a custom
   loop. A world with space, objects and a clock has no component of its own;
-  an imported env (`mas-env/1`) is the way in.
+  it comes in as a hosted MCP service (`examples/hosted/text-world-mcp`: places,
+  things, speech and a clock, shared by every agent connected to it) or an
+  imported env (`mas-env/1`).
 - **Learned components** (in part). Agents' Room fine-tunes its agents, which
   the platform does not (it runs prompted models). What is learned from one
   task to the next can now be carried: code keeps values across runs in
