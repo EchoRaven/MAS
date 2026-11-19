@@ -378,6 +378,23 @@ function sameMath(a: string, b: string): boolean {
   return x !== null && y !== null && Math.abs(x - y) <= 1e-6 * Math.max(1, Math.abs(y));
 }
 
+/** The signed terms of a sum at the top level (1+2\sqrt{3} -> +1, +2\sqrt{3}), sorted: a sum in any order. */
+function sumTerms(form: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of form) {
+    if ("{([".includes(ch)) depth++;
+    if ("})]".includes(ch)) depth--;
+    if (depth === 0 && (ch === "+" || ch === "-") && cur && !/[\^_]$/.test(cur)) {
+      out.push(cur);
+      cur = ch;
+    } else cur += ch;
+  }
+  out.push(cur);
+  return out.map((t) => (/^[+-]/.test(t) ? t : `+${t}`)).sort();
+}
+
 /** Lists that hold the same items in any order, each matched once (by form or by value). */
 function sameItemsAnyOrder(a: string[], b: string[]): boolean {
   if (a.length < 2 || a.length !== b.length) return false;
@@ -449,7 +466,10 @@ export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: str
     // a matrix or vector matches entry by entry, in order
     const [ma, me] = [matrixEntries(a), matrixEntries(e)];
     const sameMatrix = !!ma && !!me && ma.length === me.length && ma.every((x, i) => sameMath(x, me[i]));
-    const pass = a === e || sameItems || sameMatrix || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
+    // a sum in another order: 2\sqrt{3}+1 is 1+2\sqrt{3}
+    const [ta, te] = [sumTerms(a), sumTerms(e)];
+    const sameSum = !a.includes(",") && ta.length > 1 && ta.length === te.length && ta.every((x, i) => x === te[i]);
+    const pass = a === e || sameItems || sameMatrix || sameSum || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
     return { pass, answer: got.trim(), why: pass ? `${got.trim()} = ${want}` : `${got.trim().slice(0, 80)} ≠ ${want}` };
   }
   if (grader === "number") {

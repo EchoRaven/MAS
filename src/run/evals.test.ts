@@ -72,6 +72,9 @@ describe("math answers", () => {
     expect(m("\\begin{pmatrix} 0.2 \\\\ -3.6 \\end{pmatrix}", "\\begin{pmatrix} 1/5 \\\\ -18/5 \\end{pmatrix}")).toBe(true);
     expect(m("\\begin{pmatrix} -3.6 \\\\ 0.2 \\end{pmatrix}", "\\begin{pmatrix} 1/5 \\\\ -18/5 \\end{pmatrix}")).toBe(false);
     expect(m("0.25", "\\frac14")).toBe(true);
+    expect(m("2\\sqrt{3}+1", "1+2\\sqrt{3}")).toBe(true);
+    expect(m("2\\sqrt{3}-1", "1-2\\sqrt{3}")).toBe(false);
+    expect(m("x^{-1}+2", "2+x^{-1}")).toBe(true);
     expect(m("0.2", "2")).toBe(false);
   });
 
