@@ -36,7 +36,8 @@ export function interfaceOf(data: NodeData): Interface {
 }
 
 /** Who can hold an access edge, and who can be accessed. */
-export const usesResources = (k: NodeKind) => k === "agent" || k === "human";
+/** Who can use an env or plugin through an access edge: agents, people, and functions (ctx.tool: a code-only actor). */
+export const usesResources = (k: NodeKind) => k === "agent" || k === "human" || k === "function";
 export const isResource = (k: NodeKind) => k === "env" || k === "plugin";
 export const hasInterfaceEditor = (k: NodeKind) => k === "agent" || k === "model" || k === "function" || k === "group";
 

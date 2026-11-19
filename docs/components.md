@@ -49,6 +49,19 @@ Routing to one of two outputs (ports `urgent` and `normal`):
 return input.priority >= 3 ? { urgent: input } : { normal: input };
 ```
 
+A function connected to an env or plugin by an access edge can call its tools
+with `ctx.tool(name, args)`: an actor with no model. Magentic-One's
+ComputerTerminal runs the code it is given this way:
+
+```js
+const [, lang, code] = [...text.matchAll(/```(python|sh)?[^\n]*\n([\s\S]*?)```/g)].pop();
+await ctx.tool("edit_file", { path: "main.py", content: code });
+return await ctx.tool("bash", { command: "python3 main.py" });
+```
+
+A read-only access edge gives read-only tools; each call is a tool event in the
+run, like an agent's.
+
 State across rounds goes in `ctx.vars` (DyLAN keeps its agents' importance
 scores there):
 

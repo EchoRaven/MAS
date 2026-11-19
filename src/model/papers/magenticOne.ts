@@ -50,13 +50,21 @@ function build(): SystemDoc {
     .agent("websurfer", 640, -80, { name: "WebSurfer", role: "Operates a browser", model: "sonnet", tools: ["browser"], harness: { ...native(), instructions: "Navigate, click, type, scroll and read pages; report what you see." } })
     .agent("filesurfer", 640, 90, { name: "FileSurfer", role: "Reads local files", model: "sonnet", harness: { ...native(), instructions: "Open and read files of any type; navigate folders." } })
     .agent("coder", 640, 260, { name: "Coder", role: "Writes code", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "Write Python or shell code that solves the step; another agent runs it." } })
-    // the paper's terminal runs code with no model; here a small model only moves the code into the sandbox and reports
-    // what it printed (as AutoGen's user proxy): a program on the server would run without isolation
-    .agent("terminal", 640, 430, {
+    // the paper's terminal runs code with no model: so does this one, a function that runs what it is given in the
+    // sandbox through ctx.tool (bash, edit_file) and returns what it printed
+    .node("terminal", "function", 640, 430, {
       name: "ComputerTerminal",
-      role: "Runs code in the sandbox",
-      model: "haiku",
-      harness: { ...native(), loop: "react", max_steps: 4, instructions: "You only execute. When given a ```python (or ```sh) block, save it to main.py (or main.sh) with bash (cat > main.py <<'EOF' … EOF), run it, and reply with exactly what it printed and its exit status. Never compute anything yourself; with no code given, say there is no code to run." },
+      fn: {
+        lang: "js",
+        code: `// run the last code block in what was sent (python, or sh), in the sandbox; no model is called
+const text = String(input?.text ?? input ?? "");
+const blocks = [...text.matchAll(/\\\`\\\`\\\`(python|py|sh|bash|shell)?[^\\n]*\\n([\\s\\S]*?)\\\`\\\`\\\`/g)];
+if (!blocks.length) return "No code block to run: send the code in a \\\`\\\`\\\`python block.";
+const [, lang, code] = blocks[blocks.length - 1];
+const py = !lang || lang === "python" || lang === "py";
+await ctx.tool("edit_file", { path: py ? "main.py" : "main.sh", content: code });
+return await ctx.tool("bash", { command: py ? "python3 main.py" : "sh main.sh" });`,
+      },
     })
     .node("browser", "env", 1000, -70, { name: "Browser", env_kind: "browser", image: "" })
     .plugin("files", "workspace", 1000, 100, { name: "Files", scope: "system", sources: ["/task"] })
@@ -88,7 +96,7 @@ export const magenticOne: TemplateInfo = {
     ],
     differs: [
       "WebSurfer's set-of-marks screenshots and accessibility tree are behind the browser env; they are not modelled separately.",
-      "ComputerTerminal runs code without a model in the paper; here a small model moves the code into the sandbox's bash and reports its output verbatim, so execution stays isolated. It was a program on the server before, which an isolated server refuses to run: the team then multiplied by hand (15 of 30 on Hard computation).",
+      "ComputerTerminal was a program on the server, which an isolated server refuses to run: the team then multiplied by hand (15 of 30 on Hard computation). It is now a function component with no model, as in the paper, running what it is given in the sandbox through ctx.tool.",
     ],
   },
 };

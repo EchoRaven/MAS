@@ -192,9 +192,12 @@ the vocabulary:
   agent importance across tasks. The platform runs prompted models, and does
   not carry what is learned from one task to the next, except through memory
   plugins.
-- **Agents without a model.** AutoGen's user proxy and Magentic-One's terminal
-  run code without a model call. A small model stands in, or a `process`
-  agent; a code-only actor with tool access would be cleaner.
+- **Agents without a model** (now expressed). AutoGen's user proxy and
+  Magentic-One's terminal run code without a model call. A function component
+  connected to a sandbox calls its tools with `ctx.tool(name, args)`: Magentic-One's
+  ComputerTerminal is now that, as in the paper (30 of 30 on Hard computation,
+  cheaper than the small model that stood in). AutoGen's proxy still speaks in a
+  room, which only agents join.
 - **Data the papers had.** TradingAgents' market feeds, STORM's Wikipedia
   tables of contents and Werewolf's experience pool are connectable (MCP envs,
   knowledge and memory plugins) but not bundled.

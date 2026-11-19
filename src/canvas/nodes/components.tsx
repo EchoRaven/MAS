@@ -78,6 +78,7 @@ export const FunctionNode = memo(function FunctionNode({ data, selected }: NodeP
   return (
     <Shell selected={selected} status={data.status} issues={data.issues} entry={data.entry} className="min-w-[200px] max-w-[260px]">
       <Ports inputs={f.interface.inputs} outputs={f.interface.outputs} wired={data.wired} hidden={data.readOnly} />
+      <ResHandle role="user" hidden={data.readOnly} />
       <div className={cn("p-3", padFor(f.interface))}>
         <div className="flex items-center gap-2">
           <SquareFunction className="h-4 w-4 shrink-0 text-muted-foreground" />

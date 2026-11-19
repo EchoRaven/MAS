@@ -271,7 +271,7 @@ export class Draft {
     if (!["message", "call", "handoff", "access"].includes(k)) throw new DraftError(`"${kind}" is not a connection kind. Use message, call, handoff or access`);
     const edge: SysEdge = { id: `e${this.doc.edges.length + 1}`, source: from, target: to, source_port: RES_PORT, target_port: RES_PORT, kind: k };
     if (isResource(t.data.kind) || k === "access") {
-      if (!usesResources(s.data.kind)) throw new DraftError(`Only an agent or a human can use ${to}`);
+      if (!usesResources(s.data.kind)) throw new DraftError(`Only an agent, a human or a function can use ${to}`);
       if (!isResource(t.data.kind)) throw new DraftError(`${to} is not an env or a plugin, so it cannot be used with an access connection`);
       if (s.parent !== t.parent) throw new DraftError(`${from} and ${to} are on different canvases: put the env or plugin in the same group`);
       edge.kind = k = "access";

@@ -75,7 +75,7 @@ export function connect(doc: SystemDoc, scope: string | undefined, c: ConnectReq
     if (isResource(s.data.kind) && !isResource(t.data.kind)) [source, target] = [target, source];
     const user = doc.nodes.find((n) => n.id === source)!;
     const res = doc.nodes.find((n) => n.id === target)!;
-    if (!usesResources(user.data.kind) || !isResource(res.data.kind)) return { doc, error: "Access edges run from an agent or human to an env or plugin" };
+    if (!usesResources(user.data.kind) || !isResource(res.data.kind)) return { doc, error: "Access edges run from an agent, a human or a function to an env or plugin" };
     if (doc.edges.some((e) => e.kind === "access" && e.source === source && e.target === target)) return { doc };
     const edge: SysEdge = { id: newId("e"), source, source_port: RES_PORT, target, target_port: RES_PORT, kind: "access", access: "read_write", binding: defaultBinding(res.data) };
     return { doc: { ...doc, edges: [...doc.edges, edge] }, id: edge.id };

@@ -1068,6 +1068,34 @@ describe("runtime", () => {
     expect(await told()).toContain("Write 3 plans");
   });
 
+  it("a function component calls a connected env's tool with ctx.tool, with no model, as a tool event", async () => {
+    const b = new Builder("Fn tool", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("run", "function", 200, 0, { name: "Runner", fn: { lang: "js", code: 'const r = await ctx.tool("run_sql", { sql: "SELECT 6 * 7 AS n" });\nreturn "ran: " + r.replace(/\\s+/g, " ");' } })
+      .node("db", "env", 200, 200, { name: "DB", env_kind: "database", image: "", db: { mode: "tools", templates: [], tables: [], read_only: true, row_limit: 10, model: null, fn: null } })
+      .edge("me", "run", "message")
+      .edge("run", "me", "message")
+      .edge("run", "db", "access", { access: "read" });
+    const { events } = await run(b.doc, "go", { mock: false });
+    expect(errors(events)).toEqual([]);
+    const tool = events.find((e) => e.type === "tool") as { node: string; tool: string; result: string } | undefined;
+    expect(tool).toMatchObject({ node: "run", tool: "run_sql" });
+    expect((events.find((e) => e.type === "output") as { text: string }).text).toMatch(/ran: .*"n": 42/);
+    expect(events.filter((e) => e.type === "usage")).toHaveLength(0);
+  });
+
+  it("ctx.tool names what a function is connected to when the tool is not there", async () => {
+    const b = new Builder("Fn tool", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("run", "function", 200, 0, { name: "Runner", fn: { lang: "js", code: 'return await ctx.tool("bash", { command: "id" });' } })
+      .node("db", "env", 200, 200, { name: "DB", env_kind: "database", image: "", db: { mode: "tools", templates: [], tables: [], read_only: true, row_limit: 10, model: null, fn: null } })
+      .edge("me", "run", "message")
+      .edge("run", "me", "message")
+      .edge("run", "db", "access", { access: "read" });
+    const { events } = await run(b.doc, "go", { mock: false });
+    expect(errors(events).join(" ")).toMatch(/no tool bash on what Runner is connected to \(it has run_sql\)/);
+  });
+
   it("iterate.over that finds no list runs the whole input once, and says why", async () => {
     const b = new Builder("Plans", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

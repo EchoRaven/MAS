@@ -372,7 +372,7 @@ export class Engine implements TurnServices {
         const raw = item.value as Record<string, unknown>;
         // one input port: the value itself; several: { port: value }
         const input = ports.length <= 1 && raw && typeof raw === "object" && !Array.isArray(raw) && Object.keys(raw).length === 1 && ports[0]?.id in raw ? raw[ports[0].id] : raw;
-        const out = syncMsg(input, await runFn(f.fn, input, rc, { node: n.id }));
+        const out = syncMsg(input, await runFn(f.fn, input, rc, { node: n.id, helpers: { tool: (name: string, args?: Record<string, unknown>) => this.fnTool(n.id, name, args ?? {}) } }));
         const outs = f.interface.outputs.map((p) => p.id);
         let routed: Record<string, unknown> = {};
         if (out == null) routed = {};
@@ -493,6 +493,34 @@ export class Engine implements TurnServices {
     }
     rc.emit({ type: "message", from: e.target, to: e.source, edge: e.id, kind: "reply", text: clip(reply, 6000) });
     return reply;
+  }
+
+  /**
+   * ctx.tool(name, args) in a function component: a tool of an env or plugin it is connected to by an access
+   * edge, run with no model (AutoGen's user proxy, Magentic-One's terminal run code this way in the papers).
+   * Read-only access gets read-only tools; the call is a tool event like an agent's.
+   */
+  async fnTool(node: string, name: string, args: Record<string, unknown>): Promise<string> {
+    const rc = this.rc;
+    const edges = rc.doc.edges.filter((e) => e.kind === "access" && e.source === node);
+    for (const e of edges) {
+      const tools = await this.hub.get(e.target).tools(e);
+      const tool = tools.find((t) => t.name === name && (e.access !== "read" || t.effect === "read" || t.effect === "pure"));
+      if (!tool) continue;
+      let result: string;
+      let error = false;
+      try {
+        result = await tool.run(args, { node });
+      } catch (err) {
+        result = `Error: ${(err as Error).message}`;
+        error = true;
+      }
+      rc.emit({ type: "tool", node, tool: name, args: clip(JSON.stringify(args), 800), result: clip(result, 3000), ...(error ? { error: true } : {}) });
+      if (error) throw new Error(result.slice(7));
+      return result;
+    }
+    const names = (await Promise.all(edges.map(async (e) => (await this.hub.get(e.target).tools(e)).map((t) => t.name)))).flat();
+    throw new Error(`ctx.tool: no tool ${name} on what ${nameOf(rc, node)} is connected to${names.length ? ` (it has ${[...new Set(names)].join(", ")})` : ": connect it to an env or plugin with an access edge"}`);
   }
 
   async spawn(template: string, task: string, i: number): Promise<string> {

@@ -63,7 +63,7 @@ export function validate(doc: SystemDoc): Issue[] {
       if (b?.write?.when && b.write.when !== "never" && e.access === "read") add("warning", `${q(s)} → ${q(t)} is read-only but its binding writes (${b.write.when})`, { edgeId: e.id });
       const mcpTools = t.data.kind === "env" ? (t.data.manifest?.exposes.mcp?.tools ?? []) : [];
       for (const tool of b?.tools ?? []) if (mcpTools.length && !mcpTools.includes(tool)) add("warning", `${q(t)} does not expose a tool named ${tool}`, { edgeId: e.id });
-      if (!usesResources(s.data.kind) || !isResource(t.data.kind)) add("error", `Access edges run from an agent or human to an env or plugin (${q(s)} → ${q(t)})`, { edgeId: e.id });
+      if (!usesResources(s.data.kind) || !isResource(t.data.kind)) add("error", `Access edges run from an agent, a human or a function to an env or plugin (${q(s)} → ${q(t)})`, { edgeId: e.id });
       else if (s.parent !== t.parent) add("error", `${q(s)} uses ${q(t)}, which is on another canvas. Move the resource into the same group`, { edgeId: e.id });
       continue;
     }
