@@ -1133,6 +1133,39 @@ describe("runtime", () => {
     expect(events.some((e) => e.type === "output" && /walk to the park/.test((e as { text: string }).text))).toBe(false);
   });
 
+  it("a function calls connected components with ctx.call: control flow in code, each call a message", async () => {
+    const b = new Builder("Fn call", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("loop", "function", 200, 0, { name: "Loop", fn: { lang: "js", code: 'let x = Number(String(input?.text ?? input));\nfor (let i = 0; i < 2; i++) x = Number(await ctx.call("Adder", String(x)));\nconst said = await ctx.call("judge", "is " + x + " right?");\nreturn "x = " + x + "; judge: " + said;' } })
+      .node("add", "function", 400, 0, { name: "Adder", fn: { lang: "js", code: "return Number(String(input?.text ?? input)) + 10;" } })
+      .node("judge", "model", 400, 200, { name: "Judge", model: "j", system_prompt: "", prompt: "{{input}}", temperature: null, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
+      .edge("me", "loop", "message")
+      .edge("loop", "me", "message")
+      .edge("loop", "add", "call")
+      .edge("loop", "judge", "call");
+    b.doc.models.push({ id: "j", provider: "mock", model: "mock", api: { params: { script: ["yes"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "1", { mock: false });
+    expect(errors(events)).toEqual([]);
+    expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("x = 21; judge: yes");
+    const msgs = events.filter((e): e is Extract<typeof e, { type: "message" }> => e.type === "message");
+    expect(msgs.filter((m) => m.kind === "call").map((m) => m.to)).toEqual(["add", "add", "judge"]);
+    expect(msgs.filter((m) => m.kind === "reply").map((m) => `${m.from}: ${m.text}`)).toEqual(["add: 11", "add: 21", "judge: yes"]);
+    // its own answer goes to its message edge only, not to what it calls
+    expect(msgs.filter((m) => m.from === "loop" && m.kind !== "call").map((m) => m.to)).toEqual(["me"]);
+  });
+
+  it("ctx.call names what a function can call when the name is not one of them", async () => {
+    const b = new Builder("Fn call miss", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("loop", "function", 200, 0, { name: "Loop", fn: { lang: "js", code: 'return await ctx.call("Nobody", "hi");' } })
+      .node("add", "function", 400, 0, { name: "Adder", fn: { lang: "js", code: "return 1;" } })
+      .edge("me", "loop", "message")
+      .edge("loop", "me", "message")
+      .edge("loop", "add", "call");
+    const { events } = await run(b.doc, "1", { mock: false });
+    expect(errors(events).join(" ")).toMatch(/no call connection to Nobody \(it can call Adder\)/);
+  });
+
   it("ctx.tool names what a function is connected to when the tool is not there", async () => {
     const b = new Builder("Fn tool", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

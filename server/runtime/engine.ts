@@ -147,8 +147,9 @@ export class Engine implements TurnServices {
   private outEdges(id: string, port?: string) {
     const n = this.rc.byId.get(id);
     const outs = n ? interfaceOf(n.data).outputs.map((p) => p.id) : [];
-    const isAgent = n?.data.kind === "agent";
-    return this.rc.doc.edges.filter((e) => e.source === id && e.kind !== "access" && !(isAgent && e.kind === "call") && outs.includes(e.source_port) && (!port || e.source_port === port));
+    // an agent's call edges are its tools and a function's are what ctx.call reaches: neither sends its output there
+    const calls = n?.data.kind === "agent" || n?.data.kind === "function";
+    return this.rc.doc.edges.filter((e) => e.source === id && e.kind !== "access" && !(calls && e.kind === "call") && outs.includes(e.source_port) && (!port || e.source_port === port));
   }
   private targetPortType(e: SysEdge) {
     const t = this.rc.byId.get(e.target);
@@ -372,7 +373,7 @@ export class Engine implements TurnServices {
         const raw = item.value as Record<string, unknown>;
         // one input port: the value itself; several: { port: value }
         const input = ports.length <= 1 && raw && typeof raw === "object" && !Array.isArray(raw) && Object.keys(raw).length === 1 && ports[0]?.id in raw ? raw[ports[0].id] : raw;
-        const out = syncMsg(input, await runFn(f.fn, input, rc, { node: n.id, helpers: { tool: (name: string, args?: Record<string, unknown>) => this.fnTool(n.id, name, args ?? {}) } }));
+        const out = syncMsg(input, await runFn(f.fn, input, rc, { node: n.id, helpers: { tool: (name: string, args?: Record<string, unknown>) => this.fnTool(n.id, name, args ?? {}), call: (target: string, text: unknown) => this.fnCall(n.id, target, text) } }));
         const outs = f.interface.outputs.map((p) => p.id);
         let routed: Record<string, unknown> = {};
         if (out == null) routed = {};
@@ -500,6 +501,23 @@ export class Engine implements TurnServices {
    * edge, run with no model (AutoGen's user proxy, Magentic-One's terminal run code this way in the papers).
    * Read-only access gets read-only tools; the call is a tool event like an agent's.
    */
+  /**
+   * ctx.call(name, text) in a function component: ask a component it is connected to by a call edge (by the
+   * component's name or id) and get its reply. Control flow in code, the roles as components: each call and
+   * reply is a message in the run, as an agent's call is (MACM's thinker, judge and executor).
+   */
+  async fnCall(node: string, target: string, text: unknown): Promise<string> {
+    const rc = this.rc;
+    const edges = rc.doc.edges.filter((e) => e.kind === "call" && e.source === node);
+    const want = String(target).trim().toLowerCase();
+    const e = edges.find((x) => x.target.toLowerCase() === want) ?? edges.find((x) => nameOf(rc, x.target).toLowerCase() === want);
+    if (!e) {
+      const names = edges.map((x) => nameOf(rc, x.target));
+      throw new Error(`ctx.call: ${nameOf(rc, node)} has no call connection to ${target}${names.length ? ` (it can call ${names.join(", ")})` : ": connect it to a component with a call edge"}`);
+    }
+    return this.call(e, typeof text === "string" ? text : JSON.stringify(text, null, 1));
+  }
+
   async fnTool(node: string, name: string, args: Record<string, unknown>): Promise<string> {
     const rc = this.rc;
     const edges = rc.doc.edges.filter((e) => e.kind === "access" && e.source === node);
@@ -652,7 +670,7 @@ export class Engine implements TurnServices {
         const f = rc.byId.get(m)!.data as FunctionNodeData;
         let out: unknown;
         try {
-          out = await runFn(f.fn, text, rc, { node: m, helpers: { tool: (name: string, args?: Record<string, unknown>) => this.fnTool(m, name, args ?? {}) } });
+          out = await runFn(f.fn, text, rc, { node: m, helpers: { tool: (name: string, args?: Record<string, unknown>) => this.fnTool(m, name, args ?? {}), call: (target: string, text: unknown) => this.fnCall(m, target, text) } });
         } catch (e) {
           out = `Error: ${(e as Error).message}`;
         }

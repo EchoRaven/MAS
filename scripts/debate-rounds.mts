@@ -7,7 +7,7 @@ const norm = (a: string) => a.toLowerCase().replace(/<\/?answer>/g, "").replace(
 for (const f of fs.readdirSync(`${D}/evals`)) {
   const e = JSON.parse(fs.readFileSync(`${D}/evals/${f}`, "utf8"));
   if (e.mock || !/^Multiagent debate/.test(e.system_name) || !["number", "math", "answer"].includes(e.grader) || e.status !== "finished") continue;
-  const g = e.grader as Grader;
+  const g = e.grader as Exclude<Grader, "llm" | "code">;
   let n = 0, v1 = 0, fin = 0, up = 0, down = 0;
   const acc: number[][] = [];
   for (const c of e.cases) {

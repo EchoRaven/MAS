@@ -63,6 +63,18 @@ return await ctx.tool("bash", { command: "python3 main.py" });
 A read-only access edge gives read-only tools; each call is a tool event in the
 run, like an agent's.
 
+A function connected to other components by call edges can ask them with
+`ctx.call(name, text)` (by name or id) and gets the reply: the control flow
+in code, the roles as components. Each call and reply is a message in the
+run, as an agent's call is, and the function's own return goes only along its
+message edges, never to what it calls. MACM's loop calls its Thinker, Judge
+and Executor this way:
+
+```js
+const proposal = await ctx.call("Thinker", "Derive one new condition …");
+const verdict = await ctx.call("Judge", "Is it correct? … Verdict: True/False");
+```
+
 A function connected to a room is an auto-replier: it runs on each message it
 hears, its non-empty return is posted as its reply, and `null` keeps it silent
 (AutoGen's user proxy runs the code blocks it sees this way).
