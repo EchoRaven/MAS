@@ -294,7 +294,7 @@ length. Hard computation (30), one run each:
 | Single agent | 18 | 48 min |
 | Agent Forest, N = 5 (vote) | 25 | 92 min |
 | Multiagent Debate, 2 rounds | **26** | 116 min |
-| ReConcile, 3 rounds | 25 | 112 min |
+| ReConcile, 3 rounds | 26 | 112 min |
 | Solo Performance Prompting (one call, simulated personas) | 25 | 77 min |
 | Single agent with a code runner | **30** | 8.5 min |
 
@@ -317,9 +317,11 @@ debaters exchanging answers, as on the stronger model (where both gained
 almost all of it.
 
 ReConcile (three gemma seats, confidence-weighted vote over three rounds)
-lands in the same place: 25, missing #6–#10 (the digit sums and a long
-product). One of those (#8) ended on a cut-off stream ("terminated") that
-every system missed; model calls now retry a dropped connection three times.
+lands in the same place: 26, missing #6, #7, #9 and #10 (the digit sums and
+a long product), +8 −0 against the single agent (p = 0.008). It was first
+reported as 25: its case #8 had ended on a cut-off stream ("terminated");
+retried in place, it was right, as the single agent's is (model calls now
+also retry a dropped connection three times).
 Voting, debate and ReConcile all sit 7–8 above the single agent, and within
 one question of each other. One model playing all the personas in a single call
 (Solo Performance Prompting) gets the same gain: 25, fixing 8 questions and

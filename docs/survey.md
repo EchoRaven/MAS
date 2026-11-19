@@ -119,7 +119,7 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   computation, fixing the long exact computations that a single answer gets
   wrong in different places; on the stronger model the same debate gained 4.
   Agent Forest (five votes) reached 25, fixing the same questions but one. ReConcile
-  reached 25 too. Whether
+  reached 26. Whether
   a MAS helps depends on the model's error profile as much as on the protocol,
   and voting captures nearly all of what discussion does. On MMLU the same
   debate on the same weaker model gained nothing (90 → 89): its errors there
