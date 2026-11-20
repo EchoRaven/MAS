@@ -511,6 +511,10 @@ system: a 429 or an overload waits as long as the provider says (Gemini's
 halfway ("terminated", a reset) is asked for again up to three times; and a
 reply with nothing in it (no text, no tool call, 0 output tokens, not stopped
 at the token limit: gemma after 11 minutes on a hard question) once more.
+A call whose component sets no `max_tokens` is limited to 16,384 output
+tokens (`MAS_MAX_OUTPUT`): of 44,436 calls, 99.9% replied in under 3,100,
+and every reply over 16,000 was a repetition loop with no answer (one ran
+to 65,536 tokens, the cost of about a hundred answers).
 Replies are streamed, so a model that thinks for minutes is not cut off
 waiting for headers. Requests per minute are capped per provider (`MAS_RPM`, 60
 by default).

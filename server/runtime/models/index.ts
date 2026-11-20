@@ -137,6 +137,15 @@ export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: 
 
 export const MOCK_MODEL: ModelSpec = { id: "mock", provider: "mock", model: "mock", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
 
+/**
+ * The output limit of a model call that sets none: 16,384 tokens (MAS_MAX_OUTPUT to change it). Of 44,436 calls
+ * here, 99.9% replied in under 3,100 tokens, and every reply over 16,000 was a repetition loop with no answer.
+ */
+export function defaultMaxOutput(): number {
+  const v = Number(process.env.MAS_MAX_OUTPUT);
+  return Number.isFinite(v) && v >= 256 ? Math.floor(v) : 16_384;
+}
+
 export class Models {
   /** told when a call waits for the rate limit (a run logs it, so a pause has a reason) */
   onWait?: (m: ModelSpec, ms: number, rpm: number) => void;
@@ -222,6 +231,9 @@ export class Models {
 
   async chat(id: string | null | undefined, req: ChatRequest): Promise<{ res: ChatResponse; usage: Usage }> {
     const m = this.spec(id, "chat");
+    // a call with no limit of its own gets a default one: a reply that loops ("= 94,143,178,800 / 362,880 = ...")
+    // otherwise runs to the provider's 65,536 tokens and costs as much as a hundred answers
+    if (req.max_tokens == null) req = { ...req, max_tokens: defaultMaxOutput() };
     let res: ChatResponse;
     await rateLimit(m, this.keyValue(m), req.signal, (ms, rpm) => this.onWait?.(m, ms, rpm));
     try {
