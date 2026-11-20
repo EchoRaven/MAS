@@ -157,9 +157,9 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   exchange or vote on answers gain 2–4 over one agent's 19 (EoT 22.3, ReConcile
   and DyLAN 22, MacNet's star 22, debate 21; p ≈ 0.02 for the best; MacNet's
   chain, which refines one solution in sequence, stays at 19); those built on roles,
-  personas or long pipelines are no better than one agent (MoA 17, MedAgents
-  16, MAD 14, AutoAgents 14, CAMEL 12, ChatEval 12: they fix about as many
-  questions as they lose). MAD's devil, made to disagree, talks its judge out
+  personas or long pipelines are no better than one agent (AgentVerse 19.5,
+  MoA 18, MedAgents 16), and role-play is reliably worse (CAMEL 13, ChatEval
+  12.5, AutoAgents 14, p ≈ 0.01 over two runs each; MAD 14, p 0.05). MAD's devil, made to disagree, talks its judge out
   of right products; reviewers that recompute by hand (AgentVerse,
   AutoAgents) confirm wrong ones.
 - **Test-and-fix loops do not pay on easy code.** On 31 coding problems a

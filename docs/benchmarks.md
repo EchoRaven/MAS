@@ -28,9 +28,11 @@ exact McNemar tests against one agent on the same questions.
 - **On the weaker gemma, nothing without a tool beats one agent** (27;
   debate and ReConcile 26, voting and SPP 25). A 7–8 question gain first
   reported there came from cut-off answers ([A weaker model](#a-weaker-model-no-gain-from-discussion-after-all)).
-- **Roles, personas and long pipelines are no better than one agent**
-  (MoA 17, MedAgents 16, AutoAgents 14, MAD 14, CAMEL 12, ChatEval 12 on
-  Hard computation: they fix about as many questions as they lose).
+- **Roles, personas and long pipelines are no better than one agent, and
+  role-play is worse.** On Hard computation, two runs each: AgentVerse
+  19.5, Mixture-of-Agents 18, MedAgents 16 are no different from one agent;
+  CAMEL 13, ChatEval 12.5 and AutoAgents 14 are significantly worse (p ≈
+  0.01), MAD 14 nearly so (p 0.05).
 - **Choosing among samples cannot add an answer no sample has.** On the
   misses of the vote, Corex and Multi-Agent Verification the right answer
   was among the samples in 1–2 of 16; debate's debaters had and lost it in
@@ -174,14 +176,14 @@ two runs where two scores are given, one otherwise:
 | Multiagent debate (Du et al.) | 21, 21 | 21.0 | $0.50 |
 | ReConcile (Chen et al.) | 22, 22 | 22.0 | $0.51 |
 | MAD (Liang et al.; angel, devil, judge) | 14, 14 | 14.0 | $0.23 |
-| AgentVerse (recruit experts, execute, evaluate) | 20 | 20.0 | $0.29 |
-| AutoAgents (generated team, observers, execution loop) | 14 | 14.0 | $0.13 |
+| AgentVerse (recruit experts, execute, evaluate) | 20, 19 | 19.5 | $0.29 |
+| AutoAgents (generated team, observers, execution loop) | 14, 14 | 14.0 | $0.13 |
 | Exchange-of-Thought | 23, 22, 22 | 22.3 | $0.29 |
-| DyLAN | 22 | 22.0 | $0.17 |
-| Mixture-of-Agents | 17 | 17.0 | $0.24 |
-| MedAgents | 16 | 16.0 | $0.34 |
-| CAMEL role-playing | 12 | 12.0 | $0.11 |
-| ChatEval | 12 | 12.0 | $0.19 |
+| DyLAN | 22, 22 | 22.0 | $0.17 |
+| Mixture-of-Agents | 17, 19 | 18.0 | $0.24 |
+| MedAgents | 16, 16 | 16.0 | $0.34 |
+| CAMEL role-playing | 12, 14 | 13.0 | $0.11 |
+| ChatEval | 12, 13 | 12.5 | $0.19 |
 | Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
 | Solo Performance Prompting (one call, simulated personas) | 20, 22 | 21.0 | $0.10 |
 | Corex, Retrieve (5 chains, a retriever picks one) | 22, 22 | 22.0 | $0.49 |
@@ -205,11 +207,17 @@ two runs where two scores are given, one otherwise:
   self-consistency 22, DyLAN 22, debate 21, AgentVerse 20; against the single
   agent (Compare, McNemar) EoT, debate and Agent Forest at N = 10 fix 7 and
   lose none (p = 0.02). Systems built around roles, personas or long
-  pipelines score lower (MoA 17, MedAgents 16, MAD 14, AutoAgents 14, CAMEL
-  12, ChatEval 12), but they fix about as many questions as they lose (MoA
-  +6 −5, MedAgents +5 −5; p from 0.23 to 1): **no better than one agent**,
-  not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
-  on the same 30 questions, with every answer checked for an answer line.)
+  pipelines score lower, and with two runs each (60 question-run pairs
+  against one agent's two) they split in two. AgentVerse 19.5 (+7 −6),
+  Mixture-of-Agents 18 (+8 −10) and MedAgents 16 (+6 −12, p 0.24) are **no
+  better than one agent**. CAMEL 13 (+3 −15, p 0.008), ChatEval 12.5 (+5
+  −18, p 0.01) and AutoAgents 14 (+2 −12, p 0.01) are **reliably worse**,
+  and MAD 14 nearly so (+6 −16, p 0.05): the role-play and argument they
+  add talks the model out of products it would have got right alone. (An
+  earlier version of this note, from one run each, said none was reliably
+  worse.) None of them checks by computing. (The rows after ReConcile were
+  run later, with every answer checked for an answer line; all now have
+  two runs.)
   All 436 misses of the flash-lite evaluations on this set were checked
   with the judge: it agreed with the grader on all but 6. Two were grader
   errors, now fixed (AutoAgents wrote "Total: 3 + 0 + … + 1 = 6", read as 3;

@@ -78,8 +78,9 @@ Measured on this platform, every system on the same model and questions
   code solve all 30 (Magentic-One, AutoGen); those that exchange or vote on
   answers gain 2–4 over one agent's 19 (EoT 22.3 over three runs, ReConcile 22, DyLAN 22;
   p ≈ 0.02 for the best); those built on roles and long pipelines are no better
-  than one agent (MoA 17, MedAgents 16, MAD 14, AutoAgents 14, CAMEL 12,
-  ChatEval 12: lower, but they fix about as many questions as they lose).
+  than one agent (AgentVerse 19.5, MoA 18, MedAgents 16), and role-play is
+  worse (CAMEL 13, ChatEval 12.5, AutoAgents 14: p ≈ 0.01 over two runs each;
+  MAD 14, p 0.05).
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models (on gemma 25 and 26, both just below one
