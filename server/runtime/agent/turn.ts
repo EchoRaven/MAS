@@ -110,6 +110,10 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   // memory the platform writes after each turn: the agent is told, so it does not go looking for a tool to save with
   const kept = access.filter((e) => e.binding?.write?.when === "after_turn" && e.access !== "read" && rc.byId.get(e.target)?.data.kind === "plugin").map((e) => nameOf(rc, e.target));
   if (kept.length) blocks.push(`What happens in this conversation is saved to ${kept.join(", ")} for you after each turn; you do not need to store anything yourself.`);
+  // a long input is in the sandbox as a file: say so where the agent reads, or it pastes 44,000 characters into its
+  // code (a note in the tool's description alone was ignored in 27 runs of 27)
+  const boxes = access.filter((e) => e.access !== "read" && (rc.byId.get(e.target)?.data as { env_kind?: string } | undefined)?.env_kind === "sandbox").map((e) => nameOf(rc, e.target));
+  if (boxes.length && (rc.input ?? "").length > 2000) blocks.push(`The run's input (${(rc.input ?? "").length.toLocaleString("en")} characters) is saved in ${boxes[0]} at /work/input.txt. To compute over it, read that file in your code; do not copy the text into a command.`);
   // passages put in front of the agent are a first pass; say how to look for what they missed
   const searchable = access
     .filter((e) => e.binding?.mode === "auto_inject")

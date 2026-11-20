@@ -411,8 +411,11 @@ hosts) gives the agents connected to it:
 | `list_work` | the files under `/work` |
 
 The run's input, as it was given, is in `/work/input.txt` (in each agent's
-folder with `share: per_agent`), and the `bash` tool says so: a program
-reads a long input from there instead of the agent copying it into code.
+folder with `share: per_agent`). When the input is long (over 2,000
+characters), an agent connected to the sandbox is told so with its turn,
+to read the file in its code instead of copying the text into a command: a
+note in the `bash` tool's description alone was ignored in 27 runs of 27,
+each pasting a 44,000-character ledger into a heredoc.
 
 Templates that write tests use plain `test_*` functions with `assert`, so they
 run in any Python image.

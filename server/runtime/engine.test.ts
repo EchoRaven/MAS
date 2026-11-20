@@ -1154,6 +1154,24 @@ describe("runtime", () => {
     expect(msgs.filter((m) => m.from === "loop" && m.kind !== "call").map((m) => m.to)).toEqual(["me"]);
   });
 
+  it("tells an agent with a sandbox where a long input is saved, and says nothing for a short one", async () => {
+    const build = () => {
+      const b = new Builder("Box note", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("a", 200, 0, { name: "Coder", model: "echo_box", harness: { ...native(), loop: "single_shot", instructions: "Compute." } })
+        .node("box", "env", 200, 200, { name: "Box", env_kind: "sandbox", image: "python:3.12-slim", lifecycle: "per_run" })
+        .edge("me", "a", "message")
+        .edge("a", "me", "message")
+        .edge("a", "box", "access", { access: "read_write" });
+      b.doc.models.push({ id: "echo_box", provider: "mock", model: "mock", api: { params: { script: ["{{system}} || {{input}}"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return b.doc;
+    };
+    const long = "What is the total?\n---\n" + "2024-01-02 | customer Ashby | paid $12\n".repeat(80);
+    const said = async (input: string) => ((await run(build(), input, { mock: false })).events.find((e) => e.type === "output") as { text: string }).text;
+    expect(await said(long)).toMatch(/saved in Box at \/work\/input\.txt/);
+    expect(await said("What is 6 * 7?")).not.toMatch(/input\.txt/);
+  });
+
   it("ctx.call names what a function can call when the name is not one of them", async () => {
     const b = new Builder("Fn call miss", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
