@@ -264,8 +264,9 @@ two runs where two scores are given, one otherwise:
   Multiagent Debate's 21 and 21, at a fifth of the cost ($0.05 a run against
   $0.25). On these questions the separate agents add nothing that one model
   imagining them does not.
-- **Mixture-of-Agents with three different models: 28, two above its best
-  one, in one run.** As its paper intends, the proposers were different
+- **Mixture-of-Agents with three different models: 28 and 27, above its
+  best one's 26.** (A second run, added later, scored 27; over both,
+  against 3.8-flash alone, +3 −0, p = 0.25.) As its paper intends, the proposers were different
   models (gemini-3.8-flash, gemma, flash-lite, in two layers) and 3.8-flash
   aggregated. It was first reported here as 26, "the same as 3.8-flash
   alone"; three of its four misses were in fact Google 503s with no output.

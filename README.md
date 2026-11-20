@@ -111,9 +111,9 @@ Measured on this platform, every system on the same model and questions
   et al. 2025).
 - **Mixing models mostly reaches the best member, not beyond it**: ReConcile
   with one seat per model ties its strongest model alone, at four times the
-  cost; Mixture-of-Agents with three models scored 28 against its best
-  model's 26 (one run, not significant), and the best model in every slot
-  (Self-MoA) 26.
+  cost; Mixture-of-Agents with three models scored 28 and 27 against its
+  best model's 26 (not significant, p 0.25), and the best model in every
+  slot (Self-MoA) 26.
 - **One round of discussion is all that pays**, and three samples are about as
   good as twenty.
 - **A measured gain has to survive an audit of its baseline.** The
@@ -123,8 +123,9 @@ Measured on this platform, every system on the same model and questions
   (intervals, sums in another order, a number met in a long document) or a
   single lucky run were fixed. Every number above has had its misses
   checked by an LLM judge and its unknown answers run again, and the
-  differences it reports rest on two runs or more (Mixture-of-Agents with
-  three models, one run, is marked).
+  differences it reports rest on two runs or more (on the system's side;
+  3.8-flash alone and Self-MoA, the references for Mixture-of-Agents, have
+  one run each).
 - **Most "failures" of a rebuilt system were the rebuild**: wrong outputs, a
   missing input, a test step that could never pass, a grader that misread
   right answers. Each became a platform interface or check (declared results,
