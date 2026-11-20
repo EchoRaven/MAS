@@ -14,7 +14,7 @@ import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
-import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats, etaSeconds } from "@/run/evals";
+import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats, etaSeconds, retryableCase } from "@/run/evals";
 import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
@@ -559,7 +559,7 @@ function Evals({ systemId }: { systemId: string }) {
                     })()}
                     {(() => {
                       // cases that gave no answer (an error, no output, never run): run only those again
-                      const n = ev.cases.filter((c) => c.status === "error" || c.status === "pending" || (c.pass === false && /^no output|^not run|the server restarted/.test(c.why ?? ""))).length;
+                      const n = ev.cases.filter(retryableCase).length;
                       if (!n || ev.grader === "llm") return null;
                       return (
                         <Button

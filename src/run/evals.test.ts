@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, reachedBy, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, reachedBy, retryableCase, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -102,6 +102,14 @@ describe("math answers", () => {
     expect(g("\\boxed{\\text{Evelyn}}", "\\text{Evelyn}")).toBe(true);
     expect(g("\\boxed{\\frac{14}{5}}", "\\frac{14}{3}")).toBe(false);
     expect(g("\\boxed{(3, \\pi)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(false);
+  });
+});
+
+describe("what a retry runs again", () => {
+  it("includes an output the log cut before its answer, and not a plain wrong answer", () => {
+    expect(retryableCase({ status: "done", pass: false, why: "0 ≠ 13", output: "thinking… (18381 more chars)" })).toBe(true);
+    expect(retryableCase({ status: "done", pass: false, why: "12 ≠ 13", output: "Answer: 12" })).toBe(false);
+    expect(retryableCase({ status: "done", pass: false, why: "no output (finished: All idle)" })).toBe(true);
   });
 });
 

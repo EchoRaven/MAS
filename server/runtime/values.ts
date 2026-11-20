@@ -87,7 +87,17 @@ export function coerce(v: unknown, type: DataType | undefined, from?: string): u
   }
 }
 
-export const clip = (s: string, n = 4000) => (s.length > n ? `${s.slice(0, n)}… (${s.length - n} more chars)` : s);
+/**
+ * A long text cut to about n characters for the log, keeping its beginning (what it is) and, at twice the length,
+ * its end: an answer, a result, a conclusion is at the end. (Keeping only the beginning lost long-thinking
+ * models' final answers, and graded them wrong.)
+ */
+export const clip = (s: string, n = 4000) => {
+  if (s.length <= n) return s;
+  const head = Math.floor(n / 3);
+  const tail = n - head;
+  return `${s.slice(0, head)}… (${s.length - n} chars cut) …${s.slice(s.length - tail)}`;
+};
 
 /** After user code changed a message: whichever of text / content it edited wins. */
 export function syncMsg(before: unknown, after: unknown): unknown {

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule, reachedBy } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -263,7 +263,7 @@ export class EvalManager {
 
   /** The cases a retry runs again: errors, runs that gave no output, and cases a stop or a restart left unrun. */
   static retryable(c: EvalRecord["cases"][number]): boolean {
-    return c.status === "error" || c.status === "pending" || (c.pass === false && /^no output|^not run|the server restarted/.test(c.why ?? ""));
+    return retryableCase(c);
   }
 
   /**

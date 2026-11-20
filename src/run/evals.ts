@@ -267,6 +267,15 @@ export function hasMarkedAnswer(output: string): boolean {
 }
 
 /**
+ * The cases a retry runs again: errors, runs that gave no output, cases a stop or a restart left unrun, and
+ * outputs the log once kept only the beginning of (… (N more chars)), whose answer at the end was lost.
+ */
+export function retryableCase(c: Pick<EvalCaseResult, "status" | "pass" | "why" | "output">): boolean {
+  if (c.status === "error" || c.status === "pending") return true;
+  return c.pass === false && (/^no output|^not run|the server restarted/.test(c.why ?? "") || /… \(\d+ more chars\)$/.test(c.output ?? ""));
+}
+
+/**
  * Which members reached the expected answer during a run, from the messages they sent: a miss the team had and
  * lost, against one nobody found. A message counts only where it marks an answer ("Final:", "Answer:", \boxed{}),
  * so a number met in passing does not; a message that is a list (a component's replicas) counts item by item.
