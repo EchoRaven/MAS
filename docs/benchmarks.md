@@ -40,7 +40,8 @@ exact McNemar tests against one agent on the same questions.
   a fifth of its misses ([Answers the team had and lost](#answers-the-team-had-and-lost)).
 - **Reading a long input in parts beats reading it whole**: on 20
   generated ledgers of ~44,000 characters, Chain-of-Agents 14 of 20 against
-  one agent's 9 (+14 −4, p 0.03), at three times the cost; one agent with
+  one agent's 9 (+14 −4, p 0.03), at three times the cost, and LongAgent
+  (members reading at once) 13.5 at about the single reader's cost; one agent with
   a code runner reading the ledger from a file 19.5 (p 0.003 against the
   chain), at twice the chain's. A vote over five whole readings scores
   6.5, below one: each reading skips different orders, so no total wins
