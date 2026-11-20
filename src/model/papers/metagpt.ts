@@ -64,7 +64,7 @@ export const metagpt: TemplateInfo = {
   name: "MetaGPT",
   summary: "SOP roles · shared message pool with subscriptions · structured documents",
   build,
-  paper: { title: "MetaGPT: Meta Programming for a Multi-Agent Collaborative Framework", authors: "Hong et al.", year: 2023, url: "https://arxiv.org/abs/2308.00352" },
+  paper: { title: "MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework", authors: "Hong et al.", year: 2023, url: "https://arxiv.org/abs/2308.00352" },
   notes: {
     mapped: [
       "The shared message pool is a room env. Each role's access edge publishes its posts as one message type (binding.write.tag, the paper's cause_by) and subscribes to others with a filter (binding.read.filter): a role sees and is woken only by the types it subscribes to.",
