@@ -58,13 +58,18 @@ Measured on this platform, every system on the same model and questions
 (details in [docs/benchmarks.md](docs/benchmarks.md), patterns in
 [docs/survey.md](docs/survey.md)):
 
+- **Tools matter more than talk.** Questions no discussion fixed were solved
+  every time once one agent could run code, and a single agent with the same
+  sandbox scored as well as AutoGen's five-agent chat; on long ledgers one
+  agent running code over the input totals 39 of 40, where the best
+  discussion system reaches 14.5.
 - **Voting is the bar to beat, where errors scatter.** Self-consistency and
   Agent Forest (one model, several samples, a vote) match Multiagent Debate
   and ReConcile within a question on computation and math, at a fraction of
   the cost. Not on a long input: five whole readings of a ledger each skip
   different orders, and their vote (6.5 of 20) does worse than one reading
   (9) and far worse than reading in parts (14).
-- **A weaker model does not change it.** On Hard computation, debate and
+- **A weaker model does not make discussion pay.** On Hard computation, debate and
   voting add 2–4 questions in 30 on gemini-3.1-flash-lite; on the weaker
   gemma-4-26b they add nothing (one agent 27; debate and ReConcile 26, voting
   and SPP 25), and one agent with a code runner solves all 30 in a sixth of
@@ -86,8 +91,10 @@ Measured on this platform, every system on the same model and questions
   MAD 14, p 0.05).
 - **Reading a long input in parts beats reading it whole**: on generated
   ledgers of ~44,000 characters, Chain-of-Agents finds a customer's total
-  in 14 of 20 against one agent's 9 (p 0.03), at three times the cost;
-  one agent running code over the ledger, read from its sandbox, finds 19.5.
+  in 14 of 20 against one agent's 9 (p 0.03), at three times the cost, and
+  LongAgent (members reading the parts at once) 13.5 at a third of that.
+  Splitting helps to gather, not to find: asked for one order's amount, a
+  single line, one agent finds all 40, even at ~45,000 tokens.
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models (on gemma 25 and 26, both just below one
@@ -107,11 +114,16 @@ Measured on this platform, every system on the same model and questions
   cost; Mixture-of-Agents with three models scored 28 against its best
   model's 26 (one run, not significant), and the best model in every slot
   (Self-MoA) 26.
-- **Tools matter more than talk.** Questions no discussion fixed were solved
-  every time once one agent could run code, and a single agent with the same
-  sandbox scored as well as AutoGen's five-agent chat.
 - **One round of discussion is all that pays**, and three samples are about as
   good as twenty.
+- **A measured gain has to survive an audit of its baseline.** The
+  platform's first large gain from discussion (gemma, debate +8 over one
+  agent) came from a log that cut the single agent's long answers off;
+  other scores moved when a provider's 503s, a grader's misreadings
+  (intervals, sums in another order, a number met in a long document) or a
+  single lucky run were fixed. Every number above has had its misses
+  checked by an LLM judge, its unknown answers run again, and at least two
+  runs where it supports a claim.
 - **Most "failures" of a rebuilt system were the rebuild**: wrong outputs, a
   missing input, a test step that could never pass, a grader that misread
   right answers. Each became a platform interface or check (declared results,
