@@ -24,10 +24,22 @@ data.answers = (data.answers ?? []).filter((a) => keep.includes(a.from));
 return t.slice(0, k) + "\\n\\nAnswers from the previous round (yours and your two neighbours'):\\n" + JSON.stringify(data);`;
 }
 
-export function debateWith(n = 3, topology: "full" | "ring" = "full"): SystemDoc {
+/**
+ * Reasoning methods, one per debater, for a diverse debate (Liu et al. 2025, "Breaking Mental Set"): debaters who
+ * think the same way share the same blind spots. Each is added to the debater's instructions.
+ */
+export const METHODS: { name: string; how: string }[] = [
+  { name: "step by step", how: "Reason step by step, writing out every intermediate result." },
+  { name: "decompose", how: "First split the problem into small independent sub-problems, solve each on its own, then combine them; check each part separately." },
+  { name: "work backwards and check", how: "Work out the answer, then check it a different way: estimate its size, test it against a property it must have (last digit, divisibility, a congruence), or recompute it by another route. If the checks disagree, find the error." },
+  { name: "rewrite as a simpler equivalent", how: "Before computing, rewrite the problem in a simpler equivalent form (factor, reduce modulo early, split a product, use a known identity), then compute in that form." },
+  { name: "program in your head", how: "Write the computation as a short program (pseudo-code), then trace it carefully by hand, line by line." },
+];
+
+export function debateWith(n = 3, topology: "full" | "ring" = "full", diverse = false): SystemDoc {
   n = Math.max(2, Math.min(8, Math.floor(n)));
   const b = new Builder(
-    n === 3 && topology === "full" ? "Multiagent debate" : `Multiagent debate (${n} debaters${topology === "ring" ? ", ring" : ""})`,
+    n === 3 && topology === "full" && !diverse ? "Multiagent debate" : `Multiagent debate (${n} debaters${topology === "ring" ? ", ring" : ""}${diverse ? ", diverse methods" : ""})`,
     `${WORDS[n]} agents answer the same question, then in each round read the others' answers and update their own; after two rounds the answers are put to a majority vote.`,
   );
   b.node("asker", "human", 0, 60, { name: "Asker", role: "Poses the question", approves: false })
@@ -45,7 +57,8 @@ export function debateWith(n = 3, topology: "full" | "ring" = "full"): SystemDoc
   const prompt = "Answer the question. If other agents' answers are given, use them as additional advice and give an updated answer. End with: Final: <answer>.";
   for (let i = 0; i < n; i++) {
     const m = "sonnet";
-    b.agent(`agent_${i + 1}`, 0, (i - (n - 1) / 2) * 140, { name: `Debater ${i + 1}`, role: "Answers and revises", model: m, harness: { ...native(), loop: "single_shot", instructions: prompt } }, "debate");
+    const method = diverse ? METHODS[i % METHODS.length] : null;
+    b.agent(`agent_${i + 1}`, 0, (i - (n - 1) / 2) * 140, { name: method ? `Debater ${i + 1} (${method.name})` : `Debater ${i + 1}`, role: "Answers and revises", model: m, harness: { ...native(), loop: "single_shot", instructions: method ? `${prompt} ${method.how}` : prompt } }, "debate");
   }
   b.node("collect", "function", 340, 0, {
     name: "Collect answers",
