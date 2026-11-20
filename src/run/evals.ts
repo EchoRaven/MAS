@@ -335,10 +335,20 @@ export function boxedContent(s: string): string | null {
   return null;
 }
 
+const NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+
 export function answerNumber(raw: string, question = ""): number | null {
   const answer = plain(raw);
   const boxed = boxedContent(answer);
   if (boxed !== null && parseNumber(boxed) !== null) return parseNumber(boxed);
+  // a sum written out ends in its result: "Total: 3 + 0 + 1 + 0 + 1 = 6" (only a number closing the line counts)
+  const result = /=\s*\**\s*(-?\$?[\d,]+(?:\.\d+)?)\s*\**\s*\.?\s*$/.exec(answer);
+  if (result) return parseNumber(result[1]);
+  // a number written as a word, where no digit is given: "one"
+  if (!/\d/.test(answer)) {
+    const word = [...answer.toLowerCase().matchAll(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/g)].pop();
+    if (word) return NUMBER_WORDS.indexOf(word[1]);
+  }
   for (const b of answer.matchAll(/\*\*([^*]+)\*\*/g)) {
     const words = b[1].trim().split(/\s+/).length;
     const n = numbersIn(b[1]);

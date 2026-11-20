@@ -62,6 +62,16 @@ describe("grading", () => {
   });
 });
 
+describe("number answers", () => {
+  it("reads a sum's result and a number word", () => {
+    const n = (out: string, want: string) => gradeByRule("number", out, want, "How many letters?").pass;
+    expect(n("Total: **3 + 0 + 1 + 0 + 1 + 0 + 0 + 0 + 1 = 6**", "6")).toBe(true);
+    expect(n("Answer: 66967 days (= 183 years)", "66967")).toBe(true);
+    expect(n("Answer: one", "1")).toBe(true);
+    expect(n("Answer: none of them", "1")).toBe(false);
+  });
+});
+
 describe("math answers", () => {
   it("reads intervals, sets, matrices and decimals as MATH's answer key writes them", () => {
     const m = (got: string, want: string) => gradeByRule("math", `Answer: ${got}`, want).pass;
