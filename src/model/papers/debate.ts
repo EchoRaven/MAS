@@ -60,7 +60,7 @@ export const debate: TemplateInfo = {
       "A Function node with join = all waits for every debater before passing the round on; another Function takes the majority vote.",
     ],
     differs: [
-      "The paper varies the number of rounds and of agents. Rounds are the run variable rounds (2 when unset), so an evaluation can sweep them; the number of debaters is fixed at three here.",
+      "The paper varies the number of rounds and of agents. Rounds are the run variable rounds (2 when unset), so an evaluation can sweep them; the number of debaters is three here (the builder, debateWith(n), makes 2 to 8).",
     ],
   },
 };

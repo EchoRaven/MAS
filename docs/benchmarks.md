@@ -539,6 +539,30 @@ failed. Both were the grader's, found because every system failed the same
 two problems. After the fix, "Run the tests again" re-graded the stored
 answers in Docker without calling any model.
 
+## Multiagent Debate: accuracy against the number of debaters
+
+Du et al. report accuracy rising with the number of agents as well as of
+rounds. Hard computation (30), flash-lite, 2 rounds, two runs each (the
+debate template's builder takes the number of debaters, `debateWith(n)`):
+
+| Debaters | Correct (two runs) | Mean | vs one agent, over 60 (question, run) pairs | Cost |
+| --- | --- | --- | --- | --- |
+| 1 (single agent) | 20, 18 | 19.0 | | $0.05 |
+| 2 | 20, 20 | 20.0 | +7 −5 (p 0.77) | $0.27 |
+| 3 (the template) | 21, 21 | 21.0 | +6 −2 (p 0.29) | $0.50 |
+| 5 | 23, 22 | **22.5** | +8 −1 (**p 0.04**) | $0.85 |
+
+- **The paper's agent curve reproduces.** Each debater added helps a
+  little, and five are the first setting on this set where debate beats one
+  agent significantly. Two are no better than one: with two, a disagreement
+  has no majority to settle it.
+- **It costs what it buys.** Five debaters cost 17 times one agent for 3.5
+  questions in 30; a five-sample vote (self-consistency, 22.0 over two runs
+  on the same questions, $0.31) comes within half a question at about a
+  third of the cost. The gain is real; it is not cheap.
+- All misses of the three debate evaluations were checked with the judge
+  (it agreed with the grader on all 53), and no output was cut.
+
 ## Multiagent Debate: accuracy against the number of rounds
 
 Du et al.'s ablation varies the rounds of debate. The template's group takes
