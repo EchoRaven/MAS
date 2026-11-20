@@ -141,6 +141,24 @@ describe("evaluations", () => {
     expect(again.cases.map((c) => c.reached)).toEqual([["Solver"], []]);
   });
 
+  it("asks the judge about the misses only, and leaves the grades alone", async () => {
+    // a function that writes 0.5 where the key says 1/2 (a grader would have to know), and 7 where it says 8
+    const b = new Builder("Halves", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .node("f", "function", 200, 0, { name: "F", fn: { lang: "js", code: 'const q = String(input?.text ?? input);\nreturn q === "half" ? "Answer: one half" : q === "two" ? "Answer: 2" : "Answer: 7";' } })
+      .edge("me", "f", "message")
+      .edge("f", "me", "message");
+    b.doc.models.push({ id: "judge_a", provider: "mock", model: "mock", api: { params: { script: ["PASS: one half is 1/2", "FAIL: 7 is not 8"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const doc = { ...b.doc, id: "sys_halves" };
+    store.putSystem(doc);
+    const done = await finish(evals.start(doc, { grader: "answer", cases: [{ input: "half", expected: "1/2" }, { input: "two", expected: "2" }, { input: "seven", expected: "8" }] }).id);
+    expect(done.cases.map((c) => c.pass)).toEqual([false, true, false]);
+    const checked = await evals.audit(done.id, "judge_a");
+    expect(checked.cases.map((c) => c.audit?.pass)).toEqual([true, undefined, false]); // the right answer is not asked about
+    expect(checked.cases.map((c) => c.pass)).toEqual([false, true, false]); // grades stand
+    expect(checked.passed).toBe(1);
+  });
+
   it("runs a case a provider failed in passing once more at the end", async () => {
     // the first call for "busy" meets an overloaded provider; the second answers
     const b = new Builder("Busy", "");

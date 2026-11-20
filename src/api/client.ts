@@ -112,6 +112,8 @@ export const Api = {
   evals: (systemId?: string) => api<{ evals: EvalSummary[] }>("GET", `/evals${systemId ? `?system=${encodeURIComponent(systemId)}` : ""}`),
   evalRecord: (id: string) => api<{ eval: EvalRecord; active: boolean }>("GET", `/evals/${id}`),
   /** Run again only the cases that gave no answer (errors, no output, never run), in place. */
+  /** The LLM judge's second opinion on the misses of an evaluation graded by rule (grades stand). */
+  auditEval: (id: string, judge?: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/audit`, judge ? { judge } : {}),
   retryEval: (id: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/retry`, {}),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
   /** What a system's code kept across runs (ctx.state), and clearing it. */

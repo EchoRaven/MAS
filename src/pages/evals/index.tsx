@@ -65,6 +65,7 @@ function Evals({ systemId }: { systemId: string }) {
   const navigate = useNavigate();
   const connected = useServer((s) => s.status === "connected");
   const [text, setText] = useState("");
+  const [auditing, setAuditing] = useState(false);
   // a dataset to run on ("" = the questions written or loaded below), and the sample to draw from it
   const [datasetId, setDatasetId] = useState("");
   const [stored, setStored] = useState<DatasetSummary[]>([]);
@@ -535,6 +536,28 @@ function Evals({ systemId }: { systemId: string }) {
                 ) : (
                   <>
                     {(() => {
+                      // a second opinion on the wrong answers, to catch a grader that marks right answers wrong
+                      const n = ev.cases.filter((c) => c.status === "done" && c.pass === false && c.output).length;
+                      if (!n || ev.mock || ev.grader === "llm" || ev.grader === "code") return null;
+                      return (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={auditing}
+                          title="Ask the LLM judge, one call per miss, whether each wrong answer in fact agrees with the expected one. Grades stay as they are; the ones it calls right show which grader rule to check"
+                          onClick={() => {
+                            setAuditing(true);
+                            void Api.auditEval(ev.id)
+                              .then((r) => setRecord({ eval: r.eval, active: false }))
+                              .catch((e) => setError(e.message))
+                              .finally(() => setAuditing(false));
+                          }}
+                        >
+                          {auditing ? "Checking…" : `Check ${n} misses with the judge`}
+                        </Button>
+                      );
+                    })()}
+                    {(() => {
                       // cases that gave no answer (an error, no output, never run): run only those again
                       const n = ev.cases.filter((c) => c.status === "error" || c.status === "pending" || (c.pass === false && /^no output|^not run|the server restarted/.test(c.why ?? ""))).length;
                       if (!n || ev.grader === "llm") return null;
@@ -604,6 +627,16 @@ function Evals({ systemId }: { systemId: string }) {
                 )}
               </div>
             </div>
+            {(() => {
+              const checked = ev.cases.filter((c) => c.pass === false && c.audit);
+              if (!checked.length) return null;
+              const right = checked.filter((c) => c.audit!.pass).length;
+              return (
+                <p className={cn("mt-3 text-xs", right ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground")}>
+                  The judge read {checked.length} wrong answers{ev.audit_usd ? ` (${usd(ev.audit_usd)})` : ""}: {right ? `it calls ${right} of them right. Check the grader on those (marked below); the grades stand until it is fixed and the evaluation regraded.` : "it agrees with the grader on every one."}
+                </p>
+              );
+            })()}
             {!!ev.auto_retried && (
               <p className="mt-3 text-xs text-muted-foreground">
                 {ev.auto_retried === 1 ? "One case" : `${ev.auto_retried} cases`} failed for the provider (overloaded, a dropped connection) and ran once more at the end; a second failure counts.
@@ -677,6 +710,7 @@ function Evals({ systemId }: { systemId: string }) {
                           </span>
                           <span className="block text-xs text-muted-foreground">
                             {c.why}
+                            {c.pass === false && c.audit?.pass && <span className="text-amber-700 dark:text-amber-300" title={`The judge: ${c.audit.why}`}>{" · "}judge says right</span>}
                             {!!c.reached?.length && <span className="text-amber-700 dark:text-amber-300" title="A member marked the right answer in a message during the run; the team's final answer lost it">{" · "}had it: {c.reached.join(", ")}</span>}
                             {c.run_id && (
                               <>

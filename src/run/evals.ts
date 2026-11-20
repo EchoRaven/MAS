@@ -37,6 +37,8 @@ export interface EvalCaseResult {
    * they sent during the run: the team had it and lost it. Empty when none did: nobody found it.
    */
   reached?: string[];
+  /** a second opinion on a miss graded by rule: the LLM judge's verdict (the grade stands; a "right" here is a grader to check) */
+  audit?: { pass: boolean; why: string };
 }
 
 export interface EvalRecord {
@@ -65,6 +67,8 @@ export interface EvalRecord {
   stop_reason?: string;
   /** how many cases a provider failed in passing (a 503, a dropped stream) and that ran once more at the end */
   auto_retried?: number;
+  /** what checking the misses with the judge cost */
+  audit_usd?: number;
   started_at: string;
   finished_at?: string;
   cases: EvalCaseResult[];

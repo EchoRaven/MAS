@@ -111,6 +111,14 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       throw new HttpError(400, (e as Error).message);
     }
   });
+  r.on("POST", "/api/evals/:id/audit", async (req) => {
+    const b = ((await req.body()) ?? {}) as { judge?: string };
+    try {
+      return { eval: await evals.audit(req.params.id, b.judge ? String(b.judge) : undefined) };
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  });
   r.on("POST", "/api/evals/:id/retry", async (req) => {
     const b = ((await req.body()) ?? {}) as { concurrency?: number };
     try {

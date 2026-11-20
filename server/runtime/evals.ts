@@ -46,7 +46,7 @@ const TRANSIENT = /^no output: .*(\b(429|5\d\d)\b|overloaded|unavailable|termina
 
 /** Forget a case's result so that it runs again. */
 function resetCase(c: EvalRecord["cases"][number]) {
-  for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer", "reached"] as const) delete (c as unknown as Record<string, unknown>)[k];
+  for (const k of ["run_id", "output", "pass", "why", "usd", "seconds", "result_ok", "answer", "reached", "audit"] as const) delete (c as unknown as Record<string, unknown>)[k];
   c.status = "pending";
 }
 
@@ -194,6 +194,41 @@ export class EvalManager {
     rec.passed = rec.cases.filter((c) => c.pass).length;
     this.store.putEval(rec);
     return rec;
+  }
+
+  /**
+   * A second opinion on the misses of an evaluation graded by rule: the LLM judge reads each wrong answer that
+   * gave an output and says whether it agrees with the expected one. The grades stand; the misses the judge calls
+   * right are what to check the grader against (an interval written as an inequality, a sum in another order).
+   * One call per miss, one after another.
+   */
+  async audit(id: string, judgeModel?: string): Promise<EvalRecord> {
+    const rec = this.store.getEval(id);
+    if (!rec) throw new Error("No such evaluation");
+    if (this.active.has(id)) throw new Error("The evaluation is still running");
+    if (rec.grader === "llm") throw new Error("This evaluation was graded by the judge already");
+    if (rec.grader === "code") throw new Error("Code is graded by running its tests; the judge cannot second-guess them");
+    if (rec.mock) throw new Error("A mock evaluation has nothing to check");
+    const misses = rec.cases.filter((c) => c.status === "done" && c.pass === false && c.output);
+    if (!misses.length) throw new Error("No wrong answer to check");
+    const doc = this.store.getSystem(rec.system_id);
+    const known = new Set((doc?.models ?? []).map((m) => m.id));
+    const models = new Models([...(doc?.models ?? []), ...DEFAULT_MODELS.filter((m) => !known.has(m.id))], this.secrets, false);
+    const model = judgeModel || rec.on_model || undefined;
+    this.active.add(id);
+    try {
+      let usd = 0;
+      for (const c of misses) {
+        const v = await this.judge(models, model, c.input, c.expected, c.output!);
+        c.audit = { pass: v.pass, why: v.why.replace(/^judge: /, "") };
+        usd += v.usd;
+      }
+      rec.audit_usd = (rec.audit_usd ?? 0) + usd;
+      this.store.putEval(rec);
+      return rec;
+    } finally {
+      this.active.delete(id);
+    }
   }
 
   get(id: string) {

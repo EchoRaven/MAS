@@ -876,6 +876,12 @@ they are. Compare leaves flagged questions out of scores, spreads, paired
 tests and exports ("Leave out N flagged questions", on by default) and shows
 them struck through. The nine broken GSM-Hard questions below are flagged.
 
+**Check N misses with the judge** asks the LLM judge, one call per wrong
+answer, whether each in fact agrees with the expected one. Grades stay as
+they are; the ones it calls right point at a grader rule to fix (every MATH
+grader fix here came from reading such misses: an interval written as an
+inequality, a sum in another order, a vector in decimals).
+
 A case a provider fails in passing (overloaded, a 5xx, a dropped stream, a
 rate limit) runs once more at the end of the evaluation, on its own; a second
 failure counts. (Before this, three scores here counted such failures as
