@@ -5,6 +5,42 @@ run with **Models: everything on one model**, so the comparison is about how
 each system is put together, not which model it uses. The question sets ship
 as the page's sample sets, and their answers are computed by program.
 
+## At a glance
+
+The current standing, after every correction below. Each number here has
+had its misses checked with the LLM judge, and every case without a known
+answer (a provider error, an output cut short) run again; p values are
+exact McNemar tests against one agent on the same questions.
+
+- **Running code beats talking.** On Hard computation (30 exact
+  computations, flash-lite) one agent with a code runner, Magentic-One and
+  AutoGen solve all 30; no discussion system exceeds 23. On the weaker
+  gemma one agent with code solves 30 against one agent's 27. On MATH,
+  where errors are reasoning, code is a small, consistent edge (+5 −0 over
+  100 problems, p 0.06).
+- **Exchange and voting add 2–4 questions in 30, with a strong enough
+  model.** One agent 19; self-consistency (5 votes) 22; debate 21, with 5
+  debaters 22.5 (p 0.04); debaters each reasoning a different way 23 (p
+  0.02), and 22 as a plain vote over those three different first answers.
+  Exchange-of-Thought 23, ReConcile, DyLAN, Corex and Multi-Agent
+  Verification 22 (one or two runs each).
+- **On the weaker gemma, nothing without a tool beats one agent** (27;
+  debate and ReConcile 26, voting and SPP 25). A 7–8 question gain first
+  reported there came from cut-off answers ([A weaker model](#a-weaker-model-no-gain-from-discussion-after-all)).
+- **Roles, personas and long pipelines are no better than one agent**
+  (MoA 17, MedAgents 16, AutoAgents 14, MAD 14, CAMEL 12, ChatEval 12 on
+  Hard computation: they fix about as many questions as they lose).
+- **Choosing among samples cannot add an answer no sample has.** On the
+  misses of the vote, Corex and Multi-Agent Verification the right answer
+  was among the samples in 1–2 of 16; debate's debaters had and lost it in
+  a fifth of its misses ([Answers the team had and lost](#answers-the-team-had-and-lost)).
+- **A model critiquing itself helps on reasoning, not arithmetic**
+  (Self-Refine: MATH level 5 40 → 44; Hard computation revisions 4 right,
+  3 wrong).
+- **Where gains exist they cost**: five debaters cost 17 times one agent
+  for 3.5 questions; the cost frontier on Hard computation is the code
+  runners (Compare → accuracy against cost).
+
 ## Exact computation (30 questions), all on gemini-3.1-flash-lite
 
 Long multiplication, date spans, letter counts, digit sums of powers, and
@@ -126,8 +162,9 @@ questions.
 ## Hard computation, all on gemini-3.1-flash-lite
 
 On GSM8K the single agent left no room. On "Hard computation (30)" the lite
-model alone gets about 19, so there is room to gain. Four systems, two runs
-each, through the built-in dataset (2026-11-18):
+model alone gets about 19, so there is room to gain. Every paper system
+that answers questions, through the built-in dataset (2026-11-18 onward),
+two runs where two scores are given, one otherwise:
 
 | System | Runs | Mean | Cost (60 runs) |
 | --- | --- | --- | --- |
