@@ -87,6 +87,9 @@ export class SandboxEnv implements Resource {
     if (!seat) {
       seat = { dir: own ? path.join(this.dir, "agents", agent.replace(/[^a-zA-Z0-9_.-]/g, "-")) : this.dir };
       fs.mkdirSync(seat.dir, { recursive: true });
+      // the run's input as a file, so a program reads it instead of the agent typing it out again (a 44,000-character
+      // ledger cost 21,000 output tokens an answer to paste into code)
+      if (this.rc.input) fs.writeFileSync(path.join(seat.dir, "input.txt"), this.rc.input);
       this.seats.set(key, seat);
     }
     return { key, seat };
@@ -127,7 +130,7 @@ export class SandboxEnv implements Resource {
     const agent = edge.source;
     const dir = () => this.seat(agent).seat.dir;
     const all: RtTool[] = [
-      { name: "bash", description: `Run a shell command in ${this.node.data.name} (cwd /work)`, input_schema: schema({ command: S }), effect: "write", source: this.id, run: async (a) => this.sh(String(a.command), 120_000, agent) },
+      { name: "bash", description: `Run a shell command in ${this.node.data.name} (cwd /work). The run's input, as given, is in /work/input.txt: read it from there rather than copying it into a command`, input_schema: schema({ command: S }), effect: "write", source: this.id, run: async (a) => this.sh(String(a.command), 120_000, agent) },
       { name: "edit_file", description: "Read or write a file under /work. Omit content to read.", input_schema: schema({ path: S, content: S }, ["path"]), effect: "write", source: this.id, run: async (a) => {
         const f = confine(dir(), String(a.path).replace(/^\/work\/?/, ""));
         if (a.content == null) return fs.existsSync(f) ? fs.readFileSync(f, "utf8").slice(0, 50_000) : `no such file: ${a.path}`;

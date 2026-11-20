@@ -72,4 +72,18 @@ describe("isolation", () => {
       }
     }
   });
+
+  it("puts the run's input in /work/input.txt, so a program reads it instead of the agent retyping it", async () => {
+    const fake: SandboxBackend = { kind: "docker", available: async () => ({ ok: true }), start: async (spec): Promise<Box> => ({ name: spec.name, isolation: "fake" }), exec: async () => ({ code: 0, out: "" }), stop: async () => undefined };
+    const b = new Builder("S", "");
+    b.agent("a1", 0, 0, { name: "A1", model: "m", harness: { ...native(), instructions: "" } }).node("box", "env", 0, 0, { name: "Box", env_kind: "sandbox", image: "python:3.12-slim", lifecycle: "per_run" });
+    const doc = b.doc;
+    const node = doc.nodes.find((n) => n.id === "box") as SysNode<EnvData>;
+    const input = "What is the total?\n---\n2024-01-02 | customer Ashby | paid $12";
+    const rc = { doc, runId: "run_input", input, config: { allowLocalExec: false, docker: "docker" }, store: { stateDir: (...p: string[]) => path.join(dir, ...p) }, emit: () => undefined, byId: new Map(doc.nodes.map((n) => [n.id, n])) } as unknown as RunCtx;
+    const tools = await new SandboxEnv(rc, node, fake).tools({ id: "a1-box", source: "a1", target: "box", kind: "access", access: "read_write" } as never);
+    expect(tools.find((t) => t.name === "bash")!.description).toMatch(/\/work\/input\.txt/);
+    await tools.find((t) => t.name === "bash")!.run({ command: "true" }, {} as never);
+    expect(await tools.find((t) => t.name === "edit_file")!.run({ path: "/work/input.txt" }, {} as never)).toContain("customer Ashby | paid $12");
+  });
 });

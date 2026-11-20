@@ -410,6 +410,10 @@ hosts) gives the agents connected to it:
 | `run_tests` | `{command?}` → `exit <code>\n<last lines>`. Without a command it finds `test*.py`, `*_test.py` or `tests/*.py` and runs pytest if the image has it, else calls every `test_*` function in them (plain `assert`s); `npm test` for a `package.json`. The exit code is the tests' |
 | `list_work` | the files under `/work` |
 
+The run's input, as it was given, is in `/work/input.txt` (in each agent's
+folder with `share: per_agent`), and the `bash` tool says so: a program
+reads a long input from there instead of the agent copying it into code.
+
 Templates that write tests use plain `test_*` functions with `assert`, so they
 run in any Python image.
 
