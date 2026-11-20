@@ -310,7 +310,11 @@ luck: "157 (mod 10) is not r…" before the cut). The multi-agent systems
 were not affected: their answers come from a short vote or judge message.
 The log now keeps the end of a long output, and those cases were run again
 in place (Retry): 27, missing two digit sums and a long product (#7, #8,
-#10), which every system without a tool misses too.
+#10), which every system without a tool misses too. On #8 and #10 gemma at
+first streamed for about 11 minutes and returned nothing; an empty reply is
+now asked for once more, and the single agent then answered both (wrongly).
+SPP's prompt gets an empty reply on both every time, so its 25 counts them
+as misses.
 
 So on gemma, as on flash-lite, voting, debate, ReConcile and one model
 playing all the personas score as one agent does or a question or two
