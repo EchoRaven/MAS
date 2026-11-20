@@ -880,7 +880,11 @@ them struck through. The nine broken GSM-Hard questions below are flagged.
 answer, whether each in fact agrees with the expected one. Grades stay as
 they are; the ones it calls right point at a grader rule to fix (every MATH
 grader fix here came from reading such misses: an interval written as an
-inequality, a sum in another order, a vector in decimals).
+inequality, a sum in another order, a vector in decimals). On the five
+level-5 MATH evaluations, after those fixes, the judge agreed with the
+grader on 31 of the 33 misses ($0.01); the other two were its own mistakes
+(an unsolved equation accepted as its roots, 0.4995 from a simulation as
+1/2). It points at what to check; it does not decide.
 
 A case a provider fails in passing (overloaded, a 5xx, a dropped stream, a
 rate limit) runs once more at the end of the evaluation, on its own; a second
