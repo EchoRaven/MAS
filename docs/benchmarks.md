@@ -367,9 +367,12 @@ Later, with code (the same 50, answer lines checked):
 
 Running code fixed three problems no text-only system got (#8, #13, #34)
 and lost none: the best score on this sample, though three problems is not
-yet significant. On 50 more problems (seed 2) the gap nearly closed (single
-45, with code 46: +3 −2). Over the 100, code fixes 6 and loses 2 (p ≈ 0.29):
-a small edge, not a demonstrated one. MATH's problems are mostly reasoning
+yet significant. On 50 more problems (seed 2): single 47, with code 49
+(+2 −0). Over the 100, code fixes 5 and loses none (p ≈ 0.06): a small but
+consistent edge, just short of significance. (Seed 2 was first graded 45
+and 46, +3 −2: the grader marked right answers wrong, a unit with a power,
+a base subscript, a lettered choice, a sum in another order inside a
+fraction; found by checking the misses with the judge.) MATH's problems are mostly reasoning
 with short arithmetic, so a code runner matters far less than on Hard
 computation's long exact chains. Magentic-One's orchestration added nothing over one agent
 with the same sandbox, as AutoGen's five agents did on Hard computation.
@@ -926,7 +929,13 @@ inequality, a sum in another order, a vector in decimals). On the five
 level-5 MATH evaluations, after those fixes, the judge agreed with the
 grader on 31 of the 33 misses ($0.01); the other two were its own mistakes
 (an unsolved equation accepted as its roots, 0.4995 from a simulation as
-1/2). It points at what to check; it does not decide.
+1/2). It points at what to check; it does not decide. Across every
+evaluation here graded by rule (595 misses on Hard computation, GSM8K,
+GSM-Hard, MMLU, MATH-500 and its level 5), it flagged 15: six were grader
+errors, fixed and regraded (above and in the MATH-500 section); the rest
+were systems ending on a line that is not the answer (a code fence, a
+verification line, "she owes $27,398,229" for −27398229), which the rule
+grades as written.
 
 A case a provider fails in passing (overloaded, a 5xx, a dropped stream, a
 rate limit) runs once more at the end of the evaluation, on its own; a second

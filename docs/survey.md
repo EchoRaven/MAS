@@ -150,7 +150,7 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   weaker gemma, where debate and voting reached 25–26 against one agent's 27,
   one agent with a code runner scored 30 in 8.5 minutes against debate's 116. Where the
   arithmetic is short the edge shrinks: on 100 MATH-500 problems a code
-  runner fixed 6 and lost 2 (p ≈ 0.29), and on GSM-Hard's well-posed
+  runner fixed 5 and lost none (p ≈ 0.06), and on GSM-Hard's well-posed
   questions it changed nothing.
 - **On one 30-question set, every paper system side by side** (Hard
   computation, flash-lite): those that run code solve all 30; those that
