@@ -65,6 +65,16 @@ export class AgentIO {
       signal: this.rc.signal,
     });
     this.rc.usage(this.node, usage);
+    // a reply cut at the output limit: say so, or a tool call cut in half looks like the agent had nothing to say
+    if (res.stop === "max_tokens") {
+      const empty = !textOf(res.content).trim() && !res.content.some((p) => p.type === "tool_call");
+      this.rc.emit({
+        type: "log",
+        node: this.node,
+        level: empty ? "error" : "warn",
+        text: `${this.agent.name}'s reply stopped at the output limit (${usage.tokens_out} tokens)${empty ? ", with nothing usable in it" : ""}: raise the component's max_tokens, or MAS_MAX_OUTPUT for the default`,
+      });
+    }
     for (const p of res.content) {
       if (p.type === "raw" && (p.block as { type?: string }).type === "server_tool_use") {
         const b = p.block as { name: string; input: unknown };

@@ -6,11 +6,11 @@ describe("the default output limit", () => {
   afterEach(() => {
     delete process.env.MAS_MAX_OUTPUT;
   });
-  it("is 16,384 tokens unless MAS_MAX_OUTPUT says otherwise", () => {
-    expect(defaultMaxOutput()).toBe(16_384);
+  it("is 32,768 tokens unless MAS_MAX_OUTPUT says otherwise", () => {
+    expect(defaultMaxOutput()).toBe(32_768);
     process.env.MAS_MAX_OUTPUT = "4000";
     expect(defaultMaxOutput()).toBe(4000);
     process.env.MAS_MAX_OUTPUT = "lots";
-    expect(defaultMaxOutput()).toBe(16_384);
+    expect(defaultMaxOutput()).toBe(32_768);
   });
 });

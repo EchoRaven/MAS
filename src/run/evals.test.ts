@@ -181,8 +181,9 @@ describe("who had the answer", () => {
       { pass: false, status: "done", why: "no output (finished: Round limit reached)" },
       { pass: false, status: "done", why: "no output (finished: Round limit reached)" },
       { pass: false, status: "done", why: "no output: google 503: overloaded" },
+      { pass: false, status: "done", why: "no output: Solo's reply stopped at the output limit (16380 tokens), with nothing usable in it: raise …" },
     ]);
-    expect(r.map((x) => `${x.count} ${x.reason}`)).toEqual(["2 no output: round limit reached", "1 no output"]);
+    expect(r.map((x) => `${x.count} ${x.reason}`)).toEqual(["2 no output: round limit reached", "1 no output", "1 no output: reply cut at the output limit"]);
   });
   it("groups the misses a member had under their own reason", () => {
     const r = failureReasons([

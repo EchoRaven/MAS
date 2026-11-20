@@ -138,12 +138,14 @@ export async function rateLimit(m: ModelSpec, key: string | undefined, signal?: 
 export const MOCK_MODEL: ModelSpec = { id: "mock", provider: "mock", model: "mock", api: {}, price_in: 0, price_out: 0, modalities: ["text"] };
 
 /**
- * The output limit of a model call that sets none: 16,384 tokens (MAS_MAX_OUTPUT to change it). Of 44,436 calls
- * here, 99.9% replied in under 3,100 tokens, and every reply over 16,000 was a repetition loop with no answer.
+ * The output limit of a model call that sets none: 32,768 tokens (MAS_MAX_OUTPUT to change it). Of 44,436 calls
+ * here, 99.9% replied in under 3,100 tokens, and the replies over 32,000 were all repetition loops with no answer
+ * (most ran to 65,536). 16,384 was too low: an agent writing a program with a 21,000-token ledger pasted in was cut
+ * off mid-call and answered nothing.
  */
 export function defaultMaxOutput(): number {
   const v = Number(process.env.MAS_MAX_OUTPUT);
-  return Number.isFinite(v) && v >= 256 ? Math.floor(v) : 16_384;
+  return Number.isFinite(v) && v >= 256 ? Math.floor(v) : 32_768;
 }
 
 export class Models {

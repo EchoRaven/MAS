@@ -511,10 +511,14 @@ system: a 429 or an overload waits as long as the provider says (Gemini's
 halfway ("terminated", a reset) is asked for again up to three times; and a
 reply with nothing in it (no text, no tool call, 0 output tokens, not stopped
 at the token limit: gemma after 11 minutes on a hard question) once more.
-A call whose component sets no `max_tokens` is limited to 16,384 output
+A call whose component sets no `max_tokens` is limited to 32,768 output
 tokens (`MAS_MAX_OUTPUT`): of 44,436 calls, 99.9% replied in under 3,100,
-and every reply over 16,000 was a repetition loop with no answer (one ran
-to 65,536 tokens, the cost of about a hundred answers).
+and the replies over 32,000 were all repetition loops with no answer (most
+ran to 65,536 tokens, the cost of about a hundred answers). The limit was
+16,384 at first, which cut off an agent writing a program with a long
+input pasted in. A reply that stops at the limit is logged as such (an
+error when nothing usable is left), and an evaluation groups those cases
+under "no output: reply cut at the output limit".
 Replies are streamed, so a model that thinks for minutes is not cut off
 waiting for headers. Requests per minute are capped per provider (`MAS_RPM`, 60
 by default).

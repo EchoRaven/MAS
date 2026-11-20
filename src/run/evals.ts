@@ -108,6 +108,7 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
     if (/^tests fail/.test(w)) return "tests fail";
     if (/^timed out/.test(w)) return "timed out";
     // why a run ended without an answer is the fix: a round limit set too low, a time limit, a provider error
+    if (/^no output: .*stopped at the output limit/.test(w)) return "no output: reply cut at the output limit";
     const ended = /^no output \((?:finished|stopped|failed): (.*)\)$/.exec(w);
     if (ended) return `no output: ${ended[1].replace(/\s*\(no output\)/i, "").replace(/\d+(\.\d+)?/g, "#").trim().toLowerCase()}`;
     if (/^no output/.test(w)) return "no output";
