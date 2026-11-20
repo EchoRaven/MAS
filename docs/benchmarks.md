@@ -417,6 +417,7 @@ grader:
 | Agent Forest, 5 samples | **45** | | $0.26 |
 | Single agent with a code runner | **45** | +6 −1 (p 0.13) | $0.39 |
 | Self-Refine (critique and revise, up to 3 rounds) | 44 | +5 −1 (p 0.22) | $0.43 |
+| Multiagent Debate, three different reasoning methods | 45 | +5 −0 (p 0.06) | $0.47 |
 
 MACM (Lei et al. 2024) has a Thinker list the conditions and the objective
 and mine new conditions one at a time, a Judge keep only those it verifies
@@ -609,7 +610,11 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
   those slips. With the same individual accuracy (43, 44, 40 in round 1),
   the diverse three finish 1.5 higher: +3 −0 against the same-method
   control (p 0.25), suggestive rather than proven, but the only
-  three-debater setting here that beats one agent significantly.
+  three-debater setting here that beats one agent significantly. On MATH
+  level 5 the same three score 45 of 50, one above plain debate (+2 −1)
+  and level with a five-sample vote and a code runner: where errors are in
+  reasoning rather than long arithmetic, different methods tie the best,
+  not beat it.
 - All misses of the six debate evaluations were checked with the judge
   (it agreed with the grader on all 100), and no output was cut.
 
