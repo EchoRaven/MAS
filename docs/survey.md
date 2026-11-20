@@ -115,17 +115,16 @@ Each one became a general interface, not a fix for one paper:
 
 From [benchmarks.md](benchmarks.md), all on the same model:
 
-- **Discussion pays when the model is weak enough to need it.** On a weaker
-  model (gemma-4-26b), Multiagent Debate went from 18 to 26 of 30 on Hard
-  computation, fixing the long exact computations that a single answer gets
-  wrong in different places; on the stronger model the same debate gained 4.
-  Agent Forest (five votes) reached 25, fixing the same questions but one. ReConcile
-  reached 26. Whether
-  a MAS helps depends on the model's error profile as much as on the protocol,
-  and voting captures nearly all of what discussion does. On MMLU the same
-  debate on the same weaker model gained nothing (90 → 89): its errors there
-  are knowledge every copy of the model lacks, not slips that differ between
-  copies.
+- **A weaker model does not make discussion pay.** On gemma-4-26b one agent
+  scores 27 of 30 on Hard computation, and Multiagent Debate (26), ReConcile
+  (26), Agent Forest (25) and Solo Performance Prompting (25) do no better;
+  on flash-lite debate gains 2–4. This was first reported the other way
+  (one gemma agent at 18, debate +8, p = 0.02): the run log had cut gemma's
+  long answers off before their final line, and the grader read a number
+  from the middle of the reasoning. Fixed and run again, the gain is gone.
+  On MMLU the same debate on gemma gained nothing either (90 → 89). A
+  measured gain is checked against the grader's own misses before it is
+  believed.
 - **Test-and-repair loops need something to repair.** On HumanEval with
   flash-lite, AgentCoder and MapCoder scored 48 of 50, as did a single agent
   (49 with a code runner); the papers' gains were over single gpt-3.5 calls.
@@ -148,8 +147,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   one agent could run code. A single agent with the same sandbox scored the
   same 30/30 as AutoGen's five-agent chat, faster and cheaper, and so did
   Magentic-One once its terminal ran code in the sandbox (15 → 30). On the
-  weaker gemma, where debate and voting reached 25–26, one agent with a code
-  runner scored 30 in 8.5 minutes against debate's 116. Where the
+  weaker gemma, where debate and voting reached 25–26 against one agent's 27,
+  one agent with a code runner scored 30 in 8.5 minutes against debate's 116. Where the
   arithmetic is short the edge shrinks: on 100 MATH-500 problems a code
   runner fixed 6 and lost 2 (p ≈ 0.29), and on GSM-Hard's well-posed
   questions it changed nothing.
@@ -171,17 +170,16 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **A simulated discussion does as well as a real one.** One model playing
   several personas in a single call (Solo Performance Prompting) scored as
   Multiagent Debate does (21 of 30 on average on flash-lite, at a fifth of the
-  cost), and on the weaker gemma, where real debate gained 8, it gained the
-  same: 18 → 25 (+8 −1, p = 0.04), agreeing with debate on 29 of 30 questions.
+  cost), and on the weaker gemma it scored 25 to debate's 26, agreeing with
+  debate on 29 of 30 questions.
   On MMLU's medical questions it scored 73 of 75, as MedAgents' specialist
   panel and debate did, missing the same two. What discussion adds does not
   need separate agents.
-- **Debate or vote depends on the model.** Voting over the debaters' first
-  answers, before any exchange, already gives all of debate's gain on the
-  weaker gemma (26 = 26 on Hard computation), as Choi et al. (2025) argue;
-  on flash-lite the first-round vote is no better than one agent, and the
-  exchange is what lifts it (nine verdicts turned right, none wrong, over a
-  rounds sweep). On MMLU the rounds only add risk (gemma: four right
+- **Where debate gains, the exchange does it.** On flash-lite the vote over
+  the debaters' first answers, before any exchange, is no better than one
+  agent, and the exchange is what lifts it (nine verdicts turned right, none
+  wrong, over a rounds sweep), against Choi et al. (2025), who credit the
+  vote; on gemma neither gains (vote 26 = debate 26, one agent 27). On MMLU the rounds only add risk (gemma: four right
   verdicts turned wrong, one fixed).
 - **Mixing models reaches the best member, not beyond it.** ReConcile with one
   seat per model averaged 27.3 over three runs, as its strongest seat did alone

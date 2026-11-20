@@ -3,12 +3,12 @@
 // 30-question set; flash-lite is gemini-3.1-flash-lite, where a single agent scores 19.
 export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
-    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against 18.",
+    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against one agent's 27.",
     "MMLU (100): 95.5 against 95.0 on flash-lite, 89 against 90 on gemma: no gain where errors are missing knowledge.",
     "With a sandbox per debater, MATH-500 (50): 49, against one agent with a sandbox's 48, at four times the cost.",
   ],
-  "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 18.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
-  "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25."],
+  "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 27.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
+  "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25, against one agent's 27."],
   "paper-eot": ["Hard computation (flash-lite): 23, the best score there without tools."],
   "paper-dylan": ["Hard computation (flash-lite): 22; a team of two chosen by learned importance: 20, at 24% less."],
   "paper-mad": ["Hard computation (flash-lite): 14, 14, below one agent: the devil argues the judge out of right products."],
@@ -28,7 +28,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-mav": ["Hard computation (flash-lite): 22, 22, the same eight misses as the vote and Corex, at three times the vote's cost: on the misses the right answer was among the five candidates once in 16."],
   "paper-macm": ["MATH level 5 (50, flash-lite): 43, against one agent's 40, debate's 44 and a five-sample vote's 45 at the same cost; its Judge called the conditions sufficient after one mined condition in 43 of 50."],
   "paper-spp": [
-    "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (as debate, against one agent's 18).",
+    "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (debate 26, one agent 27).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",
   ],
 };

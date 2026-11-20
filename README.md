@@ -61,10 +61,13 @@ Measured on this platform, every system on the same model and questions
 - **Voting is the bar to beat.** Self-consistency and Agent Forest (one model,
   several samples, a vote) match Multiagent Debate and ReConcile within a
   question in almost every setting, at a fraction of the cost.
-- **The gain depends on how often the model slips.** On Hard computation, debate
-  and voting add 2–4 questions in 30 on gemini-3.1-flash-lite, and 7–8 on the
-  weaker gemma-4-26b (18 → 25–26), where one agent with a code runner solves
-  all 30 in a fourteenth of the time. On GSM8K and MATH-500 the strong model is
+- **A weaker model does not change it.** On Hard computation, debate and
+  voting add 2–4 questions in 30 on gemini-3.1-flash-lite; on the weaker
+  gemma-4-26b they add nothing (one agent 27; debate and ReConcile 26, voting
+  and SPP 25), and one agent with a code runner solves all 30 in a sixth of
+  the time. (An earlier report here of a 7–8 question gain on gemma came
+  from a log that cut gemma's long answers off before their final line;
+  fixed, and those cases run again.) On GSM8K and MATH-500 the strong model is
   near the ceiling and nothing shows. On MMLU nothing shows even on gemma
   (90 → 89): debate corrects slips that differ between agents, not knowledge
   that all copies of a model lack.
@@ -79,12 +82,13 @@ Measured on this platform, every system on the same model and questions
   ChatEval 12: lower, but they fix about as many questions as they lose).
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
-  Multiagent Debate on both models, including the weaker one's 18 → 25.
-- **Debate's gain is the vote on a weak model, the exchange on a strong
-  one**: on gemma a vote over the debaters' first answers already scores
-  what the whole debate does; on flash-lite the rounds turn nine wrong
-  verdicts right and none wrong (reproducing and qualifying "Debate or
-  Vote", Choi et al. 2025).
+  Multiagent Debate on both models (on gemma 25 and 26, both just below one
+  agent's 27).
+- **Where debate gains, the exchange does it, not the vote**: on flash-lite
+  a vote over the debaters' first answers is where one agent is, and the
+  rounds turn nine wrong verdicts right and none wrong; on gemma neither
+  the vote nor the rounds gain anything (qualifying "Debate or Vote", Choi
+  et al. 2025).
 - **Mixing models mostly reaches the best member, not beyond it**: ReConcile
   with one seat per model ties its strongest model alone, at four times the
   cost; Mixture-of-Agents with three models scored 28 against its best

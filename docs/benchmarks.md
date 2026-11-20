@@ -281,7 +281,7 @@ type (the list) was read as "each reply is JSON", so every sample answered
 with a bare number and no reasoning (1 of 30). Each sample now replies as
 text, and the component always sends a list.
 
-## A weaker model: where the debate's gain appears
+## A weaker model: no gain from discussion after all
 
 The papers report their gains with gpt-3.5-class models; on
 gemini-3.1-flash-lite, a single agent already gets most questions it can get
@@ -289,50 +289,39 @@ at all. gemma-4-26b-a4b-it (an open model, about 4B active parameters, free
 tier: 10 calls a minute here, 30 minutes per run) is weaker, and thinks at
 length. Hard computation (30), one run each:
 
-| System on gemma | Correct | Time |
-| --- | --- | --- |
-| Single agent | 18 | 48 min |
-| Agent Forest, N = 5 (vote) | 25 | 92 min |
-| Multiagent Debate, 2 rounds | **26** | 116 min |
-| ReConcile, 3 rounds | 26 | 112 min |
-| Solo Performance Prompting (one call, simulated personas) | 25 | 77 min |
-| Single agent with a code runner | **30** | 8.5 min |
+| System on gemma | Correct | vs single agent | Time |
+| --- | --- | --- | --- |
+| Single agent | 27 | | 48 min |
+| Agent Forest, N = 5 (vote) | 25 | +0 −2 | 92 min |
+| Multiagent Debate, 2 rounds | 26 | +0 −1 | 116 min |
+| ReConcile, 3 rounds | 26 | +1 −2 | 112 min |
+| Solo Performance Prompting (one call, simulated personas) | 25 | +0 −2 | 77 min |
+| Single agent with a code runner | **30** | +3 −0 (p 0.25) | 8.5 min |
 
-**+8 questions in 30: the first large gain from discussion on this platform.**
-The debate fixed 9 questions and lost 1 (p = 0.02): four of the five date
-spans (#11, #13–#15), all four binomial coefficients mod p (#26–#29) and one
-digit sum (#9). (The single agent was first reported as 17: one of its
-cases, #12, had ended on a dropped connection; retried in place, it gave the
-right date span, so 18, and every comparison below is against 18.) On the
-stronger model, debate gained 4 at most (19 → 23), and no system without a
-tool ever solved the binomials. Here three gemma debaters, each slipping in
-different places on long exact computations, correct each other: the setting
-the paper describes.
+**No system without a tool does better than one gemma agent.** This section
+first reported the opposite, as the platform's first large gain from
+discussion: the single agent at 17, then 18, and debate +8 above it
+(p = 0.02), voting, ReConcile and SPP +7 to +8. That came from the log, not
+the systems. The run log kept only the first 20,000 characters of an
+output, and gemma, thinking at length, wrote its answer after the cut on 13
+of the 30 questions; the grader then read a number from the middle of the
+reasoning, and 12 of the 13 were marked wrong (one was marked right by
+luck: "157 (mod 10) is not r…" before the cut). The multi-agent systems
+were not affected: their answers come from a short vote or judge message.
+The log now keeps the end of a long output, and those cases were run again
+in place (Retry): 27, missing two digit sums and a long product (#7, #8,
+#10), which every system without a tool misses too.
 
-Agent Forest fixed **the same eight questions** (those four date spans and
-all binomials; +8 −1, p = 0.04); debate fixed one more (a digit sum, #9). So
-on the weaker model both gain about 7–8 in 30, and five votes come within a question of three
-debaters exchanging answers, as on the stronger model (where both gained
-2–4). The gain grows with how often the model slips, and voting captures
-almost all of it.
+So on gemma, as on flash-lite, voting, debate, ReConcile and one model
+playing all the personas score as one agent does or a question or two
+below, at two to three times the time; the questions none of them get are
+exact computations no amount of discussion fixes, and one agent that can
+run code solves all 30 in a sixth of the time. Found by checking the
+misses with the judge (Evaluate → Check misses with the judge), which
+flagged a cut output graded wrong.
 
-ReConcile (three gemma seats, confidence-weighted vote over three rounds)
-lands in the same place: 26, missing #6, #7, #9 and #10 (the digit sums and
-a long product), +8 −0 against the single agent (p = 0.008). It was first
-reported as 25: its case #8 had ended on a cut-off stream ("terminated");
-retried in place, it was right, as the single agent's is (model calls now
-also retry a dropped connection three times).
-Voting, debate and ReConcile all sit 7–8 above the single agent, and within
-one question of each other. One model playing all the personas in a single call
-(Solo Performance Prompting) gets the same gain: 25, fixing 8 questions and
-losing 1 against the single agent (p = 0.04), and agreeing with real debate on
-29 of the 30 questions. The weaker model's gain from discussion does not need
-separate agents. One agent that can run code solves all 30, in
-a fourteenth of the time: the weaker model's slips are in long exact
-arithmetic, and code removes them where three copies of the model only
-outvote them.
-
-On GSM8K gemma is too strong to show this: a single agent scores 95/100.
+On GSM8K gemma is near the ceiling: a single agent scores 96/100 (95 until
+its cut outputs were run again).
 
 ## MATH-500: a first sample
 
@@ -445,8 +434,7 @@ on #96 the debaters agreed on "A, B, C, and D" for a one-letter question). At
 95% there is little left for discussion to fix, as with GSM8K; the paper's
 setting is a model that gets a third of MMLU wrong.
 
-On gemma-4-26b, the weaker model where debate gained 8 of 30 on Hard
-computation, the same 100 questions:
+On gemma-4-26b, the weaker model, the same 100 questions:
 
 | System on gemma | Correct | Time |
 | --- | --- | --- |
@@ -454,11 +442,10 @@ computation, the same 100 questions:
 | Multiagent Debate, 2 rounds | 89 | 62 min |
 
 Debate fixed 2 questions and lost 3 (McNemar p = 1). **Even on the weaker
-model, MMLU shows no gain.** gemma already gets 90% of these questions, and
-its errors are knowledge errors (which of four facts is right), which three
-copies of the same model share; on Hard computation its errors were slips in
-long arithmetic, which differ between copies and get corrected. Discussion
-fixes the errors that are independent between agents, and MMLU's are not.
+model, MMLU shows no gain**, as Hard computation does not either (see above:
+the gain once reported there came from cut-off answers). gemma already gets
+90% of these questions, and its errors are knowledge errors (which of four
+facts is right), which three copies of the same model share.
 
 ## MedAgents on MMLU's medical questions
 
@@ -735,11 +722,11 @@ compare with the debate's final answer on the same question.
 | MMLU (100), gemma | 100 | **92** | **89** | 1 / 4 | 91% → 89% |
 | MMLU medical (75), flash-lite | 75 | 72 | 73 | 1 / 0 | 95% → 97% |
 
-- **On the weaker model the paper is right, entirely.** Debate's gain on
-  gemma (one agent 18, debate 26) is all in the vote: the three debaters'
-  first answers, counted, already give 26, and two rounds of reading each
-  other change no verdict. That is why Agent Forest's five votes reached 25
-  on the same questions.
+- **On the weaker model the rounds change nothing.** On gemma the three
+  debaters' first answers, counted, already give the debate's 26, and two
+  rounds of reading each other change no verdict; and neither beats one
+  gemma agent (27; first reported as 18, a log that cut its answers off).
+  On gemma there is no gain for the vote or the exchange to explain.
 - **On flash-lite the rounds do the work.** There the first-round vote is
   where one agent is (18–20 of 30 on hard computation, against one agent's
   19), and the exchange lifts each debater from about 60% to 74%: nine
@@ -815,7 +802,7 @@ each one a system in the library, and each has explained away some gain:
 | --- | --- | --- | --- |
 | One agent | Single agent (baseline) | that the task needed more than one call | the reference for everything |
 | Several samples and a vote | Self-consistency, or Agent Forest with `n` | that discussion beat plain voting | voting matched debate on both models |
-| One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (18 → 25) and on medical MMLU |
+| One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (25 and 26, both just below one agent's 27) and on medical MMLU |
 | One agent with the same tools | Single agent with code | that the agents, not the tool, did the work | it matched AutoGen, Magentic-One and tool-equipped debate |
 
 Run them on the same questions and models (on the Evaluate page, Compare with
