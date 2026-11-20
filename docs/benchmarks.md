@@ -523,6 +523,15 @@ text; graded by number; flash-lite, two runs each:
   chain's are almost all too high (10 of 12): reading each part closely, it
   picks up a look-alike customer or counts an order twice as the note is
   rewritten. Each misses what its way of reading makes easy to miss.
+- **Parts of a middle size do best.** The paper varies the length each
+  worker reads; so did this (`chunk_chars`, two runs each): 3,000
+  characters (~15 parts) 14.0, 6,000 (~8 parts) 14.5, 12,000 (~4 parts)
+  10.0, against one agent's 9 reading all 44,000 at once. Doubling the
+  part trades some over-counting for some under-counting (misses too
+  high 10 → 7, too low 2 → 4) and costs less ($0.73 → $0.61); at 12,000
+  the parts are long enough to read carelessly again, and misses rise both
+  ways (9 too low, 11 too high), toward the single reader's. Misses checked
+  with the judge.
 - **Code does best, once it can read the input.** One agent with a code
   runner first totalled 17 of 20 by pasting each ledger into its program,
   at six times the chain's cost: every answer wrote the ~21,000-token
