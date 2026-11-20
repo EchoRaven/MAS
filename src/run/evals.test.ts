@@ -85,6 +85,12 @@ describe("math answers", () => {
     expect(m("2\\sqrt{3}+1", "1+2\\sqrt{3}")).toBe(true);
     expect(m("2\\sqrt{3}-1", "1-2\\sqrt{3}")).toBe(false);
     expect(m("x^{-1}+2", "2+x^{-1}")).toBe(true);
+    expect(m("\\frac{9a+11}{20}", "\\frac{11+9a}{20}")).toBe(true);
+    expect(m("\\frac{9a+11}{20}", "\\frac{9a-11}{20}")).toBe(false);
+    expect(m("864", "864 \\mbox{ inches}^2")).toBe(true);
+    expect(m("2516", "2516_8")).toBe(true);
+    expect(m("E", "\\text{(E)}")).toBe(true);
+    expect(m("D", "\\text{(E)}")).toBe(false);
     expect(m("0.2", "2")).toBe(false);
   });
 

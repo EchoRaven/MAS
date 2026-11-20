@@ -373,7 +373,9 @@ export function mathForm(raw: string): string {
   s = s.replace(/\\left|\\right/g, "").replace(/\\[dt]frac/g, "\\frac");
   s = s.replace(/\^\{?\\circ\}?/g, "").replace(/\\circ/g, "").replace(/\\?\$/g, "").replace(/\\%|%/g, "");
   // a unit after the answer ("270\text{ degrees}", "5\mbox{ cm}") is not part of it; a word alone (\text{Evelyn}) is the answer
-  s = s.replace(/(.)\\(?:text|mbox|mathrm)\{[a-zA-Z]+\}$/, "$1");
+  s = s.replace(/(.)\\(?:text|mbox|mathrm)\{[a-zA-Z]+\}(?:\^\{?[23]\}?)?$/, "$1");
+  // a base written as a subscript ("2516_8", "101_{2}"): the digits are the answer the question asks for
+  s = s.replace(/^(\d+)_\{?(\d{1,2})\}?$/, "$1");
   s = s.replace(/\\(?:text|textbf|mathrm|mbox)\{([^{}]*)\}/g, "$1");
   // \frac12 -> \frac{1}{2}, \frac1{2} -> \frac{1}{2}, \sqrt2 -> \sqrt{2}
   s = s.replace(/\\frac(\d)(\d)/g, "\\frac{$1}{$2}").replace(/\\frac(\d)\{/g, "\\frac{$1}{").replace(/\\frac\{([^{}]*)\}(\d)/g, "\\frac{$1}{$2}").replace(/\\sqrt(\w)/g, "\\sqrt{$1}");
@@ -419,6 +421,14 @@ function sumTerms(form: string): string[] {
   }
   out.push(cur);
   return out.map((t) => (/^[+-]/.test(t) ? t : `+${t}`)).sort();
+}
+
+/** A form with every sum put in one order, inside braces too: \frac{9a+11}{20} and \frac{11+9a}{20} agree. */
+function canonSums(form: string): string {
+  let s = form;
+  // innermost groups first; a sorted group is marked with \u0001 \u0002 so that it is not taken again
+  for (let guard = 0; guard < 50 && /\{[^{}]*\}/.test(s); guard++) s = s.replace(/\{([^{}]*)\}/g, (_, inner: string) => `\u0001${sumTerms(inner).join("")}\u0002`);
+  return sumTerms(s).join("");
 }
 
 /** Lists that hold the same items in any order, each matched once (by form or by value). */
@@ -494,8 +504,11 @@ export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: str
     const sameMatrix = !!ma && !!me && ma.length === me.length && ma.every((x, i) => sameMath(x, me[i]));
     // a sum in another order: 2\sqrt{3}+1 is 1+2\sqrt{3}
     const [ta, te] = [sumTerms(a), sumTerms(e)];
-    const sameSum = !a.includes(",") && ta.length > 1 && ta.length === te.length && ta.every((x, i) => x === te[i]);
-    const pass = a === e || sameItems || sameMatrix || sameSum || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
+    const sameSum = (!a.includes(",") && ta.length > 1 && ta.length === te.length && ta.every((x, i) => x === te[i])) || (a !== e && canonSums(a) === canonSums(e));
+    // a lettered choice, with or without its parentheses: E, (E), \text{(E)}
+    const choice = (x: string) => /^\(?([A-Ea-e])\)?$/.exec(x)?.[1]?.toUpperCase() ?? null;
+    const sameChoice = choice(a) !== null && choice(a) === choice(e);
+    const pass = a === e || sameItems || sameMatrix || sameSum || sameChoice || (na !== null && ne !== null && Math.abs(na - ne) <= 1e-6 * Math.max(1, Math.abs(ne)));
     return { pass, answer: got.trim(), why: pass ? `${got.trim()} = ${want}` : `${got.trim().slice(0, 80)} ≠ ${want}` };
   }
   if (grader === "number") {
