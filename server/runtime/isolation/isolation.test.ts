@@ -85,5 +85,12 @@ describe("isolation", () => {
     expect(tools.find((t) => t.name === "bash")!.description).toMatch(/\/work\/input\.txt/);
     await tools.find((t) => t.name === "bash")!.run({ command: "true" }, {} as never);
     expect(await tools.find((t) => t.name === "edit_file")!.run({ path: "/work/input.txt" }, {} as never)).toContain("customer Ashby | paid $12");
+    // a later run with no input in a folder kept across runs does not see the old one
+    const kept = { ...node, data: { ...node.data, lifecycle: "persistent" } } as SysNode<EnvData>;
+    const first = await new SandboxEnv({ ...rc, runId: "run_a" } as RunCtx, kept, fake).tools({ id: "a1-box", source: "a1", target: "box", kind: "access", access: "read_write" } as never);
+    await first.find((t) => t.name === "bash")!.run({ command: "true" }, {} as never);
+    const later = await new SandboxEnv({ ...rc, runId: "run_b", input: "" } as RunCtx, kept, fake).tools({ id: "a1-box", source: "a1", target: "box", kind: "access", access: "read_write" } as never);
+    await later.find((t) => t.name === "bash")!.run({ command: "true" }, {} as never);
+    expect(await later.find((t) => t.name === "list_work")!.run({}, {} as never)).not.toContain("input.txt");
   });
 });

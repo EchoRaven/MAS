@@ -89,7 +89,10 @@ export class SandboxEnv implements Resource {
       fs.mkdirSync(seat.dir, { recursive: true });
       // the run's input as a file, so a program reads it instead of the agent typing it out again (a 44,000-character
       // ledger cost 21,000 output tokens an answer to paste into code)
-      if (this.rc.input) fs.writeFileSync(path.join(seat.dir, "input.txt"), this.rc.input);
+      // (a folder kept across runs must not show the previous run's input when this one has none)
+      const inputFile = path.join(seat.dir, "input.txt");
+      if (this.rc.input) fs.writeFileSync(inputFile, this.rc.input);
+      else fs.rmSync(inputFile, { force: true });
       this.seats.set(key, seat);
     }
     return { key, seat };
