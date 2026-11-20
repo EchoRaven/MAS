@@ -44,7 +44,9 @@ exact McNemar tests against one agent on the same questions.
   (members reading at once) 13.5 at about the single reader's cost; one agent with
   a code runner reading the ledger from a file 19.5 (p 0.003 against the
   chain), at twice the chain's. A vote over five whole readings scores
-  6.5, below one: each reading skips different orders, so no total wins
+  6.5, below one: each reading skips different orders, so no total wins.
+  Asked instead for one order's amount, a single line, one agent finds all
+  40: it is gathering scattered evidence that splitting helps with
   ([Long input](#long-input-chain-of-agents-on-ledger-totals)).
 - **A model critiquing itself helps on reasoning, not arithmetic**
   (Self-Refine: MATH level 5 40 → 44; Hard computation revisions 4 right,
@@ -542,6 +544,16 @@ text; graded by number; flash-lite, two runs each:
   It does not remove the over-counting the chain showed: its misses are
   as often too high (7) as too low (6), members quoting a look-alike name
   and the leader adding it in.
+- **Splitting helps to gather, not to find.** The same 20 ledgers, each
+  asked instead what one order (from the middle half) paid: a single line
+  in 44,000 characters (`benchmarks/ledger/build_lookup.py`). One agent
+  reading the whole ledger finds it 40 of 40, LongAgent 40 of 40,
+  Chain-of-Agents 39 of 40, at about the cost of their totals runs. Long
+  input alone does not defeat this model; what it misses is evidence spread
+  over many lines, which reading in parts gathers. (Grading the chain's
+  answers found a grader bug: it skipped numbers "given in the question",
+  and took the whole ledger for the question, so "Order 12529 paid $801."
+  was read as 12529. Only the text before the `---` line counts now.)
 - **Parts of a middle size do best.** The paper varies the length each
   worker reads; so did this (`chunk_chars`, two runs each): 3,000
   characters (~15 parts) 14.0, 6,000 (~8 parts) 14.5, 12,000 (~4 parts)
