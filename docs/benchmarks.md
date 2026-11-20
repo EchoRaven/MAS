@@ -23,8 +23,9 @@ exact McNemar tests against one agent on the same questions.
   debaters 22.5 (p 0.04); debaters each reasoning a different way 23 (p
   0.02), and 22 as a vote over those three different first answers (a
   plain three-sample vote: 20.5). Exchange-of-Thought 22.3 over three runs;
-  ReConcile, DyLAN, Corex and Multi-Agent Verification 22 (one or two runs
-  each).
+  ReConcile, DyLAN, Corex and Multi-Agent Verification 22; MacNet's star of
+  four 22.5 (p 0.04), its chain 19.5. Every discussion system on this set
+  now has at least two runs.
 - **On the weaker gemma, nothing without a tool beats one agent** (27;
   debate and ReConcile 26, voting and SPP 25). A 7–8 question gain first
   reported there came from cut-off answers ([A weaker model](#a-weaker-model-no-gain-from-discussion-after-all)).
@@ -189,9 +190,9 @@ two runs where two scores are given, one otherwise:
 | Corex, Retrieve (5 chains, a retriever picks one) | 22, 22 | 22.0 | $0.49 |
 | Multi-Agent Verification (5 chains, 3 aspect verifiers approve or reject each) | 22, 22 | 22.0 | $0.95 |
 | Self-Refine (one model: answer, critique, revise; 3 rounds) | 21, 21 | 21.0 | $0.61 |
-| MacNet, chain of 4 | 19 | 19.0 | $0.31 |
-| MacNet, star of 4 | 22 | 22.0 | $0.44 |
-| MacNet, mesh of 4 | 21 | 21.0 | $0.47 |
+| MacNet, chain of 4 | 19, 20 | 19.5 | $0.31 |
+| MacNet, star of 4 | 22, 23 | 22.5 | $0.44 |
+| MacNet, mesh of 4 | 21, 21 | 21.0 | $0.47 |
 
 - **MAD loses 5 to the single agent, in both runs.** Its debaters are an
   "angel" and a "devil" who must disagree, and a judge decides. On the long
