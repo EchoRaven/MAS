@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, pairedDiff, repeatStats } from "@/run/evals";
+import { type EvalRecord, pairedDiff, repeatStats, retryableCase } from "@/run/evals";
 import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
 
@@ -265,6 +265,15 @@ export function ComparePage() {
                   <td className="hidden py-2 text-right text-xs text-muted-foreground md:table-cell" title={e.started_at}>
                     {timeAgo(e.started_at)}
                     {incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : noAnswers(e) ? " · no model answered" : superseded.has(e.id) ? " · older" : ""}
+                    {(() => {
+                      // cases whose answer is not known (an error, no output, an output the log cut short) make a comparison unsure
+                      const unknown = r ? r.full.cases.filter(retryableCase).length : 0;
+                      return unknown ? (
+                        <Link to={`/evals/${e.system_id}`} className="block text-amber-700 underline dark:text-amber-300" title="These cases gave no answer that could be graded (a provider error, no output, an output cut short in the log). They count as wrong; retry them on the Evaluate page before trusting a comparison with this evaluation">
+                          {unknown} without a known answer: retry
+                        </Link>
+                      ) : null;
+                    })()}
                   </td>
                 </tr>
               );
