@@ -6,7 +6,9 @@ describe("run variables", () => {
   it("parses key=value lists, with numbers, booleans and JSON", () => {
     expect(parseVars("paradigm=report, rounds=3\nstrict=true\nlist=[1,2]")).toEqual({ vars: { paradigm: "report", rounds: 3, strict: true, list: [1, 2] }, bad: [] });
     expect(parseVars("oops, x = y").bad).toEqual(["oops"]);
-    expect(formatVars({ paradigm: "relay", n: 2 })).toBe("paradigm=relay, n=2");
+    expect(formatVars({ paradigm: "relay", n: 2 })).toBe("n=2, paradigm=relay");
+    // the same setup reads the same, whatever order its variables were given in
+    expect(formatVars({ topology: "star", n: 4 })).toBe(formatVars({ n: 4, topology: "star" }));
   });
 
   it("finds the variables a system reads but never sets", () => {

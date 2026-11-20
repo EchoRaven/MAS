@@ -127,6 +127,32 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
 }
 
 /**
+ * Several evaluations of one setup (the same system, models, variables and grader on the same questions) as one:
+ * their runs numbered one after another (a second evaluation's repeat 0 becomes repeat 1, and so on), costs and
+ * counts added. A second run started later then counts in the paired test with the first.
+ */
+export function poolRuns(recs: EvalRecord[]): EvalRecord {
+  const sorted = [...recs].sort((a, b) => a.started_at.localeCompare(b.started_at));
+  const cases: EvalCaseResult[] = [];
+  let offset = 0;
+  for (const r of sorted) {
+    const runs = Math.max(1, ...r.cases.map((c) => (c.repeat ?? 0) + 1));
+    for (const c of r.cases) cases.push({ ...c, repeat: (c.repeat ?? 0) + offset });
+    offset += runs;
+  }
+  const last = sorted[sorted.length - 1];
+  return {
+    ...last,
+    id: `pool:${sorted.map((r) => r.id).join(",")}`,
+    repeats: offset,
+    cases,
+    passed: sorted.reduce((n, r) => n + r.passed, 0),
+    graded: sorted.reduce((n, r) => n + r.graded, 0),
+    usd: sorted.reduce((n, r) => n + r.usd, 0),
+  };
+}
+
+/**
  * The 95% Wilson interval of a proportion: how far an accuracy measured on n cases could be from the system's own
  * by chance. 19 of 30 is 63% (46–78): a 30-question score moves by about 15 points, so one run says little.
  */

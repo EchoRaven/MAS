@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, reachedBy, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -118,6 +118,23 @@ describe("math answers", () => {
     expect(g("\\boxed{\\text{Evelyn}}", "\\text{Evelyn}")).toBe(true);
     expect(g("\\boxed{\\frac{14}{5}}", "\\frac{14}{3}")).toBe(false);
     expect(g("\\boxed{(3, \\pi)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(false);
+  });
+});
+
+describe("pooling the runs of one setup", () => {
+  it("numbers a later evaluation's runs after the earlier one's and adds the counts", () => {
+    const rec = (id: string, at: string, passes: boolean[][]) => ({
+      id, system_id: "s", system_name: "S", grader: "number" as const, mock: false, status: "finished" as const, started_at: at,
+      cases: passes.flatMap((run, r) => run.map((p, i) => ({ case: i, repeat: r, input: `q${i}`, expected: "1", status: "done" as const, pass: p, usd: 0.01 }))),
+      passed: passes.flat().filter(Boolean).length, graded: passes.flat().length, usd: passes.flat().length * 0.01,
+    });
+    const first = rec("e1", "2026-11-18T00:00:00Z", [[true, false]]);
+    const second = rec("e2", "2026-11-20T00:00:00Z", [[true, true], [false, true]]);
+    const p = poolRuns([second, first]);
+    expect(p.cases.map((c) => `${c.case}/${c.repeat}`)).toEqual(["0/0", "1/0", "0/1", "1/1", "0/2", "1/2"]);
+    expect([p.repeats, p.passed, p.graded]).toEqual([3, 4, 6]);
+    expect(p.id).toBe("pool:e1,e2");
+    expect(repeatStats(p).per.length).toBe(3);
   });
 });
 

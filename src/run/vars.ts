@@ -46,8 +46,10 @@ export function sweepOf(vars: Record<string, unknown>): { name: string; values: 
   return { name, values, rest };
 }
 
+/** Run variables as text, by name, so that the same setup always reads the same ("n=4, topology=star"). */
 export const formatVars = (vars: Record<string, unknown> | undefined) =>
   Object.entries(vars ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
     .join(", ");
 

@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, pairedDiff, repeatStats, retryableCase, wilson } from "@/run/evals";
+import { type EvalRecord, pairedDiff, poolRuns, repeatStats, retryableCase, wilson } from "@/run/evals";
 import { CostChart } from "./CostChart";
 import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
@@ -59,7 +59,27 @@ export function ComparePage() {
     return [...by.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [all]);
   const set = params.get("set") ?? sets[0]?.[0] ?? "";
-  const members = useMemo(() => sets.find(([id]) => id === set)?.[1] ?? [], [sets, set]);
+  const rawMembers = useMemo(() => sets.find(([id]) => id === set)?.[1] ?? [], [sets, set]);
+  // several evaluations of one setup (a second run started later) as one row with all their runs
+  const [pool, setPool] = useState(true);
+  const groups = useMemo(() => {
+    const by = new Map<string, EvalSummary[]>();
+    for (const e of rawMembers) {
+      const k = pool && !incomplete(e) && !noAnswers(e) ? `${e.system_id}|${modelsLabel(e)}|${e.grader}` : e.id;
+      by.set(k, [...(by.get(k) ?? []), e]);
+    }
+    return [...by.values()].map((g) => [...g].sort((a, b) => a.started_at.localeCompare(b.started_at)));
+  }, [rawMembers, pool]);
+  const members = useMemo(
+    () =>
+      groups.map((g): EvalSummary => {
+        if (g.length === 1) return g[0];
+        const last = g[g.length - 1];
+        const sum = (f: (e: EvalSummary) => number) => g.reduce((n, e) => n + f(e), 0);
+        return { ...last, id: `pool:${g.map((e) => e.id).join(",")}`, usd: sum((e) => e.usd), passed: sum((e) => e.passed), graded: sum((e) => e.graded), total: sum((e) => e.total), repeats: sum((e) => e.repeats ?? 1) };
+      }),
+    [groups],
+  );
   const superseded = useMemo(() => {
     const seen = new Set<string>();
     const out = new Set<string>();
@@ -75,16 +95,26 @@ export function ComparePage() {
   const setOff = (fn: (s: Set<string>) => Set<string>) => setPicked(fn(off));
 
   useEffect(() => {
-    for (const e of members) {
+    for (const e of rawMembers) {
       if (records[e.id]) continue;
       Api.evalRecord(e.id)
         .then((r) => setRecords((m) => ({ ...m, [e.id]: r.eval })))
         .catch(() => undefined);
     }
-  }, [members, records]);
+  }, [rawMembers, records]);
+  // the records the page reads: each evaluation's, and a pooled one for each group once all of its are loaded
+  const recs = useMemo(() => {
+    const out: Record<string, EvalRecord> = { ...records };
+    for (const g of groups) {
+      if (g.length < 2 || !g.every((e) => records[e.id])) continue;
+      const pooled = poolRuns(g.map((e) => records[e.id]));
+      out[pooled.id] = pooled;
+    }
+    return out;
+  }, [records, groups]);
 
   // questions flagged as broken in the set's dataset: left out of scores unless asked for
-  const datasetId = useMemo(() => members.map((e) => records[e.id]?.dataset?.id).find(Boolean) ?? null, [members, records]);
+  const datasetId = useMemo(() => members.map((e) => recs[e.id]?.dataset?.id).find(Boolean) ?? null, [members, recs]);
   const [flags, setFlags] = useState<DatasetFlag[]>([]);
   const [leaveOut, setLeaveOut] = useState(true);
   useEffect(() => {
@@ -115,9 +145,9 @@ export function ComparePage() {
   const models = [...new Set(members.map(modelKey))];
   const shown = modelFilter === "all" || !models.includes(modelFilter) ? members : members.filter((e) => modelKey(e) === modelFilter);
   const allRows = shown
-    .filter((e) => records[e.id])
+    .filter((e) => recs[e.id])
     .map((e) => {
-      const full = records[e.id];
+      const full = recs[e.id];
       // scores, spreads, exports and paired tests leave flagged questions out; the grid still shows them
       const rec = leaveOut && flagged.size ? { ...full, cases: full.cases.filter((c) => !flagged.has(c.input)) } : full;
       const st = repeatStats(rec);
@@ -169,6 +199,11 @@ export function ComparePage() {
             className="max-w-[14rem]"
           />
         )}
+        {groups.some((g) => g.length > 1) || !pool ? (
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Evaluations of the same system with the same models, variables and grader become one row with all their runs: a second run started later counts with the first in the score, the interval and the paired test">
+            <input type="checkbox" checked={pool} onChange={(ev) => setPool(ev.target.checked)} /> Pool runs of the same setup
+          </label>
+        ) : null}
         {rows.length > 0 && (
           <div className="ml-auto flex gap-1.5">
             <Button
