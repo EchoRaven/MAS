@@ -319,8 +319,9 @@ the sweep is the same system with a different run variable. Hard computation
 | 10 | **23** | $0.31 | 300 s |
 | 20 | 22 | $0.60 | 600 s |
 
-- **The gain comes from the first few samples.** N = 3 already reaches 22,
-  where ReConcile and self-consistency stand (22.0). Past that the score moves
+- **The gain comes from the first few samples.** N = 3 reached 22 in this
+  run (21 and 20 when run twice more later, so about 21), near where
+  ReConcile and self-consistency stand (22.0). Past that the score moves
   by a question either way, which is noise, while the cost doubles each step.
 - **The plateau is the questions nobody can do in their head.** Every N
   misses #7–#10 and #26–#28 (digit sums of large powers, binomials mod p), and
@@ -617,6 +618,7 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
 | 3, all told to reason step by step | 21, 22 | 21.5 | +7 −2 (p 0.18) | $0.58 |
 | 3, each a different method (step by step, decompose, check another way) | 23, 23 | **23.0** | +9 −1 (**p 0.02**) | $0.60 |
 | the same three, one round: a vote over their first answers, no exchange | 22, 22 | 22.0 | +7 −1 (p 0.07) | $0.24 |
+| a plain three-sample vote (Agent Forest, N = 3), for comparison | 21, 20 | 20.5 | +5 −2 (p 0.45) | $0.19 |
 
 - **The paper's agent curve reproduces.** Each debater added helps a
   little, and five are the first setting on this set where debate beats one
@@ -654,10 +656,13 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
   reasoning rather than long arithmetic, different methods tie the best,
   not beat it. Without the exchange (`rounds = 1`, a vote over the three
   diverse first answers) they score 22 and 22 at 40% of the cost: the
-  exchange adds one question (+2 −0, p 0.5). A three-sample vote with a
-  plain "think step by step" prompt (Agent Forest, N = 3) also scored 22,
-  so most of what the diverse debate gains over plain debate is a better
-  first answer, and a vote keeps nearly all of it.
+  exchange adds one question (+2 −0, p 0.5). A plain three-sample vote
+  ("think step by step", Agent Forest with N = 3) scores 21 and 20 on the
+  same questions (its single earlier run, 22, was high): so with three
+  agents, different methods add 1.5 over the plain vote (+3 −0, p 0.25)
+  and the exchange one more. Each step is small and none alone is
+  significant; together, plain vote 20.5 → diverse vote 22 → diverse
+  debate 23.
 - All misses of the six debate evaluations were checked with the judge
   (it agreed with the grader on all 100), and no output was cut.
 
