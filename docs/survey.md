@@ -145,6 +145,15 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   answer is the one given most often: on long ledgers, where every reading
   skips different orders, five readings voted score below one (6.5 against
   9), and splitting the reading (Chain-of-Agents, 14) is what helps.
+- **Splitting a long input helps to gather, not to find.** On 20 generated
+  ledgers of ~44,000 characters, the total one customer paid over 8 to 14
+  scattered orders: one agent reading it all 9 of 20; Chain-of-Agents,
+  relaying a note through ~8 parts, 14.5; LongAgent, members reading the
+  parts at once, 13.5 at less than half the chain's cost (both p ≈ 0.02
+  against one agent); five whole readings voted, 6.5. Asked instead what one
+  order paid, a single line, one agent finds all 40. One agent with a code
+  runner reading the ledger from its sandbox totals 39 of 40, as on every
+  set where the work is exact.
 - **Tools matter more than talk.** Questions no discussion fixed in any run
   (digit sums of large powers, binomials mod p) were solved every time once
   one agent could run code. A single agent with the same sandbox scored the
