@@ -102,6 +102,7 @@ A value on a `message` port is `{ role, text, content, from, meta }`.
 
 A function component also has:
 - `tool(name, args)`: a tool of an env or plugin it is connected to by an access edge, run with no model (read-only access gives read-only tools); each call is a tool event in the run
+- `call(name, text)`: ask a model, agent or function it is connected to by a call edge (by name or id) and get its reply; each call and reply is a message in the run. The function's own return goes along its message edges only, never to what it calls (MACM's loop calls its Thinker, Judge and Executor this way)
 
 Where it applies, `ctx` also has:
 
@@ -503,6 +504,16 @@ read-only file system, for 10 seconds.
 Each model entry has `api: { base_url, key_env, headers, params }`. API keys
 are never stored in the document; `key_env` only names the environment
 variable that holds the key.
+
+A call that fails in passing is asked for again by the runtime, not the
+system: a 429 or an overload waits as long as the provider says (Gemini's
+`retryDelay`, `Retry-After`) or backs off; a stream the provider cuts off
+halfway ("terminated", a reset) is asked for again up to three times; and a
+reply with nothing in it (no text, no tool call, 0 output tokens, not stopped
+at the token limit: gemma after 11 minutes on a hard question) once more.
+Replies are streamed, so a model that thinks for minutes is not cut off
+waiting for headers. Requests per minute are capped per provider (`MAS_RPM`, 60
+by default).
 
 ## Migration
 
