@@ -141,7 +141,10 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **Discussion helps a little, and voting is the bar to beat.** On a set with
   room to improve, Multiagent Debate and ReConcile gain 2–3 questions in 30
   over a single agent. Self-consistency (five samples and a vote) gains as
-  much as ReConcile, at 60% of the cost.
+  much as ReConcile, at 60% of the cost. A vote helps only where the right
+  answer is the one given most often: on long ledgers, where every reading
+  skips different orders, five readings voted score below one (6.5 against
+  9), and splitting the reading (Chain-of-Agents, 14) is what helps.
 - **Tools matter more than talk.** Questions no discussion fixed in any run
   (digit sums of large powers, binomials mod p) were solved every time once
   one agent could run code. A single agent with the same sandbox scored the

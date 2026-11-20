@@ -58,9 +58,12 @@ Measured on this platform, every system on the same model and questions
 (details in [docs/benchmarks.md](docs/benchmarks.md), patterns in
 [docs/survey.md](docs/survey.md)):
 
-- **Voting is the bar to beat.** Self-consistency and Agent Forest (one model,
-  several samples, a vote) match Multiagent Debate and ReConcile within a
-  question in almost every setting, at a fraction of the cost.
+- **Voting is the bar to beat, where errors scatter.** Self-consistency and
+  Agent Forest (one model, several samples, a vote) match Multiagent Debate
+  and ReConcile within a question on computation and math, at a fraction of
+  the cost. Not on a long input: five whole readings of a ledger each skip
+  different orders, and their vote (6.5 of 20) does worse than one reading
+  (9) and far worse than reading in parts (14).
 - **A weaker model does not change it.** On Hard computation, debate and
   voting add 2–4 questions in 30 on gemini-3.1-flash-lite; on the weaker
   gemma-4-26b they add nothing (one agent 27; debate and ReConcile 26, voting
