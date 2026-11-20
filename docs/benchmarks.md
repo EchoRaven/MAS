@@ -514,6 +514,7 @@ text; graded by number; flash-lite, two runs each:
 | One agent, reading the whole ledger | 9, 9 | | $0.24 |
 | Five such readings and a vote (Agent Forest, N = 5) | 7, 6 | +2 −7 (p 0.18) | $1.26 |
 | Chain-of-Agents (parts of 3,000 characters, ~15 per ledger) | 13, 15 | **+14 −4 (p 0.03)** | $0.73 |
+| LongAgent (members read parts of 6,000 characters at once; a leader adds up their reports) | 14, 13 | +11 −2 (p 0.02) | $0.27 |
 | One agent with a code runner, pasting the ledger into its program | 16, 18 | +17 −1 | $4.59 |
 | One agent with a code runner, reading the ledger from `/work/input.txt` | **20, 19** | +21 −0 | $1.71 |
 
@@ -532,6 +533,14 @@ text; graded by number; flash-lite, two runs each:
   be right: voting fixes errors only where the right answer is the one
   most often given, as on Hard computation, not where every attempt goes
   wrong its own way.
+- **Reading the parts at once does as well as relaying a note, for less.**
+  LongAgent (Zhao et al. 2024) has members read the parts in parallel and
+  quote what bears on the question, and a leader add up their reports:
+  13.5 of 20 against the chain's 14.5 at the same part size (+4 −6, p
+  0.75), at $0.27 against $0.61, since no member carries a growing note.
+  It does not remove the over-counting the chain showed: its misses are
+  as often too high (7) as too low (6), members quoting a look-alike name
+  and the leader adding it in.
 - **Parts of a middle size do best.** The paper varies the length each
   worker reads; so did this (`chunk_chars`, two runs each): 3,000
   characters (~15 parts) 14.0, 6,000 (~8 parts) 14.5, 12,000 (~4 parts)

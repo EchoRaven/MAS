@@ -35,6 +35,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-chatdev": ["Not comparable on function-level coding: it builds a multi-file project in its workspace and ends with a report about it, which a test-running grader cannot execute (6 of 6 hard coding problems failed that way). Its paper evaluates whole programs."],
   "paper-metagpt": ["Not comparable on function-level coding, for the same reason as ChatDev: its engineer writes a repository and its last message is TERMINATE and a report on the files (2 of 2 hard problems failed that way)."],
   "paper-chain-of-agents": ["Ledger totals (20 generated ledgers of ~44,000 characters, flash-lite): 13, 15 against one agent reading the whole ledger 9, 9 (+14 −4, p 0.03), at three times the cost. One agent misses orders; the chain counts extra ones. By part size: 3,000 characters 14.0, 6,000 14.5, 12,000 10.0. A vote over five whole readings: 6.5 (the chain +18 −3, p 0.001). One agent with a code runner reading the ledger from its sandbox: 20, 19, at twice the chain's cost."],
+  "paper-longagent": ["Ledger totals (20 generated ledgers of ~44,000 characters, flash-lite): 14, 13 against one agent's 9, 9 (+11 −2, p 0.02), as Chain-of-Agents does at the same part size (14.5) for less than half its cost ($0.27 against $0.61)."],
   "paper-spp": [
     "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (debate 26, one agent 27).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",
