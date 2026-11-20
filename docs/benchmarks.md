@@ -511,6 +511,7 @@ text; graded by number; flash-lite, two runs each:
 | System | Correct (of 20, two runs) | vs one agent, 40 pairs | Cost |
 | --- | --- | --- | --- |
 | One agent, reading the whole ledger | 9, 9 | | $0.24 |
+| Five such readings and a vote (Agent Forest, N = 5) | 7, 6 | +2 −7 (p 0.18) | $1.26 |
 | Chain-of-Agents (parts of 3,000 characters, ~15 per ledger) | 13, 15 | **+14 −4 (p 0.03)** | $0.73 |
 | One agent with a code runner, pasting the ledger into its program | 16, 18 | +17 −1 | $4.59 |
 | One agent with a code runner, reading the ledger from `/work/input.txt` | **20, 19** | +21 −0 | $1.71 |
@@ -523,6 +524,13 @@ text; graded by number; flash-lite, two runs each:
   chain's are almost all too high (10 of 12): reading each part closely, it
   picks up a look-alike customer or counts an order twice as the note is
   rewritten. Each misses what its way of reading makes easy to miss.
+- **Reading more times does not help; reading in parts does.** A vote
+  over five whole readings scores 6.5, below one reading's 9, and the
+  chain beats it +18 −3 (p 0.001). Each reading skips different orders, so
+  the five totals mostly all differ and the most common is no likelier to
+  be right: voting fixes errors only where the right answer is the one
+  most often given, as on Hard computation, not where every attempt goes
+  wrong its own way.
 - **Parts of a middle size do best.** The paper varies the length each
   worker reads; so did this (`chunk_chars`, two runs each): 3,000
   characters (~15 parts) 14.0, 6,000 (~8 parts) 14.5, 12,000 (~4 parts)
