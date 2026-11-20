@@ -994,6 +994,11 @@ they are. Compare leaves flagged questions out of scores, spreads, paired
 tests and exports ("Leave out N flagged questions", on by default) and shows
 them struck through. The nine broken GSM-Hard questions below are flagged.
 
+Each accuracy on Compare carries its 95% interval (Wilson): on 30
+questions a score of 19 is 46–78%, so a single run of a 30-question set
+says little; compare systems with the paired test on the same questions
+(the "vs reference" column), and repeat a run before believing a gap.
+
 Compare plots each ticked evaluation's accuracy against its cost per
 question (log scale) and names the cost frontier: the evaluations nothing
 cheaper is as accurate as. On Hard computation that frontier is the

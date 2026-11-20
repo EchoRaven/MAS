@@ -127,6 +127,19 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
 }
 
 /**
+ * The 95% Wilson interval of a proportion: how far an accuracy measured on n cases could be from the system's own
+ * by chance. 19 of 30 is 63% (46–78): a 30-question score moves by about 15 points, so one run says little.
+ */
+export function wilson(passed: number, n: number, z = 1.96): [number, number] {
+  if (n <= 0) return [0, 1];
+  const p = passed / n;
+  const d = 1 + (z * z) / n;
+  const c = (p + (z * z) / (2 * n)) / d;
+  const h = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
+  return [Math.max(0, c - h), Math.min(1, c + h)];
+}
+
+/**
  * Seconds left in a running evaluation: the mean time of the cases done, times the cases left, over the cases
  * running at once. Null until a case has finished.
  */

@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, pairedDiff, repeatStats, retryableCase } from "@/run/evals";
+import { type EvalRecord, pairedDiff, repeatStats, retryableCase, wilson } from "@/run/evals";
 import { CostChart } from "./CostChart";
 import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
@@ -239,7 +239,20 @@ export function ComparePage() {
                     </Link>
                   </td>
                   <td className="py-2 pr-3 text-xs text-muted-foreground">{modelsLabel(e)}</td>
-                  <td className="py-2 text-right font-medium tabular-nums">{r ? `${Math.round(r.acc * 1000) / 10}%` : "…"}</td>
+                  <td className="py-2 text-right font-medium tabular-nums">
+                    {r ? `${Math.round(r.acc * 1000) / 10}%` : "…"}
+                    {r &&
+                      (() => {
+                        // how far the score could be by chance, on this many cases (95%)
+                        const graded = r.rec.cases.filter((c) => c.pass !== undefined);
+                        const [lo, hi] = wilson(graded.filter((c) => c.pass).length, graded.length);
+                        return graded.length ? (
+                          <span className="block text-[11px] font-normal text-muted-foreground" title={`95% interval on ${graded.length} graded cases: a score in this range is what chance alone could give. Compare systems with the paired test (vs reference), not by these ranges`}>
+                            {Math.round(lo * 100)}–{Math.round(hi * 100)}
+                          </span>
+                        ) : null;
+                      })()}
+                  </td>
                   <td className="hidden py-2 text-right text-xs tabular-nums text-muted-foreground sm:table-cell">
                     {r && r.st.per.length > 1 ? `${r.st.per.map((p) => Math.round(p * 100)).join(" · ")}${r.st.sd !== null ? ` (sd ${Math.round(r.st.sd * 1000) / 10})` : ""}` : "one run"}
                   </td>

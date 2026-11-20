@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, reachedBy, retryableCase, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { boxedContent, caseSetId, reachedBy, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -118,6 +118,17 @@ describe("math answers", () => {
     expect(g("\\boxed{\\text{Evelyn}}", "\\text{Evelyn}")).toBe(true);
     expect(g("\\boxed{\\frac{14}{5}}", "\\frac{14}{3}")).toBe(false);
     expect(g("\\boxed{(3, \\pi)}", "\\left( 3, \\frac{\\pi}{2} \\right)")).toBe(false);
+  });
+});
+
+describe("the interval of an accuracy", () => {
+  it("is wide on 30 questions and narrows with more", () => {
+    const [lo, hi] = wilson(19, 30);
+    expect([Math.round(lo * 100), Math.round(hi * 100)]).toEqual([46, 78]);
+    const [lo2, hi2] = wilson(190, 300);
+    expect(hi2 - lo2).toBeLessThan((hi - lo) / 2.5);
+    expect(wilson(30, 30)[1]).toBe(1);
+    expect(wilson(0, 0)).toEqual([0, 1]);
   });
 });
 
