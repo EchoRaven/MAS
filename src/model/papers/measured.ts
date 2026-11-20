@@ -33,7 +33,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-self-refine": ["Hard computation (flash-lite): 21, 21, as three-agent debate; its revisions moved 4 answers right and 3 wrong, and its critic never found an answer free of issues.", "MATH level 5 (50): 44, against one agent's 40; revisions 6 right, 2 wrong."],
   "paper-dmad": ["Hard computation (flash-lite): 23, 23, +9 −1 against one agent (p 0.02), above five plain debaters at 70% of their cost; three debaters all on one method: 21.5.", "MATH level 5 (50): 45, level with a five-sample vote and a code runner."],
   "paper-chatdev": ["Not comparable on function-level coding: it builds a multi-file project in its workspace and ends with a report about it, which a test-running grader cannot execute (6 of 6 hard coding problems failed that way). Its paper evaluates whole programs."],
-  "paper-metagpt": ["Not comparable on function-level coding, for the same reason as ChatDev: its engineer writes a repository, and its last message reports on it."],
+  "paper-metagpt": ["Not comparable on function-level coding, for the same reason as ChatDev: its engineer writes a repository and its last message is TERMINATE and a report on the files (2 of 2 hard problems failed that way)."],
   "paper-spp": [
     "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (debate 26, one agent 27).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",

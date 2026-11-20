@@ -797,7 +797,7 @@ gemini-3.1-flash-lite, two runs each:
   multi-file project in their workspace and end with a report on it ("The
   environment is now set up, and I have verified the integration of
   `engine.py`…"), not with the function a test can run: ChatDev failed 6 of
-  6 hard problems on syntax and imports, none of them a wrong algorithm.
+  6 hard problems on syntax and imports, none of them a wrong algorithm, and MetaGPT 2 of 2 the same way (its last message: TERMINATE and a report on the files).
   Their papers evaluate whole programs (requirements to a runnable
   project); comparing them needs that kind of task, not HumanEval-form
   functions, and changing what they deliver would no longer be them.
