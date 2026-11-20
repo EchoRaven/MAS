@@ -891,6 +891,12 @@ they are. Compare leaves flagged questions out of scores, spreads, paired
 tests and exports ("Leave out N flagged questions", on by default) and shows
 them struck through. The nine broken GSM-Hard questions below are flagged.
 
+Compare plots each ticked evaluation's accuracy against its cost per
+question (log scale) and names the cost frontier: the evaluations nothing
+cheaper is as accurate as. On Hard computation that frontier is the
+systems that run code (AutoGen, Magentic-One); every discussion system sits
+behind it.
+
 **Check N misses with the judge** asks the LLM judge, one call per wrong
 answer, whether each in fact agrees with the expected one. Grades stay as
 they are; the ones it calls right point at a grader rule to fix (every MATH

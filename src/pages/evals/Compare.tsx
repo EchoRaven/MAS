@@ -10,6 +10,7 @@ import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, pairedDiff, repeatStats, retryableCase } from "@/run/evals";
+import { CostChart } from "./CostChart";
 import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
 
@@ -189,6 +190,17 @@ export function ComparePage() {
           </div>
         )}
       </div>
+
+      {rows.length >= 2 && (
+        <section className="glass-panel rounded-xl p-4" aria-label="Accuracy against cost">
+          <CostChart
+            points={rows.map((r) => {
+              const graded = r.full.cases.filter((c) => c.pass !== undefined).length;
+              return { id: r.e.id, label: r.e.system_name, setup: modelsLabel(r.e), acc: r.acc, perCase: graded ? r.e.usd / graded : 0 };
+            })}
+          />
+        </section>
+      )}
 
       <section className="glass-panel rounded-xl p-4" aria-label="Results">
         <table className="w-full text-left text-[13px]">
