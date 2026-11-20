@@ -575,6 +575,7 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
 | 2 | 20, 20 | 20.0 | +7 −5 (p 0.77) | $0.27 |
 | 3 (the template) | 21, 21 | 21.0 | +6 −2 (p 0.29) | $0.50 |
 | 5 | 23, 22 | **22.5** | +8 −1 (**p 0.04**) | $0.85 |
+| 5, in a ring (each reads its own and its two neighbours' answers) | 22, 22 | 22.0 | +7 −1 (p 0.07) | $1.07 |
 
 - **The paper's agent curve reproduces.** Each debater added helps a
   little, and five are the first setting on this set where debate beats one
@@ -584,8 +585,18 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
   questions in 30; a five-sample vote (self-consistency, 22.0 over two runs
   on the same questions, $0.31) comes within half a question at about a
   third of the cost. The gain is real; it is not cheap.
-- All misses of the three debate evaluations were checked with the judge
-  (it agreed with the grader on all 53), and no output was cut.
+- **Sparse communication keeps the accuracy; its saving is small.** Li et
+  al. (2024) report that debaters reading only their neighbours do as well
+  as a full exchange, for less. In a ring of five (`debateWith(5, "ring")`)
+  each debater reads three answers instead of five: 22 and 22, one question
+  below the full exchange (0 fixed, 1 lost). Its round-2 input fell by a
+  third as designed (median 2,605 tokens a call against 3,892), worth about
+  $0.10 of the $0.85, since output costs six times input here; and three
+  runaway replies in this run (9,850, 46,848 and 65,538 tokens, the last at
+  the output limit) cost more than that, so it came out at $1.07. The saving
+  is real, and smaller than one run's noise in output length.
+- All misses of the four debate evaluations were checked with the judge
+  (it agreed with the grader on all 69), and no output was cut.
 
 ## Multiagent Debate: accuracy against the number of rounds
 
