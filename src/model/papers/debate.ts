@@ -4,10 +4,14 @@ import { Builder, native, type TemplateInfo } from "../builder";
 import { port } from "../ports";
 import type { SystemDoc } from "../types";
 
-function build(): SystemDoc {
+const WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"];
+
+/** The debate with n debaters (the template has three; the paper also varies the number of agents). */
+export function debateWith(n = 3): SystemDoc {
+  n = Math.max(2, Math.min(8, Math.floor(n)));
   const b = new Builder(
-    "Multiagent debate",
-    "Three agents answer the same question, then in each round read the others' answers and update their own; after two rounds the answers are put to a majority vote.",
+    n === 3 ? "Multiagent debate" : `Multiagent debate (${n} debaters)`,
+    `${WORDS[n]} agents answer the same question, then in each round read the others' answers and update their own; after two rounds the answers are put to a majority vote.`,
   );
   b.node("asker", "human", 0, 60, { name: "Asker", role: "Poses the question", approves: false })
     .group("debate", 260, 40, {
@@ -22,16 +26,17 @@ function build(): SystemDoc {
       interface: { inputs: [port("in", "json")], outputs: [port("out", "text")] },
     });
   const prompt = "Answer the question. If other agents' answers are given, use them as additional advice and give an updated answer. End with: Final: <answer>.";
-  for (const [i, m] of ["sonnet", "sonnet", "sonnet"].entries()) {
-    b.agent(`agent_${i + 1}`, 0, (i - 1) * 140, { name: `Debater ${i + 1}`, role: "Answers and revises", model: m, harness: { ...native(), loop: "single_shot", instructions: prompt } }, "debate");
+  for (let i = 0; i < n; i++) {
+    const m = "sonnet";
+    b.agent(`agent_${i + 1}`, 0, (i - (n - 1) / 2) * 140, { name: `Debater ${i + 1}`, role: "Answers and revises", model: m, harness: { ...native(), loop: "single_shot", instructions: prompt } }, "debate");
   }
   b.node("collect", "function", 340, 0, {
     name: "Collect answers",
     join: "all",
-    fn: { lang: "js", code: "// all three answers of this round; without a Final: line, the last line is the answer\nconst finalOf = (t) => ((String(t).match(/Final:\\s*(.*)/) ?? [])[1] ?? String(t).trim().split(\"\\n\").pop() ?? \"\").trim();\nreturn { answers: Object.values(input).map((t) => ({ text: t, final: finalOf(t) })) };" },
-    interface: { inputs: [port("a1", "text", { required: true }), port("a2", "text", { required: true }), port("a3", "text", { required: true })], outputs: [port("out", "json")] },
+    fn: { lang: "js", code: "// every debater's answer of this round; without a Final: line, the last line is the answer\nconst finalOf = (t) => ((String(t).match(/Final:\\s*(.*)/) ?? [])[1] ?? String(t).trim().split(\"\\n\").pop() ?? \"\").trim();\nreturn { answers: Object.values(input).map((t) => ({ text: t, final: finalOf(t) })) };" },
+    interface: { inputs: Array.from({ length: n }, (_, i) => port(`a${i + 1}`, "text", { required: true })), outputs: [port("out", "json")] },
   }, "debate");
-  for (let i = 1; i <= 3; i++) b.edge("debate", `agent_${i}`, "message").edge(`agent_${i}`, "collect", "message", { target_port: `a${i}` });
+  for (let i = 1; i <= n; i++) b.edge("debate", `agent_${i}`, "message").edge(`agent_${i}`, "collect", "message", { target_port: `a${i}` });
   b.edge("collect", "debate", "message")
     .edge("asker", "debate", "message", { label: "Question" })
     .edge("debate", "vote", "message")
@@ -40,6 +45,8 @@ function build(): SystemDoc {
   b.doc.termination = ["all_idle", "budget_exceeded"];
   return b.doc;
 }
+
+const build = (): SystemDoc => debateWith(3);
 
 export const debate: TemplateInfo = {
   id: "paper-debate",
