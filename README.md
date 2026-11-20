@@ -83,7 +83,8 @@ Measured on this platform, every system on the same model and questions
   MAD 14, p 0.05).
 - **Reading a long input in parts beats reading it whole**: on generated
   ledgers of ~44,000 characters, Chain-of-Agents finds a customer's total
-  in 14 of 20 against one agent's 9 (p 0.03), at three times the cost.
+  in 14 of 20 against one agent's 9 (p 0.03), at three times the cost;
+  one agent running code over the ledger, read from its sandbox, finds 19.5.
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models (on gemma 25 and 26, both just below one

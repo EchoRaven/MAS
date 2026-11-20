@@ -41,7 +41,8 @@ exact McNemar tests against one agent on the same questions.
 - **Reading a long input in parts beats reading it whole**: on 20
   generated ledgers of ~44,000 characters, Chain-of-Agents 14 of 20 against
   one agent's 9 (+14 −4, p 0.03), at three times the cost; one agent with
-  a code runner 17, at six times the chain's
+  a code runner reading the ledger from a file 19.5 (p 0.003 against the
+  chain), at twice the chain's
   ([Long input](#long-input-chain-of-agents-on-ledger-totals)).
 - **A model critiquing itself helps on reasoning, not arithmetic**
   (Self-Refine: MATH level 5 40 → 44; Hard computation revisions 4 right,
@@ -511,7 +512,8 @@ text; graded by number; flash-lite, two runs each:
 | --- | --- | --- | --- |
 | One agent, reading the whole ledger | 9, 9 | | $0.24 |
 | Chain-of-Agents (parts of 3,000 characters, ~15 per ledger) | 13, 15 | **+14 −4 (p 0.03)** | $0.73 |
-| One agent with a code runner | **16, 18** | +17 −1 | $4.59 |
+| One agent with a code runner, pasting the ledger into its program | 16, 18 | +17 −1 | $4.59 |
+| One agent with a code runner, reading the ledger from `/work/input.txt` | **20, 19** | +21 −0 | $1.71 |
 
 - **The paper's claim reproduces.** Reading in parts beats reading whole,
   significantly, at three times the cost: the first gain here from
@@ -521,13 +523,17 @@ text; graded by number; flash-lite, two runs each:
   chain's are almost all too high (10 of 12): reading each part closely, it
   picks up a look-alike customer or counts an order twice as the note is
   rewritten. Each misses what its way of reading makes easy to miss.
-- **Code does best, at a price.** One agent with a code runner totals 17
-  of 20 by pasting the ledger into a program, +9 −3 against the chain (p
-  0.15), at six times its cost: each answer writes the ~21,000-token ledger
-  out again as code. Its misses are the program's (a regex that matched
-  nothing, `bc` missing in the sandbox), not reading slips. Its first run
-  answered nothing: the default output limit, then 16,384 tokens, cut every
-  program off mid-call (now 32,768, and a reply cut at the limit says so).
+- **Code does best, once it can read the input.** One agent with a code
+  runner first totalled 17 of 20 by pasting each ledger into its program,
+  at six times the chain's cost: every answer wrote the ~21,000-token
+  ledger out again (and its very first run answered nothing, the output
+  limit, then 16,384 tokens, cutting every program off mid-call). The
+  sandbox now holds the run's input as `/work/input.txt`, and an agent is
+  told so with its turn (a note in the tool's description was ignored 27
+  times of 27). Reading the file, it totals 39 of 40 (+12 −1 against the
+  chain, p 0.003) with a median of 677 output tokens a run, at $1.71: still
+  twice the chain's cost, because the long input goes with each of its few
+  tool turns, but the most accurate by far.
 - All misses checked with the judge (it agreed on all 40); no answer was
   unknown.
 
