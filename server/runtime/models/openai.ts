@@ -180,6 +180,17 @@ function toMessages(system: string | undefined, msgs: ChatMessage[]): OAMessage[
   return out;
 }
 
+/** How many times a chat with an empty reply is asked again. */
+const EMPTY_RETRIES = 1;
+
+/** A streamed chat reply with no text, no tool call and no output token, that did not stop at the token limit. */
+export function emptyReply(streamed: unknown): boolean {
+  const d = streamed as { choices?: { message?: { content?: string | null; tool_calls?: unknown[] }; finish_reason?: string }[]; usage?: { completion_tokens?: number } };
+  const c = d?.choices?.[0];
+  if (!c || c.finish_reason === "length") return false;
+  return !(c.message?.content ?? "").trim() && !(c.message?.tool_calls ?? []).length && !(d.usage?.completion_tokens ?? 0);
+}
+
 export const openaiProvider: Provider = {
   async chat(model, key, req) {
     const body = {
@@ -194,9 +205,13 @@ export const openaiProvider: Provider = {
     // not cut off by the HTTP client's 300-second wait for headers (Gemma on hard questions was)
     // a stream the provider cuts off halfway ("terminated") is asked for again: a chat request can be repeated
     let streamed: unknown;
+    let emptyAgain = EMPTY_RETRIES;
     for (let attempt = 0; ; attempt++) {
       try {
         streamed = await readStream(await send(model, key, "/chat/completions", { ...body, stream: true, stream_options: { include_usage: true } }, req.signal));
+        // a reply with nothing in it (no text, no tool call, no output token) that did not stop at max_tokens is the
+        // provider giving up, not an answer (Gemma, after 11 minutes on a hard question): ask once more
+        if (emptyReply(streamed) && emptyAgain-- > 0 && !req.signal?.aborted) continue;
         break;
       } catch (e) {
         if (req.signal?.aborted || attempt >= NET_RETRIES || !networkError(e) || localUrl(base(model))) throw e;

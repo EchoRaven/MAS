@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { retryWait } from "./openai";
+import { emptyReply, retryWait } from "./openai";
 
 const res = (status: number, headers: Record<string, string> = {}) => ({ status, headers: new Headers(headers) });
 
@@ -183,4 +183,15 @@ describe("network failures", () => {
       globalThis.fetch = real;
     }
   }, 20_000);
+});
+
+describe("emptyReply", () => {
+  const reply = (content: string | null, tokens: number, finish = "stop", tools: unknown[] = []) => ({ choices: [{ message: { content, tool_calls: tools }, finish_reason: finish }], usage: { completion_tokens: tokens } });
+  it("is a reply with nothing in it, not one cut at the token limit or one that calls a tool", () => {
+    expect(emptyReply(reply("", 0))).toBe(true);
+    expect(emptyReply(reply(null, 0))).toBe(true);
+    expect(emptyReply(reply("", 0, "length"))).toBe(false);
+    expect(emptyReply(reply("Final: 4", 3))).toBe(false);
+    expect(emptyReply(reply("", 0, "tool_calls", [{ id: "a" }]))).toBe(false);
+  });
 });
