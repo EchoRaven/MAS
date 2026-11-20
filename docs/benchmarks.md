@@ -21,9 +21,10 @@ exact McNemar tests against one agent on the same questions.
 - **Exchange and voting add 2–4 questions in 30, with a strong enough
   model.** One agent 19; self-consistency (5 votes) 22; debate 21, with 5
   debaters 22.5 (p 0.04); debaters each reasoning a different way 23 (p
-  0.02), and 22 as a plain vote over those three different first answers.
-  Exchange-of-Thought 23, ReConcile, DyLAN, Corex and Multi-Agent
-  Verification 22 (one or two runs each).
+  0.02), and 22 as a vote over those three different first answers (a
+  plain three-sample vote: 20.5). Exchange-of-Thought 22.3 over three runs;
+  ReConcile, DyLAN, Corex and Multi-Agent Verification 22 (one or two runs
+  each).
 - **On the weaker gemma, nothing without a tool beats one agent** (27;
   debate and ReConcile 26, voting and SPP 25). A 7–8 question gain first
   reported there came from cut-off answers ([A weaker model](#a-weaker-model-no-gain-from-discussion-after-all)).
@@ -175,7 +176,7 @@ two runs where two scores are given, one otherwise:
 | MAD (Liang et al.; angel, devil, judge) | 14, 14 | 14.0 | $0.23 |
 | AgentVerse (recruit experts, execute, evaluate) | 20 | 20.0 | $0.29 |
 | AutoAgents (generated team, observers, execution loop) | 14 | 14.0 | $0.13 |
-| Exchange-of-Thought | 23 | 23.0 | $0.29 |
+| Exchange-of-Thought | 23, 22, 22 | 22.3 | $0.29 |
 | DyLAN | 22 | 22.0 | $0.17 |
 | Mixture-of-Agents | 17 | 17.0 | $0.24 |
 | MedAgents | 16 | 16.0 | $0.34 |
@@ -200,7 +201,7 @@ two runs where two scores are given, one otherwise:
   others in this table, on the same set.)
 - **The whole table, in three groups.** Systems that run code solve
   everything: Magentic-One 30 (and AutoGen with its executor, 30, below).
-  Systems that exchange or vote on answers gain 2–4: EoT 23, ReConcile and
+  Systems that exchange or vote on answers gain 2–4: EoT 22.3 (23 in its first run, then 22 and 22), ReConcile and
   self-consistency 22, DyLAN 22, debate 21, AgentVerse 20; against the single
   agent (Compare, McNemar) EoT, debate and Agent Forest at N = 10 fix 7 and
   lose none (p = 0.02). Systems built around roles, personas or long

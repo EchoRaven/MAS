@@ -12,7 +12,7 @@ export const MEASURED: Record<string, string[]> = {
   ],
   "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 27.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
   "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25, against one agent's 27."],
-  "paper-eot": ["Hard computation (flash-lite): 23, the best score there without tools."],
+  "paper-eot": ["Hard computation (flash-lite): 23, 22, 22 over three runs (22.3), with ReConcile and the vote; one agent 19."],
   "paper-dylan": ["Hard computation (flash-lite): 22; a team of two chosen by learned importance: 20, at 24% less."],
   "paper-mad": ["Hard computation (flash-lite): 14, 14, below one agent: the devil argues the judge out of right products."],
   "paper-agentverse": ["Hard computation (flash-lite): 20; its evaluator scores wrong products 10/10."],

@@ -154,7 +154,7 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   questions it changed nothing.
 - **On one 30-question set, every paper system side by side** (Hard
   computation, flash-lite): those that run code solve all 30; those that
-  exchange or vote on answers gain 2–4 over one agent's 19 (EoT 23, ReConcile
+  exchange or vote on answers gain 2–4 over one agent's 19 (EoT 22.3, ReConcile
   and DyLAN 22, MacNet's star 22, debate 21; p ≈ 0.02 for the best; MacNet's
   chain, which refines one solution in sequence, stays at 19); those built on roles,
   personas or long pipelines are no better than one agent (MoA 17, MedAgents
