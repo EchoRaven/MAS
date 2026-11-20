@@ -10,7 +10,15 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
   // /api goes to the MAS Studio server (npm run server); every call needs its token
-  server: { port: parseInt(process.env.STUDIO_PORT || "5180"), strictPort: true, host: "127.0.0.1", proxy: { "/api": API_PROXY } },
+  // the server's data (runs, evaluations: tens of thousands of files, more every run) and the scratch folders are not
+  // source: watching them ran the machine out of file watchers (ENOSPC) and stopped the dev server
+  server: {
+    port: parseInt(process.env.STUDIO_PORT || "5180"),
+    strictPort: true,
+    host: "127.0.0.1",
+    proxy: { "/api": API_PROXY },
+    watch: { ignored: ["**/.data/**", "**/.probe/**", "**/benchmarks/**", "**/dist/**", "**/examples/**"] },
+  },
   // `vite preview` serves the built app for the public ngrok domain; the dev server stays local-only
   preview: { port: 5181, strictPort: true, host: "127.0.0.1", allowedHosts: ["mas-studio.ngrok.app"], proxy: { "/api": API_PROXY } },
   build: {
