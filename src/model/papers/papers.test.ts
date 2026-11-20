@@ -13,8 +13,8 @@ const calls = (id: string) => {
 describe("paper reproductions", () => {
   it("every one cites its paper and says how it maps and where it differs", () => {
     for (const t of PAPER_TEMPLATES) {
-      // a scholarly source: arXiv, or bioRxiv / a DOI / the journal for papers that are not on arXiv
-      expect(t.paper?.url).toMatch(/^https:\/\/(arxiv\.org\/abs\/|www\.biorxiv\.org\/content\/10\.|doi\.org\/10\.|www\.nature\.com\/articles\/|aclanthology\.org\/)/);
+      // a scholarly source: arXiv, or bioRxiv / a DOI / the journal or proceedings for papers that are not on arXiv
+      expect(t.paper?.url).toMatch(/^https:\/\/(arxiv\.org\/abs\/|www\.biorxiv\.org\/content\/10\.|doi\.org\/10\.|www\.nature\.com\/articles\/|aclanthology\.org\/|proceedings\.iclr\.cc\/)/);
       expect(t.notes?.mapped.length).toBeGreaterThan(0);
       expect(t.notes?.differs.length).toBeGreaterThan(0);
     }
