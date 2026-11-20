@@ -265,8 +265,10 @@ two runs where two scores are given, one otherwise:
   $0.25). On these questions the separate agents add nothing that one model
   imagining them does not.
 - **Mixture-of-Agents with three different models: 28 and 27, above its
-  best one's 26.** (A second run, added later, scored 27; over both,
-  against 3.8-flash alone, +3 −0, p = 0.25.) As its paper intends, the proposers were different
+  best one's 26.5.** (Second runs, added later, for all three: mixed
+  28, 27; 3.8-flash alone 26, 27; Self-MoA 26, 26. Run against run, the
+  mixture is +2 −0 against 3.8-flash alone, p = 0.5, and +3 −0 against
+  Self-MoA, p = 0.25: a consistent small edge, never a significant one.) As its paper intends, the proposers were different
   models (gemini-3.8-flash, gemma, flash-lite, in two layers) and 3.8-flash
   aggregated. It was first reported here as 26, "the same as 3.8-flash
   alone"; three of its four misses were in fact Google 503s with no output.

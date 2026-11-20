@@ -197,10 +197,9 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **Mixing models reaches the best member, not beyond it.** ReConcile with one
   seat per model averaged 27.3 over three runs, as its strongest seat did alone
   (gemini-3-flash, 27.3), at about four times the cost. Mixture-of-Agents
-  with three different proposers is the one exception seen: 28 and 27 over
-  two runs against its best model's 26 (one run), fixing three question-runs
-  and losing none (p = 0.25, not significant), where filling every slot with
-  that best model (Self-MoA) scored its 26 exactly. The papers' gains over a single model came mostly from
+  with three different proposers is the one exception seen, and a small
+  one: 28 and 27 against its best model's 26 and 27 (+2 −0, p = 0.5), where
+  filling every slot with that best model (Self-MoA) scored 26 and 26. The papers' gains over a single model came mostly from
   models weaker than their best member.
 - **What a system learns can choose its team.** DyLAN, carrying its agents'
   importance across runs, ranked the Programmer and the Mathematician far above

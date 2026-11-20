@@ -17,7 +17,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-mad": ["Hard computation (flash-lite): 14, 14, below one agent: the devil argues the judge out of right products."],
   "paper-agentverse": ["Hard computation (flash-lite): 20, 19, no different from one agent (19); its evaluator scores wrong products 10/10."],
   "paper-autoagents": ["Hard computation (flash-lite): 14, 14, below one agent (+2 −12, p 0.01); its quality-assurance agent confirms wrong products."],
-  "paper-moa": ["Hard computation (flash-lite): 17, 19 (one agent 19); with three different models proposing, 28 and 27, against the best of them alone 26 (+3 −0, p = 0.25).", "Self-MoA (every slot on that best model): 26, missing exactly what that model misses alone."],
+  "paper-moa": ["Hard computation (flash-lite): 17, 19 (one agent 19); with three different models proposing, 28 and 27, against the best of them alone 26 and 27 (+2 −0, p = 0.5).", "Self-MoA (every slot on that best model): 26 and 26, as that model alone."],
   "paper-medagents": ["Hard computation (flash-lite): 16, 16, no different from one agent (p 0.24).", "MMLU medical (75): 73 against one agent's 71, the same as plain debate."],
   "paper-camel": ["Hard computation (flash-lite): 12, 14, below one agent (+3 −15, p 0.008)."],
   "paper-chateval": ["Hard computation (flash-lite): 12, 13, below one agent (+5 −18, p 0.01); it is built to judge answers, not to give them."],
