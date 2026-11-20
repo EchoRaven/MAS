@@ -84,9 +84,11 @@ Measured on this platform, every system on the same model and questions
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models (on gemma 25 and 26, both just below one
   agent's 27).
-- **More debaters, a little more each**: on Hard computation (flash-lite),
-  2, 3 and 5 debaters score 20, 21 and 22.5 against one agent's 19; five
-  are significant (p 0.04), at 17 times the cost.
+- **More debaters, a little more each; different methods, more**: on Hard
+  computation (flash-lite), 2, 3 and 5 debaters score 20, 21 and 22.5
+  against one agent's 19; three debaters each reasoning a different way
+  score 23 (p 0.02) at 70% of five's cost, while three all told to reason
+  step by step stay at 21.5.
 - **Where debate gains, the exchange does it, not the vote**: on flash-lite
   a vote over the debaters' first answers is where one agent is, and the
   rounds turn nine wrong verdicts right and none wrong; on gemma neither

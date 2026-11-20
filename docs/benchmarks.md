@@ -576,6 +576,8 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
 | 3 (the template) | 21, 21 | 21.0 | +6 −2 (p 0.29) | $0.50 |
 | 5 | 23, 22 | **22.5** | +8 −1 (**p 0.04**) | $0.85 |
 | 5, in a ring (each reads its own and its two neighbours' answers) | 22, 22 | 22.0 | +7 −1 (p 0.07) | $1.07 |
+| 3, all told to reason step by step | 21, 22 | 21.5 | +7 −2 (p 0.18) | $0.58 |
+| 3, each a different method (step by step, decompose, check another way) | 23, 23 | **23.0** | +9 −1 (**p 0.02**) | $0.60 |
 
 - **The paper's agent curve reproduces.** Each debater added helps a
   little, and five are the first setting on this set where debate beats one
@@ -595,8 +597,21 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
   runaway replies in this run (9,850, 46,848 and 65,538 tokens, the last at
   the output limit) cost more than that, so it came out at $1.07. The saving
   is real, and smaller than one run's noise in output length.
-- All misses of the four debate evaluations were checked with the judge
-  (it agreed with the grader on all 69), and no output was cut.
+- **Different methods help more than more debaters.** "Breaking Mental
+  Set" (Liu et al. 2025) argues that debaters who think alike share blind
+  spots, and gives each a different way of reasoning. Three debaters told
+  to reason step by step, to decompose, and to check the answer another way
+  (`debateWith(3, "full", true)`) score 23 and 23: above five plain
+  debaters, at 70% of their cost, and significant against one agent. The
+  control matters: three debaters all told to reason step by step are each
+  right far more often in round 1 than plain ones (41 of 60 against 35),
+  yet finish at 21.5, as plain debate does: the exchange was already fixing
+  those slips. With the same individual accuracy (43, 44, 40 in round 1),
+  the diverse three finish 1.5 higher: +3 −0 against the same-method
+  control (p 0.25), suggestive rather than proven, but the only
+  three-debater setting here that beats one agent significantly.
+- All misses of the six debate evaluations were checked with the judge
+  (it agreed with the grader on all 100), and no output was cut.
 
 ## Multiagent Debate: accuracy against the number of rounds
 
