@@ -793,6 +793,14 @@ gemini-3.1-flash-lite, two runs each:
   breaks on "" → "abc". Regex matching without memoisation times out. The
   JSON parser has syntax errors. These are the failures a test-and-fix loop
   is meant to catch, and it catches some of them.
+- **ChatDev and MetaGPT cannot be graded this way.** Both build a
+  multi-file project in their workspace and end with a report on it ("The
+  environment is now set up, and I have verified the integration of
+  `engine.py`…"), not with the function a test can run: ChatDev failed 6 of
+  6 hard problems on syntax and imports, none of them a wrong algorithm.
+  Their papers evaluate whole programs (requirements to a runnable
+  project); comparing them needs that kind of task, not HumanEval-form
+  functions, and changing what they deliver would no longer be them.
 - **What the paper systems claim needs harder tasks.** The papers report their
   gains on competition problems and on weaker models. Here a single attempt
   already passes 90–95%, so there is little left to gain.
