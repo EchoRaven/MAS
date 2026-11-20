@@ -77,11 +77,11 @@ Measured on this platform, every system on the same model and questions
   from a log that cut gemma's long answers off before their final line;
   fixed, and those cases run again.) On GSM8K and MATH-500 the strong model is
   near the ceiling and nothing shows. On MMLU nothing shows even on gemma
-  (90 → 89): debate corrects slips that differ between agents, not knowledge
+  (90 → 89, one run each): debate corrects slips that differ between agents, not knowledge
   that all copies of a model lack.
 - **The coding systems do not beat one agent on HumanEval** with a current
-  small model: single agent 48/50, with a code runner 49, AgentCoder and
-  MapCoder 48, at 12–28 times the cost.
+  small model: single agent 48/50, with a code runner 49 and AgentCoder 48
+  (one run each), MapCoder 48, at 12–28 times the cost.
 - **On one 30-question set, every paper system side by side:** those that run
   code solve all 30 (Magentic-One, AutoGen); those that exchange or vote on
   answers gain 2–4 over one agent's 19 (EoT 22.3 over three runs, ReConcile 22, DyLAN 22;
@@ -122,8 +122,9 @@ Measured on this platform, every system on the same model and questions
   other scores moved when a provider's 503s, a grader's misreadings
   (intervals, sums in another order, a number met in a long document) or a
   single lucky run were fixed. Every number above has had its misses
-  checked by an LLM judge, its unknown answers run again, and at least two
-  runs where it supports a claim.
+  checked by an LLM judge and its unknown answers run again; the
+  differences it reports rest on two runs or more, except where one run is
+  marked.
 - **Most "failures" of a rebuilt system were the rebuild**: wrong outputs, a
   missing input, a test step that could never pass, a grader that misread
   right answers. Each became a platform interface or check (declared results,
