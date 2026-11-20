@@ -69,6 +69,11 @@ describe("number answers", () => {
     expect(n("Answer: 66967 days (= 183 years)", "66967")).toBe(true);
     expect(n("Answer: one", "1")).toBe(true);
     expect(n("Answer: none of them", "1")).toBe(false);
+    // a document after the question does not count as numbers the question gave
+    const doc = "How many dollars did order 12529 pay?\n---\n" + "2024-01-02 | order 12529 | customer Ashby | lamp | paid $801\n".repeat(3);
+    expect(gradeByRule("number", "Order 12529 paid $801.", "801", doc).pass).toBe(true);
+    // a last line in parentheses is an aside, not the answer
+    expect(gradeByRule("number", "The total for Corrigan is 6604.\n\n(Calculation: 392 + 560 + 507 = 6604. Corrigen was excluded.)", "6604", "What did Corrigan pay?").pass).toBe(true);
   });
 });
 

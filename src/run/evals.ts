@@ -271,6 +271,8 @@ export function finalAnswer(raw: string): string {
     if (after) return after;
   }
   const lines = output.split("\n").map((l) => l.trim()).filter(Boolean);
+  // a last line in parentheses is an aside ("(Calculation: 392 + 560 + … = 6604. …)"): the answer is the line before
+  if (lines.length > 1 && /^\(.*\)$/.test(lines[lines.length - 1])) return lines[lines.length - 2];
   return lines[lines.length - 1] ?? "";
 }
 
@@ -394,7 +396,10 @@ export function answerNumber(raw: string, question = ""): number | null {
     const n = numbersIn(b[1]);
     if (words <= 4 && n.length) return n[0];
   }
-  const given = new Set(numbersIn(plain(question)));
+  // numbers the question gives are not the answer; only the question's, not a long document after it (a ledger
+  // holds nearly every number, and "Order 12529 paid $801" was read as 12529)
+  const asked = question.split("\n---\n")[0].slice(0, 2000);
+  const given = new Set(numbersIn(plain(asked)));
   const all = numbersIn(answer);
   return all.find((v) => !given.has(v)) ?? all[0] ?? null;
 }
