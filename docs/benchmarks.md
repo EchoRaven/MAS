@@ -667,14 +667,17 @@ compare them.
 50 problems sampled from HumanEval (seed 1), all on gemini-3.1-flash-lite,
 graded by running each answer against the problem's tests in Docker.
 
-| System | Passed | Cost |
-| --- | --- | --- |
-| Single agent | 48 | $0.03 |
-| Single agent with a code runner | **49** | $0.18 |
-| AgentCoder (programmer, test designer, executor) | 48 | $0.69 |
-| MapCoder (one plan, up to 5 debugging rounds) | 48 | $0.37 |
-| MapCoder as in the paper (3 plans tried best first, 5 rounds each) | 48 | $0.37 |
-| Reflexion (test, reflect, retry) | 48 | $0.34 |
+| System | Passed (two runs) | Mean | Cost per run |
+| --- | --- | --- | --- |
+| Single agent | 48, 47 | 47.5 | $0.03 |
+| Single agent with a code runner | 49, 48 | **48.5** | $0.17 |
+| AgentCoder (programmer, test designer, executor) | 48, 48 | 48.0 | $0.58 |
+| MapCoder (one plan, up to 5 debugging rounds) | 48 | 48.0 | $0.37 |
+| MapCoder as in the paper (3 plans tried best first, 5 rounds each) | 48 | 48.0 | $0.37 |
+| Reflexion (test, reflect, retry) | 48, 48 | 48.0 | $0.36 |
+
+(The second runs were added later, so that no comparison here rests on a
+single run; the two MapCoder rows are two runs of the same system.)
 
 All five miss #47 (HumanEval/145, sorting by digit sum with negative
 numbers); the others differ by one problem each, which is noise. Reflexion

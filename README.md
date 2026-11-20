@@ -80,8 +80,8 @@ Measured on this platform, every system on the same model and questions
   (90 → 89, one run each): debate corrects slips that differ between agents, not knowledge
   that all copies of a model lack.
 - **The coding systems do not beat one agent on HumanEval** with a current
-  small model: single agent 48/50, with a code runner 49 and AgentCoder 48
-  (one run each), MapCoder 48, at 12–28 times the cost.
+  small model (two runs each): single agent 47.5 of 50, with a code runner
+  48.5, AgentCoder, MapCoder and Reflexion 48, at 12–28 times the cost.
 - **On one 30-question set, every paper system side by side:** those that run
   code solve all 30 (Magentic-One, AutoGen); those that exchange or vote on
   answers gain 2–4 over one agent's 19 (EoT 22.3 over three runs, ReConcile 22, DyLAN 22;
