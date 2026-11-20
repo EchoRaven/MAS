@@ -107,9 +107,19 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
 - **Graders** are rules (`answer`, `number`, `contains`), an LLM judge, or
   `code`, which runs the answer with the problem's tests in a throwaway
   container.
+- **Evaluations look after their own answers.** A case a provider failed in
+  passing (a 5xx, a dropped stream) runs once more at the end; Retry reruns
+  the cases with no known answer (errors, no output, outputs the old log cut
+  short); misses graded by rule record which member had the right answer
+  (`reached`); and Check misses with the judge gives a second opinion on the
+  wrong answers without changing a grade.
 - **Compare** groups evaluations by their questions (a hash of the cases), and
-  shows accuracy, each repeat's score and spread, cost per correct answer, and
-  a question-by-question grid.
+  shows accuracy with its 95% interval, each repeat's score and spread, the
+  questions fixed and lost against a reference with McNemar's p, misses a
+  member had and lost, cost per correct answer, a chart of accuracy against
+  cost with the cost frontier named, and a question-by-question grid. Runs
+  of one setup started separately pool into one row; an evaluation with
+  cases whose answer is not known says so, with a link to retry them.
 
 ## Storage and server
 
