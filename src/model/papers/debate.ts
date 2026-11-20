@@ -7,10 +7,27 @@ import type { SystemDoc } from "../types";
 const WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"];
 
 /** The debate with n debaters (the template has three; the paper also varies the number of agents). */
-export function debateWith(n = 3): SystemDoc {
+/**
+ * What debater i of n reads of the previous round in a ring: its own answer and its two neighbours' (Li et al.
+ * 2024, sparse communication). The round's answers carry the port they came from (a1, a2, ...).
+ */
+function ringView(i: number, n: number): string {
+  const keep = [i - 1, i, i + 1].map((k) => `a${((k - 1 + n) % n) + 1}`);
+  return `const M = "\\n\\nAnswers from the previous round:\\n";
+const t = String(input?.text ?? input ?? "");
+const k = t.indexOf(M);
+if (k < 0) return t;
+let data;
+try { data = JSON.parse(t.slice(k + M.length)); } catch { return t; }
+const keep = ${JSON.stringify(keep)};
+data.answers = (data.answers ?? []).filter((a) => keep.includes(a.from));
+return t.slice(0, k) + "\\n\\nAnswers from the previous round (yours and your two neighbours'):\\n" + JSON.stringify(data);`;
+}
+
+export function debateWith(n = 3, topology: "full" | "ring" = "full"): SystemDoc {
   n = Math.max(2, Math.min(8, Math.floor(n)));
   const b = new Builder(
-    n === 3 ? "Multiagent debate" : `Multiagent debate (${n} debaters)`,
+    n === 3 && topology === "full" ? "Multiagent debate" : `Multiagent debate (${n} debaters${topology === "ring" ? ", ring" : ""})`,
     `${WORDS[n]} agents answer the same question, then in each round read the others' answers and update their own; after two rounds the answers are put to a majority vote.`,
   );
   b.node("asker", "human", 0, 60, { name: "Asker", role: "Poses the question", approves: false })
@@ -33,10 +50,18 @@ export function debateWith(n = 3): SystemDoc {
   b.node("collect", "function", 340, 0, {
     name: "Collect answers",
     join: "all",
-    fn: { lang: "js", code: "// every debater's answer of this round; without a Final: line, the last line is the answer\nconst finalOf = (t) => ((String(t).match(/Final:\\s*(.*)/) ?? [])[1] ?? String(t).trim().split(\"\\n\").pop() ?? \"\").trim();\nreturn { answers: Object.values(input).map((t) => ({ text: t, final: finalOf(t) })) };" },
+    // in a ring each answer says which debater gave it, so that each reads only its neighbours'
+    fn: {
+      lang: "js",
+      code:
+        "// every debater's answer of this round; without a Final: line, the last line is the answer\nconst finalOf = (t) => ((String(t).match(/Final:\\s*(.*)/) ?? [])[1] ?? String(t).trim().split(\"\\n\").pop() ?? \"\").trim();\n" +
+        (topology === "ring"
+          ? "return { answers: Object.entries(input).map(([from, t]) => ({ from, text: t, final: finalOf(t) })) };"
+          : "return { answers: Object.values(input).map((t) => ({ text: t, final: finalOf(t) })) };"),
+    },
     interface: { inputs: Array.from({ length: n }, (_, i) => port(`a${i + 1}`, "text", { required: true })), outputs: [port("out", "json")] },
   }, "debate");
-  for (let i = 1; i <= n; i++) b.edge("debate", `agent_${i}`, "message").edge(`agent_${i}`, "collect", "message", { target_port: `a${i}` });
+  for (let i = 1; i <= n; i++) b.edge("debate", `agent_${i}`, "message", topology === "ring" ? { transform: { lang: "js", code: ringView(i, n) } } : {}).edge(`agent_${i}`, "collect", "message", { target_port: `a${i}` });
   b.edge("collect", "debate", "message")
     .edge("asker", "debate", "message", { label: "Question" })
     .edge("debate", "vote", "message")
