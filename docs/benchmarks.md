@@ -38,6 +38,10 @@ exact McNemar tests against one agent on the same questions.
   misses of the vote, Corex and Multi-Agent Verification the right answer
   was among the samples in 1–2 of 16; debate's debaters had and lost it in
   a fifth of its misses ([Answers the team had and lost](#answers-the-team-had-and-lost)).
+- **Reading a long input in parts beats reading it whole**: on 20
+  generated ledgers of ~44,000 characters, Chain-of-Agents 14 of 20 against
+  one agent's 9 (+14 −4, p 0.03), at three times the cost
+  ([Long input](#long-input-chain-of-agents-on-ledger-totals)).
 - **A model critiquing itself helps on reasoning, not arithmetic**
   (Self-Refine: MATH level 5 40 → 44; Hard computation revisions 4 right,
   3 wrong).
@@ -490,6 +494,33 @@ answers (retried in place). And the first grading marked right answers
 wrong on this set (`3 < \lambda \le 4` for `(3,4]`, a vector in decimals,
 a set in braces) for every system; the grader was fixed and all MATH
 evaluations regraded, with no model calls.
+
+## Long input: Chain-of-Agents on ledger totals
+
+Chain-of-Agents (Zhang et al. 2024) claims that for inputs too long to read
+well at once, workers reading parts in turn and passing a note along do
+better than one model reading everything. A generated set
+(`benchmarks/ledger/build.py`, no download): 20 ledgers of about 700
+transactions (~44,000 characters), each asking the total one customer paid
+over 8 to 14 orders scattered among look-alike names (Harlow, Harlowe,
+Marlow). Answers are computed by the generator and checked against the
+text; graded by number; flash-lite, two runs each:
+
+| System | Correct (of 20, two runs) | vs one agent, 40 pairs | Cost |
+| --- | --- | --- | --- |
+| One agent, reading the whole ledger | 9, 9 | | $0.24 |
+| Chain-of-Agents (parts of 3,000 characters, ~15 per ledger) | 13, 15 | **+14 −4 (p 0.03)** | $0.73 |
+
+- **The paper's claim reproduces.** Reading in parts beats reading whole,
+  significantly, at three times the cost: the first gain here from
+  splitting work among agents on something other than arithmetic.
+- **The two fail in opposite directions.** One agent's misses are almost
+  all too low (16 of 22): it skips orders buried in the long text. The
+  chain's are almost all too high (10 of 12): reading each part closely, it
+  picks up a look-alike customer or counts an order twice as the note is
+  rewritten. Each misses what its way of reading makes easy to miss.
+- All misses checked with the judge (it agreed on all 34); no answer was
+  unknown.
 
 ## MMLU: single agent vs Multiagent Debate
 
