@@ -579,6 +579,7 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
 | 5, in a ring (each reads its own and its two neighbours' answers) | 22, 22 | 22.0 | +7 −1 (p 0.07) | $1.07 |
 | 3, all told to reason step by step | 21, 22 | 21.5 | +7 −2 (p 0.18) | $0.58 |
 | 3, each a different method (step by step, decompose, check another way) | 23, 23 | **23.0** | +9 −1 (**p 0.02**) | $0.60 |
+| the same three, one round: a vote over their first answers, no exchange | 22, 22 | 22.0 | +7 −1 (p 0.07) | $0.24 |
 
 - **The paper's agent curve reproduces.** Each debater added helps a
   little, and five are the first setting on this set where debate beats one
@@ -614,7 +615,12 @@ debate template's builder takes the number of debaters, `debateWith(n)`):
   level 5 the same three score 45 of 50, one above plain debate (+2 −1)
   and level with a five-sample vote and a code runner: where errors are in
   reasoning rather than long arithmetic, different methods tie the best,
-  not beat it.
+  not beat it. Without the exchange (`rounds = 1`, a vote over the three
+  diverse first answers) they score 22 and 22 at 40% of the cost: the
+  exchange adds one question (+2 −0, p 0.5). A three-sample vote with a
+  plain "think step by step" prompt (Agent Forest, N = 3) also scored 22,
+  so most of what the diverse debate gains over plain debate is a better
+  first answer, and a vote keeps nearly all of it.
 - All misses of the six debate evaluations were checked with the judge
   (it agreed with the grader on all 100), and no output was cut.
 
