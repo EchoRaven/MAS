@@ -148,6 +148,7 @@ each, through the built-in dataset (2026-11-18):
 | Solo Performance Prompting (one call, simulated personas) | 20, 22 | 21.0 | $0.10 |
 | Corex, Retrieve (5 chains, a retriever picks one) | 22, 22 | 22.0 | $0.49 |
 | Multi-Agent Verification (5 chains, 3 aspect verifiers approve or reject each) | 22, 22 | 22.0 | $0.95 |
+| Self-Refine (one model: answer, critique, revise; 3 rounds) | 21, 21 | 21.0 | $0.61 |
 | MacNet, chain of 4 | 19 | 19.0 | $0.31 |
 | MacNet, star of 4 | 22 | 22.0 | $0.44 |
 | MacNet, mesh of 4 | 21 | 21.0 | $0.47 |
@@ -171,6 +172,15 @@ each, through the built-in dataset (2026-11-18):
   +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+- **A model's critique of itself helps on reasoning, not on arithmetic.**
+  Self-Refine (Madaan et al. 2023: answer, critique the answer, revise)
+  scores 21 and 21 here, as three-agent debate does, at a little more cost.
+  Its critic never once declared an answer free of issues, so every run
+  took all three rounds, and the revisions moved as many right answers to
+  wrong (3) as wrong to right (4). On MATH level 5 (below) the same loop
+  turned 6 first answers right and 2 wrong, and its critic was satisfied in
+  7 runs: there the errors are steps of reasoning a second read can catch;
+  here they are long products it can only redo, and gets wrong as often.
 - **Reading the chains picks what counting them does.** Corex's retriever
   reads five independent chains and picks the most faithful one: 22 and 22,
   the same as self-consistency's vote over five samples, missing the same
@@ -395,6 +405,7 @@ grader:
 | Multiagent Debate, 2 rounds | 44 | | $0.39 |
 | Agent Forest, 5 samples | **45** | | $0.26 |
 | Single agent with a code runner | **45** | +6 −1 (p 0.13) | $0.39 |
+| Self-Refine (critique and revise, up to 3 rounds) | 44 | +5 −1 (p 0.22) | $0.43 |
 
 MACM (Lei et al. 2024) has a Thinker list the conditions and the objective
 and mine new conditions one at a time, a Judge keep only those it verifies
@@ -406,7 +417,9 @@ condition in 43 of the 50 problems (2 rounds in 5, 3 or 4 in 2), so in
 practice it was plan-then-execute with one verified step, not the long
 mining the paper describes. The paper's gains were with GPT-4 and a code
 executor and over plain chain of thought; against a vote over five samples
-at the same cost there is none here. A code runner does as well as the
+at the same cost there is none here. Self-Refine, one model critiquing and
+revising its own answer, scores 44 (+5 −1 against one agent), its revisions
+turning 6 first answers right and 2 wrong. A code runner does as well as the
 best of them (45: +6 −1 against one agent, and 2 fixed, 2 lost against
 Agent Forest): even on the hardest problems, MATH's errors are mostly
 reasoning, which code and voting fix about equally.
