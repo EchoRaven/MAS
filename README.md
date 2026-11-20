@@ -77,7 +77,7 @@ Measured on this platform, every system on the same model and questions
   from a log that cut gemma's long answers off before their final line;
   fixed, and those cases run again.) On GSM8K and MATH-500 the strong model is
   near the ceiling and nothing shows. On MMLU nothing shows even on gemma
-  (90 → 89, one run each): debate corrects slips that differ between agents, not knowledge
+  (89.5 → 90 over two runs): debate corrects slips that differ between agents, not knowledge
   that all copies of a model lack.
 - **The coding systems do not beat one agent on HumanEval** with a current
   small model (two runs each): single agent 47.5 of 50, with a code runner
@@ -122,9 +122,9 @@ Measured on this platform, every system on the same model and questions
   other scores moved when a provider's 503s, a grader's misreadings
   (intervals, sums in another order, a number met in a long document) or a
   single lucky run were fixed. Every number above has had its misses
-  checked by an LLM judge and its unknown answers run again; the
-  differences it reports rest on two runs or more, except where one run is
-  marked.
+  checked by an LLM judge and its unknown answers run again, and the
+  differences it reports rest on two runs or more (Mixture-of-Agents with
+  three models, one run, is marked).
 - **Most "failures" of a rebuilt system were the rebuild**: wrong outputs, a
   missing input, a test step that could never pass, a grader that misread
   right answers. Each became a platform interface or check (declared results,

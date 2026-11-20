@@ -7,7 +7,7 @@ export const MEASURED: Record<string, string[]> = {
     "With 2, 3, 5 debaters (flash-lite): 20, 21, 22.5; five beat one agent significantly (+8 −1, p 0.04), at 17 times its cost.",
     "Five in a ring, each reading its neighbours (sparse communication): 22, 22, a question below the full exchange; a third less to read, but output dominates the cost.",
     "Three debaters with different methods (step by step, decompose, check another way): 23, 23, +9 −1 against one agent (p 0.02); three all told step by step: 21.5. On MATH level 5: 45, as a vote and a code runner.",
-    "MMLU (100): 95.5 against 95.0 on flash-lite, 89 against 90 on gemma: no gain where errors are missing knowledge.",
+    "MMLU (100): 95.5 against 95.0 on flash-lite, 90 against 89.5 on gemma (two runs each): no gain where errors are missing knowledge.",
     "With a sandbox per debater, MATH-500 (50): 49, against one agent with a sandbox's 48, at four times the cost.",
   ],
   "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 27.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],

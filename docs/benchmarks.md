@@ -602,12 +602,13 @@ setting is a model that gets a third of MMLU wrong.
 
 On gemma-4-26b, the weaker model, the same 100 questions:
 
-| System on gemma | Correct | Time |
-| --- | --- | --- |
-| Single agent | 90 | 21 min |
-| Multiagent Debate, 2 rounds | 89 | 62 min |
+| System on gemma | Correct (two runs) | Mean | Time per run |
+| --- | --- | --- | --- |
+| Single agent | 90, 89 | 89.5 | 21 min |
+| Multiagent Debate, 2 rounds | 89, 91 | 90.0 | 62 min |
 
-Debate fixed 2 questions and lost 3 (McNemar p = 1). **Even on the weaker
+Over both runs (200 question-run pairs) debate fixed 4 and lost 3 (McNemar
+p = 1). **Even on the weaker
 model, MMLU shows no gain**, as Hard computation does not either (see above:
 the gain once reported there came from cut-off answers). gemma already gets
 90% of these questions, and its errors are knowledge errors (which of four
