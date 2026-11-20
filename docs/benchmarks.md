@@ -137,11 +137,11 @@ each, through the built-in dataset (2026-11-18):
 | ReConcile (Chen et al.) | 22, 22 | 22.0 | $0.51 |
 | MAD (Liang et al.; angel, devil, judge) | 14, 14 | 14.0 | $0.23 |
 | AgentVerse (recruit experts, execute, evaluate) | 20 | 20.0 | $0.29 |
-| AutoAgents (generated team, observers, execution loop) | 13 | 13.0 | $0.13 |
+| AutoAgents (generated team, observers, execution loop) | 14 | 14.0 | $0.13 |
 | Exchange-of-Thought | 23 | 23.0 | $0.29 |
 | DyLAN | 22 | 22.0 | $0.17 |
 | Mixture-of-Agents | 17 | 17.0 | $0.24 |
-| MedAgents | 15 | 15.0 | $0.34 |
+| MedAgents | 16 | 16.0 | $0.34 |
 | CAMEL role-playing | 12 | 12.0 | $0.11 |
 | ChatEval | 12 | 12.0 | $0.19 |
 | Magentic-One (its terminal runs code in the sandbox) | **30** | 30.0 | $0.06 |
@@ -167,11 +167,19 @@ each, through the built-in dataset (2026-11-18):
   self-consistency 22, DyLAN 22, debate 21, AgentVerse 20; against the single
   agent (Compare, McNemar) EoT, debate and Agent Forest at N = 10 fix 7 and
   lose none (p = 0.02). Systems built around roles, personas or long
-  pipelines score lower (MoA 17, MedAgents 15, MAD 14, AutoAgents 13, CAMEL
+  pipelines score lower (MoA 17, MedAgents 16, MAD 14, AutoAgents 14, CAMEL
   12, ChatEval 12), but they fix about as many questions as they lose (MoA
-  +6 −5, MedAgents +5 −6; p from 0.23 to 1): **no better than one agent**,
+  +6 −5, MedAgents +5 −5; p from 0.23 to 1): **no better than one agent**,
   not reliably worse. None of them checks by computing. (The rows after ReConcile were run later, once each,
   on the same 30 questions, with every answer checked for an answer line.)
+  All 436 misses of the flash-lite evaluations on this set were checked
+  with the judge: it agreed with the grader on all but 6. Two were grader
+  errors, now fixed (AutoAgents wrote "Total: 3 + 0 + … + 1 = 6", read as 3;
+  MedAgents wrote "one"), which added one question each. The other four
+  are AgentVerse and AutoAgents ending with a verification line after the
+  answer and no answer line ("… ≡ 1 (mod 1009)" after "is **441**"): the
+  rule grades the last line, so they stand, but read leniently AgentVerse's
+  first run and AutoAgents would each score one to three higher.
 - **A model's critique of itself helps on reasoning, not on arithmetic.**
   Self-Refine (Madaan et al. 2023: answer, critique the answer, revise)
   scores 21 and 21 here, as three-agent debate does, at a little more cost.

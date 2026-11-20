@@ -158,7 +158,7 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   and DyLAN 22, MacNet's star 22, debate 21; p ≈ 0.02 for the best; MacNet's
   chain, which refines one solution in sequence, stays at 19); those built on roles,
   personas or long pipelines are no better than one agent (MoA 17, MedAgents
-  15, MAD 14, AutoAgents 13, CAMEL 12, ChatEval 12: they fix about as many
+  16, MAD 14, AutoAgents 14, CAMEL 12, ChatEval 12: they fix about as many
   questions as they lose). MAD's devil, made to disagree, talks its judge out
   of right products; reviewers that recompute by hand (AgentVerse,
   AutoAgents) confirm wrong ones.
