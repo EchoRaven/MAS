@@ -108,6 +108,7 @@ describe("math answers", () => {
 describe("what a retry runs again", () => {
   it("includes an output the log cut before its answer, and not a plain wrong answer", () => {
     expect(retryableCase({ status: "done", pass: false, why: "0 ≠ 13", output: "thinking… (18381 more chars)" })).toBe(true);
+    expect(retryableCase({ status: "done", pass: true, why: "157 = 157", output: "157 mod 10 is not r… (17187 more chars)" })).toBe(true);
     expect(retryableCase({ status: "done", pass: false, why: "12 ≠ 13", output: "Answer: 12" })).toBe(false);
     expect(retryableCase({ status: "done", pass: false, why: "no output (finished: All idle)" })).toBe(true);
   });

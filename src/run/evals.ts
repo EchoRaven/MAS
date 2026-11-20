@@ -268,11 +268,14 @@ export function hasMarkedAnswer(output: string): boolean {
 
 /**
  * The cases a retry runs again: errors, runs that gave no output, cases a stop or a restart left unrun, and
- * outputs the log once kept only the beginning of (… (N more chars)), whose answer at the end was lost.
+ * outputs the log once kept only the beginning of (… (N more chars)), whose answer at the end was lost, even
+ * where the grader passed them on a number met before the cut.
  */
 export function retryableCase(c: Pick<EvalCaseResult, "status" | "pass" | "why" | "output">): boolean {
   if (c.status === "error" || c.status === "pending") return true;
-  return c.pass === false && (/^no output|^not run|the server restarted/.test(c.why ?? "") || /… \(\d+ more chars\)$/.test(c.output ?? ""));
+  // a cut output's answer is unknown either way: graded right, it was a number met in the reasoning before the cut
+  if (/… \(\d+ more chars\)$/.test(c.output ?? "")) return true;
+  return c.pass === false && /^no output|^not run|the server restarted/.test(c.why ?? "");
 }
 
 /**
