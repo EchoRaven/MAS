@@ -548,9 +548,12 @@ text; graded by number; flash-lite, two runs each:
   asked instead what one order (from the middle half) paid: a single line
   in 44,000 characters (`benchmarks/ledger/build_lookup.py`). One agent
   reading the whole ledger finds it 40 of 40, LongAgent 40 of 40,
-  Chain-of-Agents 39 of 40, at about the cost of their totals runs. Long
-  input alone does not defeat this model; what it misses is evidence spread
-  over many lines, which reading in parts gathers. (Grading the chain's
+  Chain-of-Agents 39 of 40, at about the cost of their totals runs. At
+  four times the length (2,800 transactions, ~175,000 characters, ~45,000
+  tokens; `build_lookup_long.py`) one agent still finds 40 of 40 ($0.86),
+  and LongAgent 40 of 40 ($0.91). Long input alone does not defeat this
+  model at these lengths; what it misses is evidence spread over many
+  lines, which reading in parts gathers. (Grading the chain's
   answers found a grader bug: it skipped numbers "given in the question",
   and took the whole ledger for the question, so "Order 12529 paid $801."
   was read as 12529. Only the text before the `---` line counts now.)

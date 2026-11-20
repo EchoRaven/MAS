@@ -151,7 +151,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   relaying a note through ~8 parts, 14.5; LongAgent, members reading the
   parts at once, 13.5 at less than half the chain's cost (both p ≈ 0.02
   against one agent); five whole readings voted, 6.5. Asked instead what one
-  order paid, a single line, one agent finds all 40. One agent with a code
+  order paid, a single line, one agent finds all 40, and still all 40 at
+  four times the length (~45,000 tokens). One agent with a code
   runner reading the ledger from its sandbox totals 39 of 40, as on every
   set where the work is exact.
 - **Tools matter more than talk.** Questions no discussion fixed in any run
