@@ -259,8 +259,9 @@ export class EvalManager {
     const what = criterion?.trim() || "Which response better does what the task asks: correct, complete, well organised and well written?";
     const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie" | null; usd: number; why: string }> => {
       const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
-      // no tight output limit: a judge that thinks first spends its thinking from the same allowance
-      const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)], max_tokens: 4000 });
+      // the judge model's own output limit: one that thinks first spends its thinking from the same allowance
+      // (gemma's ran past 4,000 tokens and gave no verdict on 5 of 20)
+      const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)] });
       const text = textOf(res.content);
       // the last verdict line counts; "Better: Response 1" is read as 1
       const all = [...text.matchAll(/better:\s*\**\s*(?:response\s*)?(1|2|tie)\b/gi)];
@@ -295,7 +296,8 @@ export class EvalManager {
         usd,
         at: new Date().toISOString(),
       };
-      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}.json`), JSON.stringify(result, null, 1));
+      // one file per pair and judge: a second judge's verdicts sit beside the first's
+      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${(judge ?? "default").replace(/[^\w.-]/g, "_")}.json`), JSON.stringify(result, null, 1));
       return result;
     } finally {
       this.active.delete(aId);
@@ -326,7 +328,7 @@ export class EvalManager {
     const dir = this.store.stateDir("_pairwise");
     return fs
       .readdirSync(dir)
-      .filter((f) => f.endsWith(".json") && f.replace(/\.json$/, "").split("__").includes(id))
+      .filter((f) => f.endsWith(".json") && f.replace(/\.json$/, "").split("__").slice(0, 2).includes(id))
       .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")) as PairwiseResult);
   }
 

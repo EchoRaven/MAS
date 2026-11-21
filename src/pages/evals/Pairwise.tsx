@@ -41,7 +41,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
   const run = () => {
     setBusy(true);
     Api.pairwise(ev.id, other, judge || undefined)
-      .then((r) => setKept((k) => [r.pairwise, ...k.filter((x) => !(x.a === r.pairwise.a && x.b === r.pairwise.b))]))
+      .then((r) => setKept((k) => [r.pairwise, ...k.filter((x) => !(x.a === r.pairwise.a && x.b === r.pairwise.b && x.judge === r.pairwise.judge))]))
       .catch((e) => onError(e.message))
       .finally(() => setBusy(false));
   };
@@ -74,7 +74,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         const mineA = p.a === ev.id;
         const [w, l] = mineA ? [p.a_wins, p.b_wins] : [p.b_wins, p.a_wins];
         const them = mineA ? p.b_name : p.a_name;
-        const key = `${p.a}__${p.b}`;
+        const key = `${p.a}__${p.b}__${p.judge}`;
         const split = p.per.filter((x) => x.first !== x.second).length;
         const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
         return (
