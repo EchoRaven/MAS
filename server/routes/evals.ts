@@ -121,6 +121,14 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     }
   });
   r.on("GET", "/api/evals/:id/pairwise", (req) => ({ pairwise: evals.pairwiseOf(req.params.id) }));
+  r.on("PUT", "/api/evals/:id/invalid", async (req) => {
+    const b = ((await req.body()) ?? {}) as { reason?: string | null };
+    try {
+      return { eval: evals.markInvalid(req.params.id, b.reason == null ? null : String(b.reason)) };
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  });
   r.on("GET", "/api/evals/:id/sources", (req) => {
     try {
       return { sources: evals.sources(req.params.id) };

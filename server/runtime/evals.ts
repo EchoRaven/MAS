@@ -305,6 +305,16 @@ export class EvalManager {
     }
   }
 
+  /** Mark an evaluation invalid (a setup bug found after it ran), or valid again with a null reason. */
+  markInvalid(id: string, reason: string | null): EvalRecord {
+    const rec = this.store.getEval(id);
+    if (!rec) throw new Error("No such evaluation");
+    if (this.active.has(id)) throw new Error("The evaluation is still running");
+    rec.invalid = reason?.trim() ? { reason: reason.trim().slice(0, 500), at: new Date().toISOString() } : null;
+    this.store.putEval(rec);
+    return rec;
+  }
+
   /** Per output: the links it cites and how many its run's searches returned (see sourcedLinks). */
   sources(id: string): { cited: number; found: number; searches: number; outputs: number; with_search: number } {
     const rec = this.store.getEval(id);

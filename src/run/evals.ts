@@ -116,6 +116,8 @@ export interface EvalRecord {
   auto_retried?: number;
   /** what checking the misses with the judge cost */
   audit_usd?: number;
+  /** marked invalid by hand (a setup bug found later), with why: kept, but out of comparisons by default */
+  invalid?: { reason: string; at: string } | null;
   started_at: string;
   finished_at?: string;
   cases: EvalCaseResult[];

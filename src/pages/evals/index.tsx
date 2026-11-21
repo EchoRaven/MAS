@@ -626,6 +626,23 @@ function Evals({ systemId }: { systemId: string }) {
                       </Button>
                     )}
                     <Button
+                      variant="outline"
+                      size="sm"
+                      title={ev.invalid ? "Count this evaluation again in comparisons" : "A setup bug found after it ran? Mark it invalid with the reason: it is kept, but left out of comparisons and pooled runs by default"}
+                      onClick={() => {
+                        const reason = ev.invalid ? null : window.prompt("Why is this evaluation invalid? (shown wherever it is listed)");
+                        if (!ev.invalid && !reason?.trim()) return;
+                        void Api.markEvalInvalid(ev.id, reason)
+                          .then((r) => {
+                            setRecord((x) => (x ? { ...x, eval: r.eval } : x));
+                            return refresh();
+                          })
+                          .catch((e) => setError(e.message));
+                      }}
+                    >
+                      {ev.invalid ? "Mark valid" : "Mark invalid…"}
+                    </Button>
+                    <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
@@ -667,6 +684,11 @@ function Evals({ systemId }: { systemId: string }) {
             {!!ev.auto_retried && (
               <p className="mt-3 text-xs text-muted-foreground">
                 {ev.auto_retried === 1 ? "One case" : `${ev.auto_retried} cases`} failed for the provider (overloaded, a dropped connection) and ran once more at the end; a second failure counts.
+              </p>
+            )}
+            {ev.invalid && (
+              <p className="mt-3 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200" role="note">
+                Marked invalid: {ev.invalid.reason}. It is left out of comparisons and pooled runs by default.
               </p>
             )}
             {ev.stop_reason && (

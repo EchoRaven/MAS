@@ -55,6 +55,17 @@ describe("evaluations", () => {
     expect(done.cases[0]).toMatchObject({ pass: true, why: "judge: PASS: same answer" });
   });
 
+  it("marks an evaluation invalid with a reason, keeps it, and clears the mark", async () => {
+    const done = await finish(evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }] }).id);
+    const bad = evals.markInvalid(done.id, "  the scratchpad was shared across runs  ");
+    expect(bad.invalid?.reason).toBe("the scratchpad was shared across runs");
+    expect(evals.get(done.id)?.invalid?.reason).toBe("the scratchpad was shared across runs");
+    expect(evals.get(done.id)?.passed).toBe(1); // nothing else changes
+    expect(evals.markInvalid(done.id, null).invalid).toBeNull();
+    expect(evals.markInvalid(done.id, "   ").invalid).toBeNull(); // an empty reason is no mark
+    expect(() => evals.markInvalid("eval_nope", "x")).toThrow(/No such evaluation/);
+  });
+
   it("regrades stored outputs without running anything again", async () => {
     const done = await finish(evals.start(echo(), { grader: "answer", cases: [{ input: "Paris", expected: "the capital is Paris" }] }).id);
     expect(done.cases[0].pass).toBe(false);

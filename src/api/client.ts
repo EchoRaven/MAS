@@ -116,6 +116,8 @@ export const Api = {
   auditEval: (id: string, judge?: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/audit`, judge ? { judge } : {}),
   /** Judge two evaluations of the same open-ended questions pairwise (both orders), and the judgements kept for one. */
   pairwise: (a: string, b: string, judge?: string, criterion?: string) => api<{ pairwise: PairwiseResult }>("POST", "/evals/pairwise", { a, b, judge, criterion }),
+  /** Mark an evaluation invalid with a reason (a setup bug found later), or valid again with null. */
+  markEvalInvalid: (id: string, reason: string | null) => api<{ eval: EvalRecord }>("PUT", `/evals/${id}/invalid`, { reason }),
   /** The links an evaluation's outputs cite, and how many their runs' searches returned. */
   evalSources: (id: string) => api<{ sources: { cited: number; found: number; searches: number; outputs: number; with_search: number } }>("GET", `/evals/${id}/sources`),
   pairwiseOf: (id: string) => api<{ pairwise: PairwiseResult[] }>("GET", `/evals/${id}/pairwise`),

@@ -66,7 +66,7 @@ export function ComparePage() {
   const groups = useMemo(() => {
     const by = new Map<string, EvalSummary[]>();
     for (const e of rawMembers) {
-      const k = pool && !incomplete(e) && !noAnswers(e) ? `${e.system_id}|${modelsLabel(e)}|${e.grader}` : e.id;
+      const k = pool && !incomplete(e) && !noAnswers(e) && !e.invalid ? `${e.system_id}|${modelsLabel(e)}|${e.grader}` : e.id;
       by.set(k, [...(by.get(k) ?? []), e]);
     }
     return [...by.values()].map((g) => [...g].sort((a, b) => a.started_at.localeCompare(b.started_at)));
@@ -87,6 +87,10 @@ export function ComparePage() {
     for (const e of [...members].sort((a, b) => b.started_at.localeCompare(a.started_at))) {
       const k = `${e.system_id}|${modelsLabel(e)}|${e.grader}`;
       // an evaluation that did not run every case (stopped, cut off) would rank on a part of the questions: off by default too
+      if (e.invalid) {
+        out.add(e.id); // marked invalid by hand: off, and it does not hide an older valid run
+        continue;
+      }
       if (seen.has(k) || incomplete(e) || noAnswers(e)) out.add(e.id);
       seen.add(k);
     }
@@ -325,7 +329,7 @@ export function ComparePage() {
                   <td className="hidden py-2 text-right tabular-nums text-muted-foreground sm:table-cell">{(() => { const ok = r ? r.rec.cases.filter((c) => c.pass).length : e.passed; return ok ? usd(e.usd / ok) : "–"; })()}</td>
                   <td className="hidden py-2 text-right text-xs text-muted-foreground md:table-cell" title={e.started_at}>
                     {timeAgo(e.started_at)}
-                    {incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : noAnswers(e) ? " · no model answered" : superseded.has(e.id) ? " · older" : ""}
+                    {e.invalid ? ` · invalid: ${e.invalid.reason}` : incomplete(e) ? ` · ${e.status}, ${e.graded} of ${e.total} graded` : noAnswers(e) ? " · no model answered" : superseded.has(e.id) ? " · older" : ""}
                     {(() => {
                       // cases whose answer is not known (an error, no output, an output the log cut short) make a comparison unsure
                       const unknown = r ? r.full.cases.filter(retryableCase).length : 0;

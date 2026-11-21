@@ -25,7 +25,8 @@ export function OpenEnded() {
         // the latest judgement of each pair by each judge
         const latest = new Map<string, PairwiseResult>();
         for (const p of [...seen.values()].sort((x, y) => x.at.localeCompare(y.at))) latest.set(`${p.a}|${p.b}|${p.judge}`, p);
-        out.push({ set, name: evals[0].set_name ?? evals[0].first_question.slice(0, 60), evals, judged: [...latest.values()] });
+        const bad = (p: PairwiseResult) => +!!(evals.find((e) => e.id === p.a)?.invalid || evals.find((e) => e.id === p.b)?.invalid);
+        out.push({ set, name: evals[0].set_name ?? evals[0].first_question.slice(0, 60), evals, judged: [...latest.values()].sort((x, y) => bad(x) - bad(y)) });
       }
       if (!live) return;
       setSets(out.filter((s) => s.judged.length));
@@ -70,8 +71,9 @@ export function OpenEnded() {
             <tbody>
               {s.judged.map((p) => {
                 const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
+                const invalid = [p.a, p.b].map((id) => s.evals.find((e) => e.id === id)?.invalid).find(Boolean);
                 return (
-                  <tr key={`${p.a}|${p.b}|${p.judge}`} className="border-t border-border/50">
+                  <tr key={`${p.a}|${p.b}|${p.judge}`} className={`border-t border-border/50 ${invalid ? "opacity-50" : ""}`} title={invalid ? `Invalid: ${invalid.reason}` : undefined}>
                     <td className="py-1 pr-3">
                       <Link to={`/evals/${s.evals.find((e) => e.id === p.a)?.system_id ?? ""}`} className="hover:underline">{p.a_name}</Link>
                       <span className="block text-[11px] text-muted-foreground">{when(p.a, s.evals)}</span>
@@ -86,6 +88,7 @@ export function OpenEnded() {
                         {p.a_wins} · {p.b_wins} · {p.ties}
                       </span>
                       {unread ? <span className="block text-[11px] text-amber-700 dark:text-amber-300">no verdict on {unread}: not to be trusted</span> : null}
+                      {invalid ? <span className="block text-[11px] text-muted-foreground">invalid: {invalid.reason}</span> : null}
                     </td>
                     <td className="py-1 pr-3 text-[11px] text-muted-foreground">
                       {linkShare(p.a) || "–"} / {linkShare(p.b) || "–"}
