@@ -368,9 +368,12 @@ text, and the component always sends a list.
 gemini-3.8-flash alone scores 26 and 27 on Hard computation (two runs),
 with room for 3–4 more. Multiagent Debate on it, every debater on
 3.8-flash, two runs: 26 and 26, against one agent +0 −1 (p = 1), at $0.62
-for both runs. All eight misses checked with the judge. So across three
-models debate helps only the middle one: flash-lite gains about 2 in 30,
-gemma (weaker) and 3.8-flash (stronger) nothing.
+for both runs. All eight misses checked with the judge. The diverse
+debate (three reasoning methods), the best three-debater setting on
+flash-lite, does no better on 3.8-flash: 27 and 27, +3 −2 against one
+agent (p = 1), at $1.01. So across three models debate helps only the
+middle one: flash-lite gains about 2 in 30, gemma (weaker) and 3.8-flash
+(stronger) nothing, with or without different methods.
 
 ## A weaker model: no gain from discussion after all
 
