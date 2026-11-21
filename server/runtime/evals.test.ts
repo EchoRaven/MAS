@@ -159,6 +159,31 @@ describe("evaluations", () => {
     expect(checked.passed).toBe(1);
   });
 
+  it("keeps open-ended outputs ungraded, and judges two systems pairwise in both orders", async () => {
+    const writer = (id: string, text: string) => {
+      const b = new Builder(id, "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("f", "function", 200, 0, { name: "W", fn: { lang: "js", code: `return ${JSON.stringify(text)} + " on " + String(input?.text ?? input);` } })
+        .edge("me", "f", "message")
+        .edge("f", "me", "message");
+      // the judge answers in order: q1 a-first "1" (a), b-first "2" (a); q2 a-first "1" (a), b-first "1" (b)
+      b.doc.models.push({ id: "judge_p", provider: "mock", model: "mock", api: { params: { script: ["fine. Better: 1", "fine. Better: 2", "fine. Better: 1", "fine. Better: 1"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return { ...b.doc, id };
+    };
+    const [da, db] = [writer("sys_wa", "A careful story"), writer("sys_wb", "A story")];
+    store.putSystem(da);
+    store.putSystem(db);
+    const cases = [{ input: "a fox", expected: "" }, { input: "a river", expected: "" }];
+    const ea = await finish(evals.start(da, { grader: "none", cases }).id);
+    const eb = await finish(evals.start(db, { grader: "none", cases }).id);
+    expect(ea.cases.map((c) => c.pass)).toEqual([undefined, undefined]); // nothing graded
+    expect(ea.cases[0].output).toContain("A careful story on a fox");
+    const r = await evals.pairwise(ea.id, eb.id, "judge_p");
+    expect(r.per.map((p) => [p.first, p.second, p.verdict])).toEqual([["a", "a", "a"], ["a", "b", "tie"]]);
+    expect([r.a_wins, r.b_wins, r.ties]).toEqual([1, 0, 1]);
+    expect(evals.pairwiseOf(eb.id).map((x) => x.a)).toEqual([ea.id]);
+  });
+
   it("runs a case a provider failed in passing once more at the end", async () => {
     // the first call for "busy" meets an overloaded provider; the second answers
     const b = new Builder("Busy", "");

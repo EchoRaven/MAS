@@ -11,7 +11,7 @@ import { HttpError, type Store } from "../store/files";
 import { findDataset } from "./datasets";
 import { checkDoc } from "./systems";
 
-const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code"];
+const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "none"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean; expect?: ResultSpec | null };
@@ -111,6 +111,16 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       throw new HttpError(400, (e as Error).message);
     }
   });
+  r.on("POST", "/api/evals/pairwise", async (req) => {
+    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string };
+    if (!b.a || !b.b || b.a === b.b) throw new HttpError(400, "Give two different evaluations, a and b");
+    try {
+      return { pairwise: await evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined) };
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  });
+  r.on("GET", "/api/evals/:id/pairwise", (req) => ({ pairwise: evals.pairwiseOf(req.params.id) }));
   r.on("POST", "/api/evals/:id/audit", async (req) => {
     const b = ((await req.body()) ?? {}) as { judge?: string };
     try {

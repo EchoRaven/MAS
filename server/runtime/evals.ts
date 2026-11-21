@@ -2,10 +2,12 @@
 // paper reports. Cases run a few at a time as ordinary runs, so each one can
 // be replayed like any other.
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, finalAnswer, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, finalAnswer, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -157,6 +159,7 @@ export class EvalManager {
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
+    if (g === "none" || rec.grader === "none") throw new Error("An evaluation that grades nothing is compared pairwise, not regraded");
     if (g === "code" || rec.grader === "code") {
       if (g !== rec.grader) throw new Error("Code is graded by running it against its tests; an evaluation graded another way cannot switch to it, nor away from it");
       // the stored answers run against their tests again (no model is called): after a fix to the grader
@@ -183,7 +186,7 @@ export class EvalManager {
     if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
     for (const c of rec.cases) {
       if (c.status !== "done" || !c.output) continue;
-      Object.assign(c, gradeByRule(g as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
+      Object.assign(c, gradeByRule(g as RuleGrader, c.output, c.expected, c.input));
       // who had the answer on a miss, from the run's log as it was kept (evaluations from before this was recorded too)
       delete c.reached;
       const sys = c.pass === false && c.run_id ? this.store.getRunSystem(c.run_id) : null;
@@ -229,6 +232,79 @@ export class EvalManager {
     } finally {
       this.active.delete(id);
     }
+  }
+
+  /**
+   * Two evaluations of the same questions, judged pairwise (see PairwiseResult): for open-ended tasks with no
+   * expected answer, such as articles or stories, as STORM and Agents' Room are evaluated. Questions are matched by
+   * their text, each system's first output for it is used, and every pair is judged in both orders. The result is
+   * kept with the two evaluations.
+   */
+  async pairwise(aId: string, bId: string, judgeModel?: string, criterion?: string): Promise<PairwiseResult> {
+    const [a, b] = [this.store.getEval(aId), this.store.getEval(bId)];
+    if (!a || !b) throw new Error("No such evaluation");
+    if (this.active.has(aId) || this.active.has(bId)) throw new Error("An evaluation is still running");
+    const first = (rec: EvalRecord) => {
+      const m = new Map<string, string>();
+      for (const c of rec.cases) if (c.output && !m.has(c.input)) m.set(c.input, c.output);
+      return m;
+    };
+    const [oa, ob] = [first(a), first(b)];
+    const shared = [...oa.keys()].filter((q) => ob.has(q));
+    if (!shared.length) throw new Error("The two evaluations have no question with an output in both");
+    const doc = this.store.getSystem(a.system_id);
+    const known = new Set((doc?.models ?? []).map((m) => m.id));
+    const models = new Models([...(doc?.models ?? []), ...DEFAULT_MODELS.filter((m) => !known.has(m.id))], this.secrets, false);
+    const judge = judgeModel || a.on_model || undefined;
+    const what = criterion?.trim() || "Which response better does what the task asks: correct, complete, well organised and well written?";
+    const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie"; usd: number }> => {
+      const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
+      const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)], max_tokens: 600 });
+      const m = /better:\s*\**\s*(1|2|tie)/i.exec(textOf(res.content));
+      return { pick: (m?.[1]?.toLowerCase() as "1" | "2" | "tie") ?? "tie", usd: usage.usd };
+    };
+    this.active.add(aId);
+    this.active.add(bId);
+    try {
+      const per: PairwiseResult["per"] = [];
+      let usd = 0;
+      for (const q of shared) {
+        const x = await ask(q, oa.get(q)!, ob.get(q)!); // a first
+        const y = await ask(q, ob.get(q)!, oa.get(q)!); // b first
+        usd += x.usd + y.usd;
+        const firstPick = x.pick === "1" ? "a" : x.pick === "2" ? "b" : "tie";
+        const secondPick = y.pick === "1" ? "b" : y.pick === "2" ? "a" : "tie";
+        per.push({ input: q, first: firstPick, second: secondPick, verdict: firstPick === secondPick ? firstPick : "tie" });
+      }
+      const result: PairwiseResult = {
+        a: aId,
+        b: bId,
+        a_name: a.system_name,
+        b_name: b.system_name,
+        judge: judge ?? "default",
+        criterion: what,
+        a_wins: per.filter((p) => p.verdict === "a").length,
+        b_wins: per.filter((p) => p.verdict === "b").length,
+        ties: per.filter((p) => p.verdict === "tie").length,
+        per,
+        usd,
+        at: new Date().toISOString(),
+      };
+      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}.json`), JSON.stringify(result, null, 1));
+      return result;
+    } finally {
+      this.active.delete(aId);
+      this.active.delete(bId);
+    }
+  }
+
+  /** The pairwise judgements kept for an evaluation (either side). */
+  pairwiseOf(id: string): PairwiseResult[] {
+    const dir = this.store.stateDir("_pairwise");
+    return fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".json") && f.replace(/\.json$/, "").split("__").includes(id))
+      .map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")) as PairwiseResult);
   }
 
   get(id: string) {
@@ -346,8 +422,11 @@ export class EvalManager {
             c.usd = (c.usd ?? 0) + usd;
           } else if (opts.grader === "code") {
             Object.assign(c, await gradeCode(c.expected, c.output, this.docker));
+          } else if (opts.grader === "none") {
+            // an open-ended task: the output is kept, ungraded, for a pairwise comparison
+            c.answer = finalAnswer(c.output);
           } else {
-            Object.assign(c, gradeByRule(opts.grader as Exclude<Grader, "llm" | "code">, c.output, c.expected, c.input));
+            Object.assign(c, gradeByRule(opts.grader as RuleGrader, c.output, c.expected, c.input));
             // a miss: did a member have the right answer on the way, and the team lose it?
             if (c.pass === false) c.reached = reachedBy(memberMessages(events), memberName(doc), opts.grader, c.expected, c.input);
           }

@@ -12,8 +12,32 @@ export interface EvalCase {
  * - contains: the output contains it anywhere
  * - number: the last number in the final answer equals it (fractions and percentages too)
  * - llm: a model judges whether the output gives the expected answer
+ * - none: nothing is graded; the outputs are kept, to compare two systems pairwise (open-ended tasks)
  */
-export type Grader = "answer" | "contains" | "number" | "math" | "llm" | "code";
+export type Grader = "answer" | "contains" | "number" | "math" | "llm" | "code" | "none";
+
+/**
+ * Two evaluations of the same open-ended questions, judged pairwise by a model: for each question, which output is
+ * better, asked in both orders so that a judge's preference for the first or the second cancels out. A win needs
+ * both orders to agree; anything else is a tie.
+ */
+export interface PairwiseResult {
+  a: string;
+  b: string;
+  a_name: string;
+  b_name: string;
+  judge: string;
+  criterion: string;
+  a_wins: number;
+  b_wins: number;
+  ties: number;
+  per: { input: string; first: "a" | "b" | "tie"; second: "a" | "b" | "tie"; verdict: "a" | "b" | "tie" }[];
+  usd: number;
+  at: string;
+}
+
+/** The graders that compare an output with an expected answer by a rule. */
+export type RuleGrader = Exclude<Grader, "llm" | "code" | "none">;
 
 export interface EvalCaseResult {
   /** false when the run's answer is not the kind the system declares (system.result): a bug in the system, whatever the grade */
@@ -529,7 +553,7 @@ export function parseNumber(s: string): number | null {
 }
 
 /** Grades an output by a rule (every grader but llm). */
-export function gradeByRule(grader: Exclude<Grader, "llm" | "code">, output: string, expected: string, question = ""): { pass: boolean; answer: string; why: string } {
+export function gradeByRule(grader: RuleGrader, output: string, expected: string, question = ""): { pass: boolean; answer: string; why: string } {
   const answer = finalAnswer(output);
   if (grader === "contains") {
     const pass = normalize(output).includes(normalize(expected));

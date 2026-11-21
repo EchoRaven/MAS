@@ -1,13 +1,13 @@
 // Read-only: does debate add anything over a vote on its own first round? (Choi et al. 2025, "Debate or Vote")
 // Run from the repository root: npx --no-install tsx scripts/debate-rounds.mts (reads .data, writes nothing).
 import fs from "node:fs";
-import { finalAnswer, gradeByRule, type Grader } from "../src/run/evals";
+import { finalAnswer, gradeByRule, type RuleGrader } from "../src/run/evals";
 const D = ".data";
 const norm = (a: string) => a.toLowerCase().replace(/<\/?answer>/g, "").replace(/\*+/g, "").replace(/(\d),(?=\d{3})/g, "$1").replace(/\\text\{[^}]*\}/g, "").replace(/[^a-z0-9./\\{}^-]+/g, " ").trim();
 for (const f of fs.readdirSync(`${D}/evals`)) {
   const e = JSON.parse(fs.readFileSync(`${D}/evals/${f}`, "utf8"));
   if (e.mock || !/^Multiagent debate/.test(e.system_name) || !["number", "math", "answer"].includes(e.grader) || e.status !== "finished") continue;
-  const g = e.grader as Exclude<Grader, "llm" | "code">;
+  const g = e.grader as RuleGrader;
   let n = 0, v1 = 0, fin = 0, up = 0, down = 0;
   const acc: number[][] = [];
   for (const c of e.cases) {

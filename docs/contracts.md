@@ -466,6 +466,17 @@ shows each one's count ("Had it, lost": 3 of 9). The Evaluate page warns before 
 type does not fit the grader (a system that returns a number, graded by
 running code). `choice` without `choices` means an option letter.
 
+## Open-ended tasks: grader `none` and pairwise judging
+
+An evaluation with grader `none` runs every question and keeps the outputs
+without grading them: for tasks with no single right answer (an article, a
+story). Two such evaluations of the same questions are compared with
+`POST /api/evals/pairwise`: a model reads both outputs for each question and
+says which is better, once with each first, so that a preference for the
+first or the second response cancels out; a question counts as a win only
+when both orders agree, and as a tie otherwise. This is how the writing
+papers (STORM, Agents' Room) report their results.
+
 ## Datasets
 
 A dataset is a list of cases `{input, expected}` with a name, a source
