@@ -334,3 +334,15 @@ describe("outputShape", () => {
     expect(outputShape("Plain prose, no structure.")).toEqual({ words: 4, headings: 0, items: 0, tables: 0 });
   });
 });
+
+describe("firstPicks", () => {
+  it("counts the readings where the judge picked the response shown first", async () => {
+    const { firstPicks } = await import("./evals");
+    const per = [
+      { input: "q1", first: "a", second: "b", verdict: "tie" }, // always the first shown: 2 of 2
+      { input: "q2", first: "a", second: "a", verdict: "a" }, // a both times: 1 of 2
+      { input: "q3", first: "tie", second: "unread", verdict: "tie" }, // no pick
+    ] as never;
+    expect(firstPicks(per)).toEqual({ first: 3, picked: 4 });
+  });
+});

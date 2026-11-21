@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import type { EvalRecord, PairwiseResult } from "@/run/evals";
+import { type EvalRecord, firstPicks, type PairwiseResult } from "@/run/evals";
 import { useSystems } from "@/store/systems";
 
 export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string) => void }) {
@@ -93,6 +93,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         const key = `${p.a}__${p.b}__${p.judge}`;
         const split = p.per.filter((x) => x.first !== x.second).length;
         const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
+        const pos = firstPicks(p.per);
         return (
           <div key={key} className="mt-3 text-xs">
             <p>
@@ -101,7 +102,8 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
               </span>{" "}
               against {them} · judge {p.judge} · {usd(p.usd)}
               {split ? ` · the two orders disagreed on ${split} of ${p.per.length}, counted as ties` : ""}
-              {unread ? ` · the judge gave no verdict on ${unread}` : ""}{" "}
+              {unread ? ` · the judge gave no verdict on ${unread}` : ""}
+              {pos.picked ? ` · it picked the response shown first in ${pos.first} of ${pos.picked} readings` : ""}{" "}
               <button className="underline" onClick={() => setOpen(open === key ? null : key)}>
                 {open === key ? "hide" : "per question"}
               </button>

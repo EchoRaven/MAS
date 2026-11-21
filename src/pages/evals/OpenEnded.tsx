@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Api, type EvalSummary } from "@/api/client";
-import type { PairwiseResult } from "@/run/evals";
+import { firstPicks, type PairwiseResult } from "@/run/evals";
 
 type Sources = { cited: number; found: number; outputs: number; words: number; headings: number; items: number; tables: number };
 
@@ -76,6 +76,8 @@ export function OpenEnded() {
             <tbody>
               {s.judged.map((p) => {
                 const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
+                const pos = firstPicks(p.per);
+                const biased = pos.picked >= 6 && pos.first / pos.picked >= 0.8;
                 const invalid = [p.a, p.b].map((id) => s.evals.find((e) => e.id === id)?.invalid).find(Boolean);
                 return (
                   <tr key={`${p.a}|${p.b}|${p.judge}`} className={`border-t border-border/50 ${invalid ? "opacity-50" : ""}`} title={invalid ? `Invalid: ${invalid.reason}` : undefined}>
@@ -93,6 +95,11 @@ export function OpenEnded() {
                         {p.a_wins} · {p.b_wins} · {p.ties}
                       </span>
                       {unread ? <span className="block text-[11px] text-amber-700 dark:text-amber-300">no verdict on {unread}: not to be trusted</span> : null}
+                      {pos.picked ? (
+                        <span className={`block text-[11px] ${biased ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground"}`} title="How often the judge picked whichever response it was shown first. Near half: no position bias. Near all: the order decided, and most verdicts are ties">
+                          shown first won {pos.first} of {pos.picked}
+                        </span>
+                      ) : null}
                       {invalid ? <span className="block text-[11px] text-muted-foreground">invalid: {invalid.reason}</span> : null}
                     </td>
                     <td className="py-1 pr-3 text-[11px] text-muted-foreground">

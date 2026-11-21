@@ -37,6 +37,20 @@ export interface PairwiseResult {
   at: string;
 }
 
+/**
+ * How often a pairwise judge picked whichever response it was shown first, of the readings where it picked one.
+ * Near half is no position bias; near all of them means the order decided, and its verdicts are mostly ties.
+ */
+export function firstPicks(per: PairwiseResult["per"]): { first: number; picked: number } {
+  let first = 0, picked = 0;
+  for (const x of per) {
+    // reading 1 shows a first, reading 2 shows b first
+    if (x.first === "a" || x.first === "b") (picked++, x.first === "a" && first++);
+    if (x.second === "a" || x.second === "b") (picked++, x.second === "b" && first++);
+  }
+  return { first, picked };
+}
+
 /** The http(s) links in a text, without trailing punctuation. */
 export function linksIn(text: string): Set<string> {
   return new Set((text.match(/https?:\/\/[^\s)\]>"'|,]+/g) ?? []).map((u) => u.replace(/[.;:]+$/, "")));
