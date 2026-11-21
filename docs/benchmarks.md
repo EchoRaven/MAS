@@ -37,6 +37,11 @@ exact McNemar tests against one agent on the same questions.
   19.5, Mixture-of-Agents 18, MedAgents 16 are no different from one agent;
   CAMEL 13, ChatEval 12.5 and AutoAgents 14 are significantly worse (p ≈
   0.01), MAD 14 nearly so (p 0.05).
+- **ChatEval judges no closer to a stronger judge than one judge call.**
+  As a pairwise judge on 70 questions, its debate agrees with gemini-3.8-flash
+  on 47 against one flash-lite call's 45 (p 0.79), at ten times the cost; it is
+  steadier when the two outputs swap places (80% against 71%)
+  ([ChatEval as a judge](#chateval-as-a-judge)).
 - **STORM is no better than one agent with the same search tool.** On ten
   recent topics it wins 7 and loses 12 over two runs (p 0.36), at 12 times the
   cost. Half or more of its links came from no search; one searching agent's
@@ -1215,6 +1220,36 @@ a tool's result, so its share is a lower bound.)
 **Caveats.** The paper's STORM drafts long articles from many interviews;
 these articles are 300–450 words on flash-lite, from three interviews. The paper's
 baselines include retrieval-augmented writing, which is the control here.
+
+## ChatEval as a judge
+
+ChatEval is an evaluator: three referees with different personas debate which
+of two answers is better, and a chair gives the verdict. Its paper reports that
+the debate agrees with human judges better than one judge does. Its task is
+pairwise judging, so it is tested as a judge here (`judge_system` on
+`POST /api/evals/pairwise`). It judged the seven valid pairs above, 70
+questions across stories and articles, against one judge call, both on
+flash-lite. There are no human labels: gemini-3.8-flash's verdicts stand in
+for them (`scripts/judge-agreement.mts`).
+
+| Judge (flash-lite) | Agrees with gemini-3.8-flash | Its two orders agree | Cost |
+|---|---|---|---|
+| One call | 45 of 70 (64%) | 50 of 70 (71%) | $0.12 |
+| ChatEval (3 referees, 2 rounds, a chair) | 47 of 70 (67%) | 56 of 70 (80%) | $1.18 |
+
+Each judge agrees with the reference on questions where the other does not: 6
+for the single call, 8 for ChatEval (p 0.79). On stories they agree with it
+equally (28 of 40 each); on articles 17 and 19 of 30 (p 0.62). The debate
+changes its mind less when the two outputs swap places, at ten times the cost.
+It does not agree with the stronger judge any more often. One judge call run
+twice moved its verdicts by about as much as the two judges differ.
+
+Two bugs came first. The judgement files were named by the judge model, so a
+panel run on flash-lite and flash-lite alone wrote the same file, and the
+panel's verdicts replaced the single judge's. Each file is now named by the
+judge's full label. The judging also locked both evaluations, so a second
+judge could not start until the first finished; judging only reads them, and
+the lock is gone.
 
 ## Earlier sets
 

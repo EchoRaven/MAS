@@ -96,6 +96,11 @@ Measured on this platform, every system on the same model and questions
   LongAgent (members reading the parts at once) 13.5 at a third of that.
   Splitting helps to gather, not to find: asked for one order's amount, a
   single line, one agent finds all 40, even at ~45,000 tokens.
+- **A judging panel agrees with a stronger judge no more than one call does**:
+  ChatEval's three debating referees, as a pairwise judge on 70 story and
+  article questions, match gemini-3.8-flash on 47 against one flash-lite
+  call's 45 (p 0.79), at ten times the cost. The debate is steadier when the
+  answers swap places (80% against 71%).
 - **A research team writes no better than one researcher**: STORM
   (perspectives, interviews with a searching expert, outline, article) wins 7
   and loses 12 against one agent with the same web search on ten recent

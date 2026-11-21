@@ -20,7 +20,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-moa": ["Hard computation (flash-lite): 17, 19 (one agent 19); with three different models proposing, 28 and 27, against the best of them alone 26 and 27 (+2 −0, p = 0.5).", "Self-MoA (every slot on that best model): 26 and 26, as that model alone."],
   "paper-medagents": ["Hard computation (flash-lite): 16, 16, no different from one agent (p 0.24).", "MMLU medical (75): 73 against one agent's 71, the same as plain debate."],
   "paper-camel": ["Hard computation (flash-lite): 12, 14, below one agent (+3 −15, p 0.008)."],
-  "paper-chateval": ["Hard computation (flash-lite): 12, 13, below one agent (+5 −18, p 0.01); it is built to judge answers, not to give them."],
+  "paper-chateval": ["Hard computation (flash-lite): 12, 13, below one agent (+5 −18, p 0.01); it is built to judge answers, not to give them.", "As a pairwise judge, its own task (70 story and article questions, flash-lite): agrees with gemini-3.8-flash on 47 against one judge call's 45 (p 0.79), at ten times the cost; its verdict holds when the answers swap places on 80% against 71%."],
   "paper-magentic-one": ["Hard computation (flash-lite): 30 of 30, its terminal running code in the sandbox.", "MATH-500 (50): 46; GSM-Hard (50): 39."],
   "paper-autogen": ["Hard computation (flash-lite): 30 with its executor; 28 with the model-free user proxy, at a fifth of the cost."],
   "paper-agentcoder": ["HumanEval (50): 48, as one agent; coding problems (31, two runs): 60 of 62."],
