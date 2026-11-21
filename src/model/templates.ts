@@ -311,6 +311,20 @@ function baselineBare(): SystemDoc {
   return b.doc;
 }
 
+/**
+ * A judge that can search: for pairwise judging (judge_system) on topics a judge model may not know. It checks the
+ * claims and links the two responses disagree on before it gives its verdict.
+ */
+function factCheckJudge(): SystemDoc {
+  const b = new Builder("Fact-checking judge", "One agent judges two responses with web search: it checks the facts and links they disagree on or that look doubtful, then gives its verdict in the form the request asks for. Use it as the judging system for pairwise judging on recent topics, where a judge model alone cannot tell a real fact from a made-up one.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Brings the two responses", approves: false })
+    .agent("judge", 340, 0, { name: "Judge", role: "Checks, then judges", model: "sonnet", tools: ["web_search", "fetch"], harness: { ...native(), loop: "react", max_steps: 8, instructions: "You judge two responses to the same request. First check, with web_search (and fetch for a page you need), the facts and links that matter most to the comparison: those the responses disagree on, and any that look doubtful or made up. Check a few, not everything. Then weigh the responses, counting what you found, and end exactly as the request asks (for example a last line 'Better: 1', 'Better: 2' or 'Better: tie')." } })
+    .edge("asker", "judge", "message", { label: "Two responses" })
+    .edge("judge", "asker", "message", { label: "Verdict" });
+  b.doc.budget = { usd: 0.5, max_rounds: 10, wallclock_min: 10 };
+  return b.doc;
+}
+
 /** One agent that searches the web, then writes: the baseline that tells a research team's gain from search's. */
 function baselineWriterSearch(): SystemDoc {
   const b = new Builder("Single writer with search (baseline)", "One agent searches the web (web_search, fetch) as much as it needs, then writes what is asked, citing the pages it found. The baseline for research-and-write systems such as STORM: what one agent with the same search tool does.");
@@ -377,6 +391,7 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
   { id: "baseline-writer", name: "Single writer (baseline)", summary: "one agent, one call, no answer line · the baseline for writing systems", build: baselineWriter },
   { id: "baseline-bare", name: "Single model call (baseline)", summary: "the request as it is, one model call, no instructions · one MoA proposer", build: baselineBare },
+  { id: "fact-check-judge", name: "Fact-checking judge", summary: "a judge with web search, for pairwise judging on recent topics", build: factCheckJudge },
   { id: "baseline-writer-search", name: "Single writer with search (baseline)", summary: "one agent · web search · then writes · the baseline for research-and-write systems", build: baselineWriterSearch },
   { id: "baseline-code", name: "Single agent with code (baseline)", summary: "one agent + a Python sandbox · the baseline for code-executing systems", build: baselineWithCode },
   { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
