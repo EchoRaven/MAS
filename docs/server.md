@@ -74,6 +74,8 @@ What agents reach is limited:
 | `DELETE /api/systems/:id/envs/:env/preview/:session` | End a preview: its box and copy are removed (also after 10 idle minutes) |
 | `POST /api/evals/pairwise` | Two evaluations of the same questions judged pairwise by a model (`a`, `b`, optional `judge` and `criterion`): for each question, which output is better, asked in both orders; a win needs both orders to agree. For open-ended tasks, run with grader `none` |
 | `GET /api/evals/:id/pairwise` | The pairwise judgements kept for an evaluation |
+| `GET /api/evals/:id/sources` | The links the outputs cite, and how many their runs' own `web_search` and `fetch` calls returned |
+| `PUT /api/evals/:id/invalid` | Mark an evaluation invalid (`reason`), for a setup bug found after it ran, or valid again (`reason: null`). It is kept and listed with the reason, and left out of comparisons and pooled runs by default |
 | `POST /api/evals/:id/audit` | A second opinion on the misses of an evaluation graded by rule: the LLM judge (`judge`, else the evaluation's model) reads each wrong answer and says whether it agrees with the expected one, stored as `audit` on the case; the grades stand |
 | `POST /api/evals/:id/retry` | Run again, in place, only the cases that gave no answer (an error, no output, never run because of a stop or a restart), with the evaluation's own models and settings; the rest keep their results |
 | `GET/DELETE /api/systems/:id/state` | What a system's code keeps across runs (`ctx.state`): read it, or clear it to start over |
