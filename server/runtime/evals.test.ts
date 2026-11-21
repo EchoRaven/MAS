@@ -195,6 +195,27 @@ describe("evaluations", () => {
     expect(evals.pairwiseOf(eb.id).map((x) => x.a)).toEqual([ea.id]);
   });
 
+  it("lets a system judge pairwise (a referee panel), reading the verdict from its output", async () => {
+    const writer = (id: string, text: string) => {
+      const b = new Builder(id, "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("f", "function", 200, 0, { name: "W", fn: { lang: "js", code: `return ${JSON.stringify(text)};` } })
+        .edge("me", "f", "message")
+        .edge("f", "me", "message");
+      return { ...b.doc, id };
+    };
+    const cases = [{ input: "a fox", expected: "" }];
+    const ea = await finish(evals.start(writer("sys_pa", "first story"), { grader: "none", cases }).id);
+    const eb = await finish(evals.start(writer("sys_pb", "second story"), { grader: "none", cases }).id);
+    // a panel that always prefers whatever is shown first: the two orders disagree, so it is a tie
+    const panel = writer("sys_panel", "We discussed it. Better: 1");
+    store.putSystem(panel);
+    const r = await evals.pairwise(ea.id, eb.id, undefined, undefined, "sys_panel");
+    expect(r.per.map((p) => [p.first, p.second, p.verdict])).toEqual([["a", "b", "tie"]]);
+    expect(r.judge).toContain(panel.name);
+    await expect(evals.pairwise(ea.id, eb.id, undefined, undefined, "sys_none")).rejects.toThrow(/No such system/);
+  });
+
   it("runs a case a provider failed in passing once more at the end", async () => {
     // the first call for "busy" meets an overloaded provider; the second answers
     const b = new Builder("Busy", "");

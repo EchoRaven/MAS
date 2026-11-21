@@ -112,10 +112,10 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     }
   });
   r.on("POST", "/api/evals/pairwise", async (req) => {
-    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string };
+    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string; judge_system?: string };
     if (!b.a || !b.b || b.a === b.b) throw new HttpError(400, "Give two different evaluations, a and b");
     try {
-      return { pairwise: await evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined) };
+      return { pairwise: await evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined, b.judge_system ? String(b.judge_system) : undefined) };
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }

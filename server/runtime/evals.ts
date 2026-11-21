@@ -240,7 +240,7 @@ export class EvalManager {
    * their text, each system's first output for it is used, and every pair is judged in both orders. The result is
    * kept with the two evaluations.
    */
-  async pairwise(aId: string, bId: string, judgeModel?: string, criterion?: string): Promise<PairwiseResult> {
+  async pairwise(aId: string, bId: string, judgeModel?: string, criterion?: string, judgeSystem?: string): Promise<PairwiseResult> {
     const [a, b] = [this.store.getEval(aId), this.store.getEval(bId)];
     if (!a || !b) throw new Error("No such evaluation");
     if (this.active.has(aId) || this.active.has(bId)) throw new Error("An evaluation is still running");
@@ -256,17 +256,33 @@ export class EvalManager {
     const known = new Set((doc?.models ?? []).map((m) => m.id));
     const models = new Models([...(doc?.models ?? []), ...DEFAULT_MODELS.filter((m) => !known.has(m.id))], this.secrets, false);
     const judge = judgeModel || a.on_model || undefined;
+    // a system can judge instead of one model call (ChatEval's referee panel): it runs on the judge model, given the
+    // same prompt, and its output is read for the verdict
+    const panel = judgeSystem ? this.store.getSystem(judgeSystem) : null;
+    if (judgeSystem && !panel) throw new Error(`No such system: ${judgeSystem}`);
+    const panelDoc = panel ? (judge ? runAllOn(panel, judge, DEFAULT_MODELS) : panel) : null;
     const what = criterion?.trim() || "Which response better does what the task asks: correct, complete, well organised and well written?";
     const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie" | null; usd: number; why: string }> => {
       const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
-      // the judge model's own output limit: one that thinks first spends its thinking from the same allowance
-      // (gemma's ran past 4,000 tokens and gave no verdict on 5 of 20)
-      const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)] });
-      const text = textOf(res.content);
+      let text: string;
+      let spent: number;
+      if (panelDoc) {
+        const run = this.runs.start(panelDoc, { input: prompt });
+        await this.settle(run.id);
+        const events = this.store.events(run.id) as RunEvent[];
+        text = events.filter((e): e is Extract<RunEvent, { type: "output" }> => e.type === "output").map((e) => e.text).join("\n\n");
+        spent = this.runs.get(run.id)?.usd ?? 0;
+      } else {
+        // the judge model's own output limit: one that thinks first spends its thinking from the same allowance
+        // (gemma's ran past 4,000 tokens and gave no verdict on 5 of 20)
+        const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)] });
+        text = textOf(res.content);
+        spent = usage.usd;
+      }
       // the last verdict line counts; "Better: Response 1" is read as 1
       const all = [...text.matchAll(/better:\s*\**\s*(?:response\s*)?(1|2|tie)\b/gi)];
       const pick = (all.at(-1)?.[1]?.toLowerCase() as "1" | "2" | "tie" | undefined) ?? null;
-      return { pick, usd: usage.usd, why: text.trim().slice(-600) };
+      return { pick, usd: spent, why: text.trim().slice(-600) };
     };
     this.active.add(aId);
     this.active.add(bId);
@@ -287,7 +303,7 @@ export class EvalManager {
         b: bId,
         a_name: a.system_name,
         b_name: b.system_name,
-        judge: judge ?? "default",
+        judge: panel ? `${panel.name} on ${judge ?? "its models"}` : (judge ?? "default"),
         criterion: what,
         a_wins: per.filter((p) => p.verdict === "a").length,
         b_wins: per.filter((p) => p.verdict === "b").length,
