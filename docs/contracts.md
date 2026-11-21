@@ -527,10 +527,13 @@ input pasted in. A reply that stops at the limit is logged as such (an
 error when nothing usable is left), and an evaluation groups those cases
 under "no output: reply cut at the output limit". A model can set its own
 default in `api.params.max_output` (a number, or `null` for none; the
-provider never sees it): a model that thinks before it answers spends its
-thinking from the same allowance, and gemma's ran past 32,768 tokens on hard
-questions with no answer left, so gemma's entry has `null` (stored systems
-get it by migration).
+provider never sees it). A model that thinks before it answers spends its
+thinking from the same allowance, so gemma's entry has `null`: no platform
+limit on top of the provider's (stored systems get it by migration). On a
+few of the hardest questions gemma's thinking still runs past the
+provider's own maximum and leaves no answer, with or without our limit:
+that is the model's failure, and it stays a miss. (This was first blamed on
+the default limit; removing it changed nothing.)
 Replies are streamed, so a model that thinks for minutes is not cut off
 waiting for headers. Requests per minute are capped per provider (`MAS_RPM`, 60
 by default).

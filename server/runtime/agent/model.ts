@@ -72,7 +72,7 @@ export class AgentIO {
         type: "log",
         node: this.node,
         level: empty ? "error" : "warn",
-        text: `${this.agent.name}'s reply stopped at the output limit (${usage.tokens_out} tokens)${empty ? ", with nothing usable in it" : ""}: raise the component's max_tokens, or MAS_MAX_OUTPUT for the default`,
+        text: `${this.agent.name}'s reply stopped at the output limit (${usage.tokens_out} tokens visible; a model that thinks first spends its thinking from the same allowance)${empty ? ", with nothing usable in it" : ""}. The limit is the component's max_tokens, the model's api.params.max_output, MAS_MAX_OUTPUT, or with none of those the provider's own maximum`,
       });
     }
     for (const p of res.content) {
