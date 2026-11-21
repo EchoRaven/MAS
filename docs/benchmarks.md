@@ -45,7 +45,8 @@ exact McNemar tests against one agent on the same questions.
   that survives every control. With gemini-3.8-flash in every slot it does the
   same (17–0, one run). With only the aggregator strong and flash-lite
   proposing, it gains nothing (12–10) at five times the cost; on flash-lite
-  throughout, nothing either
+  throughout, nothing either. Picking the most consistent of five samples
+  (Universal Self-Consistency) instead of merging them gains nothing (12–7)
   ([a strong model](#a-strong-model-a-gain-that-survives-the-controls)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
@@ -1363,7 +1364,24 @@ flash-lite give gemini-3.8-flash nothing to merge that it would not have
 written itself. Different models are not needed (Self-MoA gains as much as
 the mix), but a strong one at both stages is. That fits Self-MoA's finding
 that a strong model in every slot is enough. Its claim that this beats the
-mix shows here only as a tie. (One run;
+mix shows here only as a tie.
+
+**Merging is what gains, not sampling and choosing.** Universal
+Self-Consistency (Chen et al. 2023) samples gemini-3.8-flash five times, asks
+it which answer is the most consistent with the others, and returns that one
+unchanged:
+
+| USC on gemini-3.8-flash (two runs) | Default criterion | Judged on content |
+|---|---|---|
+| against gemini-3.8-flash alone | 12–7 (21 ties), p 0.36 | 11–5 (24 ties) |
+| against the mixed MoA (run 1) | 0–15 (5 ties) | |
+
+It writes as the model alone does (584 and 602 words), at six times the
+cost ($0.34 for twenty), and is no better. The choice is also less about
+consistency than it looks: the selector picked the first of the five answers
+23 times in 40, where a blind pick would land there 8 times. MoA's drafts
+give the aggregator material to combine; choosing among samples of one model
+returns one of its ordinary answers. (One run;
 judged on content rather than length it still wins 16–0. The matched-length
 control was run for the mix only.)
 On Hard computation the same mix did not help (28, 27 against the best

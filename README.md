@@ -103,8 +103,10 @@ Measured on this platform, every system on the same model and questions
   times the cost. Different models are not needed (gemini-3.8-flash in every
   slot also wins 17–0), but the strong model must propose as well as
   aggregate: with flash-lite proposing and gemini-3.8-flash aggregating it
-  gains nothing (12–10) at five times the cost. On exact computation it gains
-  nothing either.
+  gains nothing (12–10) at five times the cost. Choosing the most consistent
+  of five samples instead of merging them (Universal Self-Consistency) gains
+  nothing either (12–7), and loses 0–15 to MoA. On exact computation MoA gains
+  nothing.
 - **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
   open-ended instructions against a one-call writer told to give the piece
   only, which holds with lengths matched, and loses 14–19 to one plain call of
