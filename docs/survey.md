@@ -299,5 +299,7 @@ the vocabulary:
   often the judge picked the response shown first (four in five on stories), and
   the share of links a run's own searches returned. A baseline's prompt alone
   produced one apparent gain (MoA over a writer told to give the piece only).
-  Still open: a judge that can search, for recent topics it does not know; and
-  human labels, without which agreement is measured against a stronger model.
+  A judge that can search now exists as a template (Fact-checking judge, a
+  judging system with `web_search`); on STORM it moved single verdicts a lot
+  and the conclusion not at all. Still open: human labels, without which
+  agreement is measured against a stronger model.
