@@ -78,6 +78,21 @@ describe("migration from 0.1", () => {
   });
 });
 
+describe("migration of model settings", () => {
+  it("gives a stored gemma entry no default output limit, and leaves others and explicit limits alone", () => {
+    const base = TEMPLATES[0].build();
+    const doc = { ...base, models: [
+      { id: "gemma", provider: "google", model: "gemma-4-26b-a4b-it", api: { key_env: "GEMINI_API_KEY", params: { rpm: 10 } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "g2", provider: "google", model: "gemma-4-26b-a4b-it", api: { params: { max_output: 4000 } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "lite", provider: "google", model: "gemini-3.1-flash-lite", api: { params: {} }, price_in: 0, price_out: 0, modalities: ["text"] },
+    ] } as unknown as SystemDoc;
+    const m = migrateDoc(doc).models;
+    expect(m.find((x) => x.id === "gemma")!.api.params).toEqual({ rpm: 10, max_output: null });
+    expect(m.find((x) => x.id === "g2")!.api.params).toEqual({ max_output: 4000 });
+    expect(m.find((x) => x.id === "lite")!.api.params).toEqual({});
+  });
+});
+
 describe("ports", () => {
   it("knows what flows without a transform", () => {
     expect(compat(port("o", "text"), port("i", "message")).level).toBe("coerce");

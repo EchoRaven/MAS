@@ -29,7 +29,8 @@ export const DEFAULT_MODELS: ModelSpec[] = [
   { id: "gemini_lite", provider: "google", model: "gemini-3.1-flash-lite", api: { key_env: "GEMINI_API_KEY" }, price_in: 0.25, price_out: 1.5, modalities: ["text", "image"] },
   // weaker models, for papers whose gains show only when a single call often fails (they reported on gpt-3.5-class models)
   // free-tier Gemma has its own, much lower quota (requests and tokens per minute): 10 calls a minute keeps under it
-  { id: "gemma", provider: "google", model: "gemma-4-26b-a4b-it", api: { key_env: "GEMINI_API_KEY", params: { rpm: 10 } }, price_in: 0, price_out: 0, modalities: ["text"] },
+  // gemma thinks at length before answering, and its thinking counts in the output limit: no default limit for it
+  { id: "gemma", provider: "google", model: "gemma-4-26b-a4b-it", api: { key_env: "GEMINI_API_KEY", params: { rpm: 10, max_output: null } }, price_in: 0, price_out: 0, modalities: ["text"] },
   { id: "local", provider: "openai_compatible", model: "my-vllm-model", api: { base_url: "http://127.0.0.1:8000/v1", key_env: "LOCAL_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },
   // embedding and rerank: prices left at 0 to be filled in with your provider's rates
   { id: "embed", kind: "embedding", provider: "openai", model: "text-embedding-3-large", api: { key_env: "OPENAI_API_KEY" }, price_in: 0, price_out: 0, modalities: ["text"] },

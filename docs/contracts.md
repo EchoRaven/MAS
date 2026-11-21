@@ -525,7 +525,12 @@ ran to 65,536 tokens, the cost of about a hundred answers). The limit was
 16,384 at first, which cut off an agent writing a program with a long
 input pasted in. A reply that stops at the limit is logged as such (an
 error when nothing usable is left), and an evaluation groups those cases
-under "no output: reply cut at the output limit".
+under "no output: reply cut at the output limit". A model can set its own
+default in `api.params.max_output` (a number, or `null` for none; the
+provider never sees it): a model that thinks before it answers spends its
+thinking from the same allowance, and gemma's ran past 32,768 tokens on hard
+questions with no answer left, so gemma's entry has `null` (stored systems
+get it by migration).
 Replies are streamed, so a model that thinks for minutes is not cut off
 waiting for headers. Requests per minute are capped per provider (`MAS_RPM`, 60
 by default).

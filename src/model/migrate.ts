@@ -17,6 +17,8 @@ export function migrateDoc(input: SystemDoc): SystemDoc {
   doc.schemas ??= [];
   const KEY_ENV: Record<string, string> = { anthropic: "ANTHROPIC_API_KEY", openai: "OPENAI_API_KEY", google: "GEMINI_API_KEY" };
   doc.models = doc.models.map((m) => (m.api ? m : { ...m, api: DEFAULT_MODELS.find((x) => x.id === m.id)?.api ?? (KEY_ENV[m.provider] ? { key_env: KEY_ENV[m.provider] } : {}) }));
+  // gemma thinks at length and its thinking counts in the output limit: its stored entries get no default limit
+  doc.models = doc.models.map((m) => (/^gemma/.test(m.model) && m.api && !("max_output" in (m.api.params ?? {})) ? { ...m, api: { ...m.api, params: { ...(m.api.params ?? {}), max_output: null } } } : m));
   // 0.3: pipelines refer to embedding / rerank models; add the defaults if the catalog has none
   for (const kind of ["embedding", "rerank"] as const) {
     if (!doc.models.some((m) => m.kind === kind)) {

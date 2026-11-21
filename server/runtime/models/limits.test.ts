@@ -1,6 +1,18 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it } from "vitest";
-import { defaultMaxOutput } from "./index";
+
+import { defaultMaxOutput, outputLimit } from "./index";
+import { providerParams } from "./types";
+
+describe("a model's own output limit", () => {
+  const spec = (params: Record<string, unknown>) => ({ id: "g", provider: "mock", model: "mock", api: { params }, price_in: 0, price_out: 0, modalities: ["text"] }) as never;
+  it("is the model's own, none when it says null, else the default; and the provider never sees it", () => {
+    expect(outputLimit(spec({ max_output: null }))).toBeUndefined();
+    expect(outputLimit(spec({ max_output: 8000 }))).toBe(8000);
+    expect(outputLimit(spec({}))).toBe(32_768);
+    expect(Object.keys(providerParams(spec({ rpm: 10, max_output: null, temperature: 0 })))).toEqual(["temperature"]);
+  });
+});
 
 describe("the default output limit", () => {
   afterEach(() => {

@@ -51,7 +51,8 @@ export const textOf = (parts: Part[]) =>
     .join("");
 
 /** Settings in api.params that are for the platform, not the provider: never sent in a request. */
-export const PLATFORM_PARAMS = ["rpm"] as const;
+/** api.params the platform reads and the provider never sees: rpm (its rate limit), max_output (its default output limit) */
+export const PLATFORM_PARAMS = ["rpm", "max_output"] as const;
 /** api.params as the provider should see them. */
 export function providerParams(model: ModelSpec): Record<string, unknown> {
   const out = { ...(model.api.params ?? {}) } as Record<string, unknown>;

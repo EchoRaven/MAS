@@ -141,11 +141,23 @@ export const MOCK_MODEL: ModelSpec = { id: "mock", provider: "mock", model: "moc
  * The output limit of a model call that sets none: 32,768 tokens (MAS_MAX_OUTPUT to change it). Of 44,436 calls
  * here, 99.9% replied in under 3,100 tokens, and the replies over 32,000 were all repetition loops with no answer
  * (most ran to 65,536). 16,384 was too low: an agent writing a program with a 21,000-token ledger pasted in was cut
- * off mid-call and answered nothing.
+ * off mid-call and answered nothing. A model that thinks before it answers counts its thinking in the same limit, so
+ * it sets its own (api.params.max_output, or null for none): gemma's thinking ran past 32,768 on hard questions.
  */
 export function defaultMaxOutput(): number {
   const v = Number(process.env.MAS_MAX_OUTPUT);
   return Number.isFinite(v) && v >= 256 ? Math.floor(v) : 32_768;
+}
+
+/**
+ * The output limit of a call that sets none: the model's own (api.params.max_output), none when that is null, else
+ * the default. A model that thinks before it answers spends its thinking from the same allowance, and gemma's ran
+ * out at 32,768 tokens on hard questions with no answer left.
+ */
+export function outputLimit(model: ModelSpec): number | undefined {
+  const own = (model.api.params as { max_output?: number | null } | undefined)?.max_output;
+  if (own === null) return undefined;
+  return typeof own === "number" && own > 0 ? Math.floor(own) : defaultMaxOutput();
 }
 
 export class Models {
@@ -235,7 +247,10 @@ export class Models {
     const m = this.spec(id, "chat");
     // a call with no limit of its own gets a default one: a reply that loops ("= 94,143,178,800 / 362,880 = ...")
     // otherwise runs to the provider's 65,536 tokens and costs as much as a hundred answers
-    if (req.max_tokens == null) req = { ...req, max_tokens: defaultMaxOutput() };
+    if (req.max_tokens == null) {
+      const limit = outputLimit(m);
+      if (limit) req = { ...req, max_tokens: limit };
+    }
     let res: ChatResponse;
     await rateLimit(m, this.keyValue(m), req.signal, (ms, rpm) => this.onWait?.(m, ms, rpm));
     try {
