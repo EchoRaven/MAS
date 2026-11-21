@@ -102,11 +102,27 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   replayed. Several systems can be queued on the same questions; they run one
   after another, so a comparison never multiplies the request rate. An
   evaluation can put every model of a system on another one (`on_model`,
-  `model_map`), set run variables (`vars`: ensemble size, debate rounds), and
+  `model_map`, where `node:<id>` serves one node apart from the slot it
+  shares), set run variables (`vars`: ensemble size, debate rounds), and
   give each run a longer time limit (`time_limit_min`) for a slower model.
-- **Graders** are rules (`answer`, `number`, `contains`), an LLM judge, or
+- **Graders** are rules (`answer`, `number`, `contains`), an LLM judge,
   `code`, which runs the answer with the problem's tests in a throwaway
-  container.
+  container, or `none` for open-ended tasks (stories, articles,
+  instructions).
+- **Open-ended outputs are judged pairwise.** Two evaluations of the same
+  questions are read side by side by a judge model, or by a judging system
+  such as ChatEval's panel (`judge_system`). Each question is judged in both
+  orders, and a win needs both orders to agree. Each judge's verdicts are kept
+  in their own file. Beside every judgement go the two sides' **shape** (mean
+  words, headings, list items), because a judge rewards length and structure,
+  and their **sourced links**: the share of cited links that the run's own
+  `web_search` and `fetch` returned, a check a judge cannot make on recent
+  facts.
+- **Baselines** are templates: one model call with the request as it is
+  (the control for systems of plain calls), one writer, one writer with
+  search, one agent with code, and self-consistency. A baseline's prompt can
+  create a gain on its own: Mixture-of-Agents beat the writer baseline 31–9
+  and lost 14–19 to a plain call.
 - **Evaluations look after their own answers.** A case a provider failed in
   passing (a 5xx, a dropped stream) runs once more at the end; Retry reruns
   the cases with no known answer (errors, no output, outputs the old log cut
@@ -120,6 +136,10 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   cost with the cost frontier named, and a question-by-question grid. Runs
   of one setup started separately pool into one row; an evaluation with
   cases whose answer is not known says so, with a link to retry them.
+  Open-ended sets list their pairwise judgements, with shape and links.
+- **Invalid evaluations** (a setup bug found after they ran) are marked with
+  the reason. They are kept and listed, but left out of comparisons and pooled
+  runs by default.
 
 ## Storage and server
 
