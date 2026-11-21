@@ -297,6 +297,20 @@ function baselineWriter(): SystemDoc {
   return b.doc;
 }
 
+/**
+ * One model call with the request as it is, no instructions: exactly one proposer of Mixture-of-Agents, so a
+ * comparison with it measures what the layers and the aggregation add, not a difference of prompts.
+ */
+function baselineBare(): SystemDoc {
+  const b = new Builder("Single model call (baseline)", "The request goes to one model as it is, with no instructions, and its reply is the answer: the same call a Mixture-of-Agents proposer makes. The baseline for systems built of plain model calls.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks", approves: false })
+    .node("call", "model", 340, 0, { name: "Model", model: "sonnet", system_prompt: "", prompt: "{{input}}", temperature: null, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
+    .edge("asker", "call", "message", { label: "Request" })
+    .edge("call", "asker", "message", { label: "Reply" });
+  b.doc.budget = { usd: 0.5, max_rounds: 5, wallclock_min: 5 };
+  return b.doc;
+}
+
 /** One agent that searches the web, then writes: the baseline that tells a research team's gain from search's. */
 function baselineWriterSearch(): SystemDoc {
   const b = new Builder("Single writer with search (baseline)", "One agent searches the web (web_search, fetch) as much as it needs, then writes what is asked, citing the pages it found. The baseline for research-and-write systems such as STORM: what one agent with the same search tool does.");
@@ -362,6 +376,7 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
   { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
   { id: "baseline-writer", name: "Single writer (baseline)", summary: "one agent, one call, no answer line · the baseline for writing systems", build: baselineWriter },
+  { id: "baseline-bare", name: "Single model call (baseline)", summary: "the request as it is, one model call, no instructions · one MoA proposer", build: baselineBare },
   { id: "baseline-writer-search", name: "Single writer with search (baseline)", summary: "one agent · web search · then writes · the baseline for research-and-write systems", build: baselineWriterSearch },
   { id: "baseline-code", name: "Single agent with code (baseline)", summary: "one agent + a Python sandbox · the baseline for code-executing systems", build: baselineWithCode },
   { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
