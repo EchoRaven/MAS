@@ -56,7 +56,8 @@ mostly about **who sees what** and **when it stops**.
 | Dynamic team | `spawn` of a template agent, or a dispatch function | AgentVerse, AutoAgents, STORM, DyLAN, MedAgents |
 | Executing code | sandbox env (Docker, no network) with `bash`, `edit_file`, `run_tests` | AutoGen, AgentCoder, MapCoder, Reflexion, Voyager, ChatDev, MetaGPT, Magentic-One |
 | Long-term memory and skills | memory plugin with an extract → classify → merge → retain pipeline | Generative Agents, Voyager, Reflexion |
-| Shared files | workspace plugin; the folder `/work` is the one the sandbox mounts | ChatDev, Agents' Room, Magentic-One |
+| Shared files | workspace plugin with scope `run` (empty in every run; `system` is shared by all runs and kept); the folder `/work` is the one the sandbox mounts; `read.contents` puts the files in front of each turn | ChatDev, Agents' Room, Magentic-One |
+| Judging open-ended outputs | grader `none`, then pairwise judging in both orders, by a model or a judging system | Agents' Room, STORM, ChatEval, Mixture-of-Agents |
 | Structured hand-over (PRD, plan, trade) | `json` port bound to a schema + `parse_json` output stage | MetaGPT, MapCoder, TradingAgents |
 | Person in the loop | `human` component, approval policies, `require_approval` on tools | TradingAgents, Magentic-One |
 | Protocol as code (game rules, chains) | `custom` loop with `model`, `tools`, `memory` | Werewolf, Chain-of-Agents, Magentic-One |
@@ -204,6 +205,19 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   one: 28 and 27 against its best model's 26 and 27 (+2 −0, p = 0.5), where
   filling every slot with that best model (Self-MoA) scored 26 and 26. The papers' gains over a single model came mostly from
   models weaker than their best member.
+- **On open-ended answers, layering a strong model gains.** On twenty
+  instructions judged pairwise, MoA with gemini-3.8-flash proposing and
+  aggregating beats that model alone 31–0 over two runs. It still wins 22–6
+  with lengths matched and 17–0 under a judge from another family, and Self-MoA
+  on it does the same. With flash-lite proposing, or flash-lite throughout, it
+  gains nothing. It is the only gain here that survives every control, and it
+  shows where answers are graded on coverage rather than right or wrong.
+- **Writing teams do not beat one writer.** Agents' Room loses short and long
+  stories to one call (0–10, 0–9, 1–9), and STORM is no better than one agent
+  with the same search tool (7–12), citing more links that no search returned.
+  As a judge, ChatEval's panel agrees with a stronger judge no more often than
+  one call does (47 against 45 of 70), though it is steadier when the answers
+  swap places.
 - **What a system learns can choose its team.** DyLAN, carrying its agents'
   importance across runs, ranked the Programmer and the Mathematician far above
   the Skeptic and the Generalist on computation questions; a team of those two
