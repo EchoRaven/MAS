@@ -101,8 +101,10 @@ Measured on this platform, every system on the same model and questions
   alone on twenty open-ended instructions, 31–0 over two runs, 22–6 with
   lengths matched, and 17–0 under a judge from another model family, at six
   times the cost. Different models are not needed (gemini-3.8-flash in every
-  slot also wins 17–0), but a strong model is: on flash-lite, layering gains
-  nothing. On exact computation it gains nothing either.
+  slot also wins 17–0), but the strong model must propose as well as
+  aggregate: with flash-lite proposing and gemini-3.8-flash aggregating it
+  gains nothing (12–10) at five times the cost. On exact computation it gains
+  nothing either.
 - **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
   open-ended instructions against a one-call writer told to give the piece
   only, which holds with lengths matched, and loses 14–19 to one plain call of

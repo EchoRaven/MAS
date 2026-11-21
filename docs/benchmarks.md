@@ -43,7 +43,9 @@ exact McNemar tests against one agent on the same questions.
   runs, 32–0 with length ignored, 22–6 at matched length (p 0.004), and 17–0
   under a judge from another family, at six times the cost: the first gain here
   that survives every control. With gemini-3.8-flash in every slot it does the
-  same (17–0, one run). On flash-lite, layering gains nothing
+  same (17–0, one run). With only the aggregator strong and flash-lite
+  proposing, it gains nothing (12–10) at five times the cost; on flash-lite
+  throughout, nothing either
   ([a strong model](#a-strong-model-a-gain-that-survives-the-controls)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
@@ -1342,12 +1344,26 @@ gemini-3.8-flash in every slot, tests that directly:
 | the same, judged on content, not length | 16 | 0 | 4 |
 
 It writes 761 words, with 5.4 headings and 18.9 list items, at $0.55 for
-twenty. It ties the mix and beats the model alone as the mix does. So
-layering calls on gemini-3.8-flash gains, and layering them on flash-lite does
-not. In both winning setups gemini-3.8-flash is the aggregator. What the gain
-needs is a model strong enough to merge drafts well, not drafts from different
-models. That fits Self-MoA's finding that a strong model in every slot is
-enough. Its claim that this beats the mix shows here only as a tie. (One run;
+twenty. It ties the mix and beats the model alone as the mix does.
+
+Is a strong aggregator enough? With every proposer on flash-lite and
+gemini-3.8-flash aggregating, no:
+
+| MoA against gemini-3.8-flash alone | Proposers | Aggregator | Result (two runs unless noted) | Cost (20) |
+|---|---|---|---|---|
+| Mixed | 3.8-flash, flash-lite, gemma | 3.8-flash | 31–0; 32–0 judged on content | $0.31 |
+| Self-MoA | 3.8-flash ×3 | 3.8-flash | 17–0, one run; 16–0 judged on content | $0.55 |
+| Cheap proposers | flash-lite ×3 | 3.8-flash | 12–10 (18 ties); 10–9 (21 ties) judged on content | $0.25 |
+| Self-MoA on flash-lite (against flash-lite alone) | flash-lite ×3 | flash-lite | 14–19 | $0.21 |
+
+The cheap-proposer MoA writes as much as the model alone (576 and 603
+words against 585) and is no better, at five times the cost. The gain needs
+the strong model among the proposers as well as aggregating: drafts from
+flash-lite give gemini-3.8-flash nothing to merge that it would not have
+written itself. Different models are not needed (Self-MoA gains as much as
+the mix), but a strong one at both stages is. That fits Self-MoA's finding
+that a strong model in every slot is enough. Its claim that this beats the
+mix shows here only as a tie. (One run;
 judged on content rather than length it still wins 16–0. The matched-length
 control was run for the mix only.)
 On Hard computation the same mix did not help (28, 27 against the best
