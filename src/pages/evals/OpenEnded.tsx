@@ -96,8 +96,8 @@ export function OpenEnded() {
                       {invalid ? <span className="block text-[11px] text-muted-foreground">invalid: {invalid.reason}</span> : null}
                     </td>
                     <td className="py-1 pr-3 text-[11px] text-muted-foreground">
-                      <span className="block">{shape(p.a) || "–"}</span>
-                      <span className="block">{shape(p.b) || "–"}</span>
+                      <span className="block whitespace-nowrap">{shape(p.a) || "–"}</span>
+                      <span className="block whitespace-nowrap">{shape(p.b) || "–"}</span>
                     </td>
                     <td className="py-1 pr-3 text-[11px] text-muted-foreground">
                       {linkShare(p.a) || "–"} / {linkShare(p.b) || "–"}
