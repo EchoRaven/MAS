@@ -9,6 +9,7 @@ import { McpClient } from "../mcp/client";
 import { runCommand } from "../resources/plugins/external";
 import type { Hub } from "../resources/hub";
 import { S, schema, type RtTool } from "../resources/types";
+import { geminiSearch } from "./search";
 import { fetchText } from "./web";
 
 function argsSchema(t: ToolSpec): Record<string, unknown> {
@@ -41,11 +42,23 @@ export async function catalogTools(rc: RunCtx, agent: string, ids: string[], acc
     if (!t) continue;
     const base = { name: t.id, description: t.description, effect: t.effect, source: "catalog" };
     if (t.id === "web_search" && t.adapter === "builtin") {
-      if (providerIsAnthropic) out.server_tools.push("web_search");
-      else if (!warnedSearch.has(`${rc.runId}|${agent}`)) {
+      if (providerIsAnthropic) {
+        out.server_tools.push("web_search");
+        continue;
+      }
+      // other providers: a grounded Gemini call searches for them, when there is a key for it
+      const key = rc.secrets.get("GEMINI_API_KEY");
+      if (key || rc.models.mockAll) {
+        out.tools.push({ ...base, input_schema: schema({ query: S }), run: async (a) => {
+          if (rc.models.mockAll) return `(dry run: no search for "${String(a.query)}")`;
+          const r = await geminiSearch(key!, String(a.query ?? ""));
+          rc.usage(agent, r.usage);
+          return r.text;
+        } });
+      } else if (!warnedSearch.has(`${rc.runId}|${agent}`)) {
         // offering a tool that can only fail wastes a model call every time the agent tries it: leave it out, and say so once
         warnedSearch.add(`${rc.runId}|${agent}`);
-        rc.emit({ type: "log", node: agent, level: "warn", text: "web_search is left out: the built-in search runs only on Anthropic models. Connect a search MCP env to give this agent web search on other providers" });
+        rc.emit({ type: "log", node: agent, level: "warn", text: "web_search is left out: on models other than Anthropic's it searches through the Gemini API, and GEMINI_API_KEY is not set. Set it, or connect a search MCP env" });
       }
       continue;
     }

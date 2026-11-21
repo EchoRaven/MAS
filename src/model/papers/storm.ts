@@ -58,7 +58,7 @@ export const storm: TemplateInfo = {
     ],
     differs: [
       "The paper finds perspectives by reading the tables of contents of related Wikipedia articles; here the curator chooses them itself.",
-      "web_search runs as the provider's own search tool on Anthropic models. On other providers, connect a search MCP env to the expert, or it answers from what it knows and says no source was checked.",
+      "web_search runs as the provider's own search tool on Anthropic models, and on other models through the Gemini API's Google Search (GEMINI_API_KEY); its sources are Google's redirect links with the site's name. Without either, the expert answers from what it knows and says no source was checked.",
       "The paper drafts the outline twice (from the model alone, then refined by the research); here there is one outline, from the research.",
     ],
   },
