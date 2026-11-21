@@ -111,7 +111,8 @@ Measured on this platform, every system on the same model and questions
   gemini-3.8-flash (answer, critique, revise) beats the model alone 25–2 on
   open-ended instructions over two runs and 20–8 at matched length. The gain
   is all on the answers the critic chose to revise (19–0), at two thirds of
-  Mixture-of-Agents' cost.
+  Mixture-of-Agents' cost. Unlike Mixture-of-Agents it gains on the weaker
+  flash-lite too (21–2).
 - **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
   open-ended instructions against a one-call writer told to give the piece
   only, which holds with lengths matched, and loses 14–19 to one plain call of

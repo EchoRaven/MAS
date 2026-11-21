@@ -51,7 +51,8 @@ exact McNemar tests against one agent on the same questions.
 - **Self-Refine gains as much as MoA on open-ended answers, with one model.**
   On gemini-3.8-flash, answering, critiquing and revising beats the model
   alone 25–2 over two runs and 20–8 at matched length, all of it on the answers
-  the critic chose to revise (19–0), at two thirds of MoA's cost
+  the critic chose to revise (19–0), at two thirds of MoA's cost. Unlike MoA,
+  it gains on flash-lite too (21–2, 21–1 judged on content)
   ([Self-Refine](#one-model-criticising-itself-gains-as-much)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
@@ -1457,6 +1458,20 @@ The never-revised answers are the control model against itself, and their
 this model, self-feedback gains about what Mixture-of-Agents gains (22–6 at
 matched length), for two thirds of its cost and with one model. On maths
 (above) its revisions moved 4 answers right and 3 wrong.
+
+**Unlike MoA, it gains on flash-lite too.** Against flash-lite alone:
+
+| Self-Refine on flash-lite | Run 1 | Run 2 |
+|---|---|---|
+| Default criterion | 10–1 (9 ties) | 11–1 (8 ties) |
+| Judged on content, not length | 12–0 (8 ties) | 9–1 (10 ties) |
+
+It writes 564 and 570 words against flash-lite's 518, with as many headings
+and lists. Flash-lite's critic almost never finds nothing to fix: 38 of the 40
+answers went through all three revisions, so it costs $0.17 for twenty, seven
+times one call. MoA on flash-lite lost 14–19 to one call. Merging drafts needs
+a model that can merge them well, while a weak model can still act on specific
+feedback about its own answer.
 
 ## Earlier sets
 

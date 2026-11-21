@@ -213,8 +213,9 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   gains nothing. It shows where answers are graded on coverage rather than
   right or wrong. Self-Refine, one model critiquing and revising its own answer,
   gains as much on the same model (25–2, 20–8 at matched length), all of it on
-  the answers its critic chose to revise, at two thirds of MoA's cost. These
-  are the only gains here that survive every control.
+  the answers its critic chose to revise, at two thirds of MoA's cost, and
+  unlike MoA it gains on flash-lite too (21–2). These are the only gains here
+  that survive every control.
 - **Writing teams do not beat one writer.** Agents' Room loses short and long
   stories to one call (0–10, 0–9, 1–9), and STORM is no better than one agent
   with the same search tool (7–12), citing more links that no search returned.
