@@ -31,6 +31,7 @@ const GRADERS: { value: Grader; label: string; hint: string }[] = [
   { value: "math", label: "Math (LaTeX)", hint: "The last \\boxed{} (or the final answer) equals the expected one after the MATH benchmark's normalisation: \\frac, \\left, degrees, \\text{} and spacing do not matter, and equal numbers match" },
   { value: "llm", label: "LLM judge", hint: "A model reads the output and decides whether it gives the expected answer" },
   { value: "code", label: "Code: run the tests", hint: "The code in the answer is run with the problem's tests in a throwaway Docker container (no network, 512 MB, 10 s); it passes when the tests do. For HumanEval-style problems" },
+  { value: "none", label: "None: compare pairwise", hint: "Nothing is graded: every output is kept, for open-ended tasks (a story, an article). Compare two such evaluations of the same questions pairwise, by a model judging which output is better" },
 ];
 
 /** the server runs at most this many cases × repeats per evaluation */

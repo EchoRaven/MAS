@@ -9,7 +9,7 @@ import { runJs } from "../runtime/functions/sandbox";
 import { HttpError, type Store } from "../store/files";
 
 const FORMATS: DatasetFormat[] = ["auto", "gsm8k", "mcq", "qa", "custom"];
-const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code"];
+const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "none"];
 const MAX_CASES = 20_000;
 
 /** A dataset by id: one shipped with the app, or one stored here. */
