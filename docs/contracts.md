@@ -343,7 +343,7 @@ with the port the compose stack publishes.
 ```yaml
 contract: mas-plugin/1
 name: CRM lookup
-scope: agent | group | end_user | system
+scope: agent | group | end_user | run | system   # run: empty at the start of every run; system: shared by all runs, kept
 backend: { kind: builtin | mcp | http | code, url, command, config }
 tools: [{ name, description, effect: pure | read | write | irreversible }]
 hooks:
@@ -351,6 +351,13 @@ hooks:
   after_turn:  <fn>   # turn -> records to store, or null
   on_start:    <fn>
 ```
+
+A task's scratchpad (notes, drafts, a codebase, a ledger) takes scope `run`.
+With `system` every run of the system shares one folder, kept between runs, so
+evaluation cases that run at the same time, and later ones, read each other's
+files. Agents' Room's stories mixed for this reason until the scope existed.
+`system` is for what should carry over, such as Reflexion's lessons or Voyager's
+skills.
 
 The `memory`, `knowledge`, `workspace` and `board` presets fill in these
 fields for you. Switching a plugin to `custom` keeps its current values and

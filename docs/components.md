@@ -259,7 +259,7 @@ service:
 ```yaml
 contract: mas-plugin/1
 name: CRM lookup
-scope: agent | group | end_user | system
+scope: agent | group | end_user | run | system   # run: empty at the start of every run; system: shared by all runs, kept
 backend: { kind: http, url: https://crm.example/mas, config: { auth_env: CRM_TOKEN } }   # sent as a bearer token
 tools:
   - { name: find_customer, description: Look a customer up by email, effect: read }
