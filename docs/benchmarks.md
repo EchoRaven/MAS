@@ -1089,7 +1089,7 @@ each system's misses in two:
 
 Stories have no expected answer, so they are evaluated with the grader
 **None** and compared pairwise (`POST /api/evals/pairwise`, or the Pairwise
-panel on the Evaluate page). A judge model reads both stories for each prompt,
+panel on the Evaluate page; the Compare page lists every judgement by set). A judge model reads both stories for each prompt,
 in both orders. A story wins only when both orders pick it; anything else is
 a tie. The set is `benchmarks/stories/prompts-10.jsonl`: ten prompts asking
 for a short story of about 600 words. Everything runs on flash-lite; the judge

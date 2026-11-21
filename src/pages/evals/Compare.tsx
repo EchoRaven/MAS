@@ -10,6 +10,7 @@ import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, pairedDiff, poolRuns, repeatStats, retryableCase, wilson } from "@/run/evals";
+import { OpenEnded } from "./OpenEnded";
 import { CostChart } from "./CostChart";
 import { formatVars } from "@/run/vars";
 import { useServer } from "@/store/server";
@@ -178,7 +179,7 @@ export function ComparePage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 md:p-4">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 md:p-4 [&>*]:shrink-0">
       <div className="flex flex-wrap items-center gap-2">
         <Link to="/evals" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Evaluate
@@ -422,6 +423,7 @@ export function ComparePage() {
           <p className="mt-2 text-[11px] text-muted-foreground">A shaded row is a question no system got right in any run.</p>
         </section>
       )}
+      <OpenEnded />
     </div>
   );
 }
