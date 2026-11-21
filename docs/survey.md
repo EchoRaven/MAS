@@ -294,3 +294,10 @@ the vocabulary:
   template on real models and reports which ones finish with an answer and
   why the others do not. A per-template benchmark sample with a known pass
   rate would go further.
+- **Open-ended results depend on the judge and the baseline.** Pairwise
+  judging shows what can bias a verdict: each side's length and structure, how
+  often the judge picked the response shown first (four in five on stories), and
+  the share of links a run's own searches returned. A baseline's prompt alone
+  produced one apparent gain (MoA over a writer told to give the piece only).
+  Still open: a judge that can search, for recent topics it does not know; and
+  human labels, without which agreement is measured against a stronger model.
