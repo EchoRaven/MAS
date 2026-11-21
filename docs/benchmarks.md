@@ -48,6 +48,11 @@ exact McNemar tests against one agent on the same questions.
   throughout, nothing either. Picking the most consistent of five samples
   (Universal Self-Consistency) instead of merging them gains nothing (12–7)
   ([a strong model](#a-strong-model-a-gain-that-survives-the-controls)).
+- **Self-Refine gains as much as MoA on open-ended answers, with one model.**
+  On gemini-3.8-flash, answering, critiquing and revising beats the model
+  alone 25–2 over two runs and 20–8 at matched length, all of it on the answers
+  the critic chose to revise (19–0), at two thirds of MoA's cost
+  ([Self-Refine](#one-model-criticising-itself-gains-as-much)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
   give the piece only (p 0.0007), even with lengths matched, and 14–19 against
@@ -1421,6 +1426,37 @@ control was run for the mix only.)
 On Hard computation the same mix did not help (28, 27 against the best
 model's 26, 27): drafts from different models add coverage to open-ended
 answers, and there is nothing to add to a product that is right or wrong.
+
+### One model criticising itself gains as much
+
+Self-Refine (one model answers, critiques its own answer and revises, up to
+three times, until the critique finds nothing to fix) was measured above on
+maths. Most of its paper's tasks are open-ended, so its run variable `mode:
+open` drops the step-by-step answer line. On gemini-3.8-flash, against that
+model alone, judged by gemini-3-flash:
+
+| Self-Refine against gemini-3.8-flash alone | Run 1 | Run 2 |
+|---|---|---|
+| Default criterion | 10–1 (9 ties) | 15–1 (4 ties) |
+| Judged on content, not length | 11–1 (8 ties) | 14–1 (5 ties) |
+| The single model told to aim for about 730 words | 9–4 (7 ties) | 11–4 (5 ties) |
+
+It writes 694 and 682 words (5.5 headings, 17–18 list items) at $0.20 for
+twenty: 25–2 over two runs (p < 0.0001), 20–8 against the single model at
+matched length (p 0.04; judged again, 11–3 and 10–6). The critic found nothing
+to fix in 8 and 9 of the twenty, and those answers are one plain call, like
+the control. The split shows where the gain is:
+
+| Answers (both runs, default criterion) | Wins | Losses | Ties |
+|---|---|---|---|
+| Revised at least once | 19 | 0 | 4 |
+| Never revised: one call, as the control | 6 | 2 | 9 |
+
+The never-revised answers are the control model against itself, and their
+6–2 is the noise these judgements carry. The revised ones win 19–0. So on
+this model, self-feedback gains about what Mixture-of-Agents gains (22–6 at
+matched length), for two thirds of its cost and with one model. On maths
+(above) its revisions moved 4 answers right and 3 wrong.
 
 ## Earlier sets
 
