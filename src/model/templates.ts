@@ -287,9 +287,9 @@ function baseline(): SystemDoc {
  * The question baseline ends with an answer line ("Final: …"), which a judge of fiction reads as a flaw.
  */
 function baselineWriter(): SystemDoc {
-  const b = new Builder("Single writer (baseline)", "One agent writes what is asked in one model call, with no answer line. The baseline for open-ended writing systems (Agents' Room, STORM), judged pairwise against them.");
+  const b = new Builder("Single writer (baseline)", "One agent writes what is asked in one model call, with no answer line. The baseline for open-ended writing systems (Agents' Room, STORM), judged pairwise against them. The run variable style adds a sentence to its instructions (for example a length, to match a system that writes more).");
   b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks for a piece of writing", approves: false })
-    .agent("solo", 340, 0, { name: "Writer", role: "Writes alone", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Write what is asked. Reply with the piece itself only: no title unless asked, no notes, summary or commentary before or after it." } })
+    .agent("solo", 340, 0, { name: "Writer", role: "Writes alone", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Write what is asked.{{vars.style ?? \"\"}} Reply with the piece itself only: no title unless asked, no notes, summary or commentary before or after it." } })
     .edge("asker", "solo", "message", { label: "Request" })
     .edge("solo", "asker", "message", { label: "Piece" });
   b.doc.budget = { usd: 0.5, max_rounds: 5, wallclock_min: 5 };
