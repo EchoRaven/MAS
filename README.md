@@ -96,6 +96,11 @@ Measured on this platform, every system on the same model and questions
   LongAgent (members reading the parts at once) 13.5 at a third of that.
   Splitting helps to gather, not to find: asked for one order's amount, a
   single line, one agent finds all 40, even at ~45,000 tokens.
+- **A research team writes no better than one researcher**: STORM
+  (perspectives, interviews with a searching expert, outline, article) wins 7
+  and loses 12 against one agent with the same web search on ten recent
+  topics, at 12 times the cost. Half or more of its links came from no search,
+  checked against each run's own searches.
 - **A writers' room loses to one writer on short stories**: Agents' Room
   (planners and section writers sharing a scratchpad) loses 0–10 and 0–9 to
   a single call, judged pairwise in both orders by two judges, at 15 times the

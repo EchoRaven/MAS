@@ -37,6 +37,10 @@ exact McNemar tests against one agent on the same questions.
   19.5, Mixture-of-Agents 18, MedAgents 16 are no different from one agent;
   CAMEL 13, ChatEval 12.5 and AutoAgents 14 are significantly worse (p ≈
   0.01), MAD 14 nearly so (p 0.05).
+- **STORM is no better than one agent with the same search tool.** On ten
+  recent topics it wins 7 and loses 12 over two runs (p 0.36), at 12 times the
+  cost. Half or more of its links came from no search; one searching agent's
+  links did ([STORM](#storm-articles-on-recent-topics-with-live-search)).
 - **A writers' room loses to one writer on short stories.** Agents' Room
   (four planners and five section writers around a scratchpad) loses 0–10
   and 0–9 (one tie) to one call, judged pairwise in both orders. A second
@@ -1149,6 +1153,68 @@ A workspace binding can now inject its files' contents (`read.contents`, the
 **File contents** toggle on the edge), and every Agents' Room planner and
 writer gets the whole scratchpad. The stories then kept to their prompts but
 still lost (0–10, 0–9).
+
+## STORM: articles on recent topics, with live search
+
+STORM researches a topic by interviews. A curator picks perspectives; for each,
+an interviewer questions a topic expert who answers from web search; the notes
+become an outline, and the outline becomes the article. The set is
+`benchmarks/articles/recent-10.jsonl`: ten topics from 2024 to 2026. They are
+recent so that what a model remembers may be out of date and research has
+something to add. Everything runs on flash-lite. On this model `web_search`
+is a grounded Gemini call. The control is **Single writer with search
+(baseline)**: one agent with the same search tool that searches, then writes.
+
+| STORM | Against | Judge | Wins | Losses | Ties |
+|---|---|---|---|---|---|
+| run 1 | writer with search, run 2 | gemini | 4 | 6 | 0 |
+| run 2 | writer with search, run 1 | gemini | 3 | 6 | 1 |
+
+gemma is no judge for these topics. It does not know 2024–2026 events, so it
+calls real ones made up. It also gave no verdict on 5 of 20 readings: its
+thinking ran past the judge's 4,000-token limit, which now follows the judge
+model's own.
+
+| | Cost (10 articles) | Words | Links per article | Of them returned by its own searches |
+|---|---|---|---|---|
+| Writer with search, two runs | $0.018, $0.020 | 301, 335 | 2.8, 4.6 | 75%, 89% or more |
+| STORM, two runs | $0.229, $0.217 | 430, 444 | 5.2, 6.3 | 38%, 48% |
+
+Over both runs STORM wins 7 and loses 12 (p 0.36): no better than one agent
+with the same search tool, at 12 times the cost. Its articles are longer and
+the judge credits their depth on some topics, but it marks others down for
+drifting off the topic (the Rubin Observatory article covers the observatory,
+not its first images).
+
+**Links.** A judge cannot check recent facts or links, so the links are
+checked against each run's own searches: the **Sourced links** count on the
+Pairwise panel, `GET /api/evals/:id/sources`, or `scripts/sourced-links.mts`.
+STORM cites more links, but half or more of them came from no search. Some
+the expert wrote from memory while answering (a doi.org paper, a 2024 news
+article). Others the writer added. One searching agent cites what it found.
+(The writer's first run was logged before the log kept 12,000 characters of
+a tool's result, so its share is a lower bound.)
+
+### Before these runs
+
+- **Search worked only on Anthropic models.** On the others `web_search` was
+  left out, and STORM's expert answered from memory. It now runs as a grounded
+  Gemini call on every other model. Google gives sources as redirect links that
+  expire within minutes (404 by the end of a run), so they are resolved to the
+  real pages at search time.
+- **The notes lost their sources on the way.** Interviewers cut sources to a
+  site's name ("Source: NOAA/Climate.gov"). The curator, told to pass the notes
+  on, wrote its own article instead. Its writer then cited "Provided Interview
+  Notes" and links of its own (2.3 per article, 17% from searches; 1–6 and 2–5
+  in the first judgements). Interviewers now copy each URL exactly, the curator
+  passes the notes on as written, and the writer may cite only URLs the outline
+  gives.
+- **The log kept 3,000 characters of a tool's result**, too little to see where
+  sources were lost. It now keeps 12,000.
+
+**Caveats.** The paper's STORM drafts long articles from many interviews;
+these articles are 300–450 words on flash-lite, from three interviews. The paper's
+baselines include retrieval-augmented writing, which is the control here.
 
 ## Earlier sets
 
