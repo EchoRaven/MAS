@@ -35,7 +35,8 @@ What agents reach is limited:
 - **Web search:** `web_search` in the tool catalog is the provider's own search tool on Anthropic models. On
   every other model it is a grounded call to the Gemini API (`generateContent` with `google_search`, model
   `MAS_SEARCH_MODEL`, default gemini-3.1-flash-lite), which needs `GEMINI_API_KEY`. The agent gets the answer, the
-  queries Google ran, and numbered sources: Google's redirect links with each site's name. Searches go at most
+  queries Google ran, and numbered sources with each site's name. Google gives its sources as redirect links that
+  expire within minutes, so each is resolved at once to the page it points to (only the redirect's Location is read). Searches go at most
   one a second. Their tokens count toward the run's cost. Google also bills each grounded search, and that fee
   counts only when `MAS_SEARCH_USD_PER_QUERY` is set. A dry run searches nothing.
 - **Web pages:** the `fetch` tool, and knowledge sources that are web pages, only reach public addresses. Each address, including every redirect, is checked, and the connection is made to the address that was checked, so a name cannot be re-pointed at this machine between the check and the request.

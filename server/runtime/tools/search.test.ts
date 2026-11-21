@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { formatSearch, geminiSearch } from "./search";
+import { formatSearch, geminiSearch, resolveSources } from "./search";
 
 describe("web_search through the Gemini API", () => {
   it("reads the answer, the queries and the numbered sources, and counts the tokens", async () => {
@@ -19,6 +19,17 @@ describe("web_search through the Gemini API", () => {
     expect(r.text).toContain("[1] britannica.com: https://r.example/1");
     expect(r.text).not.toContain("[2]"); // a chunk without a URL is no source
     expect(r.usage.usd).toBeCloseTo((1000 * 0.25 + 1000 * 1.5) / 1e6);
+  });
+
+  it("resolves Google's expiring redirect links to the pages they point to, keeping any that do not resolve", async () => {
+    const fake = (async (url: string) =>
+      url.endsWith("/ok") ? new Response(null, { status: 302, headers: { location: "https://site.example/page" } }) : new Response("gone", { status: 404 })) as unknown as typeof fetch;
+    const out = await resolveSources([
+      { title: "site.example", uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/ok" },
+      { title: "old", uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/gone" },
+      { title: "plain", uri: "https://plain.example/x" },
+    ], fake);
+    expect(out.map((s) => s.uri)).toEqual(["https://site.example/page", "https://vertexaisearch.cloud.google.com/grounding-api-redirect/gone", "https://plain.example/x"]);
   });
 
   it("says so when no source came back, and fails on a provider error", async () => {

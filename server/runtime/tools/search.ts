@@ -27,6 +27,26 @@ export function formatSearch(answer: string, sources: { title?: string; uri?: st
   return [queries.length ? `Searched: ${queries.join("; ")}` : "", answer.trim() || "(no answer)", list ? `Sources:\n${list}` : "Sources: none returned"].filter(Boolean).join("\n\n");
 }
 
+/**
+ * Google's source links are redirects that expire within minutes, so an agent citing one later cites nothing,
+ * and given only the site's name an agent makes up the rest of the URL. Each is resolved at once to the page
+ * it points to (the redirect's Location, which is read, never fetched); one that does not resolve stays as is.
+ */
+export async function resolveSources(sources: { title?: string; uri?: string }[], fetchImpl: typeof fetch = fetch) {
+  return Promise.all(
+    sources.map(async (s) => {
+      if (!s.uri || !/^https:\/\/vertexaisearch\.cloud\.google\.com\//.test(s.uri)) return s;
+      try {
+        const r = await fetchImpl(s.uri, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(5000) });
+        const to = r.headers.get("location");
+        return to && /^https?:\/\//.test(to) ? { ...s, uri: to } : s;
+      } catch {
+        return s;
+      }
+    }),
+  );
+}
+
 export async function geminiSearch(key: string, query: string, fetchImpl: typeof fetch = fetch): Promise<SearchResult> {
   await pace();
   const model = SEARCH_MODEL();
@@ -47,7 +67,7 @@ export async function geminiSearch(key: string, query: string, fetchImpl: typeof
   if (!res.ok || j.error) throw new Error(`web_search: ${j.error?.message ?? `HTTP ${res.status}`}`);
   const c = j.candidates?.[0];
   const answer = (c?.content?.parts ?? []).map((p) => p.text ?? "").join("");
-  const sources = (c?.groundingMetadata?.groundingChunks ?? []).map((g) => g.web ?? {}).filter((w) => w.uri);
+  const sources = await resolveSources((c?.groundingMetadata?.groundingChunks ?? []).map((g) => g.web ?? {}).filter((w) => w.uri), fetchImpl);
   const tokens_in = j.usageMetadata?.promptTokenCount ?? 0;
   const tokens_out = j.usageMetadata?.candidatesTokenCount ?? 0;
   // Google bills each grounded search on top of the tokens; set its price to count it (it is not known here)
