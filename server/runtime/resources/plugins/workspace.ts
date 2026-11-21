@@ -109,8 +109,20 @@ export class WorkspacePlugin implements Resource {
     return all.filter((t) => declared.has(t.name) && (edge.access !== "read" || t.effect === "read"));
   }
 
-  async beforeTurn(turn: { node: string }) {
-    const files = listFiles(this.root(turn.node));
-    return `Files in ${this.node.data.name}:\n${files.length ? files.slice(0, 100).map((f) => `- ${f}`).join("\n") : "(empty)"}`;
+  /**
+   * Put in front of an agent's turn (binding auto_inject or pinned): the files' names, or with read.contents the
+   * files themselves (a scratchpad read whole, as Agents' Room gives every agent the full scratchpad, rather than
+   * the files it thinks to open). The binding's budget clips the whole.
+   */
+  async beforeTurn(turn: { node: string; edge?: SysEdge }): Promise<string | null> {
+    const root = this.root(turn.node);
+    const files = listFiles(root).sort();
+    if (!turn.edge?.binding?.read?.contents) return `Files in ${this.node.data.name}:\n${files.length ? files.slice(0, 100).map((f) => `- ${f}`).join("\n") : "(empty)"}`;
+    if (!files.length) return null;
+    const parts = files.map((f) => {
+      const text = fs.readFileSync(path.join(root, f), "utf8");
+      return `### ${f}\n${text.length > 20_000 ? text.slice(0, 20_000) + "\n…(truncated)" : text}`;
+    });
+    return `Files in ${this.node.data.name} so far:\n\n${parts.join("\n\n")}`;
   }
 }

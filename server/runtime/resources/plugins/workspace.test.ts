@@ -74,3 +74,24 @@ describe("a workspace's scope", () => {
     expect(await two.call("read_file", { path: "kept.md" })).toBe("x");
   });
 });
+
+describe("a workspace read whole before a turn", () => {
+  it("lists every file by path, and gives nothing when empty", async () => {
+    const node = { id: "pad2", data: { kind: "plugin", preset: "workspace", name: "Scratchpad", spec: { scope: "run", sources: ["/pad2"], tools: [] } } };
+    const store = { stateDir: (...p: string[]) => { const d = path.join(base, "whole", ...p); fs.mkdirSync(d, { recursive: true }); return d; } };
+    const rc = { doc: { id: "sys", nodes: [node] }, byId: new Map([["pad2", node]]), store, runId: "w1", vars: {} };
+    const ws = new WorkspacePlugin(rc as never, node as never);
+    const edge = { binding: { mode: "auto_inject", read: { contents: true } } } as never;
+    expect(await ws.beforeTurn({ node: "writer", edge })).toBeNull();
+    expect(await ws.beforeTurn({ node: "writer" })).toBe("Files in Scratchpad:\n(empty)");
+    const root = ws.root("writer");
+    fs.mkdirSync(path.join(root, "notes"), { recursive: true });
+    fs.writeFileSync(path.join(root, "notes", "plot.md"), "the keeper finds a letter");
+    fs.mkdirSync(path.join(root, "story"), { recursive: true });
+    fs.writeFileSync(path.join(root, "story", "1-exposition.md"), "The light turned.");
+    expect(await ws.beforeTurn({ node: "writer" })).toBe("Files in Scratchpad:\n- notes/plot.md\n- story/1-exposition.md");
+    const text = (await ws.beforeTurn({ node: "writer", edge }))!;
+    expect(text).toContain("### notes/plot.md\nthe keeper finds a letter");
+    expect(text.indexOf("notes/plot.md")).toBeLessThan(text.indexOf("story/1-exposition.md"));
+  });
+});

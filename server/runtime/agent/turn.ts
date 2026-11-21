@@ -116,7 +116,8 @@ export async function runAgentTurn(svc: TurnServices, state: AgentState, node: S
   if (boxes.length && (rc.input ?? "").length > 2000) blocks.push(`The run's input (${(rc.input ?? "").length.toLocaleString("en")} characters) is saved in ${boxes[0]} at /work/input.txt. To compute over it, read that file in your code; do not copy the text into a command.`);
   // passages put in front of the agent are a first pass; say how to look for what they missed
   const searchable = access
-    .filter((e) => e.binding?.mode === "auto_inject")
+    // (a workspace read whole is not a search result: no such note)
+    .filter((e) => e.binding?.mode === "auto_inject" && (rc.byId.get(e.target)?.data as { preset?: string } | undefined)?.preset !== "workspace")
     .map((e) => ({ name: nameOf(rc, e.target), tools: tools.filter((t) => t.source === e.target && (t.effect === "read" || t.effect === "pure")).map((t) => t.name) }))
     .filter((x) => x.tools.length);
   for (const s of searchable) blocks.push(`The passages from ${s.name} above were found for your input as a whole. If part of the question is not covered by them, search ${s.name} for that part with ${s.tools.join(" or ")} before answering.`);

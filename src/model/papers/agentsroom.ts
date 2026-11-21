@@ -27,6 +27,10 @@ const ORCHESTRATOR = `You run a writers' room. The task is a story the user aske
 Give each agent the user's request in your call. If a part comes back weak or inconsistent with the notes, call that agent again with what to fix.
 3. Finally reply with the whole story: the five parts in order, as continuous prose, with no headings or notes.`;
 
+// every agent starts its turn with the whole scratchpad in front of it, as in the paper, rather than opening only
+// the files it thinks of (writers that read only the part before theirs drifted off the plan)
+const PAD = { mode: "auto_inject" as const, read: { budget_tokens: 12000, contents: true }, write: { when: "agent_tool" as const } };
+
 function build(): SystemDoc {
   const b = new Builder(
     "Agents' Room",
@@ -43,20 +47,20 @@ function build(): SystemDoc {
       name: `${name} planner`,
       role: `Plans ${what.split(":")[0]}`,
       model: "sonnet",
-      harness: { ...native(), loop: "react", max_steps: 4, instructions: `You plan ${what}. Read what the other planners have already written in the scratchpad (list_files, read_file) and stay consistent with it. Write your notes, at most 200 words, with write_file to notes/${id}.md, then reply with a one-line summary.` },
+      harness: { ...native(), loop: "react", max_steps: 4, instructions: `You plan ${what}. What the other planners have written so far is in front of you (the scratchpad's files); stay consistent with it. Write your notes, at most 200 words, with write_file to notes/${id}.md, then reply with a one-line summary.` },
     })
       .edge("orchestrator", id, "call")
-      .edge(id, "scratchpad", "access", { access: "read_write" });
+      .edge(id, "scratchpad", "access", { access: "read_write", binding: PAD });
   }
   WRITERS.forEach(([id, name, what], i) => {
     b.agent(id, 0, 0, {
       name: `${name} writer`,
       role: `Writes ${what.split(":")[0]}`,
       model: "sonnet",
-      harness: { ...native(), loop: "react", max_steps: 6, instructions: `You write ${what}. First read the notes (notes/*.md) and the parts already written (story/*.md) in the scratchpad, so your part follows on from them. Write your part, 150-300 words of prose, with write_file to story/${i + 1}-${id}.md, then reply with the text you wrote.` },
+      harness: { ...native(), loop: "react", max_steps: 6, instructions: `You write ${what}. The notes (notes/*.md) and the parts already written (story/*.md) are in front of you; your part follows on from them and keeps to the notes. Write your part, 150-300 words of prose, with write_file to story/${i + 1}-${id}.md, then reply with the text you wrote.` },
     })
       .edge("orchestrator", id, "call")
-      .edge(id, "scratchpad", "access", { access: "read_write" });
+      .edge(id, "scratchpad", "access", { access: "read_write", binding: PAD });
   });
   b.doc.budget = { usd: 3, max_rounds: 60, wallclock_min: 20 };
   return autoLayout(b.doc);
@@ -72,6 +76,7 @@ export const agentsroom: TemplateInfo = {
     mapped: [
       "The scratchpad is a workspace plugin every agent can read and write: planners leave notes in notes/, writers leave their parts in story/, and each reads what the others wrote before working.",
       "The paper's planning agents (conflict, character, setting, plot) and writing agents (one per part of Freytag's pyramid: exposition, rising action, climax, falling action, resolution) are agents reached through call edges, so to the orchestrator each one is a tool (ask_conflict, ask_climax, …).",
+      "Every planner and writer starts its turn with the whole scratchpad in front of it (an auto-injected workspace), as the paper puts the scratchpad into each agent's prompt.",
       "The orchestrator is a ReAct agent: it calls the agents in turn, can send one back with corrections, and assembles the five parts into the story.",
     ],
     differs: [

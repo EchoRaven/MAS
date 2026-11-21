@@ -153,6 +153,8 @@ export interface AccessBinding {
     format?: FunctionSpec | null;
     /** tokens this source may take in the context */
     budget_tokens?: number | null;
+    /** workspaces: the files' contents, not only their names */
+    contents?: boolean | null;
     /** per-agent overrides of the plugin's retrieval pipeline */
     retrieval?: Partial<RetrievalSpec> | null;
   } | null;
