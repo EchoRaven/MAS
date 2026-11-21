@@ -653,7 +653,9 @@ export class Engine implements TurnServices {
     rc.emit({ type: "message", from, to: roomId, room: roomId, edge: edge?.id, port: tag, kind: "message", text: clip(text, 6000) });
     // posts: how many messages this run has put in the room, so a conversation can end after a set length ("posts >= 12")
     const posts = room.posts.filter((p) => p.run === rc.runId).length;
-    if (/\bTERMINATE\b/.test(text) || rc.doc.termination.some((t) => testExpr(t, { text, last: text, from, room: roomId, posts }).ok)) {
+    // a room held for a set length (room.min_posts) cannot be ended early, by TERMINATE or a condition
+    const minPosts = (rc.byId.get(roomId)?.data as { room?: { min_posts?: number | null } } | undefined)?.room?.min_posts ?? 0;
+    if (posts >= minPosts && (/\bTERMINATE\b/.test(text) || rc.doc.termination.some((t) => testExpr(t, { text, last: text, from, room: roomId, posts }).ok))) {
       rc.emit({ type: "transform", at: roomId, label: "conversation ended", detail: "termination condition" });
       // a conversation that ends in a room is the run's answer, so it is not lost
       this.outputs++;

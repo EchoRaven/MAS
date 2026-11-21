@@ -441,6 +441,14 @@ describe("runtime", () => {
       expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("a2");
     });
 
+    it("min_posts: a TERMINATE before the set length is ignored, and the conversation ends at it", async () => {
+      const doc = roomDoc("round_robin", [["a", "Ann", ["a1 TERMINATE", "a2"]], ["b", "Bo", ["b1", "b2"]]], { termination: ["posts >= 5"] });
+      (doc.nodes.find((n) => n.id === "chat")!.data as { room: { min_posts?: number } }).room.min_posts = 5;
+      const { events } = await run(doc, "go", { mock: false });
+      expect(posts(events)).toEqual(["me", "a", "b", "a", "b"]);
+      expect((events.find((e) => e.type === "output") as { text: string }).text).toBe("b2");
+    });
+
     it("free: every other agent hears each post, and a termination expression ends it", async () => {
       const doc = roomDoc("free", [["a", "Ann", ["from a", "a again"]], ["b", "Bo", ["DONE from b"]]], { termination: ['text.includes("DONE")'] });
       const { events } = await run(doc, "go", { mock: false });

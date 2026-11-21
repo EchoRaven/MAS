@@ -2,7 +2,7 @@ import { checkContract, manifestToYaml } from "@/model/envspec";
 import { nodeName } from "@/model/ports";
 import { defaultDbQuery } from "@/model/pipelines";
 import type { EnvData, SystemDoc } from "@/model/types";
-import { opts, Section, SelectField, TextField } from "../fields";
+import { NumberField, opts, Section, SelectField, TextField } from "../fields";
 import { DbQueryEditor } from "./DbQueryEditor";
 import { EnvContents } from "./EnvContents";
 import { EnvTry } from "./EnvTry";
@@ -37,6 +37,7 @@ export function EnvInspector({ id, e, doc, set }: { id: string; e: EnvData; doc:
             <SelectField label="Moderator" value={e.room.selector ?? ""} onChange={(selector) => set({ room: { ...e.room!, selector } })} items={members.filter(Boolean).map((n) => ({ value: n!.id, label: nodeName(n) }))} />
           )}
           <SelectField label="History for late joiners" value={e.room.history} onChange={(history) => set({ room: { ...e.room!, history } })} items={opts([["persistent", "Full history"], ["since_join", "Only since joining"]])} />
+          <NumberField label="Minimum posts" value={e.room.min_posts ?? null} onChange={(min_posts) => set({ room: { ...e.room!, min_posts } })} hint="The conversation cannot end before this many posts in a run: TERMINATE and the termination conditions wait (a meeting held for a set number of rounds)" />
           <p className="text-xs text-muted-foreground">Members: {members.length ? members.map(nodeName).join(", ") : "none"}. Connect an agent or human to join.</p>
         </Section>
       )}

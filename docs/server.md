@@ -170,7 +170,10 @@ The scheduler is `server/runtime/engine.ts`.
   `room` and `posts`, the number of messages this run has put in the room, so
   `posts >= 12` ends a conversation after twelve messages. So does a post after which nobody is next (the
   selector named no one, nobody was `@named`). The last message is then the
-  conversation's answer.
+  conversation's answer. A room with `min_posts` cannot end before that many posts in the
+  run: a `TERMINATE` or a termination expression earlier is ignored. Virtual
+  Lab holds its meeting to three rounds this way, where flash-lite's PI wrapped
+  up after two.
 - **People.**
   - A call to a human asks them: for approval if they approve, otherwise for
     a reply.

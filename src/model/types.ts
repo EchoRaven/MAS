@@ -278,6 +278,9 @@ export interface RoomSpec {
   /** selector: which member picks the next speaker */
   selector?: string;
   history: "persistent" | "since_join";
+  /** the conversation cannot end before this many posts in the run: TERMINATE and the termination conditions wait
+   * (a meeting held for a set number of rounds, whatever a member says) */
+  min_posts?: number | null;
 }
 
 /**

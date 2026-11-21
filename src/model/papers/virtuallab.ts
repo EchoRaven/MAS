@@ -7,6 +7,8 @@ import { autoLayout } from "../layout";
 import type { SystemDoc } from "../types";
 
 const ROUNDS = 3;
+// the researcher's question, the PI's agenda, then per round three scientists, the critic and the PI
+const MEETING_POSTS = 2 + ROUNDS * 5;
 
 const SCIENTISTS = [
   ["immunologist", "Immunologist", "immunology: antibodies, nanobodies, antigens and how they bind"],
@@ -27,7 +29,9 @@ function build(): SystemDoc {
     `A team meeting of AI scientists. A principal investigator sets the agenda; an immunologist, a machine-learning specialist and a computational biologist answer in turn; a scientific critic finds the flaws. After ${ROUNDS} rounds the PI writes the meeting summary with decisions and next steps.`,
   );
   b.node("user", "human", 0, 0, { name: "Researcher", role: "Brings the research question", approves: false })
-    .room("meeting", 0, 0, "team meeting", { policy: "round_robin", history: "since_join" })
+    // the question, the PI's agenda, then ROUNDS rounds of three scientists, the critic and the PI: the PI's summary is
+    // the last post, and the meeting cannot end before it, whatever a member writes
+    .room("meeting", 0, 0, "team meeting", { policy: "round_robin", history: "since_join", min_posts: MEETING_POSTS })
     .agent("pi", 0, 0, { name: "Principal investigator", role: "Sets the agenda, leads, summarises", model: "opus", harness: { ...native(), loop: "single_shot", instructions: PI } });
   for (const [id, name, field] of SCIENTISTS) {
     b.agent(id, 0, 0, {
@@ -42,7 +46,7 @@ function build(): SystemDoc {
   // the order members join is the order they speak: the PI first, the critic last
   for (const id of ["pi", ...SCIENTISTS.map(([id]) => id), "critic"]) b.edge(id, "meeting", "access", { access: "read_write" });
   b.doc.budget = { usd: 3, max_rounds: 40, wallclock_min: 20 };
-  b.doc.termination = ['text.includes("TERMINATE")'];
+  b.doc.termination = ['text.includes("TERMINATE")', `posts >= ${MEETING_POSTS}`];
   return autoLayout(b.doc);
 }
 
@@ -57,6 +61,7 @@ export const virtuallab: TemplateInfo = {
       "The team meeting is a room env with the round-robin policy. Members speak in the order they joined: the principal investigator, the three scientists, then the scientific critic, round after round.",
       `The PI opens with the agenda and questions, synthesises after each round, and after ${ROUNDS} rounds writes the meeting summary ending with TERMINATE, which ends the meeting; that summary is the run's answer.`,
       "The scientific critic speaks last in every round, as in the paper, so each round's proposals are checked before the PI decides what is settled.",
+      `The meeting runs its ${ROUNDS} rounds whatever a member writes: the room cannot end before its ${MEETING_POSTS}th post (room.min_posts), the PI's summary. Left to the PI, flash-lite summarised after two rounds.`,
     ],
     differs: [
       "In the paper the PI first creates the scientist agents for the project; here the team (an immunologist, a machine-learning specialist and a computational biologist, as in the paper's nanobody study) is fixed, so change the agents for another field.",
