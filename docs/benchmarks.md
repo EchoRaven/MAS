@@ -386,10 +386,10 @@ length. Hard computation (30), one run each:
 | System on gemma | Correct | vs single agent | Time |
 | --- | --- | --- | --- |
 | Single agent | 27, 24 | | 48 min |
-| Agent Forest, N = 5 (vote) | 25 | +0 −2 | 92 min |
+| Agent Forest, N = 5 (vote) | 25, 26 | +2 −2 over both runs | 92 min |
 | Multiagent Debate, 2 rounds | 26, 25 | +1 −1 over both runs | 116 min |
-| ReConcile, 3 rounds | 26 | +1 −2 | 112 min |
-| Solo Performance Prompting (one call, simulated personas) | 25 | +0 −2 | 77 min |
+| ReConcile, 3 rounds | 26, 27 | +4 −2 over both runs | 112 min |
+| Solo Performance Prompting (one call, simulated personas) | 25, 24 | +1 −3 over both runs | 77 min |
 | Single agent with a code runner | **30** | +3 −0 (p 0.25) | 8.5 min |
 
 **No system without a tool does better than one gemma agent.** This section
@@ -414,8 +414,10 @@ Second runs of the single agent and the debate, added later: 24 and 25,
 so 25.5 each over two runs, +1 −1 run against run. Three of the single
 agent's six misses in its second run were gemma thinking past the
 provider's own output limit and leaving no answer (as some debaters' calls
-did on the same questions); they count as misses. The other rows are one
-run each.
+did on the same questions); they count as misses. The voting, ReConcile
+and SPP rows got their second runs later still (26, 27 and 24): over two
+runs each, one agent 25.5, debate 25.5, voting 25.5, ReConcile 26.5, SPP
+24.5, none significantly different from one agent.
 
 So on gemma, as on flash-lite, voting, debate, ReConcile and one model
 playing all the personas score as one agent does or a question or two

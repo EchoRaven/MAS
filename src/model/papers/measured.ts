@@ -3,15 +3,15 @@
 // 30-question set; flash-lite is gemini-3.1-flash-lite, where a single agent scores 19.
 export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
-    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against one agent's 27; on the stronger 3.8-flash, 26, 26 against 26, 27.",
+    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26, 25 against one agent's 27, 24; on the stronger 3.8-flash, 26, 26 against 26, 27.",
     "With 2, 3, 5 debaters (flash-lite): 20, 21, 22.5; five beat one agent significantly (+8 −1, p 0.04), at 17 times its cost.",
     "Five in a ring, each reading its neighbours (sparse communication): 22, 22, a question below the full exchange; a third less to read, but output dominates the cost.",
     "Three debaters with different methods (step by step, decompose, check another way): 23, 23, +9 −1 against one agent (p 0.02); three all told step by step: 21.5. On MATH level 5: 45, as a vote and a code runner.",
     "MMLU (100): 95.5 against 95.0 on flash-lite, 90 against 89.5 on gemma (two runs each): no gain where errors are missing knowledge.",
     "With a sandbox per debater, MATH-500 (50): 49, against one agent with a sandbox's 48, at four times the cost.",
   ],
-  "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, against one agent's 27.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
-  "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25, against one agent's 27."],
+  "paper-reconcile": ["Hard computation (flash-lite): 22, 22; on gemma 26, 27, against one agent's 27, 24.", "One seat per model (three models): 27.3 over three runs, the same as its strongest seat alone."],
+  "paper-agent-forest": ["Hard computation (flash-lite): 22 with three samples, flat beyond; on gemma (five samples) 25, 26, against one agent's 27, 24."],
   "paper-eot": ["Hard computation (flash-lite): 23, 22, 22 over three runs (22.3), with ReConcile and the vote; one agent 19."],
   "paper-dylan": ["Hard computation (flash-lite): 22; a team of two chosen by learned importance: 20, at 24% less."],
   "paper-mad": ["Hard computation (flash-lite): 14, 14, below one agent: the devil argues the judge out of right products."],
@@ -37,7 +37,7 @@ export const MEASURED: Record<string, string[]> = {
   "paper-chain-of-agents": ["Ledger totals (20 generated ledgers of ~44,000 characters, flash-lite): 13, 15 against one agent reading the whole ledger 9, 9 (+14 −4, p 0.03), at three times the cost. One agent misses orders; the chain counts extra ones. By part size: 3,000 characters 14.0, 6,000 14.5, 12,000 10.0. A vote over five whole readings: 6.5 (the chain +18 −3, p 0.001). On the lookup version (one order's amount, a single line): 39 of 40, as one agent's 40. One agent with a code runner reading the ledger from its sandbox: 20, 19, at twice the chain's cost."],
   "paper-longagent": ["Ledger totals (20 generated ledgers of ~44,000 characters, flash-lite): 14, 13 against one agent's 9, 9 (+11 −2, p 0.02), as Chain-of-Agents does at the same part size (14.5) for less than half its cost ($0.27 against $0.61). On the lookup version: 40 of 40, as one agent."],
   "paper-spp": [
-    "Hard computation: 20, 22 on flash-lite (as debate), 25 on gemma (debate 26, one agent 27).",
+    "Hard computation: 20, 22 on flash-lite (as debate), 25 and 24 on gemma (debate 26, 25; one agent 27, 24).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",
   ],
 };

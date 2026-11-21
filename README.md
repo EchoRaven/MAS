@@ -72,8 +72,8 @@ Measured on this platform, every system on the same model and questions
 - **Neither a weaker nor a stronger model makes discussion pay.** On Hard
   computation, debate and voting add 2–4 questions in 30 on
   gemini-3.1-flash-lite; on the stronger gemini-3.8-flash debate adds
-  nothing (26, 26 against one agent's 26, 27); on the weaker gemma-4-26b they add nothing (one agent 27 and 24, debate 26 and 25;
-  ReConcile 26, voting and SPP 25, one run each, gemma being slow), and one agent with a code runner solves all 30 in a sixth of
+  nothing (26, 26 against one agent's 26, 27); on the weaker gemma-4-26b they add nothing (two runs each: one agent 25.5,
+  debate and voting 25.5, ReConcile 26.5, SPP 24.5), and one agent with a code runner solves all 30 in a sixth of
   the time. (An earlier report here of a 7–8 question gain on gemma came
   from a log that cut gemma's long answers off before their final line;
   fixed, and those cases run again.) On GSM8K and MATH-500 the strong model is
@@ -124,8 +124,7 @@ Measured on this platform, every system on the same model and questions
   (intervals, sums in another order, a number met in a long document) or a
   single lucky run were fixed. Every number above has had its misses
   checked by an LLM judge and its unknown answers run again, and the
-  differences it reports rest on two runs or more on both sides, except
-  ReConcile, voting and SPP on gemma, one run each (marked).
+  differences it reports rest on two runs or more on both sides.
 - **Most "failures" of a rebuilt system were the rebuild**: wrong outputs, a
   missing input, a test step that could never pass, a grader that misread
   right answers. Each became a platform interface or check (declared results,

@@ -118,9 +118,9 @@ From [benchmarks.md](benchmarks.md), all on the same model:
 - **Neither a weaker nor a stronger model makes discussion pay.** On the
   stronger gemini-3.8-flash, Multiagent Debate scores 26 and 26 on Hard
   computation against one agent's 26 and 27 (+0 −1), and the diverse
-  debate, the best three-debater setting on flash-lite, 27 and 27 (+3 −2). On gemma-4-26b one agent
-  scores 27 of 30 on Hard computation, and Multiagent Debate (26), ReConcile
-  (26), Agent Forest (25) and Solo Performance Prompting (25) do no better;
+  debate, the best three-debater setting on flash-lite, 27 and 27 (+3 −2). On gemma-4-26b, over two runs each, one agent
+  scores 25.5 of 30 on Hard computation, and Multiagent Debate (25.5), ReConcile
+  (26.5), Agent Forest (25.5) and Solo Performance Prompting (24.5) do no better;
   on flash-lite debate gains 2–4. This was first reported the other way
   (one gemma agent at 18, debate +8, p = 0.02): the run log had cut gemma's
   long answers off before their final line, and the grader read a number
