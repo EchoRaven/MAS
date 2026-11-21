@@ -56,7 +56,11 @@ exact McNemar tests against one agent on the same questions.
   3 wrong).
 - **Where gains exist they cost**: five debaters cost 17 times one agent
   for 3.5 questions; the cost frontier on Hard computation is the code
-  runners (Compare → accuracy against cost).
+  runners (Compare → accuracy against cost). Trying to save the other way
+  fails too: FrugalGPT's cascade (cheap model, a scorer, a strong model
+  only when in doubt) scores 21.5 at $0.054 a run, against the strong model
+  alone's 26.5 at $0.033, since its scorer trusts wrong answers and the
+  price gap is only two to one ([A cascade](#a-cascade-frugalgpt)).
 
 ## Exact computation (30 questions), all on gemini-3.1-flash-lite
 
