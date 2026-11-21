@@ -19,6 +19,7 @@ import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
 import { Input } from "@/components/ui/input";
+import { Pairwise } from "./Pairwise";
 import { useServer } from "@/store/server";
 import { useSystems } from "@/store/systems";
 
@@ -522,7 +523,7 @@ function Evals({ systemId }: { systemId: string }) {
             <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
               <div>
                 <p className="text-xs text-muted-foreground">Accuracy</p>
-                <p className="text-3xl font-semibold tabular-nums">{pct(ev.passed, ev.graded)}</p>
+                <p className="text-3xl font-semibold tabular-nums">{ev.grader === "none" ? "Not graded" : pct(ev.passed, ev.graded)}</p>
                 {stats && stats.per.length > 1 && (
                   <p className="text-xs tabular-nums text-muted-foreground" title="Accuracy of each repeat, and their standard deviation">
                     {stats.per.map((p) => `${Math.round(p * 100)}%`).join(" · ")}
@@ -652,6 +653,7 @@ function Evals({ systemId }: { systemId: string }) {
                 </p>
               );
             })()}
+            {ev.grader === "none" && !record?.active && <Pairwise ev={ev} onError={setError} />}
             {!!ev.auto_retried && (
               <p className="mt-3 text-xs text-muted-foreground">
                 {ev.auto_retried === 1 ? "One case" : `${ev.auto_retried} cases`} failed for the provider (overloaded, a dropped connection) and ran once more at the end; a second failure counts.

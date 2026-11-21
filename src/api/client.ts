@@ -2,7 +2,7 @@
 // origin; the dev and preview servers proxy it). Every call carries the
 // server token the person entered in Settings.
 import type { Dataset, DatasetSummary } from "@/run/datasets";
-import type { EvalCase, EvalRecord, Grader } from "@/run/evals";
+import type { EvalCase, EvalRecord, Grader, PairwiseResult } from "@/run/evals";
 import type { RunEvent, RunRecord } from "@/run/events";
 import type { ModelSpec, SystemDoc } from "@/model/types";
 
@@ -114,6 +114,9 @@ export const Api = {
   /** Run again only the cases that gave no answer (errors, no output, never run), in place. */
   /** The LLM judge's second opinion on the misses of an evaluation graded by rule (grades stand). */
   auditEval: (id: string, judge?: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/audit`, judge ? { judge } : {}),
+  /** Judge two evaluations of the same open-ended questions pairwise (both orders), and the judgements kept for one. */
+  pairwise: (a: string, b: string, judge?: string, criterion?: string) => api<{ pairwise: PairwiseResult }>("POST", "/evals/pairwise", { a, b, judge, criterion }),
+  pairwiseOf: (id: string) => api<{ pairwise: PairwiseResult[] }>("GET", `/evals/${id}/pairwise`),
   retryEval: (id: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/retry`, {}),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
   /** What a system's code kept across runs (ctx.state), and clearing it. */
