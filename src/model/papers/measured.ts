@@ -3,7 +3,7 @@
 // 30-question set; flash-lite is gemini-3.1-flash-lite, where a single agent scores 19.
 export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
-    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against one agent's 27.",
+    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26 against one agent's 27; on the stronger 3.8-flash, 26, 26 against 26, 27.",
     "With 2, 3, 5 debaters (flash-lite): 20, 21, 22.5; five beat one agent significantly (+8 −1, p 0.04), at 17 times its cost.",
     "Five in a ring, each reading its neighbours (sparse communication): 22, 22, a question below the full exchange; a third less to read, but output dominates the cost.",
     "Three debaters with different methods (step by step, decompose, check another way): 23, 23, +9 −1 against one agent (p 0.02); three all told step by step: 21.5. On MATH level 5: 45, as a vote and a code runner.",

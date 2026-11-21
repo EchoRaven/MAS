@@ -26,6 +26,9 @@ exact McNemar tests against one agent on the same questions.
   ReConcile, DyLAN, Corex and Multi-Agent Verification 22; MacNet's star of
   four 22.5 (p 0.04), its chain 19.5. Every discussion system on this set
   now has at least two runs.
+- **On the stronger gemini-3.8-flash, debate gains nothing either** (26,
+  26 against one agent's 26, 27): across three models only the middle one,
+  flash-lite, gains from discussion.
 - **On the weaker gemma, nothing without a tool beats one agent** (27;
   debate and ReConcile 26, voting and SPP 25). A 7–8 question gain first
   reported there came from cut-off answers ([A weaker model](#a-weaker-model-no-gain-from-discussion-after-all)).
@@ -359,6 +362,15 @@ The first sweep found a bug in `replicas` itself: the output port's `json`
 type (the list) was read as "each reply is JSON", so every sample answered
 with a bare number and no reasoning (1 of 30). Each sample now replies as
 text, and the component always sends a list.
+
+## A stronger model: no gain either
+
+gemini-3.8-flash alone scores 26 and 27 on Hard computation (two runs),
+with room for 3–4 more. Multiagent Debate on it, every debater on
+3.8-flash, two runs: 26 and 26, against one agent +0 −1 (p = 1), at $0.62
+for both runs. All eight misses checked with the judge. So across three
+models debate helps only the middle one: flash-lite gains about 2 in 30,
+gemma (weaker) and 3.8-flash (stronger) nothing.
 
 ## A weaker model: no gain from discussion after all
 

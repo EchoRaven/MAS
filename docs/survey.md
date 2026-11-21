@@ -115,7 +115,9 @@ Each one became a general interface, not a fix for one paper:
 
 From [benchmarks.md](benchmarks.md), all on the same model:
 
-- **A weaker model does not make discussion pay.** On gemma-4-26b one agent
+- **Neither a weaker nor a stronger model makes discussion pay.** On the
+  stronger gemini-3.8-flash, Multiagent Debate scores 26 and 26 on Hard
+  computation against one agent's 26 and 27 (+0 −1). On gemma-4-26b one agent
   scores 27 of 30 on Hard computation, and Multiagent Debate (26), ReConcile
   (26), Agent Forest (25) and Solo Performance Prompting (25) do no better;
   on flash-lite debate gains 2–4. This was first reported the other way

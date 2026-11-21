@@ -69,9 +69,10 @@ Measured on this platform, every system on the same model and questions
   the cost. Not on a long input: five whole readings of a ledger each skip
   different orders, and their vote (6.5 of 20) does worse than one reading
   (9) and far worse than reading in parts (14).
-- **A weaker model does not make discussion pay.** On Hard computation, debate and
-  voting add 2–4 questions in 30 on gemini-3.1-flash-lite; on the weaker
-  gemma-4-26b they add nothing (one agent 27; debate and ReConcile 26, voting
+- **Neither a weaker nor a stronger model makes discussion pay.** On Hard
+  computation, debate and voting add 2–4 questions in 30 on
+  gemini-3.1-flash-lite; on the stronger gemini-3.8-flash debate adds
+  nothing (26, 26 against one agent's 26, 27); on the weaker gemma-4-26b they add nothing (one agent 27; debate and ReConcile 26, voting
   and SPP 25), and one agent with a code runner solves all 30 in a sixth of
   the time. (An earlier report here of a 7–8 question gain on gemma came
   from a log that cut gemma's long answers off before their final line;
