@@ -1473,6 +1473,13 @@ times one call. MoA on flash-lite lost 14–19 to one call. One reading, not
 tested here: merging drafts needs a model that can merge them well, while a
 weak model can still act on specific feedback about its own answer.
 
+A stronger critic adds little (one run). With flash-lite writing and
+gemini-3.8-flash criticising (`model_map` `node:critic`), Self-Refine beats
+flash-lite alone 11–1 (8 ties), as flash-lite criticising itself does, and
+leads that version 8–3 (9 ties, p 0.23). Its critic is satisfied sooner (12
+of 20 answers revised three times, against 38 of 40), at the same cost ($0.18
+for twenty).
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
