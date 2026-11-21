@@ -65,6 +65,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         const them = mineA ? p.b_name : p.a_name;
         const key = `${p.a}__${p.b}`;
         const split = p.per.filter((x) => x.first !== x.second).length;
+        const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
         return (
           <div key={key} className="mt-3 text-xs">
             <p>
@@ -72,7 +73,8 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
                 {w} wins, {l} losses, {p.ties} ties
               </span>{" "}
               against {them} · judge {p.judge} · {usd(p.usd)}
-              {split ? ` · the two orders disagreed on ${split} of ${p.per.length}, counted as ties` : ""}{" "}
+              {split ? ` · the two orders disagreed on ${split} of ${p.per.length}, counted as ties` : ""}
+              {unread ? ` · the judge gave no verdict on ${unread}` : ""}{" "}
               <button className="underline" onClick={() => setOpen(open === key ? null : key)}>
                 {open === key ? "hide" : "per question"}
               </button>
@@ -82,7 +84,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
                 {p.per.map((x, i) => {
                   const v = x.verdict === "tie" ? "tie" : (x.verdict === "a") === mineA ? "win" : "loss";
                   return (
-                    <li key={i} className="flex gap-2">
+                    <li key={i} className="flex gap-2" title={x.why ? `First order:\n${x.why[0]}\n\nSecond order:\n${x.why[1]}` : undefined}>
                       <span className="w-8 shrink-0 font-medium">{v}</span>
                       <span className="line-clamp-1 text-muted-foreground">{x.input}</span>
                     </li>

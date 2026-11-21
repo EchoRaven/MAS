@@ -31,7 +31,8 @@ export interface PairwiseResult {
   a_wins: number;
   b_wins: number;
   ties: number;
-  per: { input: string; first: "a" | "b" | "tie"; second: "a" | "b" | "tie"; verdict: "a" | "b" | "tie" }[];
+  /** per question: the pick in each order ("unread": the judge gave no verdict line), the verdict, and the end of each reply */
+  per: { input: string; first: "a" | "b" | "tie" | "unread"; second: "a" | "b" | "tie" | "unread"; verdict: "a" | "b" | "tie"; why?: [string, string] }[];
   usd: number;
   at: string;
 }

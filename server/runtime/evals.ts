@@ -257,11 +257,15 @@ export class EvalManager {
     const models = new Models([...(doc?.models ?? []), ...DEFAULT_MODELS.filter((m) => !known.has(m.id))], this.secrets, false);
     const judge = judgeModel || a.on_model || undefined;
     const what = criterion?.trim() || "Which response better does what the task asks: correct, complete, well organised and well written?";
-    const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie"; usd: number }> => {
+    const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie" | null; usd: number; why: string }> => {
       const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
-      const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)], max_tokens: 600 });
-      const m = /better:\s*\**\s*(1|2|tie)/i.exec(textOf(res.content));
-      return { pick: (m?.[1]?.toLowerCase() as "1" | "2" | "tie") ?? "tie", usd: usage.usd };
+      // no tight output limit: a judge that thinks first spends its thinking from the same allowance
+      const { res, usage } = await models.chat(judge ?? null, { messages: [userText(prompt)], max_tokens: 4000 });
+      const text = textOf(res.content);
+      // the last verdict line counts; "Better: Response 1" is read as 1
+      const all = [...text.matchAll(/better:\s*\**\s*(?:response\s*)?(1|2|tie)\b/gi)];
+      const pick = (all.at(-1)?.[1]?.toLowerCase() as "1" | "2" | "tie" | undefined) ?? null;
+      return { pick, usd: usage.usd, why: text.trim().slice(-600) };
     };
     this.active.add(aId);
     this.active.add(bId);
@@ -272,9 +276,10 @@ export class EvalManager {
         const x = await ask(q, oa.get(q)!, ob.get(q)!); // a first
         const y = await ask(q, ob.get(q)!, oa.get(q)!); // b first
         usd += x.usd + y.usd;
-        const firstPick = x.pick === "1" ? "a" : x.pick === "2" ? "b" : "tie";
-        const secondPick = y.pick === "1" ? "b" : y.pick === "2" ? "a" : "tie";
-        per.push({ input: q, first: firstPick, second: secondPick, verdict: firstPick === secondPick ? firstPick : "tie" });
+        const firstPick = x.pick === "1" ? "a" : x.pick === "2" ? "b" : x.pick === "tie" ? "tie" : "unread";
+        const secondPick = y.pick === "1" ? "b" : y.pick === "2" ? "a" : y.pick === "tie" ? "tie" : "unread";
+        const verdict = firstPick === secondPick && firstPick !== "unread" ? firstPick : "tie";
+        per.push({ input: q, first: firstPick, second: secondPick, verdict, why: [x.why, y.why] });
       }
       const result: PairwiseResult = {
         a: aId,
