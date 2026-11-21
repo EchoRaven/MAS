@@ -9,11 +9,20 @@ import type { SystemDoc } from "../types";
 
 const LOOP = `const question = String(input?.text ?? input ?? "");
 const rounds = Math.max(0, Math.min(6, Math.floor(Number(ctx.vars.rounds ?? 3))));
-let answer = await ctx.call("Writer", "Solve the question step by step and end with a last line 'Answer: X'.\\n\\nQuestion:\\n" + question);
+// mode "open": an open-ended request (an explanation, advice, a piece of writing), as most of the paper's tasks are;
+// otherwise a question with one answer, worked step by step to a last line 'Answer: X'
+const open = String(ctx.vars.mode ?? "") === "open";
+const first = open ? question : "Solve the question step by step and end with a last line 'Answer: X'.\\n\\nQuestion:\\n" + question;
+let answer = await ctx.call("Writer", first);
 for (let r = 0; r < rounds; r++) {
-  const feedback = await ctx.call("Critic", "Question:\\n" + question + "\\n\\nAn answer:\\n" + answer + "\\n\\nCheck the answer step by step, redoing every computation. List each concrete mistake and how to fix it. If there is none, reply with exactly: NO ISSUES");
+  const critique = open
+    ? "Request:\\n" + question + "\\n\\nA response:\\n" + answer + "\\n\\nGive specific, actionable feedback: what is wrong, missing, unclear or unneeded, and how to fix each. If the response needs no change, reply with exactly: NO ISSUES"
+    : "Question:\\n" + question + "\\n\\nAn answer:\\n" + answer + "\\n\\nCheck the answer step by step, redoing every computation. List each concrete mistake and how to fix it. If there is none, reply with exactly: NO ISSUES";
+  const feedback = await ctx.call("Critic", critique);
   if (/^\\W*no issues\\W*$/i.test(feedback.trim()) || /\\bNO ISSUES\\b/.test(feedback) && feedback.length < 200) break;
-  answer = await ctx.call("Writer", "Question:\\n" + question + "\\n\\nYour previous answer:\\n" + answer + "\\n\\nFeedback on it:\\n" + feedback + "\\n\\nWrite the corrected solution step by step, using the feedback where it is right, and end with a last line 'Answer: X'.");
+  answer = await ctx.call("Writer", open
+    ? "Request:\\n" + question + "\\n\\nYour previous response:\\n" + answer + "\\n\\nFeedback on it:\\n" + feedback + "\\n\\nWrite the improved response, using the feedback where it is right. Reply with the response itself only."
+    : "Question:\\n" + question + "\\n\\nYour previous answer:\\n" + answer + "\\n\\nFeedback on it:\\n" + feedback + "\\n\\nWrite the corrected solution step by step, using the feedback where it is right, and end with a last line 'Answer: X'.");
 }
 return answer;`;
 
@@ -39,7 +48,7 @@ function build(): SystemDoc {
   // every call to a role is a turn: 1 + 2 per round
   b.doc.budget = { usd: 1, max_rounds: 20, wallclock_min: 15 };
   b.doc.termination = ["all_idle", "budget_exceeded"];
-  b.doc.result = { type: "text", description: "the last revision, ending with 'Answer: X'" };
+  b.doc.result = { type: "text", description: "the last revision, ending with 'Answer: X' (unless the run variable mode is open)" };
   return b.doc;
 }
 
@@ -56,6 +65,7 @@ export const selfRefine: TemplateInfo = {
     ],
     differs: [
       "The paper gives the model few-shot examples of feedback and refinement per task; here the instructions are zero-shot.",
+      "The run variable mode set to open treats the input as an open-ended request (most of the paper's tasks: dialogue responses, readable code, writing): no step-by-step working or answer line, feedback on what is wrong, missing or unclear, and the improved response alone.",
       "The paper keeps the whole history of answers and feedback in the refine prompt; here the reviser sees the last answer and its feedback only.",
     ],
   },
