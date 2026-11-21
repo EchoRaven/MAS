@@ -37,6 +37,12 @@ exact McNemar tests against one agent on the same questions.
   19.5, Mixture-of-Agents 18, MedAgents 16 are no different from one agent;
   CAMEL 13, ChatEval 12.5 and AutoAgents 14 are significantly worse (p ≈
   0.01), MAD 14 nearly so (p 0.05).
+- **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
+  twenty open-ended instructions it wins 31–9 against a one-call writer told to
+  give the piece only (p 0.0007), even with lengths matched, and 14–19 against
+  one plain call of the same model (p 0.49), at nine times the cost. The
+  writer's prompt took away the headings and lists the judge rewards
+  ([Mixture-of-Agents](#mixture-of-agents-on-open-ended-instructions-the-baseline-decides)).
 - **ChatEval judges no closer to a stronger judge than one judge call.**
   As a pairwise judge on 70 questions, its debate agrees with gemini-3.8-flash
   on 47 against one flash-lite call's 45 (p 0.79), at ten times the cost; it is
@@ -1251,6 +1257,40 @@ panel's verdicts replaced the single judge's. Each file is now named by the
 judge's full label. The judging also locked both evaluations, so a second
 judge could not start until the first finished; judging only reads them, and
 the lock is gone.
+
+## Mixture-of-Agents on open-ended instructions: the baseline decides
+
+Mixture-of-Agents reports its gains as win rates on open-ended instructions
+(AlpacaEval). The set here is `benchmarks/instructions/open-20.jsonl`, twenty
+requests to explain, advise, write, plan or compare. MoA (two layers of three
+proposers and an aggregator, every call on flash-lite) is judged pairwise in
+both orders by gemini-3.8-flash.
+
+| MoA against | Run 1 | Run 2 | Its words | Cost (20) |
+|---|---|---|---|---|
+| Single writer (one call, told to give the piece only) | 16–4 | 15–5 | 248, 268 | $0.011 |
+| the same, judged on content and not length | 16–3 (1 tie) | 13–7 | | |
+| the same, told to write about 450 words | 15–2 (3 ties) | 14–4 (2 ties) | 426, 428 | $0.017 |
+| **Single model call (the request as it is, no instructions)** | **7–9 (4 ties)** | **7–10 (3 ties)** | 518, 517 | $0.023 |
+
+MoA's answers average 444 and 449 words, at $0.21 for twenty.
+
+Against the writer baseline MoA wins 31 of 40 decided (p 0.0007), and keeps
+winning when the judge is told to ignore length and when the writer is made as
+long. Against one plain model call it wins 14 and loses 19 (p 0.49), at nine
+times the cost. That call is exactly one of MoA's proposers. **The gain was
+the baseline's prompt, not the aggregation.** The writer baseline was built
+for stories. Its instruction to give "the piece itself only, no title" removed
+headings and lists: 0 headings and 3 list items per answer, against MoA's 4
+headings, 9 list items and 4 tables. The judge rewarded structure ("easier to
+scan", "dense paragraphs"). The plain call formats as MoA does (5 headings, 10
+list items) and writes a little more.
+
+For systems built of plain model calls, the baseline is now **Single model
+call (baseline)**: one such call with nothing added. The stories above keep
+the writer baseline, where headings have no place. STORM's control, a
+searching writer told to give the piece only, may have been held back the
+same way; STORM lost to it anyway.
 
 ## Earlier sets
 

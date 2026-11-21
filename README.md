@@ -96,6 +96,11 @@ Measured on this platform, every system on the same model and questions
   LongAgent (members reading the parts at once) 13.5 at a third of that.
   Splitting helps to gather, not to find: asked for one order's amount, a
   single line, one agent finds all 40, even at ~45,000 tokens.
+- **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
+  open-ended instructions against a one-call writer told to give the piece
+  only, which holds with lengths matched, and loses 14–19 to one plain call of
+  the same model (one of its own proposers), at nine times the cost. The
+  writer's prompt had taken away the headings and lists the judge rewards.
 - **A judging panel agrees with a stronger judge no more than one call does**:
   ChatEval's three debating referees, as a pairwise judge on 70 story and
   article questions, match gemini-3.8-flash on 47 against one flash-lite
