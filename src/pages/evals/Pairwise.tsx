@@ -20,7 +20,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
   const [kept, setKept] = useState<PairwiseResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
-  const [links, setLinks] = useState<{ cited: number; found: number; searches: number; outputs: number; with_search: number } | null>(null);
+  const [links, setLinks] = useState<{ cited: number; found: number; searches: number; outputs: number; with_search: number; words: number; headings: number; items: number; tables: number } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -56,6 +56,12 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
       <p className="mt-1 text-xs text-muted-foreground">
         Nothing is graded here. Judge these outputs against another evaluation of the same questions: a model (or a judging system, such as ChatEval's referee panel) reads both, in both orders, and a win needs both orders to agree (anything else is a tie). Two judgements per question.
       </p>
+      {links && links.outputs > 0 && (
+        <p className="mt-2 text-xs" title="A judge rewards length and structure: compare these with the other side's before reading a win as a better answer">
+          Shape: {Math.round(links.words / links.outputs)} words, {(links.headings / links.outputs).toFixed(1)} headings and {(links.items / links.outputs).toFixed(1)} list items per output
+          {links.tables ? `, ${links.tables} with a table` : ""}
+        </p>
+      )}
       {links && links.outputs > 0 && (links.cited > 0 || links.searches > 0) && (
         <p className="mt-2 text-xs" title="Links the outputs cite, checked against what each run's own web_search and fetch calls returned. A link no search returned was written from memory or made up; a judge model cannot tell">
           Links: {(links.cited / links.outputs).toFixed(1)} per output

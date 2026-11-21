@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { Api, type EvalSummary } from "@/api/client";
 import type { PairwiseResult } from "@/run/evals";
 
-type Sources = { cited: number; found: number; outputs: number };
+type Sources = { cited: number; found: number; outputs: number; words: number; headings: number; items: number; tables: number };
 
 export function OpenEnded() {
   const [sets, setSets] = useState<{ set: string; name: string; evals: EvalSummary[]; judged: PairwiseResult[] }[] | null>(null);
@@ -44,6 +44,10 @@ export function OpenEnded() {
     const e = evals.find((x) => x.id === id);
     return e ? new Date(e.started_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
   };
+  const shape = (id: string) => {
+    const s = sources[id];
+    return s && s.outputs ? `${Math.round(s.words / s.outputs)} w · ${(s.headings / s.outputs).toFixed(1)} h · ${(s.items / s.outputs).toFixed(1)} li` : "";
+  };
   const linkShare = (id: string) => {
     const s = sources[id];
     return s && s.cited ? `${Math.round((100 * s.found) / s.cited)}% of ${(s.cited / Math.max(1, s.outputs)).toFixed(1)} links` : "";
@@ -53,7 +57,7 @@ export function OpenEnded() {
     <section className="glass-panel overflow-x-auto rounded-xl p-4" aria-label="Open-ended sets">
       <h2 className="text-sm font-medium">Open-ended sets, judged pairwise</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Evaluations that grade nothing (stories, articles) have no accuracy. Here are the pairwise judgements made between them: a judge read both outputs for each question in both orders, and a win needs both orders to agree. Links: the share of each side's cited links that its own runs' searches returned.
+        Evaluations that grade nothing (stories, articles) have no accuracy. Here are the pairwise judgements made between them: a judge read both outputs for each question in both orders, and a win needs both orders to agree. Shape: each side's mean words, headings and list items, since a judge rewards length and structure. Links: the share of each side's cited links that its own runs' searches returned.
       </p>
       {sets.map((s) => (
         <div key={s.set} className="mt-3">
@@ -65,6 +69,7 @@ export function OpenEnded() {
                 <th className="py-1 pr-3 font-normal">B</th>
                 <th className="py-1 pr-3 font-normal">Judge</th>
                 <th className="py-1 pr-3 font-normal">A wins · B wins · ties</th>
+                <th className="py-1 pr-3 font-normal" title="Mean words, headings and list items per output: a judge rewards length and structure">Shape A / B</th>
                 <th className="py-1 pr-3 font-normal">Links A / B</th>
               </tr>
             </thead>
@@ -89,6 +94,10 @@ export function OpenEnded() {
                       </span>
                       {unread ? <span className="block text-[11px] text-amber-700 dark:text-amber-300">no verdict on {unread}: not to be trusted</span> : null}
                       {invalid ? <span className="block text-[11px] text-muted-foreground">invalid: {invalid.reason}</span> : null}
+                    </td>
+                    <td className="py-1 pr-3 text-[11px] text-muted-foreground">
+                      <span className="block">{shape(p.a) || "–"}</span>
+                      <span className="block">{shape(p.b) || "–"}</span>
                     </td>
                     <td className="py-1 pr-3 text-[11px] text-muted-foreground">
                       {linkShare(p.a) || "–"} / {linkShare(p.b) || "–"}

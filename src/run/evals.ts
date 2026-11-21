@@ -59,6 +59,19 @@ export function sourcedLinks(output: string, tools: { tool: string; args?: unkno
   return { cited: mine.length, found: mine.filter((u) => searched.has(u)).length, searches };
 }
 
+/**
+ * The shape of an output: its words, headings, list items and tables. A pairwise judge rewards length and
+ * structure; shown beside a judgement, these tell a better answer from a longer or more formatted one.
+ */
+export function outputShape(text: string): { words: number; headings: number; items: number; tables: number } {
+  return {
+    words: text.split(/\s+/).filter(Boolean).length,
+    headings: (text.match(/^#{1,6} /gm) ?? []).length,
+    items: (text.match(/^\s*(?:[-*•]|\d+[.)]) /gm) ?? []).length,
+    tables: /^\|.*\|\s*$/m.test(text) ? 1 : 0,
+  };
+}
+
 /** The graders that compare an output with an expected answer by a rule. */
 export type RuleGrader = Exclude<Grader, "llm" | "code" | "none">;
 

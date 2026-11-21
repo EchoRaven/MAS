@@ -326,3 +326,11 @@ describe("sourcedLinks", () => {
     expect(sourcedLinks(out, tools)).toEqual({ cited: 3, found: 2, searches: 2 });
   });
 });
+
+describe("outputShape", () => {
+  it("counts words, headings, list items and whether there is a table", async () => {
+    const { outputShape } = await import("./evals");
+    expect(outputShape("# Title\n\nSome words here.\n\n- one\n- two\n1. three\n\n| a | b |\n|---|---|")).toEqual({ words: 17, headings: 1, items: 3, tables: 1 });
+    expect(outputShape("Plain prose, no structure.")).toEqual({ words: 4, headings: 0, items: 0, tables: 0 });
+  });
+});

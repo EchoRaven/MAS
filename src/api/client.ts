@@ -119,7 +119,7 @@ export const Api = {
   /** Mark an evaluation invalid with a reason (a setup bug found later), or valid again with null. */
   markEvalInvalid: (id: string, reason: string | null) => api<{ eval: EvalRecord }>("PUT", `/evals/${id}/invalid`, { reason }),
   /** The links an evaluation's outputs cite, and how many their runs' searches returned. */
-  evalSources: (id: string) => api<{ sources: { cited: number; found: number; searches: number; outputs: number; with_search: number } }>("GET", `/evals/${id}/sources`),
+  evalSources: (id: string) => api<{ sources: { cited: number; found: number; searches: number; outputs: number; with_search: number; words: number; headings: number; items: number; tables: number } }>("GET", `/evals/${id}/sources`),
   pairwiseOf: (id: string) => api<{ pairwise: PairwiseResult[] }>("GET", `/evals/${id}/pairwise`),
   retryEval: (id: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/retry`, {}),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
