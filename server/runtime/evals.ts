@@ -284,9 +284,8 @@ export class EvalManager {
       const pick = (all.at(-1)?.[1]?.toLowerCase() as "1" | "2" | "tie" | undefined) ?? null;
       return { pick, usd: spent, why: text.trim().slice(-600) };
     };
-    this.active.add(aId);
-    this.active.add(bId);
-    try {
+    // judging only reads the two evaluations: several judges can work on them at once (each keeps its own file)
+    {
       const per: PairwiseResult["per"] = [];
       let usd = 0;
       for (const q of shared) {
@@ -315,9 +314,6 @@ export class EvalManager {
       // one file per pair and judge: a second judge's verdicts sit beside the first's
       fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${(judge ?? "default").replace(/[^\w.-]/g, "_")}.json`), JSON.stringify(result, null, 1));
       return result;
-    } finally {
-      this.active.delete(aId);
-      this.active.delete(bId);
     }
   }
 
