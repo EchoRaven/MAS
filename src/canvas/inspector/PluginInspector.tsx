@@ -63,7 +63,7 @@ export function PluginInspector({ id, p, doc, set }: { id: string; p: PluginData
       <TextField label="Name" value={p.name} onChange={(name) => set({ ...p, name })} />
       <SelectField label="Preset" value={p.preset} onChange={(preset) => set(switchPreset(p, preset))} items={PLUGIN_PRESETS.map((x) => ({ value: x.id, label: x.label, hint: x.hint }))} hint="A preset fills in its defaults; Custom keeps what is here and makes everything editable" />
       <div className="space-y-2">
-        <SelectField label="Scope" value={spec.scope} onChange={(scope) => setSpec({ scope })} items={opts([["agent", "Per agent"], ["group", "Shared in group"], ["end_user", "Per end user"], ["system", "Whole system"]])} />
+        <SelectField label="Scope" value={spec.scope} onChange={(scope) => setSpec({ scope })} items={opts([["agent", "Per agent"], ["group", "Shared in group"], ["end_user", "Per end user"], ["run", "Per run (starts empty)"], ["system", "Whole system (kept across runs)"]])} hint="Per run: a scratchpad for one task, so concurrent runs and later runs never see its files. Whole system: shared by every run, and kept" />
         <SelectField label="Storage" value={spec.storage ?? "none"} onChange={(storage) => setSpec({ storage })} items={opts([["builtin", "Built-in"], ["pgvector", "pgvector"], ["qdrant", "Qdrant"], ["sqlite", "SQLite"], ["files", "Files"], ["none", "None"]])} />
       </div>
       <Section title="Backend">

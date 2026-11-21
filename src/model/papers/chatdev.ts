@@ -24,7 +24,7 @@ function build(): SystemDoc {
   phase(b, "coding", 380, "Coding", ["CTO", "Turn the design into a concrete architecture and ask the programmer to implement it file by file."], ["Programmer", "Write the complete code into the repository."], 10);
   phase(b, "review", 760, "Code review", ["Reviewer", "Review the code in the repository and list concrete defects."], ["Programmer", "Fix every defect the reviewer lists."], 3);
   phase(b, "testing", 1140, "Testing", ["Tester", "Run the program in the sandbox and report the errors."], ["Programmer", "Fix the errors until the program runs."], 3);
-  b.plugin("repo", "workspace", 480, 260, { name: "Codebase", scope: "system", sources: ["/work"] })
+  b.plugin("repo", "workspace", 480, 260, { name: "Codebase", scope: "run", sources: ["/work"] })
     .node("sandbox", "env", 960, 260, { name: "Test sandbox", env_kind: "sandbox", image: "python:3.12" })
     .edge("client", "design", "message", { label: "Task" })
     .edge("design", "coding", "handoff", { carry: "summary", label: "Design" })

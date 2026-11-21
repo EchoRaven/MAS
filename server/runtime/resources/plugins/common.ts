@@ -25,7 +25,7 @@ export function writeState(file: string, value: unknown) {
   fs.renameSync(tmp, file);
 }
 
-/** Who shares the plugin's state with this agent: itself, its group, the end user, or everyone. */
+/** Who shares the plugin's state with this agent: itself, its group, the end user, this run only, or everyone. */
 export function scopeKey(rc: RunCtx, plugin: SysNode<PluginData>, node: string): string {
   switch (plugin.data.spec.scope) {
     case "agent":
@@ -34,6 +34,8 @@ export function scopeKey(rc: RunCtx, plugin: SysNode<PluginData>, node: string):
       return rc.byId.get(node)?.parent ?? "root";
     case "end_user":
       return String(rc.vars.user_id ?? "default");
+    case "run":
+      return `run-${rc.runId}`;
     default:
       return "system";
   }

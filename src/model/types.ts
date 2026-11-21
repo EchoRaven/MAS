@@ -316,8 +316,8 @@ export interface PluginSpec {
     /** non-secret settings; secrets go by env var name */
     config?: Record<string, string>;
   };
-  /** where its state lives and who shares it */
-  scope: "agent" | "group" | "end_user" | "system";
+  /** where its state lives and who shares it; run: each run starts empty (a scratchpad for one task) */
+  scope: "agent" | "group" | "end_user" | "run" | "system";
   storage?: "builtin" | "pgvector" | "qdrant" | "sqlite" | "files" | "none";
   /** knowledge: documents to index · workspace: directories to mount */
   sources?: string[];

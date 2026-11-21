@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { EnvData, SysEdge, SysNode } from "@/model/types";
 import type { RunCtx } from "../../context";
-import { confine, hasWorkFolder, listFiles, sharedFolder } from "../plugins/workspace";
+import { confine, listFiles, workFolder } from "../plugins/workspace";
 import { type Box, DockerBackend, type SandboxBackend } from "../../isolation";
 import { S, schema, type Resource, type RtTool } from "../types";
 
@@ -72,7 +72,8 @@ export class SandboxEnv implements Resource {
   ) {
     const keep = node.data.lifecycle !== "per_run";
     // a workspace plugin with source /work is this folder, so agents can write code there and run it here
-    this.dir = hasWorkFolder(rc) ? sharedFolder(rc, "/work")! : keep ? rc.store.stateDir(rc.doc.id, node.id, "work") : rc.store.stateDir(rc.doc.id, node.id, "runs", rc.runId);
+    this.dir = workFolder(rc) ?? (keep ? rc.store.stateDir(rc.doc.id, node.id, "work") : rc.store.stateDir(rc.doc.id, node.id, "runs", rc.runId));
+    fs.mkdirSync(this.dir, { recursive: true });
     this.backend = backend ?? new DockerBackend(rc.config.docker, rc.hosted?.egressGrant);
   }
   get id() {

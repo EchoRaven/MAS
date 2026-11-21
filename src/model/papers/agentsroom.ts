@@ -34,7 +34,7 @@ function build(): SystemDoc {
   );
   b.node("user", "human", 0, 0, { name: "User", role: "Asks for a story", approves: false })
     .agent("orchestrator", 0, 0, { name: "Orchestrator", role: "Decides who works next and assembles the story", model: "opus", harness: { ...native(), loop: "react", max_steps: 16, instructions: ORCHESTRATOR } })
-    .plugin("scratchpad", "workspace", 0, 0, { name: "Scratchpad", scope: "system", sources: ["/story-room"] })
+    .plugin("scratchpad", "workspace", 0, 0, { name: "Scratchpad", scope: "run", sources: ["/story-room"] })
     .edge("user", "orchestrator", "message", { label: "Story request" })
     .edge("orchestrator", "user", "message", { label: "Story" })
     .edge("orchestrator", "scratchpad", "access", { access: "read_write" });

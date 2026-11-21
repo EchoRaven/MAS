@@ -61,7 +61,16 @@ export function sharedFolder(rc: RunCtx, source?: string): string | null {
   return rc.store.stateDir(rc.doc.id, "fs", slug);
 }
 
-export const hasWorkFolder = (rc: RunCtx) => rc.doc.nodes.some((n) => n.data.kind === "plugin" && n.data.preset === "workspace" && n.data.spec.sources?.[0]?.replace(/\/+$/, "") === "/work");
+const workPlugin = (rc: RunCtx) => rc.doc.nodes.find((n) => n.data.kind === "plugin" && n.data.preset === "workspace" && n.data.spec.sources?.[0]?.replace(/\/+$/, "") === "/work") as SysNode<PluginData> | undefined;
+export const hasWorkFolder = (rc: RunCtx) => !!workPlugin(rc);
+
+/** The folder a workspace with source /work shares with the sandbox: one per run when the workspace's scope is run. */
+export function workFolder(rc: RunCtx): string | null {
+  const p = workPlugin(rc);
+  if (!p) return null;
+  const base = sharedFolder(rc, "/work")!;
+  return p.data.spec.scope === "run" ? path.join(base, `run-${rc.runId}`.replace(/[^\w.-]/g, "_")) : base;
+}
 
 export class WorkspacePlugin implements Resource {
   constructor(
@@ -74,7 +83,7 @@ export class WorkspacePlugin implements Resource {
   root(agent: string): string {
     const scope = this.node.data.spec.scope;
     const base = sharedFolder(this.rc, this.node.data.spec.sources?.[0]) ?? this.rc.store.stateDir(this.rc.doc.id, this.node.id, "files");
-    const dir = scope === "agent" || scope === "group" ? path.join(base, scopeKey(this.rc, this.node, agent).replace(/[^\w.-]/g, "_")) : base;
+    const dir = scope === "agent" || scope === "group" || scope === "run" ? path.join(base, scopeKey(this.rc, this.node, agent).replace(/[^\w.-]/g, "_")) : base;
     fs.mkdirSync(dir, { recursive: true });
     // the real path, so the files listed and the paths checked agree
     return fs.realpathSync(dir);

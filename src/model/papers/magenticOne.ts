@@ -67,9 +67,9 @@ return await ctx.tool("bash", { command: py ? "python3 main.py" : "sh main.sh" }
       },
     })
     .node("browser", "env", 1000, -70, { name: "Browser", env_kind: "browser", image: "" })
-    .plugin("files", "workspace", 1000, 100, { name: "Files", scope: "system", sources: ["/task"] })
+    .plugin("files", "workspace", 1000, 100, { name: "Files", scope: "run", sources: ["/task"] })
     .node("sandbox", "env", 1000, 440, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" })
-    .plugin("ledger", "board", 260, 380, { name: "Ledgers", scope: "system" })
+    .plugin("ledger", "board", 260, 380, { name: "Ledgers", scope: "run" })
     .edge("user", "orchestrator", "message", { label: "Task" })
     .edge("orchestrator", "user", "message", { label: "Answer" });
   for (const a of ["websurfer", "filesurfer", "coder", "terminal"]) b.edge("orchestrator", a, "call");
