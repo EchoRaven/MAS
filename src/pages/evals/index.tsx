@@ -458,6 +458,16 @@ function Evals({ systemId }: { systemId: string }) {
               </p>
             );
           })()}
+          {(() => {
+            // a scratchpad every run shares: concurrent and later cases read each other's files
+            const shared = doc.nodes.filter((n) => n.data.kind === "plugin" && (n.data.preset === "workspace" || n.data.preset === "board") && n.data.spec.scope === "system");
+            if (!shared.length) return null;
+            return (
+              <p className="rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-800 dark:text-amber-200" role="note">
+                {shared.map((n) => n.data.name).join(", ")} {shared.length > 1 ? "are" : "is"} shared by every run and kept between them, so each case can read what the others left there. For a scratchpad that should start empty in every case, set its scope to Per run.
+              </p>
+            );
+          })()}
           <ModelWarnings doc={effective} skip={dry} hint="or pick other models above" />
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground" title="Every model is replaced by the built-in test model: no cost, canned answers">
