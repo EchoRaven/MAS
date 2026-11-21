@@ -1192,6 +1192,22 @@ is a grounded Gemini call. The control is **Single writer with search
 | run 1 | writer with search, run 2 | gemini | 4 | 6 | 0 |
 | run 2 | writer with search, run 1 | gemini | 3 | 6 | 1 |
 
+**A judge that can search.** The judges above cannot check recent facts.
+The **Fact-checking judge** template is one agent with `web_search` and
+`fetch`, used as the judging system (`judge_system`, on gemini-3.8-flash). It
+checks the facts and links the two articles disagree on before it rules: 162
+searches and fetches over the 40 readings.
+
+| STORM against the writer with search | Plain judge (gemini-3.8-flash) | Fact-checking judge |
+|---|---|---|
+| STORM run 2 / writer run 1 | 3–6 (1 tie) | 0–9 (1 tie) |
+| STORM run 1 / writer run 2 | 4–6 | 4–3 (3 ties) |
+| Together | 7–12 | 4–12 (p 0.08) |
+
+Checking moves single verdicts a lot, more than the two judges differ
+overall, and leaves the conclusion where it was: STORM is no better than one
+searching agent. The judging cost $0.49, against $0.05 for the plain judge.
+
 gemma is no judge for these topics. It does not know 2024–2026 events, so it
 calls real ones made up. It also gave no verdict on 5 of 20 readings: its
 thinking ran past the judge's 4,000-token limit, which now follows the judge
