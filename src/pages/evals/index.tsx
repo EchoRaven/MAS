@@ -511,7 +511,7 @@ function Evals({ systemId }: { systemId: string }) {
               <span className="min-w-0">
                 <span className="font-medium tabular-nums">{pct(e.passed, e.graded)}</span>
                 <span className="ml-2 text-xs text-muted-foreground">
-                  {e.passed}/{e.total}
+                  {e.grader === "none" ? `${e.total} outputs` : `${e.passed}/${e.total}`}
                   {(e.repeats ?? 1) > 1 ? ` (×${e.repeats})` : ""} · {GRADERS.find((g) => g.value === e.grader)?.label}
                   {e.mock ? " · dry run" : ""}
                   {e.on_model ? ` · on ${e.on_model}` : ""}
@@ -541,7 +541,7 @@ function Evals({ systemId }: { systemId: string }) {
                   </p>
                 )}
               </div>
-              <Stat label="Passed" value={`${ev.passed} of ${ev.cases.length}`} />
+              {ev.grader === "none" ? <Stat label="Outputs" value={`${ev.cases.filter((c) => c.output).length} of ${ev.cases.length}`} /> : <Stat label="Passed" value={`${ev.passed} of ${ev.cases.length}`} />}
               {(() => {
                 const kept = ev.cases.filter((c) => !flagged.has(c.input));
                 if (kept.length === ev.cases.length) return null;
@@ -549,7 +549,7 @@ function Evals({ systemId }: { systemId: string }) {
                 return <Stat label="Without flagged" value={`${ok} of ${kept.length} (${Math.round((ok / Math.max(1, kept.length)) * 1000) / 10}%): ${ev.cases.length - kept.length} flagged as broken, left out`} />;
               })()}
               <Stat label="Cost" value={usd(ev.usd)} />
-              <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : "–"} />
+              <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : ev.grader === "none" && ev.cases.length ? usd(ev.usd / ev.cases.length) : "–"} />
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />
               {ev.vars && <Stat label="Variables" value={formatVars(ev.vars)} />}
               {(ev.on_model || ev.model_map) && <Stat label="Models" value={[ev.on_model && `all on ${ev.on_model}`, ...Object.entries(ev.model_map ?? {}).map(([a, b]) => `${a} → ${b}`)].filter(Boolean).join(", ")} />}
@@ -603,7 +603,7 @@ function Evals({ systemId }: { systemId: string }) {
                         </Button>
                       );
                     })()}
-                    {grader !== "llm" && ev.grader !== "llm" && (grader === "code") === (ev.grader === "code") && (
+                    {grader !== "llm" && ev.grader !== "llm" && ev.grader !== "none" && grader !== "none" && (grader === "code") === (ev.grader === "code") && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -733,7 +733,8 @@ function Evals({ systemId }: { systemId: string }) {
                       ) : (
                         <>
                           <span className="line-clamp-2" title={c.output}>
-                            {c.answer || "(no answer)"}
+                            {/* an ungraded output has no answer line: show how it begins */}
+                            {ev.grader === "none" ? c.output?.slice(0, 300) || "(no output)" : c.answer || "(no answer)"}
                           </span>
                           <span className="block text-xs text-muted-foreground">
                             {c.why}
