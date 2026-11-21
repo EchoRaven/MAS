@@ -40,7 +40,8 @@ exact McNemar tests against one agent on the same questions.
 - **A writers' room loses to one writer on short stories.** Agents' Room
   (four planners and five section writers around a scratchpad) loses 0–10
   and 0–9 (one tie) to one call, judged pairwise in both orders. A second
-  judge, gemma, gives 0–8 (two ties). It costs 15 times as much. Three setup
+  judge, gemma, gives 0–8 (two ties), and stories of about 2,000 words give
+  0–9. It costs 7 to 15 times as much. Three setup
   bugs came first: cut-off verdicts, a scratchpad shared across stories, and
   a baseline answer line ([Agents' Room](#agents-room-stories-judged-pairwise)).
 - **Choosing among samples cannot add an answer no sample has.** On the
@@ -1095,19 +1096,27 @@ is gemini-3.8-flash unless noted.
 | Final, run 1 | Single writer, run 1 | 0 | 10 | 0 | $0.20 against $0.013 |
 | Final, run 2 | Single writer, run 2 | 0 | 9 | 1 | $0.20 against $0.013 |
 | Final, run 1, judged by gemma | Single writer, run 1 | 0 | 8 | 2 | |
+| Parts a fifth of the asked length | Single writer, run 1 | 1 | 9 | 0 | $0.20 against $0.013 |
+| Long stories (about 2,000 words) | Single writer, long | 0 | 9 | 1 | $0.22 against $0.033 |
 
 Agents' Room loses on every prompt but one or two, under two judges of
-different families (sign test over the decided prompts, p ≈ 0.002–0.008), at
-15 times the cost. Both judges give the same reasons: the five parts repeat
+different families and at both lengths (sign test over the decided prompts,
+p ≈ 0.002–0.02), at 7 to 15 times the cost. Both judges give the same reasons: the five parts repeat
 their emotional beats, the ending drags, and the story runs long. Agents'
 Room's stories average 849 and 728 words over the two runs (475 to 1,148).
-The single writer's average 651 and 647, all between 605 and 718.
+The single writer's average 651 and 647, all between 605 and 718. The
+writers were first told to write 150–300 words each, a floor of 750 for five
+parts. Told instead to write a fifth of the asked length, they still
+averaged 822 words, and the result was 1–9: the overshoot is the writers',
+not the rule's. Asked for about 2,000 words, neither side got there. Agents'
+Room averaged 1,206 words and the single writer 1,667, and Agents' Room still
+lost 0–9.
 
-**Caveats.** The paper's agents are fine-tuned for each role and its stories
-are long, so its pipeline has room to plan. Here every role is prompted
-flash-lite and the stories are short, which works against a five-part
-pipeline. The result says that this design, prompted, does not help short
-stories on this model. It does not test the paper's own setting.
+**Caveats.** The paper's agents are fine-tuned for each role. Here every
+role is prompted flash-lite. Longer stories did not change the result, so
+length is not what separates this from the paper. Fine-tuning is the
+remaining difference, and this platform does not test it. The result holds
+for this design with prompted roles on this model.
 
 ### Three bugs before the result
 
