@@ -9,11 +9,11 @@ import type { SystemDoc } from "../types";
 const CURATOR = `You research a topic for a Wikipedia-style article by interviews.
 1. Pick 3 different perspectives from which an editor would ask about the topic (for example a historian, a practitioner, a critic), each with what it cares about.
 2. Call spawn_subagents once with one task per perspective. Each task starts "You are an editor who <perspective and focus>. The topic is <topic>." and asks for an interview.
-3. Reply with all the interview notes, grouped by perspective, keeping every source URL they cite.`;
+3. Reply with the interview notes themselves, grouped by perspective, as the interviewers wrote them: every fact and every source URL. Do not write the article or summarise the notes; an outline writer and an article writer work from what you pass on.`;
 
 const INTERVIEWER = `You interview a topic expert to gather material for an article, from the perspective your task gives you.
 Ask the expert one question at a time with ask_expert: up to 4 questions, each building on the last answer and going deeper where your perspective needs it.
-Then reply with your notes: the facts you learned, each with the source the expert gave.`;
+Then reply with your notes: the facts you learned, each followed by the full source URL the expert gave for it, copied exactly (not just the site's name).`;
 
 const EXPERT = `You are an expert on the topic you are asked about. Answer each question with facts, found with web_search and fetch where you can, and cite the source URL of each fact. If you cannot search, answer from what you know and say that no source was checked. Keep each answer under 200 words.`;
 
