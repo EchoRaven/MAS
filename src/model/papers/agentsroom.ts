@@ -57,7 +57,7 @@ function build(): SystemDoc {
       name: `${name} writer`,
       role: `Writes ${what.split(":")[0]}`,
       model: "sonnet",
-      harness: { ...native(), loop: "react", max_steps: 6, instructions: `You write ${what}. The notes (notes/*.md) and the parts already written (story/*.md) are in front of you; your part follows on from them and keeps to the notes. Write your part, 150-300 words of prose, with write_file to story/${i + 1}-${id}.md, then reply with the text you wrote.` },
+      harness: { ...native(), loop: "react", max_steps: 6, instructions: `You write ${what}. The notes (notes/*.md) and the parts already written (story/*.md) are in front of you; your part follows on from them and keeps to the notes. Write your part as prose, about a fifth of the length the user asked for (150-300 words if no length was given), with write_file to story/${i + 1}-${id}.md, then reply with the text you wrote.` },
     })
       .edge("orchestrator", id, "call")
       .edge(id, "scratchpad", "access", { access: "read_write", binding: PAD });
