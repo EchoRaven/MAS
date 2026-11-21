@@ -1469,9 +1469,9 @@ matched length), for two thirds of its cost and with one model. On maths
 It writes 564 and 570 words against flash-lite's 518, with as many headings
 and lists. Flash-lite's critic almost never finds nothing to fix: 38 of the 40
 answers went through all three revisions, so it costs $0.17 for twenty, seven
-times one call. MoA on flash-lite lost 14–19 to one call. Merging drafts needs
-a model that can merge them well, while a weak model can still act on specific
-feedback about its own answer.
+times one call. MoA on flash-lite lost 14–19 to one call. One reading, not
+tested here: merging drafts needs a model that can merge them well, while a
+weak model can still act on specific feedback about its own answer.
 
 ## Earlier sets
 
