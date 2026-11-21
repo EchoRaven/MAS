@@ -1339,6 +1339,7 @@ gemini-3.8-flash in every slot, tests that directly:
 |---|---|---|---|
 | against the mixed MoA | 6 | 4 | 10 |
 | against gemini-3.8-flash alone | 17 | 0 | 3 |
+| the same, judged on content, not length | 16 | 0 | 4 |
 
 It writes 761 words, with 5.4 headings and 18.9 list items, at $0.55 for
 twenty. It ties the mix and beats the model alone as the mix does. So
@@ -1346,8 +1347,9 @@ layering calls on gemini-3.8-flash gains, and layering them on flash-lite does
 not. In both winning setups gemini-3.8-flash is the aggregator. What the gain
 needs is a model strong enough to merge drafts well, not drafts from different
 models. That fits Self-MoA's finding that a strong model in every slot is
-enough. Its claim that this beats the mix shows here only as a tie. (One run
-and the default criterion; the length controls were run for the mix only.)
+enough. Its claim that this beats the mix shows here only as a tie. (One run;
+judged on content rather than length it still wins 16–0. The matched-length
+control was run for the mix only.)
 On Hard computation the same mix did not help (28, 27 against the best
 model's 26, 27): drafts from different models add coverage to open-ended
 answers, and there is nothing to add to a product that is right or wrong.
