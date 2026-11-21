@@ -1241,8 +1241,9 @@ Each judge agrees with the reference on questions where the other does not: 6
 for the single call, 8 for ChatEval (p 0.79). On stories they agree with it
 equally (28 of 40 each); on articles 17 and 19 of 30 (p 0.62). The debate
 changes its mind less when the two outputs swap places, at ten times the cost.
-It does not agree with the stronger judge any more often. One judge call run
-twice moved its verdicts by about as much as the two judges differ.
+It does not agree with the stronger judge any more often. Run twice on the
+same pairs, the single call's win, loss and tie counts moved by one or two per
+pair (its first run's per-question verdicts were lost to the bug below).
 
 Two bugs came first. The judgement files were named by the judge model, so a
 panel run on flash-lite and flash-lite alone wrote the same file, and the
