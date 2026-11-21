@@ -283,6 +283,21 @@ function baseline(): SystemDoc {
 }
 
 /**
+ * One agent, one call, for open-ended writing: the baseline for story and article systems (Agents' Room, STORM).
+ * The question baseline ends with an answer line ("Final: …"), which a judge of fiction reads as a flaw.
+ */
+function baselineWriter(): SystemDoc {
+  const b = new Builder("Single writer (baseline)", "One agent writes what is asked in one model call, with no answer line. The baseline for open-ended writing systems (Agents' Room, STORM), judged pairwise against them.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks for a piece of writing", approves: false })
+    .agent("solo", 340, 0, { name: "Writer", role: "Writes alone", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "Write what is asked. Reply with the piece itself only: no title unless asked, no notes, summary or commentary before or after it." } })
+    .edge("asker", "solo", "message", { label: "Request" })
+    .edge("solo", "asker", "message", { label: "Piece" });
+  b.doc.budget = { usd: 0.5, max_rounds: 5, wallclock_min: 5 };
+  b.doc.result = { type: "text", description: "the piece of writing" };
+  return b.doc;
+}
+
+/**
  * One agent that can run Python: the baseline for systems with a code
  * executor (AutoGen), to tell what the team adds from what the tool adds.
  */
@@ -334,6 +349,7 @@ function selfConsistency(): SystemDoc {
 export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
   { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
+  { id: "baseline-writer", name: "Single writer (baseline)", summary: "one agent, one call, no answer line · the baseline for writing systems", build: baselineWriter },
   { id: "baseline-code", name: "Single agent with code (baseline)", summary: "one agent + a Python sandbox · the baseline for code-executing systems", build: baselineWithCode },
   { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
