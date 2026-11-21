@@ -37,13 +37,14 @@ exact McNemar tests against one agent on the same questions.
   19.5, Mixture-of-Agents 18, MedAgents 16 are no different from one agent;
   CAMEL 13, ChatEval 12.5 and AutoAgents 14 are significantly worse (p ≈
   0.01), MAD 14 nearly so (p 0.05).
-- **Mixing different models gains on open-ended answers.** MoA with
-  gemini-3.8-flash, flash-lite and gemma as proposers beats gemini-3.8-flash
-  alone on twenty instructions 31–0 over two runs, 32–0 with length ignored,
-  22–6 against it at matched length (p 0.004), and 17–0 under a judge from
-  another family, at six times the cost. It is the first gain here that
-  survives every control
-  ([different models](#different-models-a-gain-that-survives-the-controls)).
+- **Layered calls gain on open-ended answers with a strong enough model.**
+  MoA with gemini-3.8-flash aggregating (proposers gemini-3.8-flash, flash-lite
+  and gemma) beats gemini-3.8-flash alone on twenty instructions 31–0 over two
+  runs, 32–0 with length ignored, 22–6 at matched length (p 0.004), and 17–0
+  under a judge from another family, at six times the cost: the first gain here
+  that survives every control. With gemini-3.8-flash in every slot it does the
+  same (17–0, one run). On flash-lite, layering gains nothing
+  ([a strong model](#a-strong-model-a-gain-that-survives-the-controls)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
   give the piece only (p 0.0007), even with lengths matched, and 14–19 against
@@ -1300,7 +1301,7 @@ the writer baseline, where headings have no place. STORM's control, a
 searching writer told to give the piece only, may have been held back the
 same way; STORM lost to it anyway.
 
-### Different models: a gain that survives the controls
+### A strong model: a gain that survives the controls
 
 The paper's MoA mixes different models. Here the proposers are
 gemini-3.8-flash, flash-lite and gemma, and gemini-3.8-flash aggregates. The
@@ -1330,11 +1331,23 @@ model drops half its lists, which may favour MoA, and MoA's margin shrinks
 but holds. The judge's reasons are coverage: "more comprehensive", "includes
 the pro-rata rule", "quieter temples than the usual suggestions".
 
-With every slot on one model (above), MoA loses to that model's plain call.
-With different models it beats the strongest of them. **The gain comes from
-mixing models, not from layering calls.** This matches what the paper reports.
-Self-MoA's claim, that a strong model in every slot beats the mix, is not
-tested: the one-model MoA here ran on flash-lite, not gemini-3.8-flash.
+**Mixing is not what makes the gain.** An earlier version of this section
+said it was, on the strength of the flash-lite result above. Self-MoA, with
+gemini-3.8-flash in every slot, tests that directly:
+
+| Self-MoA, all on gemini-3.8-flash (one run) | Wins | Losses | Ties |
+|---|---|---|---|
+| against the mixed MoA | 6 | 4 | 10 |
+| against gemini-3.8-flash alone | 17 | 0 | 3 |
+
+It writes 761 words, with 5.4 headings and 18.9 list items, at $0.55 for
+twenty. It ties the mix and beats the model alone as the mix does. So
+layering calls on gemini-3.8-flash gains, and layering them on flash-lite does
+not. In both winning setups gemini-3.8-flash is the aggregator. What the gain
+needs is a model strong enough to merge drafts well, not drafts from different
+models. That fits Self-MoA's finding that a strong model in every slot is
+enough. Its claim that this beats the mix shows here only as a tie. (One run
+and the default criterion; the length controls were run for the mix only.)
 On Hard computation the same mix did not help (28, 27 against the best
 model's 26, 27): drafts from different models add coverage to open-ended
 answers, and there is nothing to add to a product that is right or wrong.

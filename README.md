@@ -96,12 +96,13 @@ Measured on this platform, every system on the same model and questions
   LongAgent (members reading the parts at once) 13.5 at a third of that.
   Splitting helps to gather, not to find: asked for one order's amount, a
   single line, one agent finds all 40, even at ~45,000 tokens.
-- **Mixing different models gains on open-ended answers**: Mixture-of-Agents
-  with three different models as proposers beats the strongest of them alone
-  on twenty open-ended instructions, 31–0 over two runs, 22–6 with lengths
-  matched, and 17–0 under a judge from another model family, at six times the
-  cost. With one model in every slot it gains nothing, and the same mix gains
-  nothing on exact computation.
+- **Layered calls gain on open-ended answers, given a strong aggregator**:
+  Mixture-of-Agents with gemini-3.8-flash aggregating beats gemini-3.8-flash
+  alone on twenty open-ended instructions, 31–0 over two runs, 22–6 with
+  lengths matched, and 17–0 under a judge from another model family, at six
+  times the cost. Different models are not needed (gemini-3.8-flash in every
+  slot also wins 17–0), but a strong model is: on flash-lite, layering gains
+  nothing. On exact computation it gains nothing either.
 - **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
   open-ended instructions against a one-call writer told to give the piece
   only, which holds with lengths matched, and loses 14–19 to one plain call of
