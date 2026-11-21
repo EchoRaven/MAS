@@ -22,6 +22,8 @@ export function BindingEditor({ binding, onChange, target, access, doc }: { bind
   const setWrite = (patch: Partial<NonNullable<AccessBinding["write"]>>) => onChange({ ...binding, write: { ...write, ...patch } });
   const tools = resourceTools(target);
   const injects = binding.mode !== "tool";
+  // a workspace is read as files, not searched: no top K or filter
+  const searched = binding.mode === "auto_inject" && !(target.kind === "plugin" && target.preset === "workspace");
 
   return (
     <div className="space-y-2">
@@ -47,9 +49,12 @@ export function BindingEditor({ binding, onChange, target, access, doc }: { bind
       )}
       {injects && (
         <Section title="Read">
-          {binding.mode === "auto_inject" && <NumberField label="Top K" value={read.top_k} onChange={(top_k) => setRead({ top_k })} />}
+          {target.kind === "plugin" && target.preset === "workspace" && (
+            <Toggle label="File contents" checked={!!read.contents} onChange={(on) => setRead({ contents: on || null })} hint="On: the files themselves, so the agent works from the whole scratchpad. Off: only their names" />
+          )}
+          {searched && <NumberField label="Top K" value={read.top_k} onChange={(top_k) => setRead({ top_k })} />}
           <NumberField label="Token budget" value={read.budget_tokens} onChange={(budget_tokens) => setRead({ budget_tokens })} step={500} />
-          {binding.mode === "auto_inject" && <TextField label="Filter" value={read.filter ?? ""} onChange={(f) => setRead({ filter: f || null })} mono placeholder='scope == "end_user" && age_days < 30' />}
+          {searched && <TextField label="Filter" value={read.filter ?? ""} onChange={(f) => setRead({ filter: f || null })} mono placeholder='scope == "end_user" && age_days < 30' />}
           <Toggle label="Custom query" checked={!!read.query} onChange={(on) => setRead({ query: on ? emptyFn("template", "{{input.text}}") : null })} hint="Default: the incoming message's text" />
           {read.query && <FunctionEditor label="Query (ctx → query)" fn={read.query} onChange={(query) => setRead({ query })} doc={doc} rows={2} />}
           <Toggle label="Custom format" checked={!!read.format} onChange={(on) => setRead({ format: on ? emptyFn("template", "{{#each results}}- {{this.text}}\n{{/each}}") : null })} hint="Default: a bulleted list with sources" />
