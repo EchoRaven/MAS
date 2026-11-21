@@ -37,6 +37,12 @@ exact McNemar tests against one agent on the same questions.
   19.5, Mixture-of-Agents 18, MedAgents 16 are no different from one agent;
   CAMEL 13, ChatEval 12.5 and AutoAgents 14 are significantly worse (p ≈
   0.01), MAD 14 nearly so (p 0.05).
+- **A writers' room loses to one writer on short stories.** Agents' Room
+  (four planners and five section writers around a scratchpad) loses 0–10
+  and 0–9 (one tie) to one call, judged pairwise in both orders. A second
+  judge, gemma, gives 0–8 (two ties). It costs 15 times as much. Three setup
+  bugs came first: cut-off verdicts, a scratchpad shared across stories, and
+  a baseline answer line ([Agents' Room](#agents-room-stories-judged-pairwise)).
 - **Choosing among samples cannot add an answer no sample has.** On the
   misses of the vote, Corex and Multi-Agent Verification the right answer
   was among the samples in 1–2 of 16; debate's debaters had and lost it in
@@ -1073,6 +1079,67 @@ each system's misses in two:
 - **MAD's devil found nothing to lose.** Its members marked answers in 64
   messages over 34 misses, none of them right: MAD's misses are not the
   judge overruling a right answer but nobody having one.
+
+## Agents' Room: stories, judged pairwise
+
+Stories have no expected answer, so they are evaluated with the grader
+**None** and compared pairwise (`POST /api/evals/pairwise`, or the Pairwise
+panel on the Evaluate page). A judge model reads both stories for each prompt,
+in both orders. A story wins only when both orders pick it; anything else is
+a tie. The set is `benchmarks/stories/prompts-10.jsonl`: ten prompts asking
+for a short story of about 600 words. Everything runs on flash-lite; the judge
+is gemini-3.8-flash unless noted.
+
+| Agents' Room | Against | Wins | Losses | Ties | Cost (10 stories) |
+|---|---|---|---|---|---|
+| Final, run 1 | Single writer, run 1 | 0 | 10 | 0 | $0.20 against $0.013 |
+| Final, run 2 | Single writer, run 2 | 0 | 9 | 1 | $0.20 against $0.013 |
+| Final, run 1, judged by gemma | Single writer, run 1 | 0 | 8 | 2 | |
+
+Agents' Room loses on every prompt but one or two, under two judges of
+different families (sign test over the decided prompts, p ≈ 0.002–0.008), at
+15 times the cost. Both judges give the same reasons: the five parts repeat
+their emotional beats, the ending drags, and the story runs long. Agents'
+Room's stories average 849 and 728 words over the two runs (475 to 1,148).
+The single writer's average 651 and 647, all between 605 and 718.
+
+**Caveats.** The paper's agents are fine-tuned for each role and its stories
+are long, so its pipeline has room to plan. Here every role is prompted
+flash-lite and the stories are short, which works against a five-part
+pipeline. The result says that this design, prompted, does not help short
+stories on this model. It does not test the paper's own setting.
+
+### Three bugs before the result
+
+The numbers above are the fourth attempt. Each earlier attempt measured a
+flaw in the setup, not the method:
+
+1. **The judge's verdicts were cut off.** The judge had a 600-token output
+   limit, and gemini thinks before it answers. On 6 of 10 prompts it never
+   reached its "Better:" line, and a missing verdict was counted as a tie
+   (first result: 0 wins, 4 losses, 6 ties). The judge now has 4,000 tokens,
+   its replies are kept, and a missing verdict is marked as such, not as a tie.
+2. **The scratchpad was shared by every story.** It was a workspace with scope
+   `system`: one folder for all runs of the system, kept between them, and
+   read by two stories at once in a concurrent evaluation. A beekeeper story
+   turned into a spaceship from the ice-ship prompt, and a planner wrote about
+   "letters postmarked from the future" from the lighthouse prompt (0–10).
+   Plugins now have scope `run`, which starts empty in every run. Agents'
+   Room, Magentic-One and ChatDev use it, and the Evaluate page warns about a
+   shared workspace or board. Magentic-One re-run with the fix: still 30/30
+   on Hard computation.
+3. **The baseline ended every story with "Final: …".** The question baseline
+   asks for a last answer line, and the judge marked that line down in four
+   of its losses (5–5). The **Single writer (baseline)** template is one call
+   with no answer line; it is the baseline for writing systems.
+
+A last fidelity fix came before the final runs. The writers opened only some
+of the scratchpad's files, often just the part before theirs, and drifted
+off the plan. In the paper every agent's prompt holds the whole scratchpad.
+A workspace binding can now inject its files' contents (`read.contents`, the
+**File contents** toggle on the edge), and every Agents' Room planner and
+writer gets the whole scratchpad. The stories then kept to their prompts but
+still lost (0–10, 0–9).
 
 ## Earlier sets
 

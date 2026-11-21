@@ -96,6 +96,12 @@ Measured on this platform, every system on the same model and questions
   LongAgent (members reading the parts at once) 13.5 at a third of that.
   Splitting helps to gather, not to find: asked for one order's amount, a
   single line, one agent finds all 40, even at ~45,000 tokens.
+- **A writers' room loses to one writer on short stories**: Agents' Room
+  (planners and section writers sharing a scratchpad) loses 0–10 and 0–9 to
+  a single call, judged pairwise in both orders by two judges, at 15 times the
+  cost. Its parts repeat and run long. First a shared scratchpad mixed
+  stories together, and an answer-line baseline lost points on fiction.
+  Both are fixed (the plugin scope `run`, the Single writer baseline).
 - **A simulated discussion does as well as a real one**: one model playing
   several personas in a single call (Solo Performance Prompting) matches
   Multiagent Debate on both models (on gemma 25 and 26, both just below one
