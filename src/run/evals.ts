@@ -37,6 +37,28 @@ export interface PairwiseResult {
   at: string;
 }
 
+/** The http(s) links in a text, without trailing punctuation. */
+export function linksIn(text: string): Set<string> {
+  return new Set((text.match(/https?:\/\/[^\s)\]>"'|,]+/g) ?? []).map((u) => u.replace(/[.;:]+$/, "")));
+}
+
+/**
+ * Of the links an output cites, those its own run's web searches or fetches returned. A judge model cannot check
+ * recent facts or links; this can: a link no search returned was written from memory or made up.
+ */
+export function sourcedLinks(output: string, tools: { tool: string; args?: unknown; result?: unknown }[]): { cited: number; found: number; searches: number } {
+  const searched = new Set<string>();
+  let searches = 0;
+  for (const t of tools) {
+    if (t.tool !== "web_search" && t.tool !== "fetch") continue;
+    searches++;
+    for (const u of linksIn(String(t.result ?? ""))) searched.add(u);
+    if (t.tool === "fetch") for (const u of linksIn(String(t.args ?? ""))) searched.add(u);
+  }
+  const mine = [...linksIn(output)];
+  return { cited: mine.length, found: mine.filter((u) => searched.has(u)).length, searches };
+}
+
 /** The graders that compare an output with an expected answer by a rule. */
 export type RuleGrader = Exclude<Grader, "llm" | "code" | "none">;
 

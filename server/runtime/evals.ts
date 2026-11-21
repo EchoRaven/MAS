@@ -7,7 +7,7 @@ import path from "node:path";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, finalAnswer, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, finalAnswer, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -301,6 +301,24 @@ export class EvalManager {
       this.active.delete(aId);
       this.active.delete(bId);
     }
+  }
+
+  /** Per output: the links it cites and how many its run's searches returned (see sourcedLinks). */
+  sources(id: string): { cited: number; found: number; searches: number; outputs: number; with_search: number } {
+    const rec = this.store.getEval(id);
+    if (!rec) throw new Error("No such evaluation");
+    const sum = { cited: 0, found: 0, searches: 0, outputs: 0, with_search: 0 };
+    for (const c of rec.cases) {
+      if (!c.output || !c.run_id) continue;
+      const tools = (this.store.events(c.run_id) as RunEvent[]).filter((e) => e.type === "tool") as unknown as { tool: string; args?: unknown; result?: unknown }[];
+      const s = sourcedLinks(c.output, tools);
+      sum.outputs++;
+      sum.cited += s.cited;
+      sum.found += s.found;
+      sum.searches += s.searches;
+      if (s.searches) sum.with_search++;
+    }
+    return sum;
   }
 
   /** The pairwise judgements kept for an evaluation (either side). */

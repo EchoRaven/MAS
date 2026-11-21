@@ -313,3 +313,16 @@ describe("time left", () => {
     expect(etaSeconds({ cases: [c("done", 100), c("done", 200), c("running"), c("running"), c("pending"), c("pending")] })).toBe(300);
   });
 });
+
+describe("sourcedLinks", () => {
+  it("counts the cited links its own searches or fetches returned", async () => {
+    const { sourcedLinks } = await import("./evals");
+    const out = "Text [1] [2] [3].\nReferences\n[1] https://a.example/x.\n[2] https://b.example/y\n[3] https://made.up/z";
+    const tools = [
+      { tool: "web_search", result: "Sources:\n[1] a.example: https://a.example/x" },
+      { tool: "fetch", args: '{"url":"https://b.example/y"}', result: "page" },
+      { tool: "ask_expert", result: "https://made.up/z" },
+    ];
+    expect(sourcedLinks(out, tools)).toEqual({ cited: 3, found: 2, searches: 2 });
+  });
+});

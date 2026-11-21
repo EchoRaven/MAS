@@ -16,9 +16,13 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
   const [kept, setKept] = useState<PairwiseResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  const [links, setLinks] = useState<{ cited: number; found: number; searches: number; outputs: number; with_search: number } | null>(null);
 
   useEffect(() => {
     let live = true;
+    Api.evalSources(ev.id)
+      .then((r) => live && setLinks(r.sources))
+      .catch(() => undefined);
     Promise.all([Api.evals(), Api.pairwiseOf(ev.id)])
       .then(([r, p]) => {
         if (!live) return;
@@ -48,6 +52,13 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
       <p className="mt-1 text-xs text-muted-foreground">
         Nothing is graded here. Judge these outputs against another evaluation of the same questions: a model reads both, in both orders, and a win needs both orders to agree (anything else is a tie). Two calls per question.
       </p>
+      {links && links.outputs > 0 && (links.cited > 0 || links.searches > 0) && (
+        <p className="mt-2 text-xs" title="Links the outputs cite, checked against what each run's own web_search and fetch calls returned. A link no search returned was written from memory or made up; a judge model cannot tell">
+          Links: {(links.cited / links.outputs).toFixed(1)} per output
+          {links.cited ? `, ${Math.round((100 * links.found) / links.cited)}% of them returned by the run's own searches` : ""}
+          {links.with_search < links.outputs ? ` · ${links.outputs - links.with_search} of ${links.outputs} runs searched nothing` : ""}
+        </p>
+      )}
       {others.length ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Select value={other} onValueChange={setOther} items={others.map((e) => ({ value: e.id, label: `${e.system_name} · ${new Date(e.started_at).toLocaleString()}` }))} ariaLabel="Other evaluation" />
