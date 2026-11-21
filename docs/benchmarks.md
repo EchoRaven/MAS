@@ -375,6 +375,29 @@ agent (p = 1), at $1.01. So across three models debate helps only the
 middle one: flash-lite gains about 2 in 30, gemma (weaker) and 3.8-flash
 (stronger) nothing, with or without different methods.
 
+## A cascade: FrugalGPT
+
+FrugalGPT (Chen et al. 2023) answers with a cheap model first, has a scorer
+judge the answer, and sends only doubtful questions to a dear model; it
+reports the best model's accuracy at a small part of its cost. Hard
+computation, flash-lite answering and scoring, 3.8-flash for the doubtful
+ones (threshold 8 of 10), two runs:
+
+| System | Correct (two runs) | Cost per run |
+| --- | --- | --- |
+| flash-lite alone | 20, 18 | $0.025 |
+| 3.8-flash alone | 26, 27 | $0.033 |
+| Cascade: flash-lite, scored by flash-lite, else 3.8-flash | 22, 21 | $0.054 |
+
+- **The cascade is worse and dearer than the strong model alone** (+0 −10
+  against 3.8-flash, p 0.002). Its scorer accepted 39 cheap answers, 10 of
+  them wrong: a model checking its own long arithmetic cannot tell right
+  from wrong, as Multi-Agent Verification's verifiers could not. And the
+  price gap here is only two to one, where the paper's was tens to one;
+  the scoring call alone costs more than the strong model saves. A cascade
+  needs a scorer that knows when the cheap model is wrong, and a gap worth
+  saving. Misses checked with the judge.
+
 ## A weaker model: no gain from discussion after all
 
 The papers report their gains with gpt-3.5-class models; on

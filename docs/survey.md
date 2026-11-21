@@ -32,7 +32,7 @@ replicas and a vote.
 | spawn | 3 | teams whose size depends on the task |
 | `custom` loop | 3 | protocols that are game rules or document chains |
 | tools called from code (`ctx.tool`) | 2 | actors with no model: AutoGen's user proxy, Magentic-One's terminal |
-| roles called from code (`ctx.call`) | 3 | a protocol whose loop is code but whose roles stay components: MACM's verify-then-keep condition mining, Self-Refine's critique-and-revise, LongAgent's parallel members |
+| roles called from code (`ctx.call`) | 4 | a protocol whose loop is code but whose roles stay components: MACM's verify-then-keep condition mining, Self-Refine's critique-and-revise, LongAgent's parallel members, FrugalGPT's cascade |
 
 Two parts carry most of the field: an agent with a simple loop, and a group
 that repeats until a condition holds. The differences between papers are
