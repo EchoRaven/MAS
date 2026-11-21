@@ -112,15 +112,28 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     }
   });
   r.on("POST", "/api/evals/pairwise", async (req) => {
-    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string; judge_system?: string };
+    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string; judge_system?: string; wait?: boolean };
     if (!b.a || !b.b || b.a === b.b) throw new HttpError(400, "Give two different evaluations, a and b");
+    const job = evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined, b.judge_system ? String(b.judge_system) : undefined);
+    if (b.wait === false) {
+      // in the background: GET /api/evals/:id/pairwise lists it while it runs (or why it failed), then its result
+      // its checks (the evaluations, a shared question, the judging system) run before its first await, so a request
+      // that cannot start has already failed here and says why
+      try {
+        await Promise.race([job, Promise.resolve(null)]);
+      } catch (e) {
+        throw new HttpError(400, (e as Error).message);
+      }
+      job.catch(() => undefined);
+      return { started: true };
+    }
     try {
-      return { pairwise: await evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined, b.judge_system ? String(b.judge_system) : undefined) };
+      return { pairwise: await job };
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }
   });
-  r.on("GET", "/api/evals/:id/pairwise", (req) => ({ pairwise: evals.pairwiseOf(req.params.id) }));
+  r.on("GET", "/api/evals/:id/pairwise", (req) => ({ pairwise: evals.pairwiseOf(req.params.id), judging: evals.judgingOf(req.params.id) }));
   r.on("PUT", "/api/evals/:id/invalid", async (req) => {
     const b = ((await req.body()) ?? {}) as { reason?: string | null };
     try {

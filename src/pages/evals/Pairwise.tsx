@@ -2,7 +2,7 @@
 // judged against another of the same questions: a model reads both outputs, in both orders, and a win needs both
 // orders to agree. The judgements are kept with the evaluations and listed here.
 import { useEffect, useState } from "react";
-import { Api, type EvalSummary } from "@/api/client";
+import { Api, type EvalSummary, type PairwiseJob } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usd } from "@/lib/format";
@@ -19,6 +19,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
   const systems = useSystems((s) => s.systems);
   const [kept, setKept] = useState<PairwiseResult[]>([]);
   const [busy, setBusy] = useState(false);
+  const [jobs, setJobs] = useState<PairwiseJob[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [links, setLinks] = useState<{ cited: number; found: number; searches: number; outputs: number; with_search: number; words: number; headings: number; items: number; tables: number } | null>(null);
 
@@ -35,6 +36,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         setOthers(same);
         setOther((o) => o || same[0]?.id || "");
         setKept(p.pairwise);
+        setJobs(p.judging ?? []);
       })
       .catch((e) => onError(e.message));
     return () => {
@@ -42,10 +44,29 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
     };
   }, [ev.id, onError]);
 
+  // judgements run in the background (a judging system can take half an hour): poll while any is in progress
+  const running = jobs.some((j) => !j.error);
+  useEffect(() => {
+    if (!running) return;
+    const t = window.setInterval(() => {
+      Api.pairwiseOf(ev.id)
+        .then((p) => {
+          setKept(p.pairwise);
+          setJobs(p.judging ?? []);
+        })
+        .catch(() => undefined);
+    }, 3000);
+    return () => window.clearInterval(t);
+  }, [running, ev.id]);
+
   const run = () => {
     setBusy(true);
-    Api.pairwise(ev.id, other, judge || undefined, undefined, panel || undefined)
-      .then((r) => setKept((k) => [r.pairwise, ...k.filter((x) => !(x.a === r.pairwise.a && x.b === r.pairwise.b && x.judge === r.pairwise.judge))]))
+    Api.startPairwise(ev.id, other, judge || undefined, undefined, panel || undefined)
+      .then(() => Api.pairwiseOf(ev.id))
+      .then((p) => {
+        setKept(p.pairwise);
+        setJobs(p.judging ?? []);
+      })
       .catch((e) => onError(e.message))
       .finally(() => setBusy(false));
   };
@@ -80,12 +101,17 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
             ariaLabel="Judging system"
           />
           <Button size="sm" variant="outline" disabled={busy || !other} onClick={run} title={panel ? "The chosen system judges each pair, run on the judge model; its output must end with a line 'Better: 1', 'Better: 2' or 'Better: tie'. Several model calls per question" : "One call per question and order"}>
-            {busy ? "Judging…" : "Judge pairwise"}
+            {busy ? "Starting…" : "Judge pairwise"}
           </Button>
         </div>
       ) : (
         <p className="mt-2 text-xs text-muted-foreground">No other ungraded evaluation of these questions yet: evaluate a second system on them with the grader None.</p>
       )}
+      {jobs.map((j) => (
+        <p key={`${j.a}|${j.b}|${j.judge}`} className={`mt-3 text-xs ${j.error ? "text-destructive" : "text-muted-foreground"}`}>
+          {j.error ? `Judging by ${j.judge} failed: ${j.error}` : `Judging by ${j.judge}: ${j.done} of ${j.total} questions (both orders each)…`}
+        </p>
+      ))}
       {kept.map((p) => {
         const mineA = p.a === ev.id;
         const [w, l] = mineA ? [p.a_wins, p.b_wins] : [p.b_wins, p.a_wins];

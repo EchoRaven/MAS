@@ -55,6 +55,8 @@ function resetCase(c: EvalRecord["cases"][number]) {
 export class EvalManager {
   private stopped = new Set<string>();
   private active = new Set<string>();
+  /** pairwise judgements in progress, by "a|b|judge": how far they are, or why they failed (kept ten minutes) */
+  private judging = new Map<string, { a: string; b: string; judge: string; done: number; total: number; started: string; error?: string }>();
   /** queued evaluations run one at a time, in the order they were queued */
   private queue: Promise<void> = Promise.resolve();
   constructor(
@@ -285,7 +287,11 @@ export class EvalManager {
       return { pick, usd: spent, why: text.trim().slice(-600) };
     };
     // judging only reads the two evaluations: several judges can work on them at once (each keeps its own file)
-    {
+    const label = panel ? `${panel.name} on ${judge ?? "its models"}` : (judge ?? "default");
+    const key = `${aId}|${bId}|${label}`;
+    const progress = { a: aId, b: bId, judge: label, done: 0, total: shared.length, started: new Date().toISOString() } as { a: string; b: string; judge: string; done: number; total: number; started: string; error?: string };
+    this.judging.set(key, progress);
+    try {
       const per: PairwiseResult["per"] = [];
       let usd = 0;
       for (const q of shared) {
@@ -296,13 +302,14 @@ export class EvalManager {
         const secondPick = y.pick === "1" ? "b" : y.pick === "2" ? "a" : y.pick === "tie" ? "tie" : "unread";
         const verdict = firstPick === secondPick && firstPick !== "unread" ? firstPick : "tie";
         per.push({ input: q, first: firstPick, second: secondPick, verdict, why: [x.why, y.why] });
+        progress.done++;
       }
       const result: PairwiseResult = {
         a: aId,
         b: bId,
         a_name: a.system_name,
         b_name: b.system_name,
-        judge: panel ? `${panel.name} on ${judge ?? "its models"}` : (judge ?? "default"),
+        judge: label,
         criterion: what,
         a_wins: per.filter((p) => p.verdict === "a").length,
         b_wins: per.filter((p) => p.verdict === "b").length,
@@ -313,8 +320,19 @@ export class EvalManager {
       };
       // one file per pair and judge (its full label: a panel on a model is not that model alone)
       fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${result.judge.replace(/[^\w.-]/g, "_")}.json`), JSON.stringify(result, null, 1));
+      this.judging.delete(key);
       return result;
+    } catch (e) {
+      // a failure stays listed for a while, so a page that started it in the background can say why
+      progress.error = (e as Error).message;
+      setTimeout(() => this.judging.get(key) === progress && this.judging.delete(key), 600_000).unref?.();
+      throw e;
     }
+  }
+
+  /** Pairwise judgements in progress (or failed in the last ten minutes) that involve an evaluation. */
+  judgingOf(id: string) {
+    return [...this.judging.values()].filter((j) => j.a === id || j.b === id);
   }
 
   /** Mark an evaluation invalid (a setup bug found after it ran), or valid again with a null reason. */

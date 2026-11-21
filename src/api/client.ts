@@ -34,6 +34,17 @@ export class ApiError extends Error {
   }
 }
 
+/** A pairwise judgement in progress (or failed in the last ten minutes). */
+export interface PairwiseJob {
+  a: string;
+  b: string;
+  judge: string;
+  done: number;
+  total: number;
+  started: string;
+  error?: string;
+}
+
 export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; set: string; questions: number; first_question: string; set_name?: string };
 
 export interface SystemVersion {
@@ -116,11 +127,13 @@ export const Api = {
   auditEval: (id: string, judge?: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/audit`, judge ? { judge } : {}),
   /** Judge two evaluations of the same open-ended questions pairwise (both orders), and the judgements kept for one. */
   pairwise: (a: string, b: string, judge?: string, criterion?: string, judge_system?: string) => api<{ pairwise: PairwiseResult }>("POST", "/evals/pairwise", { a, b, judge, criterion, judge_system }),
+  /** The same, in the background: it shows in pairwiseOf's judging while it runs. */
+  startPairwise: (a: string, b: string, judge?: string, criterion?: string, judge_system?: string) => api<{ started: true }>("POST", "/evals/pairwise", { a, b, judge, criterion, judge_system, wait: false }),
   /** Mark an evaluation invalid with a reason (a setup bug found later), or valid again with null. */
   markEvalInvalid: (id: string, reason: string | null) => api<{ eval: EvalRecord }>("PUT", `/evals/${id}/invalid`, { reason }),
   /** The links an evaluation's outputs cite, and how many their runs' searches returned. */
   evalSources: (id: string) => api<{ sources: { cited: number; found: number; searches: number; outputs: number; with_search: number; words: number; headings: number; items: number; tables: number } }>("GET", `/evals/${id}/sources`),
-  pairwiseOf: (id: string) => api<{ pairwise: PairwiseResult[] }>("GET", `/evals/${id}/pairwise`),
+  pairwiseOf: (id: string) => api<{ pairwise: PairwiseResult[]; judging?: PairwiseJob[] }>("GET", `/evals/${id}/pairwise`),
   retryEval: (id: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/retry`, {}),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),
   /** What a system's code kept across runs (ctx.state), and clearing it. */

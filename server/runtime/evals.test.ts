@@ -195,6 +195,30 @@ describe("evaluations", () => {
     expect(evals.pairwiseOf(eb.id).map((x) => x.a)).toEqual([ea.id]);
   });
 
+  it("lists a pairwise judgement while it runs, then only its result", async () => {
+    const writer = (id: string, text: string) => {
+      const b = new Builder(id, "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("f", "function", 200, 0, { name: "W", fn: { lang: "js", code: `return ${JSON.stringify(text)};` } })
+        .edge("me", "f", "message")
+        .edge("f", "me", "message");
+      b.doc.models.push({ id: "judge_q", provider: "mock", model: "mock", api: { params: { script: ["ok. Better: 1"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return { ...b.doc, id };
+    };
+    const cases = [{ input: "a bird", expected: "" }, { input: "a stone", expected: "" }];
+    const da = writer("sys_qa", "one");
+    store.putSystem(da);
+    const ea = await finish(evals.start(da, { grader: "none", cases }).id);
+    const eb = await finish(evals.start(writer("sys_qb", "two"), { grader: "none", cases }).id);
+    const job = evals.pairwise(ea.id, eb.id, "judge_q");
+    expect(evals.judgingOf(ea.id)).toMatchObject([{ a: ea.id, b: eb.id, judge: "judge_q", total: 2 }]);
+    await job;
+    expect(evals.judgingOf(ea.id)).toEqual([]);
+    // a request that cannot start fails before its first await
+    const bad = evals.pairwise(ea.id, "eval_nope", "judge_q");
+    await expect(Promise.race([bad, Promise.resolve("started")])).rejects.toThrow(/No such evaluation/);
+  });
+
   it("lets a system judge pairwise (a referee panel), reading the verdict from its output", async () => {
     const writer = (id: string, text: string) => {
       const b = new Builder(id, "");
