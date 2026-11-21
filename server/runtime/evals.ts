@@ -311,8 +311,8 @@ export class EvalManager {
         usd,
         at: new Date().toISOString(),
       };
-      // one file per pair and judge: a second judge's verdicts sit beside the first's
-      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${(judge ?? "default").replace(/[^\w.-]/g, "_")}.json`), JSON.stringify(result, null, 1));
+      // one file per pair and judge (its full label: a panel on a model is not that model alone)
+      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${result.judge.replace(/[^\w.-]/g, "_")}.json`), JSON.stringify(result, null, 1));
       return result;
     }
   }

@@ -213,6 +213,8 @@ describe("evaluations", () => {
     const r = await evals.pairwise(ea.id, eb.id, undefined, undefined, "sys_panel");
     expect(r.per.map((p) => [p.first, p.second, p.verdict])).toEqual([["a", "b", "tie"]]);
     expect(r.judge).toContain(panel.name);
+    // a panel's verdicts and a plain judge's sit side by side
+    expect(evals.pairwiseOf(ea.id).map((x) => x.judge)).toEqual([r.judge]);
     await expect(evals.pairwise(ea.id, eb.id, undefined, undefined, "sys_none")).rejects.toThrow(/No such system/);
   });
 
