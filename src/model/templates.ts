@@ -302,9 +302,9 @@ function baselineWriter(): SystemDoc {
  * comparison with it measures what the layers and the aggregation add, not a difference of prompts.
  */
 function baselineBare(): SystemDoc {
-  const b = new Builder("Single model call (baseline)", "The request goes to one model as it is, with no instructions, and its reply is the answer: the same call a Mixture-of-Agents proposer makes. The baseline for systems built of plain model calls.");
+  const b = new Builder("Single model call (baseline)", "The request goes to one model as it is, with no instructions, and its reply is the answer: the same call a Mixture-of-Agents proposer makes. The baseline for systems built of plain model calls. The run variable style, when set, is appended to the request (for example a length, to match a system that writes more).");
   b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks", approves: false })
-    .node("call", "model", 340, 0, { name: "Model", model: "sonnet", system_prompt: "", prompt: "{{input}}", temperature: null, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
+    .node("call", "model", 340, 0, { name: "Model", model: "sonnet", system_prompt: "", prompt: "{{input}}{{vars.style}}", temperature: null, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } })
     .edge("asker", "call", "message", { label: "Request" })
     .edge("call", "asker", "message", { label: "Reply" });
   b.doc.budget = { usd: 0.5, max_rounds: 5, wallclock_min: 5 };
