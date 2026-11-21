@@ -8,11 +8,15 @@ import { Select } from "@/components/ui/select";
 import { usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import type { EvalRecord, PairwiseResult } from "@/run/evals";
+import { useSystems } from "@/store/systems";
 
 export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string) => void }) {
   const [others, setOthers] = useState<EvalSummary[]>([]);
   const [other, setOther] = useState("");
   const [judge, setJudge] = useState(ev.on_model ?? "");
+  // a system can judge instead of one model call (a referee panel such as ChatEval), run on the judge model
+  const [panel, setPanel] = useState("");
+  const systems = useSystems((s) => s.systems);
   const [kept, setKept] = useState<PairwiseResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -40,7 +44,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
 
   const run = () => {
     setBusy(true);
-    Api.pairwise(ev.id, other, judge || undefined)
+    Api.pairwise(ev.id, other, judge || undefined, undefined, panel || undefined)
       .then((r) => setKept((k) => [r.pairwise, ...k.filter((x) => !(x.a === r.pairwise.a && x.b === r.pairwise.b && x.judge === r.pairwise.judge))]))
       .catch((e) => onError(e.message))
       .finally(() => setBusy(false));
@@ -50,7 +54,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
     <section className="mt-4 rounded-lg border border-border/60 p-3">
       <h3 className="text-sm font-medium">Pairwise</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Nothing is graded here. Judge these outputs against another evaluation of the same questions: a model reads both, in both orders, and a win needs both orders to agree (anything else is a tie). Two calls per question.
+        Nothing is graded here. Judge these outputs against another evaluation of the same questions: a model (or a judging system, such as ChatEval's referee panel) reads both, in both orders, and a win needs both orders to agree (anything else is a tie). Two judgements per question.
       </p>
       {links && links.outputs > 0 && (links.cited > 0 || links.searches > 0) && (
         <p className="mt-2 text-xs" title="Links the outputs cite, checked against what each run's own web_search and fetch calls returned. A link no search returned was written from memory or made up; a judge model cannot tell">
@@ -63,7 +67,13 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Select value={other} onValueChange={setOther} items={others.map((e) => ({ value: e.id, label: `${e.system_name} · ${new Date(e.started_at).toLocaleString()}` }))} ariaLabel="Other evaluation" />
           <Select value={judge} onValueChange={setJudge} items={[{ value: "", label: "Judge: this evaluation's model" }, ...DEFAULT_MODELS.map((m) => ({ value: m.id, label: `Judge: ${m.id}` }))]} ariaLabel="Judge" />
-          <Button size="sm" variant="outline" disabled={busy || !other} onClick={run}>
+          <Select
+            value={panel}
+            onValueChange={setPanel}
+            items={[{ value: "", label: "One judge call" }, ...systems.filter((s) => s.id !== ev.system_id).map((s) => ({ value: s.id, label: `Panel: ${s.name}` }))]}
+            ariaLabel="Judging system"
+          />
+          <Button size="sm" variant="outline" disabled={busy || !other} onClick={run} title={panel ? "The chosen system judges each pair, run on the judge model; its output must end with a line 'Better: 1', 'Better: 2' or 'Better: tie'. Several model calls per question" : "One call per question and order"}>
             {busy ? "Judging…" : "Judge pairwise"}
           </Button>
         </div>

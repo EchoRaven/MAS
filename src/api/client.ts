@@ -115,7 +115,7 @@ export const Api = {
   /** The LLM judge's second opinion on the misses of an evaluation graded by rule (grades stand). */
   auditEval: (id: string, judge?: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/audit`, judge ? { judge } : {}),
   /** Judge two evaluations of the same open-ended questions pairwise (both orders), and the judgements kept for one. */
-  pairwise: (a: string, b: string, judge?: string, criterion?: string) => api<{ pairwise: PairwiseResult }>("POST", "/evals/pairwise", { a, b, judge, criterion }),
+  pairwise: (a: string, b: string, judge?: string, criterion?: string, judge_system?: string) => api<{ pairwise: PairwiseResult }>("POST", "/evals/pairwise", { a, b, judge, criterion, judge_system }),
   /** Mark an evaluation invalid with a reason (a setup bug found later), or valid again with null. */
   markEvalInvalid: (id: string, reason: string | null) => api<{ eval: EvalRecord }>("PUT", `/evals/${id}/invalid`, { reason }),
   /** The links an evaluation's outputs cite, and how many their runs' searches returned. */
