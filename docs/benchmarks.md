@@ -27,8 +27,8 @@ exact McNemar tests against one agent on the same questions.
   four 22.5 (p 0.04), its chain 19.5. Every discussion system on this set
   now has at least two runs.
 - **On the stronger gemini-3.8-flash, debate gains nothing either** (26,
-  26 against one agent's 26, 27): across three models only the middle one,
-  flash-lite, gains from discussion.
+  26 against one agent's 26, 27; the diverse debate 27, 27): across three
+  models only the middle one, flash-lite, gains from discussion.
 - **On the weaker gemma, nothing without a tool beats one agent** (27;
   debate and ReConcile 26, voting and SPP 25). A 7–8 question gain first
   reported there came from cut-off answers ([A weaker model](#a-weaker-model-no-gain-from-discussion-after-all)).
