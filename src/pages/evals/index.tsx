@@ -14,7 +14,7 @@ import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
-import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats, etaSeconds, retryableCase } from "@/run/evals";
+import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats, etaSeconds, retryableCase, wilson } from "@/run/evals";
 import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
@@ -337,6 +337,20 @@ function Evals({ systemId }: { systemId: string }) {
                 · ≈{Math.min(caseCount * Number(repeats), MAX_RUNS) * callsPerRun} model calls, at least {Math.max(1, Math.ceil((Math.min(caseCount * Number(repeats), MAX_RUNS) * callsPerRun) / rpm))} min at {rpm}/min
               </span>
             )}
+            {caseCount > 0 &&
+              !dry &&
+              (() => {
+                // how far a score on this many runs can move by chance (95%, at a typical 70% right)
+                const n = Math.min(caseCount * Number(repeats), MAX_RUNS);
+                const [lo, hi] = wilson(Math.round(0.7 * n), n);
+                const spread = Math.round(((hi - lo) / 2) * 100);
+                return (
+                  <span title="The 95% interval of a score around 70% on this many runs. Two systems are compared question by question on Compare (the paired test), which needs fewer runs than this suggests, but one run of a small set says little either way">
+                    {" "}
+                    · a score can move about ±{spread} points by chance{Number(repeats) === 1 && n <= 100 ? ": a second repeat narrows it" : ""}
+                  </span>
+                );
+              })()}
             {caseCount * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
             {!chosen && parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
