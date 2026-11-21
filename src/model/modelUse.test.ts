@@ -31,4 +31,19 @@ describe("runAllOn", () => {
     expect(() => remapModels(doc, { nope: "gemini" }, DEFAULT_MODELS)).toThrow(/no model "nope"/);
     expect(() => remapModels(doc, { sonnet: "embed" }, DEFAULT_MODELS)).toThrow(/same kind/);
   });
+
+  it("serves one node with a model of its own (node:<id>), apart from the slot it shared", () => {
+    // MoA's aggregator and its first proposers share the opus slot
+    const doc = TEMPLATES.find((t) => t.id === "paper-moa")!.build();
+    const out = remapModels(doc, { opus: "gemini_lite", gpt: "gemini_lite", local: "gemini_lite", "node:aggregator": "gemini" }, DEFAULT_MODELS);
+    const modelOf = (nodeId: string) => {
+      const slot = (out.nodes.find((n) => n.id === nodeId)!.data as { model: string }).model;
+      return out.models.find((m) => m.id === slot)!.model;
+    };
+    expect(modelOf("aggregator")).toBe("gemini-3.8-flash");
+    expect(modelOf("l1_1")).toBe("gemini-3.1-flash-lite"); // the proposer that shared opus with it
+    expect((doc.nodes.find((n) => n.id === "aggregator")!.data as { model: string }).model).toBe("opus"); // the original is untouched
+    expect(() => remapModels(doc, { "node:nope": "gemini" }, DEFAULT_MODELS)).toThrow(/no node "nope"/);
+    expect(() => remapModels(doc, { "node:aggregator": "embed" }, DEFAULT_MODELS)).toThrow(/not a chat model/);
+  });
 });

@@ -57,6 +57,29 @@ export function runAllOn(doc: SystemDoc, target: string, defaults: ModelSpec[] =
  */
 export function remapModels(doc: SystemDoc, map: Record<string, string>, defaults: ModelSpec[] = []): SystemDoc {
   const find = (id: string) => doc.models.find((m) => m.id === id) ?? defaults.find((m) => m.id === id);
+  // "node:<id>" serves one node with a model, when it shares its slot with others (MoA's aggregator and a proposer)
+  const nodeKeys = Object.entries(map).filter(([k]) => k.startsWith("node:"));
+  const slotMap = Object.fromEntries(Object.entries(map).filter(([k]) => !k.startsWith("node:")));
+  if (nodeKeys.length) {
+    let out = remapModels(doc, slotMap, defaults);
+    for (const [key, to] of nodeKeys) {
+      const id = key.slice(5);
+      const node = out.nodes.find((n) => n.id === id);
+      const data = node?.data as { model?: string } | undefined;
+      if (!node || typeof data?.model !== "string") throw new Error(`The system has no node "${id}" with a model`);
+      const spec = find(to);
+      if (!spec) throw new Error(`Unknown model "${to}"`);
+      if ((spec.kind ?? "chat") !== "chat") throw new Error(`"${to}" is not a chat model`);
+      // its own slot, so remapping the slot it shared cannot reach it
+      const slot = `node_${id}`;
+      out = {
+        ...out,
+        models: [...out.models.filter((m) => m.id !== slot), { ...spec, id: slot }],
+        nodes: out.nodes.map((n) => (n.id === id ? ({ ...n, data: { ...n.data, model: slot } } as typeof n) : n)),
+      };
+    }
+    return out;
+  }
   for (const [from, to] of Object.entries(map)) {
     if (!doc.models.some((m) => m.id === from)) throw new Error(`The system has no model "${from}"`);
     const spec = find(to);
