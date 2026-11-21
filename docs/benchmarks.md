@@ -1381,7 +1381,25 @@ cost ($0.34 for twenty), and is no better. The choice is also less about
 consistency than it looks: the selector picked the first of the five answers
 23 times in 40, where a blind pick would land there 8 times. MoA's drafts
 give the aggregator material to combine; choosing among samples of one model
-returns one of its ordinary answers. (One run;
+returns one of its ordinary answers.
+
+**On stories the edge is small.** Self-MoA on gemini-3.8-flash against that
+model alone, on the ten short-story prompts:
+
+| | Wins | Losses | Ties | Picked the story shown first |
+|---|---|---|---|---|
+| Run 1, judged by gemini-3-flash | 4 | 0 | 6 | 16 of 20 |
+| Run 2, judged by gemini-3-flash | 3 | 0 | 7 | 17 of 20 |
+| Run 1, judged by gemma | 3 | 0 | 7 | 17 of 20 |
+
+The lengths match (619 and 623 words against 631 and 634). MoA never loses:
+7–0 over the two runs (p 0.016), and gemma agrees. But both judges picked
+whichever story came first in four readings of five, so most pairs are ties
+the order decided. Where a judge could tell the stories apart it chose MoA's,
+at nine times the cost. Agents' Room, a team built for stories, lost to one
+call on the same prompts (0–10). The Pairwise panel and the Compare page now
+show how often a judge picked the response shown first, flagged at four in
+five or more. (One run;
 judged on content rather than length it still wins 16–0. The matched-length
 control was run for the mix only.)
 On Hard computation the same mix did not help (28, 27 against the best
