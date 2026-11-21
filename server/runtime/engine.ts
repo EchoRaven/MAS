@@ -178,7 +178,7 @@ export class Engine implements TurnServices {
     }
     if (e.gate && !(await this.gate(e, v, from))) return;
     v = coerce(v, this.targetPortType(e), from);
-    rc.emit({ type: "message", from, to: e.target, edge: e.id, port: e.target_port, kind: e.kind, text: clip(asText(v), 6000) });
+    rc.emit({ type: "message", from, to: e.target, edge: e.id, port: e.target_port, kind: e.kind, text: clip(asText(v), 12_000) });
     await this.arrive(e, v, from);
   }
 
@@ -469,7 +469,7 @@ export class Engine implements TurnServices {
     let v: unknown = { role: "user", text, content: text, from: e.source } satisfies Msg;
     if (e.transform) v = syncMsg(v, await runFn(e.transform, v, rc, { node: e.source, edge: e.id }));
     v = coerce(v, this.targetPortType(e), e.source);
-    rc.emit({ type: "message", from: e.source, to: e.target, edge: e.id, port: e.target_port, kind: "call", text: clip(asText(v), 6000) });
+    rc.emit({ type: "message", from: e.source, to: e.target, edge: e.id, port: e.target_port, kind: "call", text: clip(asText(v), 12_000) });
     this.status(e.source, "waiting");
     const t = this.node(e.target);
     let reply: string;
@@ -492,7 +492,7 @@ export class Engine implements TurnServices {
     } finally {
       this.status(e.source, "working");
     }
-    rc.emit({ type: "message", from: e.target, to: e.source, edge: e.id, kind: "reply", text: clip(reply, 6000) });
+    rc.emit({ type: "message", from: e.target, to: e.source, edge: e.id, kind: "reply", text: clip(reply, 12_000) });
     return reply;
   }
 
@@ -533,7 +533,7 @@ export class Engine implements TurnServices {
         result = `Error: ${(err as Error).message}`;
         error = true;
       }
-      rc.emit({ type: "tool", node, tool: name, args: clip(JSON.stringify(args), 800), result: clip(result, 3000), ...(error ? { error: true } : {}) });
+      rc.emit({ type: "tool", node, tool: name, args: clip(JSON.stringify(args), 800), result: clip(result, 12_000), ...(error ? { error: true } : {}) });
       if (error) throw new Error(result.slice(7));
       return result;
     }
@@ -545,7 +545,7 @@ export class Engine implements TurnServices {
     const n = this.node(template) as SysNode<AgentData>;
     this.rc.emit({ type: "message", from: "spawn", to: template, kind: "call", text: `#${i}: ${clip(task, 500)}` });
     const r = await runAgentTurn(this, new AgentState(), n, { role: "user", text: task, content: task } satisfies Msg);
-    this.rc.emit({ type: "message", from: template, to: "spawn", kind: "reply", text: `#${i}: ${clip(r.text, 2000)}` });
+    this.rc.emit({ type: "message", from: template, to: "spawn", kind: "reply", text: `#${i}: ${clip(r.text, 12_000)}` });
     return r.text;
   }
 

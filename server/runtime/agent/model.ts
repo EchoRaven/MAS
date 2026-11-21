@@ -12,6 +12,9 @@ import { textOf } from "../models";
 import type { RtTool } from "../resources/types";
 import { clip } from "../values";
 
+// what the log keeps of a tool's result: enough to audit what an agent was given (sources, notes), not only its start
+const LOG_RESULT = 12_000;
+
 export class AgentIO {
   constructor(
     readonly rc: RunCtx,
@@ -129,7 +132,7 @@ export class AgentIO {
           result = `Error: ${(e as Error).message}`;
           await this.hook("on_error", { where: "tool", tool: c.name, error: (e as Error).message }).catch(() => null);
         }
-        this.rc.emit({ type: "tool", node: this.node, tool: c.name, args: clip(JSON.stringify(c.input), 1500), result: clip(result, 3000), error });
+        this.rc.emit({ type: "tool", node: this.node, tool: c.name, args: clip(JSON.stringify(c.input), 1500), result: clip(result, LOG_RESULT), error });
         if (t && t.source !== "catalog" && !t.source.startsWith("edge:")) {
           const edge = this.rc.doc.edges.find((e) => e.kind === "access" && e.source === this.node && e.target === t.source);
           if (edge) this.rc.emit({ type: "access", node: this.node, target: t.source, edge: edge.id, op: t.effect === "read" || t.effect === "pure" ? "read" : "write" });
