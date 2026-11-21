@@ -297,6 +297,18 @@ function baselineWriter(): SystemDoc {
   return b.doc;
 }
 
+/** One agent that searches the web, then writes: the baseline that tells a research team's gain from search's. */
+function baselineWriterSearch(): SystemDoc {
+  const b = new Builder("Single writer with search (baseline)", "One agent searches the web (web_search, fetch) as much as it needs, then writes what is asked, citing the pages it found. The baseline for research-and-write systems such as STORM: what one agent with the same search tool does.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Asks for a piece of writing", approves: false })
+    .agent("solo", 340, 0, { name: "Writer", role: "Searches, then writes", model: "sonnet", tools: ["web_search", "fetch"], harness: { ...native(), loop: "react", max_steps: 8, instructions: "Research the request with web_search (and fetch for a page you need in full), then write what is asked. Cite sources inline as [n] and list them at the end as References: only URLs your searches returned. Reply with the piece itself only." } })
+    .edge("asker", "solo", "message", { label: "Request" })
+    .edge("solo", "asker", "message", { label: "Piece" });
+  b.doc.budget = { usd: 1, max_rounds: 10, wallclock_min: 10 };
+  b.doc.result = { type: "text", description: "the piece of writing, with references" };
+  return b.doc;
+}
+
 /**
  * One agent that can run Python: the baseline for systems with a code
  * executor (AutoGen), to tell what the team adds from what the tool adds.
@@ -350,6 +362,7 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "blank", name: "Blank system", summary: "Start from scratch", build: () => emptySystem() },
   { id: "baseline", name: "Single agent (baseline)", summary: "one agent, one call · what papers compare against", build: baseline },
   { id: "baseline-writer", name: "Single writer (baseline)", summary: "one agent, one call, no answer line · the baseline for writing systems", build: baselineWriter },
+  { id: "baseline-writer-search", name: "Single writer with search (baseline)", summary: "one agent · web search · then writes · the baseline for research-and-write systems", build: baselineWriterSearch },
   { id: "baseline-code", name: "Single agent with code (baseline)", summary: "one agent + a Python sandbox · the baseline for code-executing systems", build: baselineWithCode },
   { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
