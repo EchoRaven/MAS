@@ -1094,6 +1094,38 @@ compare with the debate's final answer on the same question.
   all of it on long computation with the stronger model. Measured by
   `scripts/debate-rounds.mts` over the stored runs.
 
+## Self-correction without feedback: what the second look changes
+
+"Large Language Models Cannot Self-Correct Reasoning Yet" (Huang et al., ICLR
+2024) asks a model to review its answer and find problems, then to improve
+it, with no feedback from outside, and finds the answers get worse: GPT-4 on
+GSM8K 95.5, then 91.5 and 89.0 after one and two rounds. The template
+"Intrinsic self-correction" uses the paper's prompts, two rounds, five calls,
+and logs each round's boxed answer, so one run gives the first answer and the
+corrected ones on the same question.
+
+| flash-lite, two runs each | First answer | After round 1 | After round 2 | Right → wrong | Wrong → right | Cost per run |
+|---|---|---|---|---|---|---|
+| GSM-Hard (50) | 38, 37 | 37, 34 | 35, 35 | 5 | 0 | $0.20 |
+| Hard computation (30) | 19, 21 | 22, 22 | 21, 21 | 2 | 4 | $0.25 |
+
+- **On GSM-Hard the paper's finding holds in direction.** Every changed
+  verdict went from right to wrong (5 to 0, p 0.06 over two runs): reviewing,
+  the model talked itself out of answers the key agrees with.
+- **On Hard computation it does not.** Two rounds turned 4 wrong answers right
+  and 2 right answers wrong: no difference beyond noise.
+- **Most answers never change.** In 74 of 100 GSM-Hard runs and 42 of 60 Hard
+  computation runs the answer is the same in all three rounds. A second look by
+  the same model, with nothing new to go on, mostly agrees with itself.
+- **Self-Refine's gain on word sorting is not a contradiction.** There each
+  slip is visible on rereading: two neighbouring words in the wrong order.
+  On arithmetic the model rereads its own reasoning and finds it plausible;
+  a check from outside (running code) is what changes the answer, as with
+  one agent with a sandbox above.
+
+The paper's other finding, that debate gains no more than a vote over the same
+number of answers, is checked in [Debate or vote?](#debate-or-vote-what-the-rounds-add).
+
 ## Answers the team had and lost
 
 Each miss graded by rule now says whether a member marked the right answer
