@@ -356,7 +356,7 @@ function Evals({ systemId }: { systemId: string }) {
             {caseCount * Number(repeats) > MAX_RUNS && <span className="text-amber-700 dark:text-amber-300"> · only the first {Math.floor(MAX_RUNS / Number(repeats))} will run (at most {MAX_RUNS} runs per evaluation)</span>}
             {!chosen && parsed.skipped ? <span className="text-destructive"> · {parsed.skipped} line{parsed.skipped === 1 ? "" : "s"} not understood</span> : null}
           </p>
-          <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-2">
+          <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
             <label className="flex flex-col gap-1 text-xs text-muted-foreground">
               Grader
               <Select value={grader} onValueChange={(v) => setGrader(v as Grader)} items={GRADERS.map((g) => ({ value: g.value, label: g.label }))} ariaLabel="Grader" />
