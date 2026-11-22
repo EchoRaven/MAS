@@ -1518,6 +1518,18 @@ against 9.57. Both point the same way. Self-Refine's stories are a little
 better as often as not, never clearly worse, and the difference is small
 enough that thirty prompts still leave it short of significance.
 
+### How much a judgement moves when repeated
+
+Thirteen pairs above were judged a second time by the same judge, with the
+same criterion. Each pair's file had been overwritten when the judge rejudged
+it on content rather than length, before such judgements got files of their
+own. Across them the wins and losses moved by 1.1 per pair of twenty
+questions. Clear results came back almost unchanged: Self-Refine's 10–1 and
+15–1 exactly, mixed MoA's 16–0 and 15–0 as 15–0 and 16–0. The near-ties moved
+most: cheap-proposer MoA 6–6 became 5–4, and USC 5–3 became 3–4. Every
+conclusion above holds on the second judging. A split of a few questions on
+twenty is within what judging the same outputs again produces.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
