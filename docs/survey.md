@@ -218,7 +218,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   debater revising after reading the others, gains as much on that model
   (26–6 at matched length) at the highest cost. Judged against each other,
   debate beats Self-Refine over fifty instructions (34–18, p 0.04) at twice
-  its cost, and MoA is too close to either to call. On flash-lite only Self-Refine still gains; MoA and
+  its cost, and MoA is level with both (21–24 against debate, 27–22 against
+  Self-Refine, over the same fifty). On flash-lite only Self-Refine still gains; MoA and
   debate lose to one call (debate's answers come out shorter). These three are
   the only gains here that survive every control, all on open-ended answers.
 - **Writing teams do not beat one writer.** Agents' Room loses short and long

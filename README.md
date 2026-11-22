@@ -117,8 +117,9 @@ Measured on this platform, every system on the same model and questions
   on gemini-3.8-flash, Mixture-of-Agents, Self-Refine and Multiagent Debate
   (each debater revising after reading the others) each beat the model alone
   by 20–26 to 6–8 with lengths matched. They differ in cost: $0.20, $0.31 and
-  $0.48 for twenty instructions. Judged against each other, debate beats
-  Self-Refine 34–18 over fifty instructions (p 0.04) at twice the cost. On the weaker flash-lite only Self-Refine
+  $0.48 for twenty instructions. Judged against each other over fifty
+  instructions, debate beats Self-Refine 34–18 (p 0.04) at twice the cost,
+  and MoA is level with both. On the weaker flash-lite only Self-Refine
   still gains; MoA and debate lose to one call. On exact computation none of
   them helped.
 - **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
