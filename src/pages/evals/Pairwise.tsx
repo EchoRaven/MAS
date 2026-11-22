@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import { type EvalRecord, firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
+import { criterionTag, type EvalRecord, firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
 import { useSystems } from "@/store/systems";
 
 /** An exact sign test's p over the decided questions, as Compare shows McNemar's. */
@@ -124,7 +124,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         const mineA = p.a === ev.id;
         const [w, l] = mineA ? [p.a_wins, p.b_wins] : [p.b_wins, p.a_wins];
         const them = mineA ? p.b_name : p.a_name;
-        const key = `${p.a}__${p.b}__${p.judge}`;
+        const key = `${p.a}__${p.b}__${p.judge}__${criterionTag(p.criterion)}`;
         const split = p.per.filter((x) => x.first !== x.second).length;
         const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
         const pos = firstPicks(p.per, p.mode);

@@ -219,6 +219,28 @@ describe("evaluations", () => {
     await expect(Promise.race([bad, Promise.resolve("started")])).rejects.toThrow(/No such evaluation/);
   });
 
+  it("keeps one judge's verdicts under different criteria apart", async () => {
+    const writer = (id: string, text: string) => {
+      const b = new Builder(id, "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("f", "function", 200, 0, { name: "W", fn: { lang: "js", code: `return ${JSON.stringify(text)};` } })
+        .edge("me", "f", "message")
+        .edge("f", "me", "message");
+      b.doc.models.push({ id: "judge_c", provider: "mock", model: "mock", api: { params: { script: ["ok. Better: 1"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return { ...b.doc, id };
+    };
+    const cases = [{ input: "a moth", expected: "" }];
+    const da = writer("sys_ca", "one");
+    store.putSystem(da);
+    const ea = await finish(evals.start(da, { grader: "none", cases }).id);
+    const eb = await finish(evals.start(writer("sys_cb", "two"), { grader: "none", cases }).id);
+    await evals.pairwise(ea.id, eb.id, "judge_c");
+    await evals.pairwise(ea.id, eb.id, "judge_c", "Judge the content, not the length.");
+    const kept = evals.pairwiseOf(ea.id);
+    expect(kept.length).toBe(2);
+    expect(kept.map((k) => k.criterion).sort()[0]).toBe("Judge the content, not the length.");
+  });
+
   it("scores each output alone in pointwise mode, so order cannot sway it", async () => {
     const writer = (id: string, text: string) => {
       const b = new Builder(id, "");

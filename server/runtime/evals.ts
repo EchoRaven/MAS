@@ -7,7 +7,7 @@ import path from "node:path";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, DEFAULT_CRITERION, criterionTag, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -263,7 +263,9 @@ export class EvalManager {
     const panel = judgeSystem ? this.store.getSystem(judgeSystem) : null;
     if (judgeSystem && !panel) throw new Error(`No such system: ${judgeSystem}`);
     const panelDoc = panel ? (judge ? runAllOn(panel, judge, DEFAULT_MODELS) : panel) : null;
-    const what = criterion?.trim() || "Which response better does what the task asks: correct, complete, well organised and well written?";
+    const what = criterion?.trim() || DEFAULT_CRITERION;
+    // judgements under another criterion are kept beside the default ones, never in their place
+    const tag = criterionTag(what);
     const judgeText = async (prompt: string): Promise<{ text: string; spent: number }> => {
       let text: string;
       let spent: number;
@@ -301,7 +303,7 @@ export class EvalManager {
     };
     // judging only reads the two evaluations: several judges can work on them at once (each keeps its own file)
     const label = (panel ? `${panel.name} on ${judge ?? "its models"}` : (judge ?? "default")) + (pointwise ? " (pointwise)" : "");
-    const key = `${aId}|${bId}|${label}`;
+    const key = `${aId}|${bId}|${label}|${tag}`;
     const progress = { a: aId, b: bId, judge: label, done: 0, total: shared.length, started: new Date().toISOString() } as { a: string; b: string; judge: string; done: number; total: number; started: string; error?: string };
     this.judging.set(key, progress);
     try {
@@ -342,7 +344,7 @@ export class EvalManager {
         at: new Date().toISOString(),
       };
       // one file per pair and judge (its full label: a panel on a model is not that model alone)
-      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${result.judge.replace(/[^\w.-]/g, "_")}.json`), JSON.stringify(result, null, 1));
+      fs.writeFileSync(path.join(this.store.stateDir("_pairwise"), `${aId}__${bId}__${result.judge.replace(/[^\w.-]/g, "_")}${tag ? `__${tag}` : ""}.json`), JSON.stringify(result, null, 1));
       this.judging.delete(key);
       return result;
     } catch (e) {

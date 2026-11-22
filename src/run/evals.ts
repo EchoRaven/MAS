@@ -54,6 +54,17 @@ export function firstPicks(per: PairwiseResult["per"], mode?: PairwiseResult["mo
   return { first, picked };
 }
 
+/** What a pairwise judge is asked when no criterion is given. */
+export const DEFAULT_CRITERION = "Which response better does what the task asks: correct, complete, well organised and well written?";
+
+/** A short tag for a criterion other than the default, so judgements by one judge under different criteria are kept apart. */
+export function criterionTag(criterion: string): string {
+  if (criterion === DEFAULT_CRITERION) return "";
+  let h = 0x811c9dc5;
+  for (let i = 0; i < criterion.length; i++) h = Math.imul(h ^ criterion.charCodeAt(i), 0x01000193);
+  return "c" + (h >>> 0).toString(36);
+}
+
 /** The http(s) links in a text, without trailing punctuation. */
 export function linksIn(text: string): Set<string> {
   return new Set((text.match(/https?:\/\/[^\s)\]>"'|,]+/g) ?? []).map((u) => u.replace(/[.;:]+$/, "")));

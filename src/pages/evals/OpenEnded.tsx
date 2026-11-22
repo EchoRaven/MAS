@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Api, type EvalSummary } from "@/api/client";
-import { firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
+import { criterionTag, firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
 
 type Sources = { cited: number; found: number; outputs: number; words: number; headings: number; items: number; tables: number };
 
@@ -24,7 +24,7 @@ export function OpenEnded() {
         for (const e of evals) for (const p of (await Api.pairwiseOf(e.id)).pairwise) seen.set(`${p.a}|${p.b}|${p.judge}|${p.at}`, p);
         // the latest judgement of each pair by each judge
         const latest = new Map<string, PairwiseResult>();
-        for (const p of [...seen.values()].sort((x, y) => x.at.localeCompare(y.at))) latest.set(`${p.a}|${p.b}|${p.judge}`, p);
+        for (const p of [...seen.values()].sort((x, y) => x.at.localeCompare(y.at))) latest.set(`${p.a}|${p.b}|${p.judge}|${criterionTag(p.criterion)}`, p);
         const bad = (p: PairwiseResult) => +!!(evals.find((e) => e.id === p.a)?.invalid || evals.find((e) => e.id === p.b)?.invalid);
         out.push({ set, name: evals[0].set_name ?? evals[0].first_question.slice(0, 60), evals, judged: [...latest.values()].sort((x, y) => bad(x) - bad(y)) });
       }
@@ -62,6 +62,7 @@ export function OpenEnded() {
       {sets.map((s) => (
         <div key={s.set} className="mt-3">
           <h3 className="text-xs font-medium">{s.name}</h3>
+          <Pooled set={s} />
           <table className="mt-1 w-full text-xs">
             <thead className="text-muted-foreground">
               <tr className="text-left">
@@ -89,7 +90,10 @@ export function OpenEnded() {
                       <Link to={`/evals/${s.evals.find((e) => e.id === p.b)?.system_id ?? ""}`} className="hover:underline">{p.b_name}</Link>
                       <span className="block text-[11px] text-muted-foreground">{when(p.b, s.evals)}</span>
                     </td>
-                    <td className="py-1 pr-3">{p.judge}</td>
+                    <td className="py-1 pr-3" title={criterionTag(p.criterion) ? `Its own criterion: ${p.criterion}` : undefined}>
+                      {p.judge}
+                      {criterionTag(p.criterion) ? <span className="block text-[11px] text-muted-foreground">own criterion</span> : null}
+                    </td>
                     <td className="py-1 pr-3 tabular-nums">
                       <span className="font-medium">
                         {p.a_wins} · {p.b_wins} · {p.ties}
@@ -125,5 +129,50 @@ export function OpenEnded() {
         </div>
       ))}
     </section>
+  );
+}
+
+/**
+ * The judgements of a set pooled by setup: every valid judgement of system A against system B by the same judge
+ * (runs judged separately add up), with the totals and an exact sign test over them. Invalid evaluations are left out.
+ */
+function Pooled({ set }: { set: { evals: EvalSummary[]; judged: PairwiseResult[] } }) {
+  const byId = new Map(set.evals.map((e) => [e.id, e]));
+  const groups = new Map<string, { a: string; b: string; judge: string; w: number; l: number; t: number; n: number }>();
+  for (const p of set.judged) {
+    const ea = byId.get(p.a), eb = byId.get(p.b);
+    if (!ea || !eb || ea.invalid || eb.invalid) continue;
+    if (p.per.some((x) => x.first === "unread" || x.second === "unread")) continue; // a judge that gave no verdict is not counted
+    // a setup is the system with its models and run variables: MoA on flash-lite and MoA on gemini are not pooled
+    const setup = (e: EvalSummary) => {
+      const models = e.on_model ? `on ${e.on_model}` : e.model_map ? Object.entries(e.model_map).map(([x, y]) => `${x}→${y}`).join(", ") : "";
+      const vars = e.vars ? Object.entries(e.vars).map(([x, y]) => `${x}=${typeof y === "string" ? y.trim().slice(0, 24) : JSON.stringify(y)}`).join(", ") : "";
+      return [e.system_name, [models, vars].filter(Boolean).join("; ")].filter(Boolean).join(" · ");
+    };
+    // one direction per pair of setups, whichever sorts first
+    const [sa, sb] = [setup(ea), setup(eb)];
+    const flip = sa > sb;
+    const [na, nb] = flip ? [sb, sa] : [sa, sb];
+    const own = criterionTag(p.criterion);
+    const k = `${na}|${nb}|${p.judge}|${own}`;
+    const g = groups.get(k) ?? { a: na, b: nb, judge: own ? `${p.judge}, own criterion` : p.judge, w: 0, l: 0, t: 0, n: 0 };
+    g.w += flip ? p.b_wins : p.a_wins;
+    g.l += flip ? p.a_wins : p.b_wins;
+    g.t += p.ties;
+    g.n++;
+    groups.set(k, g);
+  }
+  const rows = [...groups.values()].filter((g) => g.n > 1);
+  if (!rows.length) return null;
+  const fmt = (v: number) => (v < 0.001 ? "< 0.001" : v < 0.1 ? v.toFixed(3) : v.toFixed(2));
+  return (
+    <div className="mt-1 rounded-md bg-secondary/40 px-2 py-1.5 text-[11px]" title="Judgements of the same two systems by the same judge, added up across runs (invalid evaluations and judgements with missing verdicts left out)">
+      <span className="font-medium">Pooled across runs: </span>
+      {rows.map((g, i) => (
+        <span key={i} className="mr-3 inline-block">
+          {g.a} vs {g.b} ({g.judge}, {g.n} judgements): {g.w}–{g.l}, {g.t} ties{g.w + g.l ? `, p ${fmt(mcnemarP(g.w, g.l))}` : ""}
+        </span>
+      ))}
+    </div>
   );
 }
