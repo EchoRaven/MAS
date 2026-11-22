@@ -369,3 +369,15 @@ describe("poolJudgements", () => {
     expect(out.length).toBe(3);
   });
 });
+
+describe("cut-short cases", () => {
+  it("group as their own reason among the failures", async () => {
+    const { failureReasons } = await import("./evals");
+    const out = failureReasons([
+      { pass: false, status: "done", why: "5 ≠ 6", cut_short: true },
+      { pass: false, status: "done", why: "7 ≠ 8" },
+      { pass: true, status: "done", why: "", cut_short: true }, // a pass is not a failure, cut short or not
+    ] as never);
+    expect(out.map((r) => [r.reason, r.count])).toEqual([["cut short at a limit: the conversation did not end", 1], ["wrong answer", 1]]);
+  });
+});

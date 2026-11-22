@@ -151,6 +151,8 @@ export type RuleGrader = Exclude<Grader, "llm" | "code" | "none">;
 export interface EvalCaseResult {
   /** false when the run's answer is not the kind the system declares (system.result): a bug in the system, whatever the grade */
   result_ok?: boolean;
+  /** the run was stopped at a limit before its conversation ended, and its answer is the conversation's last message */
+  cut_short?: boolean;
   /** which question (index into the set) and which repeat of it (0-based) */
   case?: number;
   repeat?: number;
@@ -226,7 +228,7 @@ export function caseSetId(cases: Pick<EvalCaseResult, "input" | "expected">[]): 
  * tests fail: AssertionError", "5 × no output") instead of scattered rows.
  * Groups are sorted by size; each lists the indices of its cases.
  */
-export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why" | "result_ok" | "reached">[]): { reason: string; count: number; cases: number[] }[] {
+export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "why" | "result_ok" | "reached" | "cut_short">[]): { reason: string; count: number; cases: number[] }[] {
   const reasonOf = (why: string, status: string) => {
     const w = why.trim();
     if (/ ≠ /.test(w)) return "wrong answer";
@@ -256,7 +258,8 @@ export function failureReasons(cases: Pick<EvalCaseResult, "pass" | "status" | "
   cases.forEach((c, i) => {
     if (c.pass !== false && c.status !== "error") return;
     // the wrong kind of answer explains a failure before its details do
-    const r = c.result_ok === false ? "not the declared result type" : c.reached?.length ? "a member had it, the team lost it" : reasonOf(c.why ?? "", c.status);
+    // a conversation stopped at a limit explains a miss before its wording does: the limit is the fix
+    const r = c.result_ok === false ? "not the declared result type" : c.cut_short ? "cut short at a limit: the conversation did not end" : c.reached?.length ? "a member had it, the team lost it" : reasonOf(c.why ?? "", c.status);
     by.set(r, [...(by.get(r) ?? []), i]);
   });
   return [...by].map(([reason, idx]) => ({ reason, count: idx.length, cases: idx })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));

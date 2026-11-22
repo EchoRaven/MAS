@@ -502,6 +502,8 @@ export class EvalManager {
           c.output = events.filter((e): e is Extract<RunEvent, { type: "output" }> => e.type === "output").map((e) => e.text).join("\n\n");
           c.usd = done.usd;
           if (done.result_check) c.result_ok = done.result_check.ok;
+          // stopped at a limit with the conversation unfinished: the answer is its last message, and the case says so
+          c.cut_short = events.some((e) => e.type === "log" && (e as { text?: string }).text?.includes("did not end on its own")) || undefined;
           if (!c.output) {
             c.pass = false;
             const err = events.find((e): e is Extract<RunEvent, { type: "log" }> => e.type === "log" && e.level === "error")?.text;

@@ -760,6 +760,7 @@ function Evals({ systemId }: { systemId: string }) {
                           </span>
                           <span className="block text-xs text-muted-foreground">
                             {c.why}
+                            {c.cut_short && <span className="text-amber-700 dark:text-amber-300" title="The run was stopped at a limit (rounds, time, budget) before its conversation ended; its answer is the conversation's last message">{" · "}cut short at a limit</span>}
                             {c.pass === false && c.audit?.pass && <span className="text-amber-700 dark:text-amber-300" title={`The judge: ${c.audit.why}`}>{" · "}judge says right</span>}
                             {!!c.reached?.length && <span className="text-amber-700 dark:text-amber-300" title="A member marked the right answer in a message during the run; the team's final answer lost it">{" · "}had it: {c.reached.join(", ")}</span>}
                             {c.run_id && (
