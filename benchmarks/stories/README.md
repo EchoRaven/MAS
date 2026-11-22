@@ -7,3 +7,6 @@ evaluate theirs.
 
 `prompts-long-10.jsonl`: the same ten prompts asking for about 2,000 words
 instead of about 600, closer to the long stories of the Agents' Room paper.
+
+`prompts-30.jsonl`: the ten short-story prompts and twenty more like them, for comparisons where a
+judge's position bias leaves most of ten pairs tied.
