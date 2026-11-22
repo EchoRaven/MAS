@@ -51,13 +51,35 @@ const SUFFIX = "\\n\\nLet's first come up with a list of experts you may want to
 const FEEDBACK = "Based on the information given, what are the most logical next steps or conclusions? Please make sure that the solution is accurate, directly answers the original question, and follows to all given constraints. Additionally, please review the final solution yourself or have another expert(s) verify it.";
 const ERROR = "If you have determined the final answer, please present it using the format below:\\n\\n>> FINAL ANSWER:\\n\\"\\"\\"\\n[final answer]\\n\\"\\"\\"";
 const rounds = Math.max(1, Math.min(30, Number(ctx.vars.rounds ?? 15)));
+const MAX_CHARS = 300000;
+// The conductor reads the conversation as text and could continue it (write the user's next turn, or copy the
+// conversation back before its own message). As a guard, only its own message is kept: after the last
+// "[Meta-Expert]" line when it opens with one, and up to the first turn marker otherwise.
+const MARK = /^\\s*\\[(?:User|Meta-Expert)\\]\\s*$/m;
+const clean = (text) => {
+  let t = text;
+  if (/^\\s*\\[(?:User|Meta-Expert)\\]/.test(t)) {
+    const i = t.lastIndexOf("[Meta-Expert]");
+    t = i >= 0 ? t.slice(i + "[Meta-Expert]".length) : "";
+  }
+  const m = MARK.exec(t);
+  if (m) t = t.slice(0, m.index);
+  if (t.length < text.length) ctx.log("kept " + t.length + " of the conductor's " + text.length + " characters: the rest continued the conversation");
+  return t.trim();
+};
 // the conversation so far, as alternating turns; the conductor reads it whole each round (it is a stateless call)
 const turns = [{ who: "User", text: META + "\\n\\nQuestion: " + question + SUFFIX }];
 const render = () => turns.map((t) => (t.who === "User" ? "[User]\\n" : "[Meta-Expert]\\n") + t.text).join("\\n\\n") + "\\n\\n[Meta-Expert]\\n";
 let last = "";
 for (let r = 0; r < rounds; r++) {
   if (r === rounds - 1) turns[turns.length - 1].text += "\\n\\nThis is the last round; so, please present your final answer.";
-  last = String(await ctx.call("Meta-Expert", render()));
+  const prompt = render();
+  // a conversation that keeps growing (a model copying it back) stops here rather than costing more each round
+  if (prompt.length > MAX_CHARS) {
+    ctx.log("the conversation passed " + MAX_CHARS + " characters: stopped, the last message is the answer");
+    return last;
+  }
+  last = clean(String(await ctx.call("Meta-Expert", prompt)));
   turns.push({ who: "Meta", text: "ROUND " + (r + 1) + ":\\n\\n" + last });
   const fin = /(?:>>\\s*)?FINAL ANSWER:\\s*"""([\\s\\S]*?)"""/.exec(last) || /(?:>>\\s*)?FINAL ANSWER:\\s*([^\\n]+)/.exec(last);
   if (fin) {
@@ -100,14 +122,14 @@ function build(python = false): SystemDoc {
     interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] },
   });
   const sys = "You are an AI assistant that helps people find information.";
-  b.node("meta", "model", 580, 60, { name: "Meta-Expert", model: "sonnet", system_prompt: sys, prompt: "{{input}}", temperature: 0.1, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } });
-  b.node("expert", "model", 580, 260, { name: "Expert", model: "sonnet", system_prompt: sys, prompt: "{{input}}", temperature: 0.1, max_tokens: null, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } });
+  b.node("meta", "model", 580, 60, { name: "Meta-Expert", model: "sonnet", system_prompt: sys, prompt: "{{input}}", temperature: 0.1, max_tokens: 4096, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } });
+  b.node("expert", "model", 580, 260, { name: "Expert", model: "sonnet", system_prompt: sys, prompt: "{{input}}", temperature: 0.1, max_tokens: 4096, interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] } });
   b.edge("asker", "loop", "message", { label: "Question" })
     .edge("loop", "meta", "call", { label: "Next step" })
     .edge("loop", "expert", "call", { label: "Ask an expert" })
     .edge("loop", "asker", "message", { label: "Answer" });
   if (python) b.node("sandbox", "env", 280, 380, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }).edge("loop", "sandbox", "access", { access: "read_write" });
-  b.doc.budget = { usd: 2, max_rounds: 40, wallclock_min: 30 };
+  b.doc.budget = { usd: 1, max_rounds: 40, wallclock_min: 30 };
   b.doc.termination = ["all_idle", "budget_exceeded"];
   return b.doc;
 }
@@ -129,7 +151,8 @@ export const metaPrompting: TemplateInfo = {
     differs: [
       "No Python expert: this is the paper's 'Meta −Py' setting. Its large gains (Game of 24, word sorting at 99.6%) came with the interpreter.",
       "The conductor is a stateless call that reads the whole conversation, rendered as [User] / [Meta-Expert] turns, each round, rather than a chat with message history. The content is the same.",
-      "The authors' code caps each reply at 1,024 tokens; the models here use their own limits.",
+      "Each reply is capped at 4,096 tokens, where the authors' configuration has 1,024: room for a reasoning model. Without a cap, flash-lite sometimes repeated itself to its output limit in every round, and a run cost over a dollar.",
+      "A conversation past 300,000 characters stops, and its last message is the answer.",
     ],
   },
 };
