@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
 import { Code2, Download, History, Keyboard, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Redo2, Undo2, Wand2, Workflow } from "lucide-react";
 import { ShortcutsDialog } from "@/canvas/ShortcutsDialog";
+import { FindDialog } from "@/canvas/FindDialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AgentView } from "@/canvas/agent/AgentView";
@@ -73,6 +74,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const [architect, setArchitect] = useState(false);
   const [history, setHistory] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
+  const [finding, setFinding] = useState(false);
   const connected = useServer((s) => s.status === "connected");
   const [toast, setToast] = useState<string | null>(null);
   // positions before the last tidy, so it can be undone for a few seconds
@@ -182,6 +184,11 @@ export function Editor({ doc }: { doc: SystemDoc }) {
       if (e.key === "?") {
         e.preventDefault();
         setShortcuts(true);
+        return;
+      }
+      if (e.key === "/") {
+        e.preventDefault();
+        setFinding(true);
         return;
       }
       const kind = (Object.keys(SHORTCUT) as NodeKind[]).find((k) => SHORTCUT[k] === e.key.toUpperCase());
@@ -313,6 +320,17 @@ export function Editor({ doc }: { doc: SystemDoc }) {
       </div>
       <ImportDialog kind={importing} doc={doc} onClose={() => setImporting(null)} onImport={(items) => { add(items); flash(`Added ${items.length} component${items.length > 1 ? "s" : ""}`); }} />
       <ShortcutsDialog open={shortcuts} onOpenChange={setShortcuts} />
+      <FindDialog
+        doc={doc}
+        open={finding}
+        onOpenChange={setFinding}
+        onPick={(id) => {
+          // open its group's level, select it, then centre on it once that level has rendered
+          nav.pickIssue({ nodeId: id } as Parameters<typeof nav.pickIssue>[0]);
+          setInspectorOpen(true);
+          window.setTimeout(() => rf.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2, padding: 0.6 }), 80);
+        }}
+      />
       <HistoryDialog
         open={history}
         doc={doc}

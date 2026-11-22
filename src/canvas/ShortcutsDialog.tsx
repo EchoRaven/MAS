@@ -13,6 +13,7 @@ const ROWS: [string, string][] = [
   ["Delete, Backspace", "Delete the selection"],
   ["Shift+drag", "Select several components"],
   ["Double-click", "Open a group's canvas, or an agent's internals"],
+  ["/", "Find a component by name, inside groups too"],
   ["?", "These shortcuts"],
 ];
 
