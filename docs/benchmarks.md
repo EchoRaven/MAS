@@ -1383,9 +1383,13 @@ gemini-3.8-flash in every slot, tests that directly:
 | against the mixed MoA | 6 | 4 | 10 |
 | against gemini-3.8-flash alone (two runs) | 34 | 0 | 6 |
 | the same, judged on content, not length | 33 | 0 | 7 |
+| against the model told to aim for about 730 words (two runs) | 26 | 5 | 9 |
 
-It writes 761 words, with 5.4 headings and 18.9 list items, at $0.55 for
-twenty. It ties the mix and beats the model alone as the mix does.
+It writes 761 and 756 words, with 5.4 and 6.1 headings and 18.9 and 18.1 list
+items, at $0.55 for twenty. It ties the mix and beats the model alone as the
+mix does, at its own length too (13–3 and 13–2, p 0.0002). The matched control
+keeps under half Self-MoA's lists, and the judge's reasons often name its
+tables and structure, so that margin is partly format.
 
 Is a strong aggregator enough? With every proposer on flash-lite and
 gemini-3.8-flash aggregating, no:
@@ -1393,7 +1397,7 @@ gemini-3.8-flash aggregating, no:
 | MoA against gemini-3.8-flash alone | Proposers | Aggregator | Result (two runs unless noted) | Cost (20) |
 |---|---|---|---|---|
 | Mixed | 3.8-flash, flash-lite, gemma | 3.8-flash | 31–0; 32–0 judged on content | $0.31 |
-| Self-MoA | 3.8-flash ×3 | 3.8-flash | 17–0, 17–0; 16–0, 17–0 judged on content | $0.55 |
+| Self-MoA | 3.8-flash ×3 | 3.8-flash | 17–0, 17–0; 16–0, 17–0 judged on content; 26–5 at matched length | $0.55 |
 | Cheap proposers | flash-lite ×3 | 3.8-flash | 12–10 (18 ties); 10–9 (21 ties) judged on content | $0.25 |
 | Self-MoA on flash-lite (against flash-lite alone) | flash-lite ×3 | flash-lite | 14–19 | $0.21 |
 
