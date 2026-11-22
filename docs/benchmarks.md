@@ -54,6 +54,11 @@ exact McNemar tests against one agent on the same questions.
   the critic chose to revise (19–0), at two thirds of MoA's cost. Unlike MoA,
   it gains on flash-lite too (21–2, 21–1 judged on content)
   ([Self-Refine](#one-model-criticising-itself-gains-as-much)).
+- **Debate gains on open-ended answers too, at the highest cost.** Three
+  debaters revising after reading each other (open mode) beat gemini-3.8-flash
+  alone 33–1 over two runs, 36–1 on content, 26–6 at matched length, at $0.48
+  for twenty against Self-Refine's $0.20 and MoA's $0.31 for about the same
+  gain ([debate](#debate-revised-in-the-open-gains-as-well)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
   give the piece only (p 0.0007), even with lengths matched, and 14–19 against
@@ -1517,6 +1522,36 @@ first picked in 52 of 60 readings; 9–3 (18 ties) pointwise, mean scores 9.77
 against 9.57. Both point the same way. Self-Refine's stories are a little
 better as often as not, never clearly worse, and the difference is small
 enough that thirty prompts still leave it short of significance.
+
+### Debate, revised in the open, gains as well
+
+Multiagent Debate votes on final answers, which open-ended requests do not
+have. In the paper's open-ended task (biographies) each agent's revised answer
+is what counts. The run variables `mode: open` and `answer_format: "Reply with
+your full response."` do that: three debaters answer, read each other and
+revise for two rounds, and the first debater's last revision is the result.
+On gemini-3.8-flash, against that model alone:
+
+| Debate (open) against gemini-3.8-flash alone | Run 1 | Run 2 |
+|---|---|---|
+| Default criterion | 17–0 (3 ties) | 16–1 (3 ties) |
+| Judged on content, not length | 20–0 | 16–1 (3 ties) |
+| The single model told to aim for about 730 words | 13–1 (6 ties) | 13–5 (2 ties) |
+
+It writes 703 and 701 words, at $0.48 for twenty. Side by side, on the same
+twenty instructions, model and judge (two runs each):
+
+| Against gemini-3.8-flash alone | Default | On content | Matched length | Cost (20) |
+|---|---|---|---|---|
+| Mixture-of-Agents (mixed proposers) | 31–0 | 32–0 | 22–6 | $0.31 |
+| Self-Refine | 25–2 | 25–2 | 20–8 | $0.20 |
+| Debate, open | 33–1 | 36–1 | 26–6 | $0.48 |
+
+All three gain about as much. They were not judged against each other, so
+this ranks none above another. What separates them here is cost: Self-Refine
+gets its gain for about two fifths of what debate spends. Merging drafts,
+criticising one's own answer, and revising after reading others all work on
+open-ended answers with this model. On exact computation none of them did.
 
 ### How much a judgement moves when repeated
 
