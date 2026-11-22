@@ -73,7 +73,8 @@ exact McNemar tests against one agent on the same questions.
   (four planners and five section writers around a scratchpad) loses 0–10
   and 0–9 (one tie) to one call, judged pairwise in both orders. A second
   judge, gemma, gives 0–8 (two ties), and stories of about 2,000 words give
-  0–9. It costs 7 to 15 times as much. Three setup
+  0–9. On gemini-3.8-flash it still loses to that model alone (0–4, 6 ties).
+  It costs 7 to 18 times as much. Three setup
   bugs came first: cut-off verdicts, a scratchpad shared across stories, and
   a baseline answer line ([Agents' Room](#agents-room-stories-judged-pairwise)).
 - **Choosing among samples cannot add an answer no sample has.** On the
@@ -90,9 +91,9 @@ exact McNemar tests against one agent on the same questions.
   Asked instead for one order's amount, a single line, one agent finds all
   40: it is gathering scattered evidence that splitting helps with
   ([Long input](#long-input-chain-of-agents-on-ledger-totals)).
-- **A model critiquing itself helps on reasoning, not arithmetic**
-  (Self-Refine: MATH level 5 40 → 44; Hard computation revisions 4 right,
-  3 wrong).
+- **A model critiquing itself helps on reasoning and open-ended answers, not
+  arithmetic** (Self-Refine: MATH level 5 40 → 44; Hard computation revisions
+  4 right, 3 wrong; open-ended instructions 25–2, above).
 - **Where gains exist they cost**: five debaters cost 17 times one agent
   for 3.5 questions; the cost frontier on Hard computation is the code
   runners (Compare → accuracy against cost). Trying to save the other way
