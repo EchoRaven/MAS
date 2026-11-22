@@ -84,7 +84,7 @@ exact McNemar tests against one agent on the same questions.
   (four planners and five section writers around a scratchpad) loses 0–10
   and 0–9 (one tie) to one call, judged pairwise in both orders. A second
   judge, gemma, gives 0–8 (two ties), and stories of about 2,000 words give
-  0–9. On gemini-3.8-flash it still loses to that model alone (0–4, 6 ties).
+  0–10. On gemini-3.8-flash it still loses to that model alone (0–4, 6 ties).
   It costs 7 to 18 times as much. Three setup
   bugs came first: cut-off verdicts, a scratchpad shared across stories, and
   a baseline answer line ([Agents' Room](#agents-room-stories-judged-pairwise)).

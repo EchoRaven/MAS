@@ -145,7 +145,7 @@ Measured on this platform, every system on the same model and questions
   (planners and section writers sharing a scratchpad) loses 0–10 and 0–9 to
   a single call, judged pairwise in both orders by two judges, at 15 times the
   cost. Stories of about 2,000 words, closer to the paper's setting, give the
-  same result (0–9). Its parts repeat and run long. First a shared scratchpad mixed
+  same result (0–10). Its parts repeat and run long. First a shared scratchpad mixed
   stories together, and an answer-line baseline lost points on fiction.
   Both are fixed (the plugin scope `run`, the Single writer baseline).
 - **A simulated discussion does as well as a real one**: one model playing
