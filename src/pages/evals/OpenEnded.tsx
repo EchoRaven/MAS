@@ -50,7 +50,8 @@ export function OpenEnded() {
   };
   const linkShare = (id: string) => {
     const s = sources[id];
-    return s && s.cited ? `${Math.round((100 * s.found) / s.cited)}% of ${(s.cited / Math.max(1, s.outputs)).toFixed(1)} links` : "";
+    // a stray link in one answer of twenty is not a sourcing pattern: shown from one link per two outputs
+    return s && s.cited / Math.max(1, s.outputs) >= 0.5 ? `${Math.round((100 * s.found) / s.cited)}% of ${(s.cited / Math.max(1, s.outputs)).toFixed(1)} links` : "";
   };
 
   return (
@@ -141,13 +142,36 @@ function Pooled({ set }: { set: { evals: EvalSummary[]; judged: PairwiseResult[]
   if (!rows.length) return null;
   const fmt = (v: number) => (v < 0.001 ? "< 0.001" : v < 0.1 ? v.toFixed(3) : v.toFixed(2));
   return (
-    <div className="mt-1 rounded-md bg-secondary/40 px-2 py-1.5 text-[11px]" title="Judgements of the same two systems by the same judge, added up across runs (invalid evaluations and judgements with missing verdicts left out)">
-      <span className="font-medium">Pooled across runs: </span>
-      {rows.map((g, i) => (
-        <span key={i} className="mr-3 inline-block">
-          {g.a} vs {g.b} ({g.judge}, {g.n} judgements): {g.w}–{g.l}, {g.t} ties{g.w + g.l ? `, p ${fmt(mcnemarP(g.w, g.l))}` : ""}
-        </span>
-      ))}
+    <div className="mt-1 rounded-md bg-secondary/40 px-2 py-1.5" title="Judgements of the same two setups by the same judge and criterion, added up across runs (invalid evaluations and judgements with missing verdicts left out)">
+      <p className="text-[11px] font-medium">Pooled across runs</p>
+      <table className="mt-0.5 w-full text-[11px]">
+        <thead className="text-muted-foreground">
+          <tr className="text-left">
+            <th className="py-0.5 pr-3 font-normal">A</th>
+            <th className="py-0.5 pr-3 font-normal">B</th>
+            <th className="py-0.5 pr-3 font-normal">Judge</th>
+            <th className="py-0.5 pr-3 text-right font-normal">Judgements</th>
+            <th className="py-0.5 pr-3 text-right font-normal">A–B</th>
+            <th className="py-0.5 pr-3 text-right font-normal">Ties</th>
+            <th className="py-0.5 text-right font-normal">p</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((g, i) => (
+            <tr key={i} className="border-t border-border/40 align-top">
+              <td className="py-0.5 pr-3">{g.a}</td>
+              <td className="py-0.5 pr-3">{g.b}</td>
+              <td className="py-0.5 pr-3 text-muted-foreground">{g.judge}</td>
+              <td className="py-0.5 pr-3 text-right tabular-nums">{g.n}</td>
+              <td className="whitespace-nowrap py-0.5 pr-3 text-right font-medium tabular-nums">
+                {g.w}–{g.l}
+              </td>
+              <td className="py-0.5 pr-3 text-right tabular-nums">{g.t}</td>
+              <td className="whitespace-nowrap py-0.5 text-right tabular-nums">{g.w + g.l ? fmt(mcnemarP(g.w, g.l)) : "–"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
