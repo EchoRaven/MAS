@@ -173,7 +173,9 @@ The scheduler is `server/runtime/engine.ts`.
   conversation's answer. A room with `min_posts` cannot end before that many posts in the
   run: a `TERMINATE` or a termination expression earlier is ignored. Virtual
   Lab holds its meeting to three rounds this way, where flash-lite's PI wrapped
-  up after two.
+  up after two. A conversation the run stops at a limit (rounds, time,
+  budget) without its having ended gives its last message as the answer, with a
+  warning that it was cut short, rather than no answer.
 - **People.**
   - A call to a human asks them: for approval if they approve, otherwise for
     a reply.

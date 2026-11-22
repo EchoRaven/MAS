@@ -1451,6 +1451,25 @@ describe("runtime", () => {
     expect(usages(store.events(rec.id))).toHaveLength(5);
   });
 
+  it("gives a room conversation stopped at the round limit its last message as the answer", async () => {
+    const b = new Builder("Chat", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false }).room("chat", 0, 0, "chat", { policy: "round_robin", history: "since_join" });
+    b.edge("me", "chat", "access", { access: "read_write", binding: { mode: "tool", write: { when: "agent_tool" } } });
+    for (const id of ["a", "b"]) {
+      b.agent(id, 0, 0, { name: id.toUpperCase(), model: `m_${id}`, harness: { ...native(), loop: "single_shot", instructions: "" } });
+      b.doc.models.push({ id: `m_${id}`, provider: "mock", model: "mock", api: { params: { script: [`${id} says more`] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      b.edge(id, "chat", "access", { access: "read_write" });
+    }
+    b.doc.budget = { usd: null, max_rounds: 5, wallclock_min: null };
+    const { rec } = await run(b.doc, "go", { mock: false });
+    expect(rec.reason).toBe("Round limit reached");
+    const events = store.events(rec.id);
+    const out = events.filter((e) => e.type === "output") as { text: string }[];
+    expect(out.length).toBe(1);
+    expect(out[0].text).toMatch(/says more/);
+    expect(events.some((e) => e.type === "log" && (e as { text: string }).text.includes("did not end on its own"))).toBe(true);
+  });
+
   it("remembers across runs through a memory plugin", async () => {
     const b = new Builder("Mem", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

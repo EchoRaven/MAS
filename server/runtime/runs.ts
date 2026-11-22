@@ -183,6 +183,19 @@ export class RunManager {
       if (!(e instanceof StopError) && !(e instanceof BudgetError) && !act.stopReason) emit({ type: "log", level: "error", text: (e as Error).message });
     } finally {
       clearTimeout(wall);
+      // a conversation stopped at a limit (rounds, time, budget) still has its work in the room: its last post is the
+      // answer, said to be cut short, rather than no answer at all (AutoGen's group chat returns the chat so far)
+      if (!engine.outputs && rec.status === "finished") {
+        let last: { room: string; from: string; text: string; ts: number } | null = null;
+        for (const n of doc.nodes) {
+          if (n.data.kind !== "env" || (n.data as { env_kind?: string }).env_kind !== "room") continue;
+          for (const p of engine.hub.room(n.id)?.posts ?? []) if (p.run === rec.id && p.text.trim() && (!last || p.ts >= last.ts)) last = { room: n.id, from: p.from, text: p.text, ts: p.ts };
+        }
+        if (last) {
+          emit({ type: "log", level: "warn", text: `${act.stopReason ?? "The run stopped"}: the conversation did not end on its own, so its last message (from ${rc.byId.get(last.from)?.data && "name" in rc.byId.get(last.from)!.data ? (rc.byId.get(last.from)!.data as { name: string }).name : last.from}) is the answer` });
+          emit({ type: "output", node: last.from, port: last.room, text: last.text.slice(0, 20_000) });
+        }
+      }
       await engine.hub.closeAll();
       revokeRun(rec.id);
     }
