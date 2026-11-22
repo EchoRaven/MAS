@@ -43,7 +43,7 @@ exact McNemar tests against one agent on the same questions.
   runs, 32–0 with length ignored, 22–6 at matched length (p 0.004), and 17–0
   under a judge from another family, at six times the cost: the first gain here
   that survives every control. With gemini-3.8-flash in every slot it does the
-  same (17–0, one run). With only the aggregator strong and flash-lite
+  same (17–0 in each of two runs). With only the aggregator strong and flash-lite
   proposing, it gains nothing (12–10) at five times the cost; on flash-lite
   throughout, nothing either. Picking the most consistent of five samples
   (Universal Self-Consistency) instead of merging them gains nothing (12–7)
@@ -1378,11 +1378,11 @@ the pro-rata rule", "quieter temples than the usual suggestions".
 said it was, on the strength of the flash-lite result above. Self-MoA, with
 gemini-3.8-flash in every slot, tests that directly:
 
-| Self-MoA, all on gemini-3.8-flash (one run) | Wins | Losses | Ties |
+| Self-MoA, all on gemini-3.8-flash | Wins | Losses | Ties |
 |---|---|---|---|
 | against the mixed MoA | 6 | 4 | 10 |
-| against gemini-3.8-flash alone | 17 | 0 | 3 |
-| the same, judged on content, not length | 16 | 0 | 4 |
+| against gemini-3.8-flash alone (two runs) | 34 | 0 | 6 |
+| the same, judged on content, not length | 33 | 0 | 7 |
 
 It writes 761 words, with 5.4 headings and 18.9 list items, at $0.55 for
 twenty. It ties the mix and beats the model alone as the mix does.
@@ -1393,7 +1393,7 @@ gemini-3.8-flash aggregating, no:
 | MoA against gemini-3.8-flash alone | Proposers | Aggregator | Result (two runs unless noted) | Cost (20) |
 |---|---|---|---|---|
 | Mixed | 3.8-flash, flash-lite, gemma | 3.8-flash | 31–0; 32–0 judged on content | $0.31 |
-| Self-MoA | 3.8-flash ×3 | 3.8-flash | 17–0, one run; 16–0 judged on content | $0.55 |
+| Self-MoA | 3.8-flash ×3 | 3.8-flash | 17–0, 17–0; 16–0, 17–0 judged on content | $0.55 |
 | Cheap proposers | flash-lite ×3 | 3.8-flash | 12–10 (18 ties); 10–9 (21 ties) judged on content | $0.25 |
 | Self-MoA on flash-lite (against flash-lite alone) | flash-lite ×3 | flash-lite | 14–19 | $0.21 |
 
