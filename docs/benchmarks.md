@@ -1559,7 +1559,16 @@ other (two runs each, the same judge):
 Debate leads Self-Refine by a margin just short of significance, and MoA
 sits between them. None of the differences is clear. Cost separates them more
 sharply: Self-Refine gets most of the gain for about two fifths of what debate
-spends. Merging drafts,
+spends.
+
+**On flash-lite, debate is like MoA, not Self-Refine.** Against flash-lite
+alone, open-mode debate on flash-lite loses: 2–6 (12 ties) and 4–8 (8 ties),
+6–14 together (p 0.12); judged on content, 2–7 and 5–11 (7–18, p 0.04). Its
+answers come out shorter than one call's (430 and 446 words against 518, with
+fewer lists): the debaters cut after reading each other where gemini-3.8-flash's
+added. Two of the three methods need a strong model, merging drafts and
+revising after reading others. Only criticising one's own answer gains on
+flash-lite. Merging drafts,
 criticising one's own answer, and revising after reading others all work on
 open-ended answers with this model. On exact computation none of them did.
 
