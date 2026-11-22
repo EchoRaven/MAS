@@ -37,8 +37,9 @@ What agents reach is limited:
   `MAS_SEARCH_MODEL`, default gemini-3.1-flash-lite), which needs `GEMINI_API_KEY`. The agent gets the answer, the
   queries Google ran, and numbered sources with each site's name. Google gives its sources as redirect links that
   expire within minutes, so each is resolved at once to the page it points to (only the redirect's Location is read). Searches go at most
-  one a second. Their tokens count toward the run's cost. Google also bills each grounded search, and that fee
-  counts only when `MAS_SEARCH_USD_PER_QUERY` is set. A dry run searches nothing.
+  one a second. Their tokens count toward the run's cost. Google also bills each search the model runs (one call can run several):
+  for Gemini 3 and newer, $14 per 1,000 after 5,000 free a month (2026-11). That fee counts
+  when `MAS_SEARCH_USD_PER_QUERY` is set (0.014), per search run. A dry run searches nothing.
 - **Web pages:** the `fetch` tool, and knowledge sources that are web pages, only reach public addresses. Each address, including every redirect, is checked, and the connection is made to the address that was checked, so a name cannot be re-pointed at this machine between the check and the request.
 - **Isolation.** Everything that runs code an agent or a model wrote (sandbox
   envs, the code grader, hosted services and compose projects) runs in a

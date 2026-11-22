@@ -70,8 +70,11 @@ export async function geminiSearch(key: string, query: string, fetchImpl: typeof
   const sources = await resolveSources((c?.groundingMetadata?.groundingChunks ?? []).map((g) => g.web ?? {}).filter((w) => w.uri), fetchImpl);
   const tokens_in = j.usageMetadata?.promptTokenCount ?? 0;
   const tokens_out = j.usageMetadata?.candidatesTokenCount ?? 0;
-  // Google bills each grounded search on top of the tokens; set its price to count it (it is not known here)
+  // Google bills each search the model runs, on top of the tokens, and one call can run several (Gemini 3 and newer:
+  // $14 per 1,000 after 5,000 free a month, 2026-11). The price counts when MAS_SEARCH_USD_PER_QUERY is set (0.014),
+  // since whether the free searches cover a run is not known here.
   const perQuery = Number(process.env.MAS_SEARCH_USD_PER_QUERY ?? 0) || 0;
-  const usd = (tokens_in * PRICE.in + tokens_out * PRICE.out) / 1e6 + perQuery;
+  const searches = Math.max(1, c?.groundingMetadata?.webSearchQueries?.length ?? 0);
+  const usd = (tokens_in * PRICE.in + tokens_out * PRICE.out) / 1e6 + perQuery * searches;
   return { text: formatSearch(answer, sources, c?.groundingMetadata?.webSearchQueries ?? []), usage: { model, tokens_in, tokens_out, usd } };
 }

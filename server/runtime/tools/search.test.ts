@@ -19,6 +19,14 @@ describe("web_search through the Gemini API", () => {
     expect(r.text).toContain("[1] britannica.com: https://r.example/1");
     expect(r.text).not.toContain("[2]"); // a chunk without a URL is no source
     expect(r.usage.usd).toBeCloseTo((1000 * 0.25 + 1000 * 1.5) / 1e6);
+    // with a price per search, each search Google ran counts (this call ran one)
+    process.env.MAS_SEARCH_USD_PER_QUERY = "0.014";
+    try {
+      const two = (async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: "x" }] }, groundingMetadata: { webSearchQueries: ["a", "b"], groundingChunks: [] } }], usageMetadata: { promptTokenCount: 0, candidatesTokenCount: 0 } }), { status: 200 })) as unknown as typeof fetch;
+      expect((await geminiSearch("k", "q", two)).usage.usd).toBeCloseTo(0.028);
+    } finally {
+      delete process.env.MAS_SEARCH_USD_PER_QUERY;
+    }
   });
 
   it("resolves Google's expiring redirect links to the pages they point to, keeping any that do not resolve", async () => {
