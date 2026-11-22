@@ -121,6 +121,22 @@ describe("paper reproductions", () => {
     expect(s.logs).toContain("answers by correction: 12 → 13 → 13 → 13");
   });
 
+  it("CRITIC keeps the last code that gave an answer, and stops when a revision without one changes nothing twice", async () => {
+    let file = "";
+    const s = script(["```python\nanswer = 12\n```", "The output looks wrong.", "result = 12\nprint(result)\n```", "Still wrong.", "result = 12\nprint(result)\n```"], async (name, a) => {
+      if (name === "edit_file") return (file = a.content ?? ""), "ok";
+      const m = /^answer = (\d+)/m.exec(file);
+      return m ? "__ANSWER__=" + m[1] : "12\n__ANSWER__=None";
+    });
+    const out = String(await new AsyncFn("input", "ctx", fnCode("paper-critic"))({ text: "q" }, s.ctx));
+    expect(out).toMatch(/answer = 12\n```\n\nAnswer: 12$/);
+    // two corrections (four calls) after the first program, not four
+    expect(s.seen).toHaveLength(5);
+    expect(s.seen[3]).toContain("answer = 12\n```\nExecution: Done");
+    expect(s.logs.filter((l) => l.includes("gave no answer"))).toHaveLength(2);
+    expect(s.logs).toContain("answers by correction: 12 → 12 → 12");
+  });
+
   it("intrinsic self-correction keeps only the model's own turn, and logs every round's boxed answer", async () => {
     const s = script(["work \\boxed{12}", "Problem: step 2.\n\n[User]\ninvented turn", "\\boxed{\\frac{26}{2}}", "fine", "\\boxed{13}"]);
     expect(await new AsyncFn("input", "ctx", fnCode("paper-self-correct"))({ text: "q" }, s.ctx)).toBe("\\boxed{13}");

@@ -47,9 +47,14 @@ for (let i = 0; i < (noSandbox ? 0 : maxIter); i++) {
   const next = codeOf(String(await ctx.call("Model", shown + critique + "\\n\\nHere's a better solution:\\n\\\`\\\`\\\`python\\n")));
   if (!next || next === code) { trail.push(String(res.pred)); same++; if (same >= 2) break; continue; }
   const r = await run(next);
-  same = String(r.pred) === String(res.pred) ? same + 1 : 0;
-  code = next;
-  if (r.pred !== null || res.pred === null) res = r;
+  const prev = String(res.pred);
+  // a revision that leaves no answer (an error, or the result printed but not stored) is not taken: the next round
+  // criticises the latest code that gave one, with its own execution, as the authors' code does
+  if (r.pred !== null || res.pred === null) {
+    res = r;
+    code = next;
+  } else ctx.log("revision " + (i + 1) + " gave no answer (" + r.report + "): kept the previous code");
+  same = String(res.pred) === prev ? same + 1 : 0;
   trail.push(String(res.pred));
   if (same >= 2) break;
 }
