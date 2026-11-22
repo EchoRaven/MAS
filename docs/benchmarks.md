@@ -1488,6 +1488,21 @@ of 20 readings. Its stories run a little longer (653 and 662 words against
 large differences, such as Agents' Room's loss to one call; a smaller edge
 needs more prompts or a judge with less position bias.
 
+**Scoring each story alone** (`pointwise: true`, "Score each alone" on the
+Pairwise panel) takes the order away: the judge reads one story at a time and
+gives it 1 to 10, and the higher score wins.
+
+| Against gemini-3.8-flash alone (gemini-3-flash judging) | Pointwise | Mean scores | Pairwise, above |
+|---|---|---|---|
+| Self-MoA, run 1 / run 2 | 5–2 (3 ties) / 4–1 (5 ties) | 9.8–9.5 / 9.9–9.6 | 4–0 / 3–0 |
+| Self-Refine, run 1 / run 2 | 3–4 (3 ties) / 4–2 (4 ties) | 9.5–9.6 / 9.8–9.6 | 1–0 / 3–0 |
+| Agents' Room against the single writer (check) | 0–7 (3 ties) | 8.4–9.4 | 0–10 |
+
+It agrees with the pairwise verdicts: Agents' Room loses, Self-MoA has a
+small edge (9–3 over two runs), and Self-Refine none (7–6). The order is gone,
+but the scores crowd the top of the scale (9.5 to 9.9), which leaves ties of
+its own.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
