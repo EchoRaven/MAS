@@ -1612,6 +1612,12 @@ a single call asked for as many uses. Against it LLM Discussion still wins
 16–1, but 23 of the 40 judgements are ties: its lead comes mostly from listing
 more, and partly from more varied ideas. It costs eleven times as much.
 
+On flash-lite (one run each), LLM Discussion lists about 76 uses against one
+call's 26 and beats it 14–0 (6 ties). Against one call told to aim for 76
+uses, it is 2–1 with 17 ties. On the weaker model its whole advantage is the
+count. On gemini-3.8-flash a small edge in the ideas themselves survives. The
+pattern matches MoA and debate, which gain only on the stronger model.
+
 **The first judgement was wrong, and a platform bug made it so.** At first
 LLM Discussion beat the count-matched call 19–0 as well. The judge kept saying
 the other list "cuts off mid-sentence at item 86". It did not: the judge was
