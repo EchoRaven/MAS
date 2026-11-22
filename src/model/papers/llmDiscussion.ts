@@ -16,16 +16,17 @@ const PHASES = `const task = String(input?.text ?? input ?? "");
 const rounds = Math.max(1, Math.min(5, Number(ctx.vars.rounds ?? 3)));
 const roles = ${JSON.stringify(ROLES.map(([, name]) => name))};
 let ideas = {};
-// initiation: each role answers on its own
-for (const r of roles) ideas[r] = String(await ctx.call(r, "Task: " + task + "\\n\\nGive your ideas as a numbered list, one short line each."));
+// initiation: each role answers on its own (the roles of a round work at the same time)
+const firsts = await Promise.all(roles.map((r) => ctx.call(r, "Task: " + task + "\\n\\nGive your ideas as a numbered list, one short line each.")));
+roles.forEach((r, i) => (ideas[r] = String(firsts[i])));
 // discussion and convergence: each reads the others' lists and builds on them
 for (let k = 1; k < rounds; k++) {
   const last = k === rounds - 1;
   const next = {};
-  for (const r of roles) {
+  await Promise.all(roles.map(async (r) => {
     const others = roles.filter((o) => o !== r).map((o) => o + ":\\n" + ideas[o]).join("\\n\\n");
     next[r] = String(await ctx.call(r, "Task: " + task + "\\n\\nYour ideas so far:\\n" + ideas[r] + "\\n\\nThe other members' ideas:\\n" + others + "\\n\\n" + (last ? "This is the last round: give your final list, the best and most original ideas you have now, numbered, one short line each." : "Build on the others: combine, extend or push their ideas further, and add new ones of your own. Give your updated list, numbered, one short line each.")));
-  }
+  }));
   ideas = next;
 }
 const all = roles.map((r) => r + ":\\n" + ideas[r]).join("\\n\\n");
