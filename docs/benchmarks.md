@@ -54,6 +54,10 @@ exact McNemar tests against one agent on the same questions.
   the critic chose to revise (19–0), at two thirds of MoA's cost. Unlike MoA,
   it gains on flash-lite too (21–2, 21–1 judged on content)
   ([Self-Refine](#one-model-criticising-itself-gains-as-much)).
+- **Meta-Prompting gains on word sorting, but voting gains as much and
+  Self-Refine more.** On 49 lists, flash-lite: one agent 35, 35;
+  Meta-Prompting 45, 44 at seven times the cost; ten-sample voting 45, 44;
+  Self-Refine 49, 48 ([Meta-Prompting](#meta-prompting-word-sorting-and-what-else-gains-as-much)).
 - **Debate gains on open-ended answers too, at the highest cost.** Three
   debaters revising after reading each other (open mode) beat gemini-3.8-flash
   alone 33–1 over two runs, 36–1 on content, 26–6 at matched length, at $0.48
@@ -1651,6 +1655,53 @@ questions. Clear results came back almost unchanged: Self-Refine's 10–1 and
 most: cheap-proposer MoA 6–6 became 5–4, and USC 5–3 became 3–4. Every
 conclusion above holds on the second judging. A split of a few questions on
 twenty is within what judging the same outputs again produces.
+
+## Meta-Prompting: word sorting, and what else gains as much
+
+Meta-Prompting (Suzgun & Kalai 2024) has one model conduct. With the authors'
+Meta-Expert instruction it either calls a named expert ("Expert Linguist:"
+and an instruction in triple quotes), a fresh call to the same model that
+sees only that instruction, or gives a final answer; each expert's output
+goes back with the authors' prompt to verify, for at most fifteen rounds. The
+template uses their prompts (their repository, MIT) without the Python
+expert: the paper's "Meta −Py" setting. The paper's GPT-4 word sorting:
+standard prompting 80.4, zero-shot chain of thought 83.6, Meta −Py 84.0,
+Meta with Python 99.6.
+
+The set is `benchmarks/word-sorting/word-sorting-50.jsonl`, fifty lists of 12
+to 20 words in BIG-Bench Hard's format, generated from the system word list;
+in half, a third of the words share their first two letters. One list holds
+"étude", whose expected place (last, by code point) is arguable: it is
+flagged and left out, so 49 questions. Everything runs on flash-lite, graded
+by exact match of the sorted list (case and punctuation ignored).
+
+| Word sorting (49), flash-lite | Run 1 | Run 2 | Cost per run | Against one agent, both runs |
+|---|---|---|---|---|
+| One agent, thinking step by step | 35 | 35 | $0.011 | |
+| Meta-Prompting | 45 | 44 | $0.08 | +21 −2 (p 0.0001) |
+| Agent Forest, 10 samples and a vote | 45 | 44 | $0.21 | +19 −0 (p < 0.0001) |
+| Self-Refine | **49** | **48** | $0.29 | +27 −0 (p < 0.0001) |
+
+- **The gain is real, and larger than the paper's.** The single agent already
+  thinks step by step, so this is the paper's chain-of-thought column: 71%
+  against Meta-Prompting's 91%, where GPT-4 had 83.6 against 84.0. A weaker
+  model leaves more room.
+- **It is not the experts alone.** In 32 and 31 of 49 questions the conductor
+  gave its final answer in the first round without calling anyone; there it
+  still beat the single agent, 54 to 43 over both runs. When it did call
+  experts (35 questions), it got all 35, the single agent 27.
+- **Voting matches it at two and a half times the cost.** Meta-Prompting and
+  ten-sample voting win 6 questions each against the other.
+- **One model checking its own list does best.** Self-Refine gets 97 of 98,
+  beating Meta-Prompting +8 −0 (p 0.008), at three and a half times its cost.
+  Sorting is checkable: comparing neighbouring words finds the slip that a
+  first pass makes, and a reviser fixes it. Meta-Prompting's experts verify
+  too, but the conductor often skips them.
+
+The first grading counted none of Meta-Prompting's answers right: it writes
+the sorted list one numbered word a line after "Answer:", and the grader read
+only that line. The answer grader now reads a list given one item a line as
+the whole list, and both evaluations were regraded without calling a model.
 
 ## Earlier sets
 
