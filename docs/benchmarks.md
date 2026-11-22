@@ -1126,6 +1126,49 @@ corrected ones on the same question.
 The paper's other finding, that debate gains no more than a vote over the same
 number of answers, is checked in [Debate or vote?](#debate-or-vote-what-the-rounds-add).
 
+## CRITIC: criticising with the interpreter's output
+
+CRITIC (Gou et al., ICLR 2024) adds the tool to self-correction. On math, the
+model writes Python that stores its result in `answer`; the code runs; it is
+shown the code, the interpreter's report and the output, asked "What's the
+problem with the above code?", and writes a better solution, which runs in
+turn: at most four corrections, stopping once the result stays the same twice.
+The paper's ChatGPT on GSM8K: program of thought 72.5, CRITIC 78.2, and 77.0
+when the critic does not see the execution ("w/o Tool"). The template's run
+variable `tool=false` is that ablation; each correction's executed answer is
+logged.
+
+| flash-lite, two runs each | First program | After corrections | Right → wrong | Wrong → right | Cost per run |
+|---|---|---|---|---|---|
+| GSM-Hard (50), with the execution | 40, 39 | 35, 32 | 15 | 3 | $0.26 |
+| GSM-Hard (50), without it | 41, 40 | 30, 33 | 20 | 2 | $0.26 |
+| Hard computation (30), with the execution | 30 | 30 | 0 | 0 | $0.11 |
+| Hard computation (30), without it | 30 | 29 | 1 | 0 | $0.10 |
+
+- **Writing a program is the gain; criticising it costs answers.** The first
+  program already does what one agent with a sandbox does (Hard computation
+  30 of 30). On GSM-Hard, corrections turned 15 right answers wrong and 3
+  wrong ones right with the execution shown (p 0.008), 20 and 2 without it
+  (p 0.0001).
+- **The interpreter's output halves the damage but does not make it a gain.**
+  Reading the execution, the critic still overruled correct results: in one
+  run it called its own program's right product "incorrect output", against
+  its mental arithmetic, and wrote another program.
+- **Zero-shot is a caveat.** The authors prompt with few-shot critiques, many
+  of which judge the code correct before revising; without them the critic
+  may look for problems more readily. The revision prompt also repeats their
+  instruction to store the result in `answer`, which zero-shot revisions
+  otherwise ignored.
+
+Two template fixes came before these numbers. The first version compared each
+revision's result with the previous one even when the revision had stored no
+answer, so the stopping rule never fired and every run did all four
+corrections; it also criticised code that had given no answer. Fixed, nine
+revisions in ten still printed the result without storing it and could not be
+taken, so corrections changed almost nothing (GSM-Hard 40 → 41, 39 → 39). With
+the instruction repeated, almost every revision is taken (1 of 157 not), and
+the numbers above are those runs.
+
 ## Answers the team had and lost
 
 Each miss graded by rule now says whether a member marked the right answer
