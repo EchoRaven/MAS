@@ -44,7 +44,9 @@ if (noSandbox) ctx.log("no sandbox to run the code (" + noSandbox + "): no corre
 for (let i = 0; i < (noSandbox ? 0 : maxIter); i++) {
   const shown = "Question: " + question + "\\n\\\`\\\`\\\`python\\n" + code.split("\\n").filter((l) => !/^\\s*#/.test(l)).join("\\n") + "\\n\\\`\\\`\\\`\\n" + (withTool ? "Execution: " + res.report + "\\nOutput: answer = " + res.pred + "\\n" : "") + "\\nWhat's the problem with the above code?\\n";
   const critique = String(await ctx.call("Model", shown)).split(/Here's a better solution/i)[0].trim();
-  const next = codeOf(String(await ctx.call("Model", shown + critique + "\\n\\nHere's a better solution:\\n\\\`\\\`\\\`python\\n")));
+  // the authors' few-shot revisions all store the result in answer; zero-shot, a model prints it instead, and a revision
+  // with no answer cannot be taken, so the instruction of their program prompt is repeated before the cue
+  const next = codeOf(String(await ctx.call("Model", shown + critique + "\\n\\n# Store your result as a variable named 'answer'.\\nHere's a better solution:\\n\\\`\\\`\\\`python\\n")));
   if (!next || next === code) { trail.push(String(res.pred)); same++; if (same >= 2) break; continue; }
   const r = await run(next);
   const prev = String(res.pred);
@@ -96,7 +98,7 @@ export const critic: TemplateInfo = {
       "Every correction's executed answer goes into the run log, so changes can be counted.",
     ],
     differs: [
-      "Zero-shot: the authors prompt with few-shot examples of programs and critiques, which are not copied here.",
+      "Zero-shot: the authors prompt with few-shot examples of programs and critiques, which are not copied here. Their examples' revisions all store the result in answer; zero-shot, nine revisions in ten printed it instead and could not be taken, so the revision prompt repeats their program instruction ('Store your result as a variable named 'answer'.') before 'Here's a better solution:'.",
       "Their code runs all four corrections without the stopping rule the paper states; this follows the paper.",
       "Replies are capped at 4,096 tokens where their calls use 500 and 400, room for a reasoning model.",
     ],
