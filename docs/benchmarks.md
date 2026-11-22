@@ -57,7 +57,9 @@ exact McNemar tests against one agent on the same questions.
 - **Meta-Prompting gains on word sorting, but voting gains as much and
   Self-Refine more.** On 49 lists, flash-lite: one agent 35, 35;
   Meta-Prompting 45, 44 at seven times the cost; ten-sample voting 45, 44;
-  Self-Refine 49, 48 ([Meta-Prompting](#meta-prompting-word-sorting-and-what-else-gains-as-much)).
+  Self-Refine 49, 48. On Game of 24, Meta-Prompting with an Expert Python
+  gains (43, 42 against 30, 35), but one agent with a sandbox solves all
+  fifty twice at half the cost ([Meta-Prompting](#meta-prompting-word-sorting-and-what-else-gains-as-much)).
 - **Debate gains on open-ended answers too, at the highest cost.** Three
   debaters revising after reading each other (open mode) beat gemini-3.8-flash
   alone 33–1 over two runs, 36–1 on content, 26–6 at matched length, at $0.48
@@ -1702,6 +1704,40 @@ The first grading counted none of Meta-Prompting's answers right: it writes
 the sorted list one numbered word a line after "Answer:", and the grader read
 only that line. The answer grader now reads a list given one item a line as
 the whole list, and both evaluations were regraded without calling a model.
+
+**Game of 24: the interpreter, not the conductor.** The paper's largest gain
+is here: GPT-4 standard prompting 3%, Meta −Py 11%, Meta with Python 67%. The
+set is `benchmarks/game24/game24-50.jsonl`, fifty games generated from every
+four numbers 1 to 13, keeping those with the fewest solutions (4nums.com's
+ranked games would need a download). A `check` grader verifies that the final
+answer uses exactly the four numbers and equals 24. "Meta-Prompting (with
+Python)" adds the authors' Expert Python: its code runs in a sandbox and the
+output goes back to the conductor.
+
+| Game of 24 (50), flash-lite | Run 1 | Run 2 | Cost per run |
+|---|---|---|---|
+| One agent, thinking step by step | 30 | 35 | $0.09 |
+| Meta-Prompting | 36 | 37 | $0.80 |
+| Meta-Prompting with Python | 43 | 42 | $0.21 |
+| **One agent with a Python sandbox** | **50** | **50** | $0.12 |
+
+- **The interpreter is the gain, and the scaffold costs some of it.** One
+  agent that can run code solves all fifty twice, beating Meta-Prompting
+  with Python +15 −0 (p 0.0001) at half its cost. The conductor lost games
+  by declaring them impossible, or with an expression that uses the wrong
+  numbers.
+- **Without code, the scaffold adds little.** Meta-Prompting against one
+  agent: +18 −10 (p 0.18), at nine times the cost. With Python against
+  without: +19 −7 (p 0.03).
+- **Every miss without code was a claim that no solution exists**, or a
+  wrong expression; every game has one, and the record keeps it.
+
+The first evaluation of Meta-Prompting on this set had no cap on reply
+length. On two games flash-lite repeated itself to its output limit in every
+round, $1.4 a game and no end; it was stopped and marked invalid. Replies are
+now capped at 4,096 tokens (the authors' configuration has 1,024). An
+uncapped run of the Python version (46 of 50, $0.92) is left out of the
+table for the same reason.
 
 ## Earlier sets
 
