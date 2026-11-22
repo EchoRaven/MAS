@@ -52,10 +52,13 @@ export function debateWith(n = 3, topology: "full" | "ring" = "full", diverse: b
     })
     .node("vote", "function", 560, 50, {
       name: "Majority vote",
-      fn: { lang: "js", code: "const counts = {};\nfor (const a of input.answers ?? []) if (a.final) counts[a.final] = (counts[a.final] ?? 0) + 1;\nconst ranked = Object.entries(counts).sort((x, y) => y[1] - x[1]);\nreturn ranked.length ? `Final: ${ranked[0][0]}` : \"No debater gave an answer.\";" },
+      // mode open: no final answer to vote on; the result is the first debater's last revision, as the paper scores
+      // each agent's revised biography
+      fn: { lang: "js", code: "if (String(ctx.vars.mode ?? '') === 'open') { const a = (input.answers ?? [])[0]; return a ? a.text : 'No debater answered.'; }\nconst counts = {};\nfor (const a of input.answers ?? []) if (a.final) counts[a.final] = (counts[a.final] ?? 0) + 1;\nconst ranked = Object.entries(counts).sort((x, y) => y[1] - x[1]);\nreturn ranked.length ? `Final: ${ranked[0][0]}` : \"No debater gave an answer.\";" },
       interface: { inputs: [port("in", "json")], outputs: [port("out", "text")] },
     });
-  const prompt = "Answer the question. If other agents' answers are given, use them as additional advice and give an updated answer. End with: Final: <answer>.";
+  // the answer line is a run variable: an open-ended request (mode open) asks for the full response instead
+  const prompt = "Answer the question. If other agents' answers are given, use them as additional advice and give an updated answer. {{vars.answer_format ?? \"End with: Final: <answer>.\"}}";
   for (let i = 0; i < n; i++) {
     const m = "sonnet";
     const method = diverse === true ? METHODS[i % METHODS.length] : typeof diverse === "number" ? METHODS[diverse % METHODS.length] : null;
@@ -97,6 +100,7 @@ export const debate: TemplateInfo = {
     mapped: [
       "A Group holds the debaters; its iteration (2 rounds, feeding the question plus the collected answers back in) is the debate.",
       "A Function node with join = all waits for every debater before passing the round on; another Function takes the majority vote.",
+      "For open-ended requests (the paper's biographies), the run variables mode = open and answer_format = 'Reply with your full response.' drop the answer line, and the result is the first debater's last revision instead of a vote.",
     ],
     differs: [
       "The paper varies the number of rounds and of agents. Rounds are the run variable rounds (2 when unset), so an evaluation can sweep them; the number of debaters is three here (the builder, debateWith(n), makes 2 to 8).",
