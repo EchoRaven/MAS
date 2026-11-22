@@ -1557,9 +1557,13 @@ other (two runs each, the same judge):
 | Self-Refine against debate | 5–11 (4 ties) | 4–9 (7 ties) | 9–20, p 0.06 |
 
 Debate leads Self-Refine by a margin just short of significance, and MoA
-sits between them. None of the differences is clear. Cost separates them more
-sharply: Self-Refine gets most of the gain for about two fifths of what debate
-spends.
+sits between them. To settle that one, both answered thirty more instructions
+(`benchmarks/instructions/open-30b.jsonl`), as long as each other (808 and
+795 words, as many headings and lists): debate 14–9 (7 ties). Over all fifty,
+debate beats Self-Refine 34–18 (p 0.04), at about twice the cost ($0.79
+against $0.41 for the thirty). So debate is somewhat better, and Self-Refine
+gets most of its gain for half the price. MoA against either is too close to
+call.
 
 **On flash-lite, debate is like MoA, not Self-Refine.** Against flash-lite
 alone, open-mode debate on flash-lite loses: 2–6 (12 ties) and 4–8 (8 ties),
