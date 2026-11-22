@@ -18,7 +18,9 @@ import { ArchitectPanel } from "./canvas/ArchitectPanel";
 
 function counts(doc: SystemDoc) {
   const c = (k: string) => doc.nodes.filter((n) => n.data.kind === k).length;
-  return { agents: c("agent"), humans: c("human"), envs: c("env"), stores: c("store"), rooms: c("channel"), groups: c("group"), edges: doc.edges.length };
+  // a room is an environment of its own kind: counted apart, so a debate's room does not read as a sandbox
+  const rooms = doc.nodes.filter((n) => n.data.kind === "env" && (n.data as { env_kind?: string }).env_kind === "room").length;
+  return { agents: c("agent"), models: c("model"), functions: c("function"), humans: c("human"), envs: c("env") - rooms, plugins: c("plugin"), rooms, groups: c("group"), edges: doc.edges.length };
 }
 
 function SystemCard({ doc }: { doc: SystemDoc }) {
@@ -74,18 +76,22 @@ function SystemCard({ doc }: { doc: SystemDoc }) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-        {[
-          [k.agents, "agent"],
-          [k.humans, "human"],
-          [k.envs, "env"],
-          [k.stores, "store"],
-          [k.rooms, "room"],
-          [k.groups, "group"],
-        ]
-          .filter(([n]) => Number(n) > 0)
+        {(
+          [
+            [k.agents, "agent"],
+            [k.models, "model call"],
+            [k.functions, "function"],
+            [k.humans, "human"],
+            [k.envs, "env"],
+            [k.plugins, "plugin"],
+            [k.rooms, "room"],
+            [k.groups, "group"],
+          ] as [number, string][]
+        )
+          .filter(([n]) => n > 0)
           .map(([n, label]) => (
-            <span key={String(label)} className="rounded-full bg-secondary px-2 py-0.5 text-secondary-foreground">
-              {n} {label}
+            <span key={label} className="rounded-full bg-secondary px-2 py-0.5 text-secondary-foreground">
+              {n} {n === 1 ? label : `${label}s`}
             </span>
           ))}
         {errors > 0 && <span className="rounded-full bg-destructive/10 px-2 py-0.5 font-medium text-destructive">{errors} errors</span>}
