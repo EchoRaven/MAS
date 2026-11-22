@@ -194,6 +194,8 @@ export interface EvalRecord {
   on_model?: string;
   /** each run's wall-clock limit, in minutes, instead of the system's own (slow models need longer) */
   time_limit_min?: number;
+  /** each run's spending limit (USD), when it replaced the system's budget */
+  usd_limit?: number;
   /** run variables every case started with */
   vars?: Record<string, unknown>;
   /** the dataset the cases came from, its version, and the sample drawn from it */

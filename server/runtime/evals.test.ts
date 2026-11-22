@@ -380,6 +380,16 @@ describe("evaluations", () => {
     expect(() => evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], time_limit_min: 500 })).toThrow(/1 to 120/);
   });
 
+  it("gives each run the evaluation's spending limit instead of the system's budget, and refuses one out of range", async () => {
+    const rec = evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], usd_limit: 0.25 });
+    expect(rec.usd_limit).toBe(0.25);
+    const done = await finish(rec.id);
+    expect(done.passed).toBe(1);
+    expect(store.getRunSystem(done.cases[0].run_id!)?.budget.usd).toBe(0.25);
+    expect(() => evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], usd_limit: 0 })).toThrow(/usd_limit/);
+    expect(() => evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], usd_limit: 500 })).toThrow(/usd_limit/);
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

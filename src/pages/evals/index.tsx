@@ -83,6 +83,8 @@ function Evals({ systemId }: { systemId: string }) {
   const [repeats, setRepeats] = useState("1");
   // each run's time limit, instead of the system's: "" keeps the system's own
   const [timeLimit, setTimeLimit] = useState("");
+  // each run's spending limit instead of the system's budget: a loop that runs away stops at it
+  const [usdLimit, setUsdLimit] = useState("");
   const [dry, setDry] = useState(false);
   const [varsText, setVarsText] = useState("");
   const wanted = useMemo(() => readVars(doc), [doc]);
@@ -198,7 +200,7 @@ function Evals({ systemId }: { systemId: string }) {
       const sw = sweepOf(vars.vars);
       if (sw && "error" in sw) throw new Error(sw.error);
       const theVars = sw ? sw.rest : vars.vars;
-      const opts = { ...source, grader, ...(grader === "check" && check.trim() ? { check } : {}), mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(theVars).length ? { vars: theVars } : {}), force };
+      const opts = { ...source, grader, ...(grader === "check" && check.trim() ? { check } : {}), mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), ...(usdLimit ? { usd_limit: Number(usdLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(theVars).length ? { vars: theVars } : {}), force };
       const rec = sw ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts, sweep: { name: sw.name, values: sw.values } })).evals[0] : alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
       await refresh();
       setSelected(rec.id);
@@ -394,6 +396,10 @@ function Evals({ systemId }: { systemId: string }) {
               />
             </label>
           )}
+          <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Each run stops once it has spent this much, instead of at the system's own budget. A loop that repeats itself or keeps calling stops here rather than costing more every round">
+            Max cost per run
+            <Select value={usdLimit || "own"} onValueChange={(v) => setUsdLimit(v === "own" ? "" : v)} items={[{ value: "own", label: `system (${doc.budget.usd != null ? `$${doc.budget.usd}` : "none"})` }, ...["0.05", "0.1", "0.25", "0.5", "1", "2"].map((v) => ({ value: v, label: `$${v}` }))]} ariaLabel="Max cost per run" />
+          </label>
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
             Models
             <Select value={onModel || "own"} onValueChange={(v) => setOnModel(v === "own" ? "" : v)} items={[{ value: "own", label: "As the system says" }, ...chatModels.map((m) => ({ value: m.value, label: `Everything on ${m.label}` })), { value: "per", label: "Choose per model…" }]} ariaLabel="Models" />
