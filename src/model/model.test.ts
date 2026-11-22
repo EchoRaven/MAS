@@ -222,3 +222,25 @@ describe("local addresses", () => {
     expect(validate(b.doc).find((i) => /already talk in room/.test(i.message))).toMatchObject({ severity: "warning", message: expect.stringMatching(/"A" and "C" already talk in room "Chat"/) });
   });
 });
+
+describe("calls and handoffs", () => {
+  it("accepts a call to a function (it replies with what it returns), and flags a handoff to one", async () => {
+    const { Builder, native } = await import("./builder");
+    const { validate } = await import("./validate");
+    const doc = () => {
+      const b = new Builder("C", "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .agent("boss", 0, 0, { name: "Boss", model: "sonnet", harness: { ...native(), loop: "react", instructions: "" } })
+        .node("run", "function", 0, 0, { name: "Run", fn: { lang: "js", code: "return input;" } })
+        .edge("me", "boss", "message")
+        .edge("boss", "me", "message");
+      return b;
+    };
+    const call = doc();
+    call.edge("boss", "run", "call");
+    expect(validate(call.doc).filter((i) => i.message.includes("expects a reply"))).toEqual([]);
+    const handoff = doc();
+    handoff.edge("boss", "run", "handoff");
+    expect(validate(handoff.doc).some((i) => i.severity === "warning" && i.message.includes("cannot take it over"))).toBe(true);
+  });
+});

@@ -85,8 +85,10 @@ export function validate(doc: SystemDoc): Issue[] {
         add("error", `${q(s)}.${sp.id} → ${q(t)}.${tp.id}: ${c.note}`, { edgeId: e.id });
       }
     }
-    if ((e.kind === "call" || e.kind === "handoff") && !(t.data.kind === "agent" || t.data.kind === "human" || t.data.kind === "group" || t.data.kind === "model")) {
-      add("warning", `A ${e.kind} expects a reply or a new owner; a ${t.data.kind} gives neither. Use message`, { edgeId: e.id });
+    // a called function replies with what it returns (Magentic-One's terminal); a handoff needs someone to take over
+    const replies = t.data.kind === "agent" || t.data.kind === "human" || t.data.kind === "group" || t.data.kind === "model";
+    if ((e.kind === "call" && !replies && t.data.kind !== "function") || (e.kind === "handoff" && !replies)) {
+      add("warning", e.kind === "call" ? `A call expects a reply; a ${t.data.kind} gives none. Use message` : `A handoff passes the conversation on; a ${t.data.kind} cannot take it over. Use message or call`, { edgeId: e.id });
     }
     if (e.gate && !e.gate.condition.trim()) add("warning", `Gate "${e.gate.name}" has no condition`, { edgeId: e.id });
   }
