@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -384,5 +384,32 @@ describe("cut-short cases", () => {
       { pass: true, status: "done", why: "", cut_short: true }, // a pass is not a failure, cut short or not
     ] as never);
     expect(out.map((r) => [r.reason, r.count])).toEqual([["cut short at a limit: the conversation did not end", 1], ["wrong answer", 1]]);
+  });
+});
+
+describe("answer trails", () => {
+  it("reads the last trail a run logged", () => {
+    expect(answerTrail(["Starts", "answers by round: 12 → 12 → 15", "done"])).toEqual({ label: "round", answers: ["12", "12", "15"] });
+    expect(answerTrail(["answers by correction: 1 → 2", "answers by correction: 3 → 4"])?.answers).toEqual(["3", "4"]);
+    expect(answerTrail(["no trail here"])).toBeNull();
+  });
+  it("grades every step as the score does, Decimal reprs and equal numbers included", () => {
+    const t = trailStats(
+      [
+        { answers: ["Decimal('2944533.50')", "2944533.5"], expected: "2944533.5", input: "q1" }, // right both times
+        { answers: ["10", "11"], expected: "10", input: "q2" }, // right → wrong
+        { answers: ["4", "5", "5"], expected: "5", input: "q3" }, // wrong → right
+        { answers: ["7", "7"], expected: "8", input: "q4" }, // wrong, unchanged
+      ],
+      "number",
+      "round",
+    );
+    expect(t).toMatchObject({ label: "round", cases: 4, first: 2, last: 2, right_to_wrong: 1, wrong_to_right: 1, unchanged: 1 });
+    expect(t.mean_steps).toBeCloseTo(1.25);
+    expect(t.by_step).toEqual([
+      { step: 0, right: 2, cases: 4 },
+      { step: 1, right: 2, cases: 4 },
+      { step: 2, right: 1, cases: 1 },
+    ]);
   });
 });

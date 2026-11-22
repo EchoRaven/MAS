@@ -492,6 +492,17 @@ run variable `style` set to `"\n\nAim for about N words."`, N being the
 judged evaluation's mean words rounded to ten. Judgements name each side by
 its setup (system, models and run variables), so the control shows as such.
 
+## Answer trails
+
+A system that revises its answer can log each step's answer in one line,
+`answers by <step>: a → b → c` (the first before any revision), as the
+intrinsic self-correction and CRITIC templates do. The Evaluate page then
+grades every step with the evaluation's own grader and shows how the answers
+moved: right first and last, wrong → right and right → wrong (with a sign
+test), and how many never changed (`GET /api/evals/:id/trail`). A count made
+outside the grader reads answers differently: `Decimal('2944533.50')` is
+2944533.5 to the grader.
+
 ## Datasets
 
 A dataset is a list of cases `{input, expected}` with a name, a source

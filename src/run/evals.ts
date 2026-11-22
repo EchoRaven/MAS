@@ -691,6 +691,59 @@ export function parseNumber(s: string): number | null {
   return Number(last);
 }
 
+/**
+ * An answer trail a system logs: "answers by round: 12 → 12 → 15" (intrinsic self-correction, CRITIC). The label is
+ * what the steps are ("round", "correction"); the answers are in order, the first before any revision.
+ */
+export function answerTrail(logs: string[]): { label: string; answers: string[] } | null {
+  for (let i = logs.length - 1; i >= 0; i--) {
+    const m = /^answers by ([^:]{1,40}): (.*)$/s.exec(logs[i].trim());
+    if (m) return { label: m[1].trim(), answers: m[2].split(" → ").map((a) => a.trim()) };
+  }
+  return null;
+}
+
+/** How an evaluation's answers moved along their trails, each step graded by the evaluation's rule grader. */
+export interface TrailStats {
+  label: string;
+  cases: number;
+  /** right at the first step, and at the last */
+  first: number;
+  last: number;
+  right_to_wrong: number;
+  wrong_to_right: number;
+  /** the same answer at every step */
+  unchanged: number;
+  /** mean steps after the first */
+  mean_steps: number;
+  /** right by step (0 = the first answer), over the cases that reached it */
+  by_step: { step: number; right: number; cases: number }[];
+}
+
+export function trailStats(cases: { answers: string[]; expected: string; input: string }[], grader: RuleGrader, label = "step"): TrailStats {
+  const s: TrailStats = { label, cases: 0, first: 0, last: 0, right_to_wrong: 0, wrong_to_right: 0, unchanged: 0, mean_steps: 0, by_step: [] };
+  let steps = 0;
+  for (const c of cases) {
+    if (!c.answers.length) continue;
+    const ok = c.answers.map((a) => gradeByRule(grader, `Answer: ${a}`, c.expected, c.input).pass);
+    s.cases++;
+    steps += c.answers.length - 1;
+    const [f, l] = [ok[0], ok[ok.length - 1]];
+    s.first += +f;
+    s.last += +l;
+    if (f && !l) s.right_to_wrong++;
+    if (!f && l) s.wrong_to_right++;
+    if (new Set(c.answers).size === 1) s.unchanged++;
+    ok.forEach((v, i) => {
+      s.by_step[i] ??= { step: i, right: 0, cases: 0 };
+      s.by_step[i].right += +v;
+      s.by_step[i].cases++;
+    });
+  }
+  s.mean_steps = s.cases ? steps / s.cases : 0;
+  return s;
+}
+
 /** Grades an output by a rule (every grader but llm). */
 export function gradeByRule(grader: RuleGrader, output: string, expected: string, question = ""): { pass: boolean; answer: string; why: string } {
   const answer = finalAnswer(output);

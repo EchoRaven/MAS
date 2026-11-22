@@ -133,6 +133,8 @@ export const Api = {
   markEvalInvalid: (id: string, reason: string | null) => api<{ eval: EvalRecord }>("PUT", `/evals/${id}/invalid`, { reason }),
   /** The links an evaluation's outputs cite, and how many their runs' searches returned. */
   evalSources: (id: string) => api<{ sources: { cited: number; found: number; searches: number; outputs: number; with_search: number; words: number; headings: number; items: number; tables: number } }>("GET", `/evals/${id}/sources`),
+  /** How the answers moved along the trail a system logs ("answers by round: …"), graded step by step. */
+  evalTrail: (id: string) => api<{ trail: import("@/run/evals").TrailStats | null }>("GET", `/evals/${id}/trail`),
   pairwiseOf: (id: string) => api<{ pairwise: PairwiseResult[]; judging?: PairwiseJob[] }>("GET", `/evals/${id}/pairwise`),
   retryEval: (id: string) => api<{ eval: EvalRecord }>("POST", `/evals/${id}/retry`, {}),
   regradeEval: (id: string, grader?: Grader) => api<EvalRecord>("POST", `/evals/${id}/regrade`, { grader }),

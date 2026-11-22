@@ -7,7 +7,7 @@ import path from "node:path";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, DEFAULT_CRITERION, criterionTag, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, type TrailStats, answerTrail, trailStats, DEFAULT_CRITERION, criterionTag, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -420,6 +420,28 @@ export class EvalManager {
       sum.tables += shape.tables;
     }
     return sum;
+  }
+
+  /**
+   * How the answers moved, for systems that log an answer trail ("answers by round: 12 → 12 → 15"): every step graded
+   * by the evaluation's own rule grader, so a count of right-to-wrong changes reads answers as the score does. Null
+   * when no run logged a trail, or the grader is not a rule (the judge, a check, none).
+   */
+  trail(id: string): TrailStats | null {
+    const rec = this.store.getEval(id);
+    if (!rec) throw new Error("No such evaluation");
+    if (["llm", "code", "check", "none"].includes(rec.grader)) return null;
+    let label = "";
+    const cases: { answers: string[]; expected: string; input: string }[] = [];
+    for (const c of rec.cases) {
+      if (!c.run_id || c.status !== "done") continue;
+      const logs = (this.store.events(c.run_id) as RunEvent[]).filter((e) => e.type === "log").map((e) => (e as { text?: string }).text ?? "");
+      const t = answerTrail(logs);
+      if (!t) continue;
+      label ||= t.label;
+      cases.push({ answers: t.answers, expected: c.expected, input: c.input });
+    }
+    return cases.length ? trailStats(cases, rec.grader as RuleGrader, label) : null;
   }
 
   /** The pairwise judgements kept for an evaluation (either side). */

@@ -20,6 +20,7 @@ import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
 import { Input } from "@/components/ui/input";
 import { Pairwise } from "./Pairwise";
+import { Trail } from "./Trail";
 import { useServer } from "@/store/server";
 import { useSystems } from "@/store/systems";
 
@@ -706,6 +707,7 @@ function Evals({ systemId }: { systemId: string }) {
               );
             })()}
             {ev.grader === "none" && !record?.active && <Pairwise ev={ev} onError={setError} />}
+            {ev.status === "finished" && ev.grader !== "none" && <Trail id={ev.id} />}
             {!!ev.auto_retried && (
               <p className="mt-3 text-xs text-muted-foreground">
                 {ev.auto_retried === 1 ? "One case" : `${ev.auto_retried} cases`} failed for the provider (overloaded, a dropped connection) and ran once more at the end; a second failure counts.
