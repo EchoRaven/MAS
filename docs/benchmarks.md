@@ -1480,6 +1480,14 @@ leads that version 8–3 (9 ties, p 0.23). Its critic is satisfied sooner (12
 of 20 answers revised three times, against 38 of 40), at the same cost ($0.18
 for twenty).
 
+On stories it is like MoA: never worse, rarely told apart. Self-Refine on
+gemini-3.8-flash against that model alone, on the ten short-story prompts:
+1–0 (9 ties) and 3–0 (7 ties), with the story shown first picked in 19 and 17
+of 20 readings. Its stories run a little longer (653 and 662 words against
+631 and 634), at $0.09 for ten. With this judge, ten stories separate only
+large differences, such as Agents' Room's loss to one call; a smaller edge
+needs more prompts or a judge with less position bias.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
