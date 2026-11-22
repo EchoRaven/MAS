@@ -193,7 +193,7 @@ export class RunManager {
         }
         if (last) {
           emit({ type: "log", level: "warn", text: `${act.stopReason ?? "The run stopped"}: the conversation did not end on its own, so its last message (from ${rc.byId.get(last.from)?.data && "name" in rc.byId.get(last.from)!.data ? (rc.byId.get(last.from)!.data as { name: string }).name : last.from}) is the answer` });
-          emit({ type: "output", node: last.from, port: last.room, text: last.text.slice(0, 20_000) });
+          emit({ type: "output", node: last.from, port: last.room, text: last.text.slice(0, 200_000) });
         }
       }
       await engine.hub.closeAll();

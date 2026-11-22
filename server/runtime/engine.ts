@@ -20,6 +20,10 @@ import { Hub } from "./resources/hub";
 import type { RtTool } from "./resources/types";
 import { asText, clip, coerce, exprValue, syncMsg, type Msg } from "./values";
 import { parseReplicas, replicaCount, roundLimit } from "@/model/replicas";
+
+// what the log keeps of a run's answer: an evaluation grades exactly this text, so it must hold a long answer whole
+// (a 20,000-character keep cut the middle out of long lists, as an earlier one cut gemma's final answers)
+const OUTPUT_LOG = 200_000;
 export { replicaCount };
 
 type Item = { value: unknown; via?: SysEdge };
@@ -411,7 +415,7 @@ export class Engine implements TurnServices {
     for (const e of roomEdges) if (e.target === fromRoom || !send.length) this.track(this.post(e.target, n.id, asText(r.output)));
     if (!send.length && !roomEdges.length) {
       this.outputs++;
-      this.rc.emit({ type: "output", node: n.id, port: ports[0] ?? "out", text: clip(asText(r.output), 20_000) });
+      this.rc.emit({ type: "output", node: n.id, port: ports[0] ?? "out", text: clip(asText(r.output), OUTPUT_LOG) });
     }
   }
 
@@ -421,7 +425,7 @@ export class Engine implements TurnServices {
       const edges = this.outEdges(id, port);
       if (!edges.length) {
         this.outputs++;
-        this.rc.emit({ type: "output", node: id, port, text: clip(asText(v), 20_000) });
+        this.rc.emit({ type: "output", node: id, port, text: clip(asText(v), OUTPUT_LOG) });
       }
       for (const e of edges) this.track(this.deliver(e, v, id));
     }
@@ -451,7 +455,7 @@ export class Engine implements TurnServices {
       } else if (p.action === "terminate") {
         // the value that met the condition is the run's answer
         this.outputs++;
-        rc.emit({ type: "output", node: id, port, text: clip(asText(v), 20_000) });
+        rc.emit({ type: "output", node: id, port, text: clip(asText(v), OUTPUT_LOG) });
         rc.emit({ type: "log", node: id, level: "info", text: `${what}: ended the run` });
         rc.stop(`Policy ${p.id}`);
         return false;
@@ -553,7 +557,7 @@ export class Engine implements TurnServices {
   finish(node: string, answer: string) {
     const rc = this.rc;
     this.outputs++;
-    rc.emit({ type: "output", node, port: "finish", text: clip(answer, 20_000) });
+    rc.emit({ type: "output", node, port: "finish", text: clip(answer, OUTPUT_LOG) });
     rc.emit({ type: "log", node, level: "info", text: `${nameOf(rc, node)} called finish: the run ends` });
     rc.stop(`${nameOf(rc, node)} called finish`);
   }
@@ -625,7 +629,7 @@ export class Engine implements TurnServices {
     const outs = this.outEdges(h.id);
     if (this.starters.has(h.id) || !outs.length) {
       this.outputs++;
-      rc.emit({ type: "output", node: h.id, port: e.target_port, text: clip(asText(v), 20_000) });
+      rc.emit({ type: "output", node: h.id, port: e.target_port, text: clip(asText(v), OUTPUT_LOG) });
       this.status(h.id, "done");
       return;
     }
@@ -659,7 +663,7 @@ export class Engine implements TurnServices {
       rc.emit({ type: "transform", at: roomId, label: "conversation ended", detail: "termination condition" });
       // a conversation that ends in a room is the run's answer, so it is not lost
       this.outputs++;
-      rc.emit({ type: "output", node: from, port: roomId, text: clip(text, 20_000) });
+      rc.emit({ type: "output", node: from, port: roomId, text: clip(text, OUTPUT_LOG) });
       return;
     }
     // members only hear what their subscription accepts (binding.read.filter over msg)
@@ -725,7 +729,7 @@ export class Engine implements TurnServices {
       // nobody is next (the manager named no one, nobody was @named): the conversation is over, and its last word is the answer, as with TERMINATE
       rc.emit({ type: "transform", at: roomId, label: "conversation ended", detail: room.policy === "selector" ? "the manager picked no one" : "nobody is next" });
       this.outputs++;
-      rc.emit({ type: "output", node: from, port: roomId, text: clip(text, 20_000) });
+      rc.emit({ type: "output", node: from, port: roomId, text: clip(text, OUTPUT_LOG) });
       return;
     }
     for (const m of next) {

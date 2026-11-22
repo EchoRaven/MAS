@@ -266,6 +266,10 @@ export class EvalManager {
     const what = criterion?.trim() || DEFAULT_CRITERION;
     // judgements under another criterion are kept beside the default ones, never in their place
     const tag = criterionTag(what);
+    // the judge sees a response whole up to a generous length; past it, it is told so, so a long answer is not
+    // read as one that broke off (a 12,000-character cut made long lists "stop mid-sentence at item 86")
+    const SHOW = 60_000;
+    const shown = (r: string) => (r.length <= SHOW ? r : `${r.slice(0, SHOW)}\n[… the rest of this response, ${r.length - SHOW} characters, is not shown here; it is not cut off in the answer itself]`);
     const judgeText = async (prompt: string): Promise<{ text: string; spent: number }> => {
       let text: string;
       let spent: number;
@@ -287,14 +291,14 @@ export class EvalManager {
     // pointwise: each response scored on its own, never beside the other, so the order cannot sway it (a judge that
     // picks whichever story it read first in four readings of five gives mostly ties pairwise)
     const score = async (task: string, r: string): Promise<{ score: number | null; usd: number; why: string }> => {
-      const prompt = `You rate a response to a task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse:\n${r.slice(0, 12000)}\n\n${what}\nJudge this response on its own. Give a short reason, then a last line exactly 'Score: N', where N is 1 (very poor) to 10 (excellent).`;
+      const prompt = `You rate a response to a task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse:\n${shown(r)}\n\n${what}\nJudge this response on its own. Give a short reason, then a last line exactly 'Score: N', where N is 1 (very poor) to 10 (excellent).`;
       const { text, spent } = await judgeText(prompt);
       const all = [...text.matchAll(/score:\s*\**\s*(\d+(?:\.\d+)?)/gi)];
       const n = all.length ? Number(all.at(-1)![1]) : null;
       return { score: n !== null && n >= 1 && n <= 10 ? n : null, usd: spent, why: text.trim().slice(-600) };
     };
     const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie" | null; usd: number; why: string }> => {
-      const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
+      const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${shown(r1)}\n\nResponse 2:\n${shown(r2)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
       const { text, spent } = await judgeText(prompt);
       // the last verdict line counts; "Better: Response 1" is read as 1
       const all = [...text.matchAll(/better:\s*\**\s*(?:response\s*)?(1|2|tie)\b/gi)];

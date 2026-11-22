@@ -219,6 +219,28 @@ describe("evaluations", () => {
     await expect(Promise.race([bad, Promise.resolve("started")])).rejects.toThrow(/No such evaluation/);
   });
 
+  it("shows the judge a long answer to its end (a 20,000-character list is not cut at 12,000)", async () => {
+    const writer = (id: string, text: string) => {
+      const b = new Builder(id, "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("f", "function", 200, 0, { name: "W", fn: { lang: "js", code: `return ${JSON.stringify(text)};` } })
+        .edge("me", "f", "message")
+        .edge("f", "me", "message");
+      // the judge repeats its prompt, so its reply shows what it was given
+      b.doc.models.push({ id: "judge_echo", provider: "mock", model: "mock", api: { params: { script: ["{{input}} Better: 1"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return { ...b.doc, id };
+    };
+    const long = "x".repeat(20_000) + " ZZEND";
+    const cases = [{ input: "list", expected: "" }];
+    const da = writer("sys_la", "short answer");
+    store.putSystem(da);
+    const ea = await finish(evals.start(da, { grader: "none", cases }).id);
+    const eb = await finish(evals.start(writer("sys_lb", long), { grader: "none", cases }).id);
+    expect(eb.cases[0].output).toContain("ZZEND"); // the run's answer is whole
+    const r = await evals.pairwise(ea.id, eb.id, "judge_echo");
+    expect(r.per[0].why?.[0]).toContain("ZZEND"); // a first, b second: the end of b reached the judge
+  });
+
   it("keeps one judge's verdicts under different criteria apart", async () => {
     const writer = (id: string, text: string) => {
       const b = new Builder(id, "");
