@@ -65,6 +65,51 @@ export function criterionTag(criterion: string): string {
   return "c" + (h >>> 0).toString(36);
 }
 
+/** What pooling needs of an evaluation: its system, models, run variables and whether it was marked invalid. */
+export interface PoolableEval {
+  id: string;
+  system_name: string;
+  on_model?: string;
+  model_map?: Record<string, string>;
+  vars?: Record<string, unknown>;
+  invalid?: { reason: string } | null;
+}
+
+/** A setup: the system with its models and run variables (MoA on flash-lite and MoA on gemini are not the same). */
+export function setupLabel(e: PoolableEval): string {
+  const models = e.on_model ? `on ${e.on_model}` : e.model_map ? Object.entries(e.model_map).map(([x, y]) => `${x}→${y}`).join(", ") : "";
+  const vars = e.vars ? Object.entries(e.vars).map(([x, y]) => `${x}=${typeof y === "string" ? y.trim().slice(0, 24) : JSON.stringify(y)}`).join(", ") : "";
+  return [e.system_name, [models, vars].filter(Boolean).join("; ")].filter(Boolean).join(" · ");
+}
+
+/**
+ * Pairwise judgements pooled by setup: every valid judgement of setup A against setup B by the same judge under the
+ * same criterion adds up, runs judged separately included, in one direction per pair (whichever setup sorts
+ * first). Invalid evaluations and judgements with a missing verdict are left out. Groups of one are kept: the
+ * caller decides what to show.
+ */
+export function poolJudgements(evals: PoolableEval[], judged: PairwiseResult[]): { a: string; b: string; judge: string; w: number; l: number; t: number; n: number }[] {
+  const byId = new Map(evals.map((e) => [e.id, e]));
+  const groups = new Map<string, { a: string; b: string; judge: string; w: number; l: number; t: number; n: number }>();
+  for (const p of judged) {
+    const ea = byId.get(p.a), eb = byId.get(p.b);
+    if (!ea || !eb || ea.invalid || eb.invalid) continue;
+    if (p.per.some((x) => x.first === "unread" || x.second === "unread")) continue;
+    const [sa, sb] = [setupLabel(ea), setupLabel(eb)];
+    const flip = sa > sb;
+    const [na, nb] = flip ? [sb, sa] : [sa, sb];
+    const own = criterionTag(p.criterion);
+    const k = `${na}|${nb}|${p.judge}|${own}`;
+    const g = groups.get(k) ?? { a: na, b: nb, judge: own ? `${p.judge}, own criterion` : p.judge, w: 0, l: 0, t: 0, n: 0 };
+    g.w += flip ? p.b_wins : p.a_wins;
+    g.l += flip ? p.a_wins : p.b_wins;
+    g.t += p.ties;
+    g.n++;
+    groups.set(k, g);
+  }
+  return [...groups.values()];
+}
+
 /** The http(s) links in a text, without trailing punctuation. */
 export function linksIn(text: string): Set<string> {
   return new Set((text.match(/https?:\/\/[^\s)\]>"'|,]+/g) ?? []).map((u) => u.replace(/[.;:]+$/, "")));

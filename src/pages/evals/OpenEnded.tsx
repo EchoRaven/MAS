@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Api, type EvalSummary } from "@/api/client";
-import { criterionTag, firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
+import { criterionTag, firstPicks, mcnemarP, type PairwiseResult, poolJudgements } from "@/run/evals";
 
 type Sources = { cited: number; found: number; outputs: number; words: number; headings: number; items: number; tables: number };
 
@@ -137,32 +137,7 @@ export function OpenEnded() {
  * (runs judged separately add up), with the totals and an exact sign test over them. Invalid evaluations are left out.
  */
 function Pooled({ set }: { set: { evals: EvalSummary[]; judged: PairwiseResult[] } }) {
-  const byId = new Map(set.evals.map((e) => [e.id, e]));
-  const groups = new Map<string, { a: string; b: string; judge: string; w: number; l: number; t: number; n: number }>();
-  for (const p of set.judged) {
-    const ea = byId.get(p.a), eb = byId.get(p.b);
-    if (!ea || !eb || ea.invalid || eb.invalid) continue;
-    if (p.per.some((x) => x.first === "unread" || x.second === "unread")) continue; // a judge that gave no verdict is not counted
-    // a setup is the system with its models and run variables: MoA on flash-lite and MoA on gemini are not pooled
-    const setup = (e: EvalSummary) => {
-      const models = e.on_model ? `on ${e.on_model}` : e.model_map ? Object.entries(e.model_map).map(([x, y]) => `${x}→${y}`).join(", ") : "";
-      const vars = e.vars ? Object.entries(e.vars).map(([x, y]) => `${x}=${typeof y === "string" ? y.trim().slice(0, 24) : JSON.stringify(y)}`).join(", ") : "";
-      return [e.system_name, [models, vars].filter(Boolean).join("; ")].filter(Boolean).join(" · ");
-    };
-    // one direction per pair of setups, whichever sorts first
-    const [sa, sb] = [setup(ea), setup(eb)];
-    const flip = sa > sb;
-    const [na, nb] = flip ? [sb, sa] : [sa, sb];
-    const own = criterionTag(p.criterion);
-    const k = `${na}|${nb}|${p.judge}|${own}`;
-    const g = groups.get(k) ?? { a: na, b: nb, judge: own ? `${p.judge}, own criterion` : p.judge, w: 0, l: 0, t: 0, n: 0 };
-    g.w += flip ? p.b_wins : p.a_wins;
-    g.l += flip ? p.a_wins : p.b_wins;
-    g.t += p.ties;
-    g.n++;
-    groups.set(k, g);
-  }
-  const rows = [...groups.values()].filter((g) => g.n > 1);
+  const rows = poolJudgements(set.evals, set.judged).filter((g) => g.n > 1);
   if (!rows.length) return null;
   const fmt = (v: number) => (v < 0.001 ? "< 0.001" : v < 0.1 ? v.toFixed(3) : v.toFixed(2));
   return (

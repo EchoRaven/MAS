@@ -346,3 +346,26 @@ describe("firstPicks", () => {
     expect(firstPicks(per)).toEqual({ first: 3, picked: 4 });
   });
 });
+
+describe("poolJudgements", () => {
+  it("adds up judgements of the same two setups by one judge and criterion, in one direction, leaving out invalid ones", async () => {
+    const { poolJudgements, DEFAULT_CRITERION } = await import("./evals");
+    const ev = (id: string, system_name: string, on_model: string, invalid = false) => ({ id, system_name, on_model, ...(invalid ? { invalid: { reason: "bug" } } : {}) });
+    const evals = [ev("m1", "MoA", "gemini"), ev("m2", "MoA", "gemini"), ev("s1", "Single", "gemini"), ev("s2", "Single", "gemini"), ev("ml", "MoA", "lite"), ev("bad", "Single", "gemini", true)];
+    const j = (a: string, b: string, aw: number, bw: number, t: number, criterion = DEFAULT_CRITERION, unread = false) =>
+      ({ a, b, a_name: "", b_name: "", judge: "g", criterion, a_wins: aw, b_wins: bw, ties: t, per: unread ? [{ input: "q", first: "unread", second: "a", verdict: "tie" }] : [], usd: 0, at: "" }) as never;
+    const out = poolJudgements(evals, [
+      j("m1", "s1", 16, 0, 4),
+      j("s2", "m2", 0, 15, 5), // the other direction: flipped onto MoA's side
+      j("ml", "s1", 7, 9, 4), // MoA on another model: its own group
+      j("m1", "bad", 20, 0, 0), // an invalid evaluation: left out
+      j("m1", "s1", 17, 0, 3, "Judge the content, not the length."), // another criterion: its own group
+      j("m2", "s2", 1, 1, 18, DEFAULT_CRITERION, true), // a missing verdict: left out
+    ]);
+    const main = out.find((g) => g.a === "MoA · on gemini" && g.judge === "g")!;
+    expect([main.w, main.l, main.t, main.n]).toEqual([31, 0, 9, 2]);
+    expect(out.some((g) => g.a.includes("on lite") || g.b.includes("on lite"))).toBe(true);
+    expect(out.find((g) => g.judge === "g, own criterion")).toMatchObject({ w: 17, n: 1 });
+    expect(out.length).toBe(3);
+  });
+});
