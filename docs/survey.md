@@ -254,6 +254,13 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   against one agent's 35, Game of 24 36 against 30) are matched by one call
   with personas (Solo Performance Prompting) and by ten-sample voting, and
   beaten by Self-Refine (49 of 49 on word sorting).
+- **A second look without feedback changes little, and on arithmetic not for
+  the better.** Intrinsic self-correction (Huang et al.), reviewing and
+  improving its own answer twice, kept the same answer in about three runs of
+  four; on GSM-Hard every verdict it changed went from right to wrong (5 to 0),
+  on Hard computation it gained 4 and lost 2. Self-Refine gains where a slip
+  shows on rereading (word order); on arithmetic the check that changes
+  answers comes from outside, such as running code.
 - **A paper's gain needs room to show.** On GSM8K the single agent already
   scores 97, so a debate cannot show the paper's 77 → 85; on MMLU, 95 against
   the paper's 64 (debate 95.5, no gain). Even a benchmark meant to leave room
