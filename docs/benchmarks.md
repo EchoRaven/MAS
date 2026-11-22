@@ -1618,6 +1618,12 @@ uses, it is 2–1 with 17 ties. On the weaker model its whole advantage is the
 count. On gemini-3.8-flash a small edge in the ideas themselves survives. The
 pattern matches MoA and debate, which gain only on the stronger model.
 
+Against Self-Refine (gemini-3.8-flash, open mode), the paper's kind of single-model
+baseline, LLM Discussion wins 16–0 and 19–0 (5 ties). Self-Refine revises one
+list and ends with about 32 uses, as one call does ($0.32 for twenty), so this
+measures the count again. On idea quality, the comparison that counts is the
+one at matched count above.
+
 **The first judgement was wrong, and a platform bug made it so.** At first
 LLM Discussion beat the count-matched call 19–0 as well. The judge kept saying
 the other list "cuts off mid-sentence at item 86". It did not: the judge was
