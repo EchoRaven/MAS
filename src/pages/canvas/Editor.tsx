@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
-import { Code2, Download, History, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Redo2, Undo2, Wand2, Workflow } from "lucide-react";
+import { Code2, Download, History, Keyboard, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Redo2, Undo2, Wand2, Workflow } from "lucide-react";
+import { ShortcutsDialog } from "@/canvas/ShortcutsDialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AgentView } from "@/canvas/agent/AgentView";
@@ -71,6 +72,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const [importing, setImporting] = useState<ImportKind | null>(null);
   const [architect, setArchitect] = useState(false);
   const [history, setHistory] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false);
   const connected = useServer((s) => s.status === "connected");
   const [toast, setToast] = useState<string | null>(null);
   // positions before the last tidy, so it can be undone for a few seconds
@@ -177,6 +179,11 @@ export function Editor({ doc }: { doc: SystemDoc }) {
       if (view !== "canvas" || e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.closest("[role=dialog],[role=menu],[role=listbox]"))) return;
+      if (e.key === "?") {
+        e.preventDefault();
+        setShortcuts(true);
+        return;
+      }
       const kind = (Object.keys(SHORTCUT) as NodeKind[]).find((k) => SHORTCUT[k] === e.key.toUpperCase());
       if (!kind) return;
       e.preventDefault();
@@ -222,6 +229,9 @@ export function Editor({ doc }: { doc: SystemDoc }) {
                   <LayoutGrid className="mr-1.5 h-3.5 w-3.5" /> Tidy
                 </Button>
               ))}
+            <Button variant="ghost" size="sm" onClick={() => setShortcuts(true)} title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+              <Keyboard className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="ghost" size="sm" disabled={!canUndo} onClick={() => undoStore(doc.id)} title="Undo the last change (Ctrl/Cmd+Z)" aria-label="Undo">
               <Undo2 className="h-3.5 w-3.5" />
             </Button>
@@ -302,6 +312,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
         )}
       </div>
       <ImportDialog kind={importing} doc={doc} onClose={() => setImporting(null)} onImport={(items) => { add(items); flash(`Added ${items.length} component${items.length > 1 ? "s" : ""}`); }} />
+      <ShortcutsDialog open={shortcuts} onOpenChange={setShortcuts} />
       <HistoryDialog
         open={history}
         doc={doc}
