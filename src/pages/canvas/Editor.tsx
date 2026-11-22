@@ -9,7 +9,7 @@ import { CanvasContext } from "@/canvas/context";
 import { FlowView } from "@/canvas/FlowView";
 import { ImportDialog } from "@/canvas/ImportDialog";
 import { Inspector } from "@/canvas/inspector";
-import { addNode } from "@/canvas/ops";
+import { addNode, type Clip, copyNodes, pasteNodes } from "@/canvas/ops";
 import { Palette, SHORTCUT, type ImportKind } from "@/canvas/Palette";
 import { PALETTE } from "@/canvas/presets";
 import { downloadText, slug } from "@/lib/format";
@@ -49,6 +49,10 @@ function ViewSwitch({ view, setView }: { view: "canvas" | "yaml"; setView: (v: "
     </div>
   );
 }
+
+
+/** Copied components, kept for the tab so they can be pasted into another system too. */
+let clipboard: Clip | null = null;
 
 export function Editor({ doc }: { doc: SystemDoc }) {
   const navigate = useNavigate();
@@ -133,6 +137,28 @@ export function Editor({ doc }: { doc: SystemDoc }) {
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.closest("[role=dialog],[role=menu],[role=listbox]"))) return;
       const k = e.key.toLowerCase();
+      // copy / paste / duplicate the selected components (a group with its members), on the canvas itself
+      if ((k === "c" || k === "v" || k === "d") && view === "canvas" && !nav.agent) {
+        const selected = rf.getNodes().filter((n) => n.selected).map((n) => n.id);
+        const ids = selected.length ? selected : nav.sel?.nodeId ? [nav.sel.nodeId] : [];
+        if (k === "c") {
+          if (!ids.length) return;
+          clipboard = copyNodes(doc, ids);
+          flash(`Copied ${clipboard.nodes.length} component${clipboard.nodes.length === 1 ? "" : "s"}: Ctrl/Cmd+V pastes`);
+          return;
+        }
+        const clip = k === "d" ? (ids.length ? copyNodes(doc, ids) : null) : clipboard;
+        if (!clip?.nodes.length) return;
+        e.preventDefault();
+        let pasted: string[] = [];
+        update((d) => {
+          const r = pasteNodes(d, clip, nav.scope);
+          pasted = r.ids;
+          return r.doc;
+        });
+        if (pasted[0]) nav.setSel({ nodeId: pasted[0] });
+        return;
+      }
       if (k === "z" && !e.shiftKey) {
         e.preventDefault();
         undoStore(doc.id);
@@ -143,7 +169,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [doc.id, undoStore, redoStore]);
+  });
 
   // single-key shortcuts add a component (not while typing)
   useEffect(() => {

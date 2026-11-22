@@ -34,3 +34,35 @@ describe("edge edits", () => {
     expect("points" in setEdgePoints(routed, id, []).edges[0]).toBe(false);
   });
 });
+
+describe("copy and paste", () => {
+  it("copies a group with its members and the connections among them, and pastes them with new ids", async () => {
+    const { copyNodes, pasteNodes } = await import("./ops");
+    const { Builder, native } = await import("@/model/builder");
+    const b = new Builder("Copy", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .group("team", 100, 0, { name: "Team" })
+      .agent("a", 0, 0, { name: "Ann", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } }, "team")
+      .agent("b", 200, 0, { name: "Bo", model: "sonnet", harness: { ...native(), loop: "single_shot", instructions: "" } }, "team")
+      .edge("a", "b", "message")
+      .edge("me", "team", "message"); // to something outside the copy: not copied
+    const doc = b.doc;
+    const clip = copyNodes(doc, ["team"]);
+    expect(clip.nodes.map((n) => n.id).sort()).toEqual(["a", "b", "team"]);
+    expect(clip.edges.map((e) => [e.source, e.target])).toEqual([["a", "b"]]);
+
+    const { doc: out, ids } = pasteNodes(doc, clip, undefined);
+    expect(out.nodes.length).toBe(doc.nodes.length + 3);
+    expect(ids.length).toBe(1); // the group is the top level of what was pasted
+    const team2 = out.nodes.find((n) => n.id === ids[0])!;
+    expect(team2.id).not.toBe("team");
+    expect((team2.data as { name: string }).name).toBe("Team (copy)");
+    expect(team2.position).toEqual({ x: 140, y: 40 });
+    const members = out.nodes.filter((n) => n.parent === team2.id);
+    expect(members.map((n) => (n.data as { name: string }).name).sort()).toEqual(["Ann (copy)", "Bo (copy)"]);
+    const e2 = out.edges.find((e) => members.some((m) => m.id === e.source) && members.some((m) => m.id === e.target))!;
+    expect(e2.id).not.toBe(clip.edges[0].id);
+    // the originals are untouched, and the copy's connection joins the copies
+    expect(out.edges.filter((e) => e.source === "a" && e.target === "b").length).toBe(1);
+  });
+});

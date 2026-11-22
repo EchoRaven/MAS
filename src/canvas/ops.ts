@@ -31,6 +31,49 @@ export function addNode(doc: SystemDoc, kind: NodeKind, position: { x: number; y
   return { doc: { ...doc, nodes: [...doc.nodes, node] }, id };
 }
 
+/** What copying takes: the components (a group with its members) and the connections among them. */
+export interface Clip {
+  nodes: SysNode[];
+  edges: SysEdge[];
+}
+
+/** Copy components: a group takes its members with it, and the connections between copied components come too. */
+export function copyNodes(doc: SystemDoc, ids: string[]): Clip {
+  const take = new Set(ids.filter((id) => doc.nodes.some((n) => n.id === id)));
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const n of doc.nodes) if (n.parent && take.has(n.parent) && !take.has(n.id)) { take.add(n.id); grew = true; }
+  }
+  const copy = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+  return { nodes: copy(doc.nodes.filter((n) => take.has(n.id))), edges: copy(doc.edges.filter((e) => take.has(e.source) && take.has(e.target))) };
+}
+
+/**
+ * Paste copied components with new ids: members stay in their copied group, the rest go into the canvas level
+ * shown (scope), moved by offset so they do not sit on the originals; a name already taken gets " (copy)".
+ * Returns the new top-level ids, to select them.
+ */
+export function pasteNodes(doc: SystemDoc, clip: Clip, scope: string | undefined, offset = { x: 40, y: 40 }): { doc: SystemDoc; ids: string[] } {
+  if (!clip.nodes.length) return { doc, ids: [] };
+  const map = new Map(clip.nodes.map((n) => [n.id, newId(n.data.kind)]));
+  const names = new Set(doc.nodes.map((n) => ("name" in n.data ? n.data.name : "")));
+  const top: string[] = [];
+  const nodes: SysNode[] = clip.nodes.map((n) => {
+    const inner = !!n.parent && map.has(n.parent);
+    const data = JSON.parse(JSON.stringify(n.data)) as NodeData;
+    if ("name" in data && names.has(data.name)) data.name = `${data.name} (copy)`;
+    const node: SysNode = { ...n, id: map.get(n.id)!, data, position: inner ? n.position : { x: n.position.x + offset.x, y: n.position.y + offset.y } };
+    if (inner) node.parent = map.get(n.parent!);
+    else if (scope) node.parent = scope;
+    else delete node.parent;
+    if (!inner) top.push(node.id);
+    return node;
+  });
+  const edges: SysEdge[] = clip.edges.map((e) => ({ ...JSON.parse(JSON.stringify(e)), id: newId("e"), source: map.get(e.source)!, target: map.get(e.target)! }));
+  return { doc: { ...doc, nodes: [...doc.nodes, ...nodes], edges: [...doc.edges, ...edges] }, ids: top };
+}
+
 /** Delete components; a group takes its members with it. */
 export function deleteNodes(doc: SystemDoc, ids: string[]): SystemDoc {
   const gone = new Set(ids);
