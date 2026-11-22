@@ -1681,6 +1681,7 @@ by exact match of the sorted list (case and punctuation ignored).
 |---|---|---|---|---|
 | One agent, thinking step by step | 35 | 35 | $0.011 | |
 | Meta-Prompting | 45 | 44 | $0.08 | +21 −2 (p 0.0001) |
+| Solo Performance Prompting (multi-persona, one call) | 45 | 47 | $0.05 | +25 −3 (p < 0.0001) |
 | Agent Forest, 10 samples and a vote | 45 | 44 | $0.21 | +19 −0 (p < 0.0001) |
 | Self-Refine | **49** | **48** | $0.29 | +27 −0 (p < 0.0001) |
 
@@ -1692,6 +1693,9 @@ by exact match of the sorted list (case and punctuation ignored).
   gave its final answer in the first round without calling anyone; there it
   still beat the single agent, 54 to 43 over both runs. When it did call
   experts (35 questions), it got all 35, the single agent 27.
+- **One call with personas matches it for less.** Solo Performance
+  Prompting, the paper's multi-persona column (GPT-4: 79.2), gets 45 and 47,
+  against Meta-Prompting +8 −5 (p 0.6), at two thirds of its cost.
 - **Voting matches it at two and a half times the cost.** Meta-Prompting and
   ten-sample voting win 6 questions each against the other.
 - **One model checking its own list does best.** Self-Refine gets 97 of 98,
@@ -1718,6 +1722,7 @@ output goes back to the conductor.
 |---|---|---|---|
 | One agent, thinking step by step | 30 | 35 | $0.09 |
 | Meta-Prompting | 36 | 37 | $0.80 |
+| Solo Performance Prompting (multi-persona, one call) | 37 | 43 | $0.15 |
 | Meta-Prompting with Python | 43 | 42 | $0.21 |
 | **One agent with a Python sandbox** | **50** | **50** | $0.12 |
 
@@ -1727,7 +1732,10 @@ output goes back to the conductor.
   by declaring them impossible, or with an expression that uses the wrong
   numbers.
 - **Without code, the scaffold adds little.** Meta-Prompting against one
-  agent: +18 −10 (p 0.18), at nine times the cost. With Python against
+  agent: +18 −10 (p 0.18), at nine times the cost. Solo Performance
+  Prompting, in one call, does at least as well: 37 and 43, +21 −6 against
+  one agent (p 0.006) and +18 −11 against Meta-Prompting (p 0.26), at a fifth
+  of its cost (the paper's GPT-4: multi-persona 25.0, Meta −Py 11.0). With Python against
   without: +19 −7 (p 0.03).
 - **Every miss without code was a claim that no solution exists**, or a
   wrong expression; every game has one, and the record keeps it.
