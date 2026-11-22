@@ -1510,6 +1510,14 @@ small edge (9–3 over two runs), and Self-Refine none (7–6). The order is gon
 but the scores crowd the top of the scale (9.5 to 9.9), which leaves ties of
 its own.
 
+**Thirty stories** (`benchmarks/stories/prompts-30.jsonl`: the ten and twenty
+more) give the small effects more room. Self-Refine on gemini-3.8-flash
+against that model alone: 7–1 (22 ties, p 0.07) pairwise, the story shown
+first picked in 52 of 60 readings; 9–3 (18 ties) pointwise, mean scores 9.77
+against 9.57. Both point the same way. Self-Refine's stories are a little
+better as often as not, never clearly worse, and the difference is small
+enough that thirty prompts still leave it short of significance.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
