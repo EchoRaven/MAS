@@ -10,7 +10,7 @@ import type { Dataset, DatasetSummary } from "@/run/datasets";
 import { cn } from "@/lib/utils";
 import { useServer } from "@/store/server";
 
-const GRADER: Record<string, string> = { answer: "Final answer", number: "Number", math: "Math (LaTeX)", contains: "Contains", llm: "LLM judge", code: "Code: run the tests", none: "None: judged pairwise" };
+const GRADER: Record<string, string> = { answer: "Final answer", number: "Number", math: "Math (LaTeX)", contains: "Contains", llm: "LLM judge", code: "Code: run the tests", check: "Check: run JS", none: "None: judged pairwise" };
 
 /** What a case expects, short: a code case's spec is the function its tests call. */
 function expectedText(e: string): string {

@@ -9,7 +9,7 @@ import { runJs } from "../runtime/functions/sandbox";
 import { HttpError, type Store } from "../store/files";
 
 const FORMATS: DatasetFormat[] = ["auto", "gsm8k", "mcq", "qa", "custom"];
-const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "none"];
+const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "check", "none"];
 const MAX_CASES = 20_000;
 
 /** A dataset by id: one shipped with the app, or one stored here. */
@@ -48,7 +48,7 @@ export function datasetRoutes(r: Router, store: Store) {
     return d;
   });
   r.on("POST", "/api/datasets", async (req) => {
-    const b = (await req.body()) as { name?: string; description?: string; text?: string; format?: DatasetFormat; adapter?: string; grader?: Grader; source?: Dataset["source"]; sample?: { n?: number; seed?: number } };
+    const b = (await req.body()) as { name?: string; description?: string; text?: string; format?: DatasetFormat; adapter?: string; grader?: Grader; check?: string; source?: Dataset["source"]; sample?: { n?: number; seed?: number } };
     const name = String(b.name ?? "").trim();
     if (!name) throw new HttpError(400, "Give the dataset a name");
     if (typeof b.text !== "string" || !b.text.trim()) throw new HttpError(400, "Give the questions as text: JSON lines, CSV with a header, or 'question | answer' lines");
@@ -56,6 +56,7 @@ export function datasetRoutes(r: Router, store: Store) {
     if (!FORMATS.includes(format)) throw new HttpError(400, `format must be one of ${FORMATS.join(", ")}`);
     const grader = b.grader ?? "number";
     if (!GRADERS.includes(grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);
+    if (grader === "check" && !b.check?.trim()) throw new HttpError(400, "The grader check needs its JS (check): it sees output, answer, expected and question, and returns true / false or {pass, why}");
     const parsed = await casesFrom(b.text, format, b.adapter);
     if (!parsed.cases.length) throw new HttpError(400, `No cases could be read (${parsed.skipped} lines skipped)`);
     const n = Number(b.sample?.n) || undefined;
@@ -69,6 +70,7 @@ export function datasetRoutes(r: Router, store: Store) {
       format,
       ...(format === "custom" ? { adapter: b.adapter } : {}),
       grader,
+      ...(b.check?.trim() ? { check: b.check.trim() } : {}),
       version: datasetVersion(cases),
       created_at: new Date().toISOString(),
       cases,

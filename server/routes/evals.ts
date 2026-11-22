@@ -11,10 +11,10 @@ import { HttpError, type Store } from "../store/files";
 import { findDataset } from "./datasets";
 import { checkDoc } from "./systems";
 
-const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "none"];
+const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "check", "none"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
-  type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean; expect?: ResultSpec | null };
+  type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean; expect?: ResultSpec | null; check?: string };
   // the questions and options of an evaluation, shared by one system and a batch of them
   /** What every answer must be (an evaluation's own result check): a known type, optionally marked. */
   const checkExpect = (x: unknown): ResultSpec | undefined => {
@@ -26,6 +26,7 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   const prepare = (b: StartBody) => {
     let cases = b.cases;
     let grader = b.grader;
+    let check = b.check?.trim() || undefined;
     let dataset: { id: string; name: string; version: string; n?: number; seed?: number } | undefined;
     if (b.dataset_id) {
       const d = findDataset(store, b.dataset_id);
@@ -35,11 +36,12 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       cases = sampleCases(d.cases, n, seed);
       dataset = { id: d.id, name: d.name, version: d.version, ...(n && n < d.cases.length ? { n, seed } : {}) };
       grader ??= d.grader;
+      check = b.check?.trim() || d.check;
     }
     if (!Array.isArray(cases) || !cases.length) throw new HttpError(400, "Give cases: [{input, expected}, …], or a dataset_id");
     grader ??= "answer";
     if (!GRADERS.includes(grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);
-    return { dataset, cases, grader, mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined, time_limit_min: b.time_limit_min ?? undefined, repeats: b.repeats, model_map: b.model_map, vars: b.vars && typeof b.vars === "object" ? b.vars : undefined, expect: checkExpect(b.expect) };
+    return { dataset, cases, grader, ...(grader === "check" ? { check } : {}), mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined, time_limit_min: b.time_limit_min ?? undefined, repeats: b.repeats, model_map: b.model_map, vars: b.vars && typeof b.vars === "object" ? b.vars : undefined, expect: checkExpect(b.expect) };
   };
   const checkValid = (doc: SystemDoc, force?: boolean) => {
     const errors = validate(doc).filter((i) => i.severity === "error");
@@ -103,10 +105,10 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     return { eval: rec, active: evals.isActive(rec.id) };
   });
   r.on("POST", "/api/evals/:id/regrade", async (req) => {
-    const b = ((await req.body()) ?? {}) as { grader?: Grader };
+    const b = ((await req.body()) ?? {}) as { grader?: Grader; check?: string };
     if (b.grader && !GRADERS.includes(b.grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);
     try {
-      return await evals.regrade(req.params.id, b.grader as Exclude<Grader, "llm"> | undefined);
+      return await evals.regrade(req.params.id, b.grader as Exclude<Grader, "llm"> | undefined, typeof b.check === "string" ? b.check : undefined);
     } catch (e) {
       throw new HttpError(400, (e as Error).message);
     }

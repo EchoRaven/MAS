@@ -11,6 +11,7 @@ import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type 
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
+import { gradeCheck } from "./grading/check";
 import { gradeCode } from "./grading/code";
 import { Models, textOf, userText } from "./models";
 import type { RunManager } from "./runs";
@@ -20,6 +21,8 @@ export interface EvalOptions {
   /** the dataset the cases came from, kept on the record */
   dataset?: EvalRecord["dataset"];
   grader: Grader;
+  /** for grader "check": the JS that decides (from the dataset unless given) */
+  check?: string;
   mock?: boolean;
   /** runs at once */
   concurrency?: number;
@@ -93,11 +96,13 @@ export class EvalManager {
     const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
     if (!cases.length) throw new Error("No cases: each needs an input");
+    if (opts.grader === "check" && !opts.check?.trim()) throw new Error("The grader check needs its JS: a dataset that carries one, or check in the request");
     const rec: EvalRecord = {
       id: `eval_${Date.now().toString(36)}_${randomUUID().slice(0, 6)}`,
       system_id: doc.id,
       system_name: doc.name,
       grader: opts.grader,
+      ...(opts.grader === "check" && opts.check ? { check: opts.check } : {}),
       mock: !!opts.mock,
       repeats,
       ...(opts.dataset ? { dataset: opts.dataset } : {}),
@@ -155,13 +160,26 @@ export class EvalManager {
   }
 
   /** Grades the stored outputs again, by a rule (the given one, or the evaluation's own); no run is repeated. */
-  async regrade(id: string, grader?: Exclude<Grader, "llm">): Promise<EvalRecord> {
+  async regrade(id: string, grader?: Exclude<Grader, "llm">, check?: string): Promise<EvalRecord> {
     const rec = this.store.getEval(id);
     if (!rec) throw new Error("No such evaluation");
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
     if (g === "none" || rec.grader === "none") throw new Error("An evaluation that grades nothing is compared pairwise, not regraded");
+    if (g === "check") {
+      // the stored outputs checked again (no model is called): after a fix to the check, given here, or with the one kept
+      const code = check?.trim() || (rec.grader === "check" ? rec.check : undefined);
+      if (!code) throw new Error("The grader check needs its JS: give check");
+      if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
+      for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, await gradeCheck(code, c.output, c.expected, c.input));
+      rec.grader = "check";
+      rec.check = code;
+      rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
+      rec.passed = rec.cases.filter((c) => c.pass).length;
+      this.store.putEval(rec);
+      return rec;
+    }
     if (g === "code" || rec.grader === "code") {
       if (g !== rec.grader) throw new Error("Code is graded by running it against its tests; an evaluation graded another way cannot switch to it, nor away from it");
       // the stored answers run against their tests again (no model is called): after a fix to the grader
@@ -524,6 +542,8 @@ export class EvalManager {
             c.usd = (c.usd ?? 0) + usd;
           } else if (opts.grader === "code") {
             Object.assign(c, await gradeCode(c.expected, c.output, this.docker));
+          } else if (opts.grader === "check") {
+            Object.assign(c, await gradeCheck(rec.check ?? "", c.output, c.expected, c.input));
           } else if (opts.grader === "none") {
             // an open-ended task: the output is kept, ungraded, for a pairwise comparison
             c.answer = finalAnswer(c.output);

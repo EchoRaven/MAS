@@ -32,6 +32,7 @@ const GRADERS: { value: Grader; label: string; hint: string }[] = [
   { value: "math", label: "Math (LaTeX)", hint: "The last \\boxed{} (or the final answer) equals the expected one after the MATH benchmark's normalisation: \\frac, \\left, degrees, \\text{} and spacing do not matter, and equal numbers match" },
   { value: "llm", label: "LLM judge", hint: "A model reads the output and decides whether it gives the expected answer" },
   { value: "code", label: "Code: run the tests", hint: "The code in the answer is run with the problem's tests in a throwaway Docker container (no network, 512 MB, 10 s); it passes when the tests do. For HumanEval-style problems" },
+  { value: "check", label: "Check: run JS", hint: "JS decides whether each output passes, for answers with no single form (a Game of 24 expression, a list that must meet constraints). It sees output, answer (the final answer), expected and question, and returns true / false or {pass, why}; two seconds per output. A dataset can carry its own" },
   { value: "none", label: "None: compare pairwise", hint: "Nothing is graded: every output is kept, for open-ended tasks (a story, an article). Compare two such evaluations of the same questions pairwise, by a model judging which output is better" },
 ];
 
@@ -76,6 +77,8 @@ function Evals({ systemId }: { systemId: string }) {
   const [saveName, setSaveName] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [grader, setGrader] = useState<Grader>("number");
+  // for grader "check": the JS that decides, from the dataset unless written here
+  const [check, setCheck] = useState("");
   const [concurrency, setConcurrency] = useState("2");
   const [repeats, setRepeats] = useState("1");
   // each run's time limit, instead of the system's: "" keeps the system's own
@@ -195,7 +198,7 @@ function Evals({ systemId }: { systemId: string }) {
       const sw = sweepOf(vars.vars);
       if (sw && "error" in sw) throw new Error(sw.error);
       const theVars = sw ? sw.rest : vars.vars;
-      const opts = { ...source, grader, mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(theVars).length ? { vars: theVars } : {}), force };
+      const opts = { ...source, grader, ...(grader === "check" && check.trim() ? { check } : {}), mock: dry, concurrency: Number(concurrency), ...(expect ? { expect } : {}), ...(timeLimit ? { time_limit_min: Number(timeLimit) } : {}), on_model: onModel && onModel !== "per" ? onModel : undefined, model_map: onModel === "per" ? modelMap : undefined, repeats: Number(repeats), ...(Object.keys(theVars).length ? { vars: theVars } : {}), force };
       const rec = sw ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts, sweep: { name: sw.name, values: sw.values } })).evals[0] : alsoDocs.length ? (await Api.startEvalBatch({ docs: [doc, ...alsoDocs], ...opts })).evals[0] : await Api.startEval({ doc, ...opts });
       await refresh();
       setSelected(rec.id);
@@ -239,7 +242,10 @@ function Evals({ systemId }: { systemId: string }) {
                 const id = v === "own" ? "" : v;
                 setDatasetId(id);
                 const d = datasets.find((x) => x.id === id);
-                if (d) setGrader(d.grader);
+                if (d) {
+                  setGrader(d.grader);
+                  setCheck(d.check ?? "");
+                }
               }}
               items={[{ value: "own", label: "Write or load questions" }, ...datasets.map((d) => ({ value: d.id, label: new RegExp(`\\b${d.total}\\)?$`).test(d.name) ? d.name : `${d.name} · ${d.total}` }))]}
               ariaLabel="Dataset"
@@ -375,6 +381,19 @@ function Evals({ systemId }: { systemId: string }) {
             </label>
           </div>
           <p className="text-[11px] leading-snug text-muted-foreground">{GRADERS.find((g) => g.value === grader)?.hint}</p>
+          {grader === "check" && (
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+              Check
+              <textarea
+                className="min-h-24 rounded-md border border-border bg-background p-2 font-mono text-[11px] text-foreground"
+                value={check}
+                onChange={(e) => setCheck(e.target.value)}
+                placeholder={'return answer.trim() === expected.trim()  // or {pass, why}'}
+                aria-label="Check code"
+                spellCheck={false}
+              />
+            </label>
+          )}
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
             Models
             <Select value={onModel || "own"} onValueChange={(v) => setOnModel(v === "own" ? "" : v)} items={[{ value: "own", label: "As the system says" }, ...chatModels.map((m) => ({ value: m.value, label: `Everything on ${m.label}` })), { value: "per", label: "Choose per model…" }]} ariaLabel="Models" />

@@ -12,9 +12,10 @@ export interface EvalCase {
  * - contains: the output contains it anywhere
  * - number: the last number in the final answer equals it (fractions and percentages too)
  * - llm: a model judges whether the output gives the expected answer
+ * - check: JS kept with the dataset decides (a Game of 24 expression, a constraint): for answers with no single form
  * - none: nothing is graded; the outputs are kept, to compare two systems pairwise (open-ended tasks)
  */
-export type Grader = "answer" | "contains" | "number" | "math" | "llm" | "code" | "none";
+export type Grader = "answer" | "contains" | "number" | "math" | "llm" | "code" | "check" | "none";
 
 /**
  * Two evaluations of the same open-ended questions, judged pairwise by a model: for each question, which output is
@@ -146,7 +147,7 @@ export function outputShape(text: string): { words: number; headings: number; it
 }
 
 /** The graders that compare an output with an expected answer by a rule. */
-export type RuleGrader = Exclude<Grader, "llm" | "code" | "none">;
+export type RuleGrader = Exclude<Grader, "llm" | "code" | "check" | "none">;
 
 export interface EvalCaseResult {
   /** false when the run's answer is not the kind the system declares (system.result): a bug in the system, whatever the grade */
@@ -181,6 +182,11 @@ export interface EvalRecord {
   system_id: string;
   system_name: string;
   grader: Grader;
+  /**
+   * for grader "check": JS run on each output, with `output`, `answer` (the final answer), `expected` and
+   * `question` in scope; it returns true / false or {pass, why}. Kept on the record so a regrade runs the same check.
+   */
+  check?: string;
   /** how many times every question was run */
   repeats?: number;
   mock: boolean;

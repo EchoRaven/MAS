@@ -24,6 +24,8 @@ export interface Dataset {
   adapter?: string;
   /** the grader that suits it, offered by default */
   grader: Grader;
+  /** for grader "check": JS that decides whether an output passes (see EvalRecord.check) */
+  check?: string;
   /** a hash of the cases: a changed dataset is a new version */
   version: string;
   created_at: string;

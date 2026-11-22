@@ -514,11 +514,31 @@ seed always draws the same cases, in their original order.
 
 | Grader | Passes when |
 | --- | --- |
-| `answer` | the final answer equals the expected one (normalised); an option letter matches "B. …" |
+| `answer` | the final answer equals the expected one (normalised); an option letter matches "B. …"; an answer given as a list, one item a line, is read as the whole list |
 | `number` | the number in the final answer equals the expected one (fractions; a percentage matches either 40 or 0.4) |
 | `contains` | the whole output contains the expected text |
 | `llm` | a judge model says the output gives the expected answer |
 | `code` | the code passes the case's tests in a fresh container (below) |
+| `check` | JS kept with the dataset (or given with the evaluation) returns true or `{pass: true}` |
+
+A `check` is for answers with no single form: a Game of 24 expression, a list
+that must meet constraints. It runs in the function sandbox, two seconds per
+output, with `output` (the whole output), `answer` (the final answer, as the
+other graders read it), `expected` and `question` in scope, and returns
+`true` / `false` or `{pass, why}`. An error or a timeout fails the case with
+the reason. The dataset keeps it as `check`, and so does every evaluation
+graded by it, so `POST /api/evals/:id/regrade {grader: "check", check?}`
+runs the same check again, or a corrected one, without calling a model.
+
+```js
+// Game of 24: expected holds the four numbers
+const nums = expected.match(/\d+/g).map(Number).sort((a, b) => a - b);
+const expr = answer.replace(/[×x]/g, "*").replace(/÷/g, "/").replace(/=.*$/, "").trim();
+if (!/^[\d+\-*\/().\s]+$/.test(expr)) return { pass: false, why: "not an expression" };
+const used = expr.match(/\d+/g).map(Number).sort((a, b) => a - b);
+if (used.join() !== nums.join()) return { pass: false, why: "uses " + used };
+return Math.abs(Function("return (" + expr + ")")() - 24) < 1e-9;
+```
 
 A code case's `expected` is JSON:
 
