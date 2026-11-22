@@ -221,6 +221,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [LongAgent](https://arxiv.org/abs/2402.11550) | A leader splits a long document among members who read their parts at the same time; it answers from their reports |
 | [FrugalGPT](https://arxiv.org/abs/2305.05176) (cascade) | A cheap model answers; a scorer accepts it or passes the question to a strong model |
 | [Universal Self-Consistency](https://arxiv.org/abs/2311.17311) | Several samples of one model; the model picks the most consistent and it is returned unchanged (self-consistency for open-ended answers) |
+| [LLM Discussion](https://arxiv.org/abs/2405.06373) | Role-played agents brainstorm a creative task in rounds (initiation, discussion, convergence), each building on the others' ideas; a collector merges the final lists |
 | [AutoAgents](https://arxiv.org/abs/2309.17288) | A team drafted per task; an agent observer and a plan observer must both approve the draft; the drafted agents are created (spawned) one plan step at a time |
 | [Exchange-of-Thought](https://arxiv.org/abs/2312.01823) | Four communication paradigms (memory, report, relay, debate) in one system, chosen by a run variable; confidence from each agent's consistency; stop at agreement |
 | [Agents' Room](https://arxiv.org/abs/2410.02603) | Story writing: planning agents (conflict, characters, setting, plot) and one writing agent per part of the narrative arc share a scratchpad; an orchestrator calls them in turn |
