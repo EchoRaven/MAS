@@ -7,6 +7,7 @@ const KIND_NAME: Record<keyof typeof SHORTCUT, string> = { agent: "an agent", mo
 const ROWS: [string, string][] = [
   ["Ctrl/Cmd+Z", "Undo (a drag counts as one step)"],
   ["Ctrl/Cmd+Shift+Z, Ctrl+Y", "Redo"],
+  ["Ctrl/Cmd+A", "Select everything on this canvas level"],
   ["Ctrl/Cmd+C", "Copy the selected components (a group with its members)"],
   ["Ctrl/Cmd+V", "Paste, here or in another system"],
   ["Ctrl/Cmd+D", "Duplicate the selection"],

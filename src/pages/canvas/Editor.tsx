@@ -141,6 +141,12 @@ export function Editor({ doc }: { doc: SystemDoc }) {
       const t = e.target as HTMLElement | null;
       if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.closest("[role=dialog],[role=menu],[role=listbox]"))) return;
       const k = e.key.toLowerCase();
+      // select every component on the canvas level shown
+      if (k === "a" && view === "canvas" && !nav.agent) {
+        e.preventDefault();
+        rf.setNodes((ns) => ns.map((n) => ({ ...n, selected: true })));
+        return;
+      }
       // copy / paste / duplicate the selected components (a group with its members), on the canvas itself
       if ((k === "c" || k === "v" || k === "d") && view === "canvas" && !nav.agent) {
         const selected = rf.getNodes().filter((n) => n.selected).map((n) => n.id);
@@ -328,7 +334,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           // open its group's level, select it, then centre on it once that level has rendered
           nav.pickIssue({ nodeId: id } as Parameters<typeof nav.pickIssue>[0]);
           setInspectorOpen(true);
-          window.setTimeout(() => rf.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2, padding: 0.6 }), 80);
+          window.setTimeout(() => rf.fitView({ nodes: [{ id }], duration: 300, maxZoom: 1.2, padding: 0.6 }), 300);
         }}
       />
       <HistoryDialog
