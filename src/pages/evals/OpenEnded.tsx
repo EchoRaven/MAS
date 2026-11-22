@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Api, type EvalSummary } from "@/api/client";
-import { firstPicks, type PairwiseResult } from "@/run/evals";
+import { firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
 
 type Sources = { cited: number; found: number; outputs: number; words: number; headings: number; items: number; tables: number };
 
@@ -94,6 +94,14 @@ export function OpenEnded() {
                       <span className="font-medium">
                         {p.a_wins} · {p.b_wins} · {p.ties}
                       </span>
+                      {p.a_wins + p.b_wins ? (
+                        <span className="ml-1 text-[11px] text-muted-foreground" title="Exact sign test over the questions one side won (ties left out): the chance of a split at least this uneven if neither side were better">
+                          p {(() => {
+                            const v = mcnemarP(p.a_wins, p.b_wins);
+                            return v < 0.001 ? "< 0.001" : v < 0.1 ? v.toFixed(3) : v.toFixed(2);
+                          })()}
+                        </span>
+                      ) : null}
                       {unread ? <span className="block text-[11px] text-amber-700 dark:text-amber-300">no verdict on {unread}: not to be trusted</span> : null}
                       {pos.picked ? (
                         <span className={`block text-[11px] ${biased ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground"}`} title="How often the judge picked whichever response it was shown first. Near half: no position bias. Near all: the order decided, and most verdicts are ties">

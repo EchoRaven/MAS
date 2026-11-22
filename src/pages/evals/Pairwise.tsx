@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import { type EvalRecord, firstPicks, type PairwiseResult } from "@/run/evals";
+import { type EvalRecord, firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
 import { useSystems } from "@/store/systems";
+
+/** An exact sign test's p over the decided questions, as Compare shows McNemar's. */
+const fmtP = (p: number) => (p < 0.001 ? "< 0.001" : p < 0.1 ? p.toFixed(3) : p.toFixed(2));
 
 export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string) => void }) {
   const [others, setOthers] = useState<EvalSummary[]>([]);
@@ -131,7 +134,8 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
               <span className="font-medium tabular-nums">
                 {w} wins, {l} losses, {p.ties} ties
               </span>{" "}
-              against {them} · judge {p.judge} · {usd(p.usd)}
+              against {them} · judge {p.judge}
+              {w + l ? ` · p ${fmtP(mcnemarP(w, l))}` : ""} · {usd(p.usd)}
               {split ? ` · the two orders disagreed on ${split} of ${p.per.length}, counted as ties` : ""}
               {unread ? ` · the judge gave no verdict on ${unread}` : ""}
               {pos.picked ? ` · it picked the response shown first in ${pos.first} of ${pos.picked} readings` : ""}{" "}
