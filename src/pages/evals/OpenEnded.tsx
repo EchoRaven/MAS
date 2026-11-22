@@ -82,7 +82,7 @@ export function OpenEnded() {
                 const biased = pos.picked >= 6 && pos.first / pos.picked >= 0.8;
                 const invalid = [p.a, p.b].map((id) => s.evals.find((e) => e.id === id)?.invalid).find(Boolean);
                 return (
-                  <tr key={`${p.a}|${p.b}|${p.judge}`} className={`border-t border-border/50 ${invalid ? "opacity-50" : ""}`} title={invalid ? `Invalid: ${invalid.reason}` : undefined}>
+                  <tr key={`${p.a}|${p.b}|${p.judge}|${criterionTag(p.criterion)}`} className={`border-t border-border/50 ${invalid ? "opacity-50" : ""}`} title={invalid ? `Invalid: ${invalid.reason}` : undefined}>
                     <td className="py-1 pr-3">
                       <Link to={`/evals/${s.evals.find((e) => e.id === p.a)?.system_id ?? ""}`} className="hover:underline">{p.a_name}</Link>
                       <span className="block text-[11px] text-muted-foreground">{when(p.a, s.evals)}</span>
