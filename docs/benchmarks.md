@@ -1547,9 +1547,19 @@ twenty instructions, model and judge (two runs each):
 | Self-Refine | 25–2 | 25–2 | 20–8 | $0.20 |
 | Debate, open | 33–1 | 36–1 | 26–6 | $0.48 |
 
-All three gain about as much. They were not judged against each other, so
-this ranks none above another. What separates them here is cost: Self-Refine
-gets its gain for about two fifths of what debate spends. Merging drafts,
+All three gain about as much against the model alone. Judged against each
+other (two runs each, the same judge):
+
+| Head to head | Run 1 | Run 2 | Together |
+|---|---|---|---|
+| MoA against Self-Refine | 8–5 (7 ties) | 7–6 (7 ties) | 15–11, p 0.56 |
+| MoA against debate | 5–8 (7 ties) | 7–7 (6 ties) | 12–15, p 0.70 |
+| Self-Refine against debate | 5–11 (4 ties) | 4–9 (7 ties) | 9–20, p 0.06 |
+
+Debate leads Self-Refine by a margin just short of significance, and MoA
+sits between them. None of the differences is clear. Cost separates them more
+sharply: Self-Refine gets most of the gain for about two fifths of what debate
+spends. Merging drafts,
 criticising one's own answer, and revising after reading others all work on
 open-ended answers with this model. On exact computation none of them did.
 
