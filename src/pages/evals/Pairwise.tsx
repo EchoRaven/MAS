@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { usd } from "@/lib/format";
 import { DEFAULT_MODELS } from "@/model/defaults";
-import { criterionTag, type EvalRecord, firstPicks, mcnemarP, type PairwiseResult } from "@/run/evals";
+import { buildSeed, seedId, TEMPLATES } from "@/model/templates";
+import { criterionTag, type EvalRecord, firstPicks, mcnemarP, type PairwiseResult, setupLabel } from "@/run/evals";
 import { useSystems } from "@/store/systems";
 
 /** An exact sign test's p over the decided questions, as Compare shows McNemar's. */
@@ -64,6 +65,30 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
     return () => window.clearInterval(t);
   }, [running, ev.id]);
 
+  // A length-matched control: the plainest baseline (one model call, the request as it is) told to aim for this
+  // evaluation's mean length, on the same questions. A judge rewards length, so a win should hold against it too.
+  const [controlModel, setControlModel] = useState(ev.on_model ?? "");
+  const [control, setControl] = useState<string | null>(null);
+  const meanWords = links && links.outputs ? Math.max(10, Math.round(links.words / links.outputs / 10) * 10) : 0;
+  const runControl = () => {
+    const t = TEMPLATES.find((x) => x.id === "baseline-bare");
+    if (!t || !meanWords || !controlModel) return;
+    const doc = systems.find((x) => x.id === seedId(t.id)) ?? buildSeed(t);
+    const unique = [...new Map(ev.cases.map((c) => [c.input, { input: c.input, expected: c.expected }])).values()];
+    setBusy(true);
+    Api.startEval({
+      doc,
+      ...(ev.dataset ? { dataset_id: ev.dataset.id, sample: ev.dataset.n ? { n: ev.dataset.n, seed: ev.dataset.seed } : undefined } : { cases: unique }),
+      grader: "none",
+      concurrency: 2,
+      on_model: controlModel,
+      vars: { style: `\n\nAim for about ${meanWords} words.` },
+    })
+      .then((r) => setControl(r.id))
+      .catch((e) => onError(e.message))
+      .finally(() => setBusy(false));
+  };
+
   const run = () => {
     setBusy(true);
     Api.startPairwise(ev.id, other, judge || undefined, undefined, panel || undefined, alone)
@@ -95,9 +120,18 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
           {links.with_search < links.outputs ? ` · ${links.outputs - links.with_search} of ${links.outputs} runs searched nothing` : ""}
         </p>
       )}
+      {meanWords > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <Select value={controlModel} onValueChange={setControlModel} items={[{ value: "", label: "Control model…" }, ...DEFAULT_MODELS.map((m) => ({ value: m.id, label: `Control: ${m.id}` }))]} ariaLabel="Control model" />
+          <Button size="sm" variant="outline" disabled={busy || !controlModel || !!control} onClick={runControl} title={`Evaluate "Single model call (baseline)" on these questions, told to aim for about ${meanWords} words (this evaluation's mean). A judge rewards length: a win over the model alone should also hold against it at the same length. Judge against it here once it finishes`}>
+            Length-matched control ({meanWords} words)
+          </Button>
+          {control && <span className="text-muted-foreground">Started {control}: judge against it here when it finishes.</span>}
+        </div>
+      )}
       {others.length ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Select value={other} onValueChange={setOther} items={others.map((e) => ({ value: e.id, label: `${e.system_name} · ${new Date(e.started_at).toLocaleString()}` }))} ariaLabel="Other evaluation" />
+          <Select value={other} onValueChange={setOther} items={others.map((e) => ({ value: e.id, label: `${setupLabel(e)} · ${new Date(e.started_at).toLocaleString()}` }))} ariaLabel="Other evaluation" />
           <Select value={judge} onValueChange={setJudge} items={[{ value: "", label: "Judge: this evaluation's model" }, ...DEFAULT_MODELS.map((m) => ({ value: m.id, label: `Judge: ${m.id}` }))]} ariaLabel="Judge" />
           <Select
             value={panel}
@@ -123,7 +157,9 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
       {kept.map((p) => {
         const mineA = p.a === ev.id;
         const [w, l] = mineA ? [p.a_wins, p.b_wins] : [p.b_wins, p.a_wins];
-        const them = mineA ? p.b_name : p.a_name;
+        // the setup, not just the system's name: a length-matched control is the same system with a run variable
+        const themEv = others.find((e) => e.id === (mineA ? p.b : p.a));
+        const them = themEv ? setupLabel(themEv) : mineA ? p.b_name : p.a_name;
         const key = `${p.a}__${p.b}__${p.judge}__${criterionTag(p.criterion)}`;
         const split = p.per.filter((x) => x.first !== x.second).length;
         const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;

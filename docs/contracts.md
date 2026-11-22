@@ -484,6 +484,14 @@ first or the second response cancels out; a question counts as a win only
 when both orders agree, and as a tie otherwise. This is how the writing
 papers (STORM, Agents' Room) report their results.
 
+A judge rewards length and structure, so a win over a plain model call should
+also hold at matched length. The Evaluate page's length-matched control is an
+ordinary evaluation of "Single model call (baseline)" on the same questions
+(the same dataset and sample, or the same cases), with grader `none` and the
+run variable `style` set to `"\n\nAim for about N words."`, N being the
+judged evaluation's mean words rounded to ten. Judgements name each side by
+its setup (system, models and run variables), so the control shows as such.
+
 ## Datasets
 
 A dataset is a list of cases `{input, expected}` with a name, a source
