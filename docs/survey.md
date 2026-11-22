@@ -214,8 +214,10 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   right or wrong. Self-Refine, one model critiquing and revising its own answer,
   gains as much on the same model (25–2, 20–8 at matched length), all of it on
   the answers its critic chose to revise, at two thirds of MoA's cost, and
-  unlike MoA it gains on flash-lite too (21–2). These are the only gains here
-  that survive every control.
+  unlike MoA it gains on flash-lite too (21–2). Multiagent Debate, each
+  debater revising after reading the others, gains as much on that model
+  (26–6 at matched length) at the highest cost. These three are the only gains
+  here that survive every control, all on open-ended answers.
 - **Writing teams do not beat one writer.** Agents' Room loses short and long
   stories to one call (0–10, 0–9, 1–9), and STORM is no better than one agent
   with the same search tool (7–12), citing more links that no search returned.
