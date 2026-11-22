@@ -1144,8 +1144,14 @@ not the rule's. Asked for about 2,000 words, neither side got there. Agents'
 Room averaged 1,206 words and the single writer 1,667, and Agents' Room still
 lost 0–9.
 
+**On a stronger model it still loses, by less.** With every role on
+gemini-3.8-flash, against one call of that model (judged by gemini-3-flash):
+0–4 (6 ties) pairwise and 2–4 (4 ties) scored pointwise. Its stories are as
+long (626 words against 631), at $0.48 for ten, eighteen times the single
+call. Self-MoA and Self-Refine on the same model never lost a story.
+
 **Caveats.** The paper's agents are fine-tuned for each role. Here every
-role is prompted flash-lite. Longer stories did not change the result, so
+role is prompted flash-lite, and gemini-3.8-flash in the run above. Longer stories did not change the result, so
 length is not what separates this from the paper. Fine-tuning is the
 remaining difference, and this platform does not test it. The result holds
 for this design with prompted roles on this model.
