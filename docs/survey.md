@@ -111,6 +111,10 @@ Each one became a general interface, not a fix for one paper:
 | AgentVerse, AutoAgents | First runs scored 10 and 13 of 30: AgentVerse returned its evaluator's feedback when the evaluator stayed unsatisfied; AutoAgents ended with a check after its answer, which graders read | **Template rule:** whoever delivers the result ends with `Answer: X` when the task asks for one value, and a reviewer always ends by repeating the deliverable (AgentVerse 10 → 20). **Marked answers:** a declared result can require an answer line (`marked: true`), and evaluations with a single-answer grader check it on every system (`expect`), so the next template with this bug is flagged on its first run |
 | A world of its own (Generative Agents' town) | An env whose MCP server was a hosted service checked its health path ("/health") as a URL, failed, and gave its agents no tools: they narrated walking to the park instead of walking there | **Envs reached through an endpoint leave starting and health to the hosting layer**; `examples/hosted/text-world-mcp` is a shared world (places, things, speech, a clock), and two agents in it reproduce the party's spread: what Isabella says in the park, Klaus hears there |
 | Every comparison | Questions pasted by hand, evaluations run in parallel (a burst of 875 calls a minute got a key suspended) | **Datasets** (versioned, sampled), **batch evaluations** (one system after another), a **server-wide rate limit** |
+| Meta-Prompting (word sorting) | Its sorted lists, one numbered word a line after "Answer:", were all graded wrong: the grader read only that line | **Graders read a list answer whole** (one item a line) |
+| Meta-Prompting (Game of 24) | An answer with no single form (any expression that makes 24) could not be graded against an expected string | **Grader `check`:** JS kept with the dataset decides, sees the output and the final answer, and is kept on the evaluation for regrading |
+| Meta-Prompting (Game of 24) | With no cap on reply length, flash-lite repeated itself to its output limit every round: $1.4 a run under a $2 budget, and no end | **A spending limit per run** on the evaluation (`usd_limit`), and loop templates cap replies and the conversation they re-send |
+| Open-ended comparisons | A length-matched control was built by hand each time (mean words, the plain baseline, a style variable) | **One-click length-matched control** on the Pairwise panel; judgements name each side's setup, run variables included |
 
 ## What the results say about the patterns
 
@@ -244,6 +248,12 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   model. Matched that way, discussion adds nothing here: Multiagent Debate
   with a sandbox per debater scored 49 of 50 on MATH-500 against one agent
   with a sandbox's 48 (one problem, p = 1), at four times the cost.
+  Meta-Prompting shows it again: on Game of 24, its conductor with an Expert
+  Python solves 43 and 42 of 50, while one agent with the same sandbox solves
+  all 50 twice, at half the cost. Without code, its gains (word sorting 45
+  against one agent's 35, Game of 24 36 against 30) are matched by one call
+  with personas (Solo Performance Prompting) and by ten-sample voting, and
+  beaten by Self-Refine (49 of 49 on word sorting).
 - **A paper's gain needs room to show.** On GSM8K the single agent already
   scores 97, so a debate cannot show the paper's 77 → 85; on MMLU, 95 against
   the paper's 64 (debate 95.5, no gain). Even a benchmark meant to leave room
