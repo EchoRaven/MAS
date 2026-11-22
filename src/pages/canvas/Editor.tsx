@@ -69,7 +69,8 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const canRedo = useSystems.getState().canRedo(doc.id);
   const rf = useReactFlow();
   const [view, setView] = useState<"canvas" | "yaml">("canvas");
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  // on a phone the inspector would cover the canvas: it starts closed there, and opens when something is selected
+  const [inspectorOpen, setInspectorOpen] = useState(() => typeof window === "undefined" || window.innerWidth >= 768);
   const [importing, setImporting] = useState<ImportKind | null>(null);
   const [architect, setArchitect] = useState(false);
   const [history, setHistory] = useState(false);
@@ -231,7 +232,7 @@ export function Editor({ doc }: { doc: SystemDoc }) {
           <Select value={doc.id} onValueChange={(id) => navigate(`/canvas/${id}`)} items={systems.map((s) => ({ value: s.id, label: s.name }))} ariaLabel="Select system" className="max-w-56" />
           <ViewSwitch view={view} setView={setView} />
           <IssuesMenu doc={doc} issues={issues} onPick={(i) => { setView("canvas"); nav.pickIssue(i); setInspectorOpen(true); }} />
-          <div className="ml-auto flex gap-1.5">
+          <div className="ml-auto flex flex-wrap justify-end gap-1.5">
             {view === "canvas" &&
               (beforeTidy ? (
                 <Button variant="outline" size="sm" onClick={undoTidy} title="Put everything back where it was">
