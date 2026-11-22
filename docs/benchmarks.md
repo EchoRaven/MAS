@@ -59,6 +59,12 @@ exact McNemar tests against one agent on the same questions.
   alone 33–1 over two runs, 36–1 on content, 26–6 at matched length, at $0.48
   for twenty against Self-Refine's $0.20 and MoA's $0.31 for about the same
   gain ([debate](#debate-revised-in-the-open-gains-as-well)).
+- **A brainstorming group is more creative mostly by listing more.** LLM
+  Discussion's four role-played agents beat one call 37–0 on twenty
+  alternative-uses items. Against one call asked for as many uses, they win
+  16–1 with 23 ties, at eleven times the cost. A judge first shown only 12,000
+  characters of each answer had called that 19–0
+  ([LLM Discussion](#llm-discussion-creativity-and-what-the-judge-was-shown)).
 - **Mixture-of-Agents beats a prompted writer, not a plain model call.** On
   twenty open-ended instructions it wins 31–9 against a one-call writer told to
   give the piece only (p 0.0007), even with lengths matched, and 14–19 against
@@ -1135,7 +1141,7 @@ is gemini-3.8-flash unless noted.
 | Final, run 2 | Single writer, run 2 | 0 | 9 | 1 | $0.20 against $0.013 |
 | Final, run 1, judged by gemma | Single writer, run 1 | 0 | 8 | 2 | |
 | Parts a fifth of the asked length | Single writer, run 1 | 1 | 9 | 0 | $0.20 against $0.013 |
-| Long stories (about 2,000 words) | Single writer, long | 0 | 9 | 1 | $0.22 against $0.033 |
+| Long stories (about 2,000 words) | Single writer, long | 0 | 10 | 0 | $0.22 against $0.033 |
 
 Agents' Room loses on every prompt but one or two, under two judges of
 different families and at both lengths (sign test over the decided prompts,
@@ -1148,7 +1154,7 @@ parts. Told instead to write a fifth of the asked length, they still
 averaged 822 words, and the result was 1–9: the overshoot is the writers',
 not the rule's. Asked for about 2,000 words, neither side got there. Agents'
 Room averaged 1,206 words and the single writer 1,667, and Agents' Room still
-lost 0–9.
+lost 0–10 (0–9 when the judge saw only the first 12,000 characters of each).
 
 **On a stronger model it still loses, by less.** With every role on
 gemini-3.8-flash, against one call of that model (judged by gemini-3-flash):
@@ -1577,6 +1583,46 @@ revising after reading others. Only criticising one's own answer gains on
 flash-lite. Merging drafts,
 criticising one's own answer, and revising after reading others all work on
 open-ended answers with this model. On exact computation none of them did.
+
+## LLM Discussion: creativity, and what the judge was shown
+
+LLM Discussion (Lu et al., COLM 2024) brainstorms like a group. Four agents
+with distinct roles (engineer, artist, futurist, community organiser) answer
+a creative task, read each other's ideas and build on them over three rounds,
+and a collector merges their final lists. The set is
+`benchmarks/creativity/aut-20.jsonl`: twenty items in the form of the
+Alternative Uses Test ("List as many creative and unusual uses as you can for
+a brick."). The judge is gemini-3-flash, asked which list is more original,
+varied and workable, and told that a longer list is better only if its extra
+ideas are. Everything runs on gemini-3.8-flash.
+
+| LLM Discussion against | Run 1 | Run 2 | Together |
+|---|---|---|---|
+| One call (about 30 uses) | 18–0 (2 ties) | 19–0 (1 tie) | 37–0 |
+| One call told to aim for about 130 uses | 5–1 (14 ties) | 11–0 (9 ties) | 16–1, p 0.0003 |
+
+| | Uses per answer | Words | Cost (20) |
+|---|---|---|---|
+| One call | 30.5, 30.1 | 914, 925 | $0.08 |
+| One call, about 130 uses | about 133 | about 2,800 | $0.08 |
+| LLM Discussion | 133.2, 132.1 | 1,482, 1,563 | $0.90 |
+
+The merged lists are four times as long as one call's, so the fair control is
+a single call asked for as many uses. Against it LLM Discussion still wins
+16–1, but 23 of the 40 judgements are ties: its lead comes mostly from listing
+more, and partly from more varied ideas. It costs eleven times as much.
+
+**The first judgement was wrong, and a platform bug made it so.** At first
+LLM Discussion beat the count-matched call 19–0 as well. The judge kept saying
+the other list "cuts off mid-sentence at item 86". It did not: the judge was
+shown only the first 12,000 characters of each answer, and the long lists ran
+to 14,000–20,000. The run log also kept only 20,000 characters of an answer
+and cut the middle of longer ones. The judge now sees answers whole up to
+60,000 characters, and is told when one is shortened. The log keeps answers up
+to 200,000 characters. The count-matched control was run again, and every
+affected judgement was redone. Among the earlier open-ended results, only one
+long story exceeded either limit. Agents' Room against the single writer on
+long stories was judged again with it whole: 0–10, where it had been 0–9.
 
 ### How much a judgement moves when repeated
 

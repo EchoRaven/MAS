@@ -122,6 +122,10 @@ Measured on this platform, every system on the same model and questions
   and MoA is level with both. On the weaker flash-lite only Self-Refine
   still gains; MoA and debate lose to one call. On exact computation none of
   them helped.
+- **A brainstorming group is more creative mostly by listing more**: LLM
+  Discussion (four role-played agents building on each other's ideas) beats
+  one call 37–0 on alternative-uses items, and a single call asked for as many
+  uses 16–1 with 23 ties, at eleven times the cost.
 - **A baseline's prompt can make a gain**: Mixture-of-Agents wins 31–9 on
   open-ended instructions against a one-call writer told to give the piece
   only, which holds with lengths matched, and loses 14–19 to one plain call of
