@@ -37,8 +37,16 @@ Present the final answer as follows:
 
 For multiple-choice questions, select only one option. Each question has a unique answer, so analyze the provided information carefully to determine the most accurate and appropriate response. Please present only one solution if you come across multiple options.`;
 
-const LOOP = `const question = String(input?.text ?? input ?? "");
-const META = ${JSON.stringify(META_EXPERT)};
+/** the paragraph prompts/meta-prompting-instruction.txt adds for the Python expert, verbatim */
+const PYTHON_PARAGRAPH = `Note that you also have special access to Expert Python, which has the unique ability to generate and execute Python code given natural-language instructions. Expert Python is highly capable of crafting code to perform complex calculations when given clear and precise directions. You might therefore want to use it especially for computational tasks.`;
+/** the prefix the authors' code puts before an instruction to Expert Python, verbatim */
+const PYTHON_PREFIX = `You are an expert in Python and can generate Python code. To execute the code and display its output in the terminal using print statements, please make sure to include "Please run this code!" after the code block (i.e., after the closing code blocks)`;
+const withPython = META_EXPERT.replace("\n\nAs Meta-Expert", "\n\n" + PYTHON_PARAGRAPH + "\n\nAs Meta-Expert");
+
+const loop = (python: boolean) => `const question = String(input?.text ?? input ?? "");
+const META = ${JSON.stringify(python ? withPython : META_EXPERT)};
+const PYTHON = ${python};
+const PY_PREFIX = ${JSON.stringify(PYTHON_PREFIX)};
 const SUFFIX = "\\n\\nLet's first come up with a list of experts you may want to consult for this problem and then immediately start solving it.";
 const FEEDBACK = "Based on the information given, what are the most logical next steps or conclusions? Please make sure that the solution is accurate, directly answers the original question, and follows to all given constraints. Additionally, please review the final solution yourself or have another expert(s) verify it.";
 const ERROR = "If you have determined the final answer, please present it using the format below:\\n\\n>> FINAL ANSWER:\\n\\"\\"\\"\\n[final answer]\\n\\"\\"\\"";
@@ -60,7 +68,18 @@ for (let r = 0; r < rounds; r++) {
   if (call) {
     const name = "Expert " + call[1].trim();
     ctx.log("round " + (r + 1) + ": " + name);
-    const said = String(await ctx.call("Expert", call[2].trim()));
+    const isPython = PYTHON && /^expert python$/i.test(name);
+    let said = String(await ctx.call("Expert", (isPython ? PY_PREFIX + "\\n\\n" : "") + call[2].trim()));
+    if (isPython && said.includes("Please run this code!")) {
+      // the last python block runs in the sandbox and its output follows the expert's message, as in the authors' code
+      const blocks = [...said.matchAll(/\`\`\`(?:python|py)?[^\\n]*\\n([\\s\\S]*?)\`\`\`/g)];
+      if (blocks.length) {
+        await ctx.tool("edit_file", { path: "main.py", content: blocks[blocks.length - 1][1] });
+        const out = String(await ctx.tool("bash", { command: "timeout 60 python3 main.py 2>&1 | head -c 8000" }));
+        said += "\\n\\nHere is the output of the code when executed:\\n" + out;
+        ctx.log("ran Expert Python's code");
+      }
+    }
     turns.push({ who: "User", text: name + "'s output:\\n\\"\\"\\"\\n" + said + "\\n\\"\\"\\"\\n\\n" + FEEDBACK });
   } else {
     turns.push({ who: "User", text: ERROR });
@@ -69,15 +88,15 @@ for (let r = 0; r < rounds; r++) {
 ctx.log("no final answer in " + rounds + " rounds: the last message is the answer");
 return last;`;
 
-function build(): SystemDoc {
+function build(python = false): SystemDoc {
   const b = new Builder(
-    "Meta-Prompting",
-    "One model conducts: with the Meta-Expert instruction it either calls an expert by name with an instruction in triple quotes, or gives the final answer. Each expert is a fresh call to the same model that sees only that instruction, and its output goes back to the conductor with a prompt to verify. At most fifteen rounds (the run variable rounds).",
+    python ? "Meta-Prompting (with Python)" : "Meta-Prompting",
+    (python ? "With an Expert Python whose code runs in a sandbox. " : "") + "One model conducts: with the Meta-Expert instruction it either calls an expert by name with an instruction in triple quotes, or gives the final answer. Each expert is a fresh call to the same model that sees only that instruction, and its output goes back to the conductor with a prompt to verify. At most fifteen rounds (the run variable rounds).",
   );
   b.node("asker", "human", 0, 160, { name: "Asker", role: "Asks", approves: false }).node("loop", "function", 280, 160, {
     name: "Conductor loop",
     join: "any",
-    fn: { lang: "js", code: LOOP, timeout_ms: 1_800_000 },
+    fn: { lang: "js", code: loop(python), timeout_ms: 1_800_000 },
     interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] },
   });
   const sys = "You are an AI assistant that helps people find information.";
@@ -87,17 +106,20 @@ function build(): SystemDoc {
     .edge("loop", "meta", "call", { label: "Next step" })
     .edge("loop", "expert", "call", { label: "Ask an expert" })
     .edge("loop", "asker", "message", { label: "Answer" });
+  if (python) b.node("sandbox", "env", 280, 380, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" }).edge("loop", "sandbox", "access", { access: "read_write" });
   b.doc.budget = { usd: 2, max_rounds: 40, wallclock_min: 30 };
   b.doc.termination = ["all_idle", "budget_exceeded"];
   return b.doc;
 }
 
+const PAPER = { title: "Meta-Prompting: Enhancing Language Models with Task-Agnostic Scaffolding", authors: "Suzgun & Kalai", year: 2024, url: "https://arxiv.org/abs/2401.12954" };
+
 export const metaPrompting: TemplateInfo = {
   id: "paper-meta-prompting",
   name: "Meta-Prompting",
   summary: "one model conducts · calls fresh instances of itself as experts · verifies · ≤15 rounds",
-  build,
-  paper: { title: "Meta-Prompting: Enhancing Language Models with Task-Agnostic Scaffolding", authors: "Suzgun & Kalai", year: 2024, url: "https://arxiv.org/abs/2401.12954" },
+  build: () => build(false),
+  paper: PAPER,
   notes: {
     mapped: [
       "The Meta-Expert instruction, the suffix asking for a list of experts, the feedback after each expert's output, the reminder when a message has neither a call nor an answer, and the last-round note are the authors' text (their repository, MIT).",
@@ -108,6 +130,25 @@ export const metaPrompting: TemplateInfo = {
       "No Python expert: this is the paper's 'Meta −Py' setting. Its large gains (Game of 24, word sorting at 99.6%) came with the interpreter.",
       "The conductor is a stateless call that reads the whole conversation, rendered as [User] / [Meta-Expert] turns, each round, rather than a chat with message history. The content is the same.",
       "The authors' code caps each reply at 1,024 tokens; the models here use their own limits.",
+    ],
+  },
+};
+
+export const metaPromptingPython: TemplateInfo = {
+  id: "paper-meta-prompting-python",
+  name: "Meta-Prompting (with Python)",
+  summary: "Meta-Prompting with an Expert Python whose code runs in a sandbox · the paper's best setting",
+  build: () => build(true),
+  paper: PAPER,
+  notes: {
+    mapped: [
+      "The Meta-Expert instruction with the authors' paragraph on Expert Python; an instruction to Expert Python gets the authors' prefix, and when its reply says 'Please run this code!' the last python block runs in a python:3.12 sandbox and its output follows the reply, as in their code.",
+      "Everything else as in Meta-Prompting: the authors' prompts, fresh memoryless experts, at most fifteen rounds.",
+    ],
+    differs: [
+      "The code runs in a container (60 s, output cut at 8,000 characters) rather than the authors' local interpreter.",
+      "The words introducing the code's output are this template's; the authors' exact wording is in their code, not read here.",
+      "The conductor is a stateless call that reads the whole conversation each round, as in Meta-Prompting here.",
     ],
   },
 };
