@@ -404,14 +404,31 @@ export function finalAnswer(raw: string): string {
   if (marked.length) {
     const m = marked[marked.length - 1];
     const same = m[1].replace(/^\*+|\*+$/g, "").trim();
-    if (same) return m[1].trim();
-    const after = output.slice((m.index ?? 0) + m[0].length).split("\n").map((l) => l.trim()).find(Boolean);
-    if (after) return after;
+    const rest = output.slice((m.index ?? 0) + m[0].length).split("\n").map((l) => l.trim());
+    if (same) return listFrom(m[1].trim(), rest[0] ? rest : rest.slice(1)) ?? m[1].trim();
+    const at = rest.findIndex(Boolean);
+    if (at >= 0) return listFrom(rest[at], rest.slice(at + 1)) ?? rest[at];
   }
   const lines = output.split("\n").map((l) => l.trim()).filter(Boolean);
   // a last line in parentheses is an aside ("(Calculation: 392 + 560 + … = 6604. …)"): the answer is the line before
   if (lines.length > 1 && /^\(.*\)$/.test(lines[lines.length - 1])) return lines[lines.length - 2];
   return lines[lines.length - 1] ?? "";
+}
+
+const LIST_ITEM = /^(?:\d+[.)]|[-*\u2022])\s+/;
+/**
+ * An answer given as a list, one item a line ("Answer: 1. apple\n2. banana\n3. cherry"): the items joined by
+ * spaces, numbers and bullets dropped. Only when the answer's first line is itself a list item and the next line
+ * continues the list; otherwise null and the answer is that one line.
+ */
+function listFrom(first: string, next: string[]): string | null {
+  if (!LIST_ITEM.test(first) || !LIST_ITEM.test(next[0] ?? "")) return null;
+  const items = [first];
+  for (const l of next) {
+    if (!LIST_ITEM.test(l)) break;
+    items.push(l);
+  }
+  return items.map((l) => l.replace(LIST_ITEM, "").trim()).join(" ");
 }
 
 /** Every number in a text, in order: 12, -3.5, 1,234, 1/3, 40%. */

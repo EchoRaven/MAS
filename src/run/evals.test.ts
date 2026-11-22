@@ -7,6 +7,11 @@ describe("grading", () => {
     expect(finalAnswer("first\nFinal: 12\nmore\n**Final Answer:** 13")).toBe("13");
     expect(finalAnswer("work…\n\n**Final Answer:**\nThere are **3,600** ways for 8 people.")).toBe("There are **3,600** ways for 8 people.");
     expect(finalAnswer("B. Hyperkalaemia\n\nbecause potassium")).toBe("because potassium");
+    // an answer given as a list, one item a line, is the whole list
+    expect(finalAnswer("Answer: 1. devour\n2. elder\n3. elms")).toBe("devour elder elms");
+    expect(finalAnswer("**Final Answer:**\n- apple\n- banana\n\nThat is all.")).toBe("apple banana");
+    expect(finalAnswer("Answer: 1. The total is 42\nbecause …")).toBe("1. The total is 42");
+    expect(gradeByRule("answer", "Answer: 1. devour\n2. elder\n3. elms", "devour elder elms").pass).toBe(true);
     expect(finalAnswer("")).toBe("");
   });
 
