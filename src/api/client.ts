@@ -128,7 +128,7 @@ export const Api = {
   /** Judge two evaluations of the same open-ended questions pairwise (both orders), and the judgements kept for one. */
   pairwise: (a: string, b: string, judge?: string, criterion?: string, judge_system?: string) => api<{ pairwise: PairwiseResult }>("POST", "/evals/pairwise", { a, b, judge, criterion, judge_system }),
   /** The same, in the background: it shows in pairwiseOf's judging while it runs. */
-  startPairwise: (a: string, b: string, judge?: string, criterion?: string, judge_system?: string) => api<{ started: true }>("POST", "/evals/pairwise", { a, b, judge, criterion, judge_system, wait: false }),
+  startPairwise: (a: string, b: string, judge?: string, criterion?: string, judge_system?: string, pointwise?: boolean) => api<{ started: true }>("POST", "/evals/pairwise", { a, b, judge, criterion, judge_system, wait: false, pointwise }),
   /** Mark an evaluation invalid with a reason (a setup bug found later), or valid again with null. */
   markEvalInvalid: (id: string, reason: string | null) => api<{ eval: EvalRecord }>("PUT", `/evals/${id}/invalid`, { reason }),
   /** The links an evaluation's outputs cite, and how many their runs' searches returned. */

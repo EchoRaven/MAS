@@ -16,6 +16,8 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
   const [judge, setJudge] = useState(ev.on_model ?? "");
   // a system can judge instead of one model call (a referee panel such as ChatEval), run on the judge model
   const [panel, setPanel] = useState("");
+  // score each output alone instead of side by side: no order to sway the judge
+  const [alone, setAlone] = useState(false);
   const systems = useSystems((s) => s.systems);
   const [kept, setKept] = useState<PairwiseResult[]>([]);
   const [busy, setBusy] = useState(false);
@@ -61,7 +63,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
 
   const run = () => {
     setBusy(true);
-    Api.startPairwise(ev.id, other, judge || undefined, undefined, panel || undefined)
+    Api.startPairwise(ev.id, other, judge || undefined, undefined, panel || undefined, alone)
       .then(() => Api.pairwiseOf(ev.id))
       .then((p) => {
         setKept(p.pairwise);
@@ -100,6 +102,9 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
             items={[{ value: "", label: "One judge call" }, ...systems.filter((s) => s.id !== ev.system_id).map((s) => ({ value: s.id, label: `Panel: ${s.name}` }))]}
             ariaLabel="Judging system"
           />
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title="The judge reads each output on its own and scores it 1 to 10; the higher score wins. With no order to favour, a judge that picks whichever response it read first can still tell outputs apart">
+            <input type="checkbox" checked={alone} onChange={(e) => setAlone(e.target.checked)} /> Score each alone
+          </label>
           <Button size="sm" variant="outline" disabled={busy || !other} onClick={run} title={panel ? "The chosen system judges each pair, run on the judge model; its output must end with a line 'Better: 1', 'Better: 2' or 'Better: tie'. Several model calls per question" : "One call per question and order"}>
             {busy ? "Starting…" : "Judge pairwise"}
           </Button>
@@ -119,7 +124,7 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
         const key = `${p.a}__${p.b}__${p.judge}`;
         const split = p.per.filter((x) => x.first !== x.second).length;
         const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
-        const pos = firstPicks(p.per);
+        const pos = firstPicks(p.per, p.mode);
         return (
           <div key={key} className="mt-3 text-xs">
             <p>
@@ -138,9 +143,11 @@ export function Pairwise({ ev, onError }: { ev: EvalRecord; onError: (m: string)
               <ul className="mt-1 space-y-0.5">
                 {p.per.map((x, i) => {
                   const v = x.verdict === "tie" ? "tie" : (x.verdict === "a") === mineA ? "win" : "loss";
+                  const sc = x.scores ? (mineA ? x.scores : [x.scores[1], x.scores[0]]) : null;
                   return (
                     <li key={i} className="flex gap-2" title={x.why ? `First order:\n${x.why[0]}\n\nSecond order:\n${x.why[1]}` : undefined}>
                       <span className="w-8 shrink-0 font-medium">{v}</span>
+                      {sc && <span className="w-12 shrink-0 tabular-nums text-muted-foreground">{sc[0] ?? "?"}–{sc[1] ?? "?"}</span>}
                       <span className="line-clamp-1 text-muted-foreground">{x.input}</span>
                     </li>
                   );

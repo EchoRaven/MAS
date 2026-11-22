@@ -242,7 +242,7 @@ export class EvalManager {
    * their text, each system's first output for it is used, and every pair is judged in both orders. The result is
    * kept with the two evaluations.
    */
-  async pairwise(aId: string, bId: string, judgeModel?: string, criterion?: string, judgeSystem?: string): Promise<PairwiseResult> {
+  async pairwise(aId: string, bId: string, judgeModel?: string, criterion?: string, judgeSystem?: string, pointwise = false): Promise<PairwiseResult> {
     const [a, b] = [this.store.getEval(aId), this.store.getEval(bId)];
     if (!a || !b) throw new Error("No such evaluation");
     if (this.active.has(aId) || this.active.has(bId)) throw new Error("An evaluation is still running");
@@ -264,8 +264,7 @@ export class EvalManager {
     if (judgeSystem && !panel) throw new Error(`No such system: ${judgeSystem}`);
     const panelDoc = panel ? (judge ? runAllOn(panel, judge, DEFAULT_MODELS) : panel) : null;
     const what = criterion?.trim() || "Which response better does what the task asks: correct, complete, well organised and well written?";
-    const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie" | null; usd: number; why: string }> => {
-      const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
+    const judgeText = async (prompt: string): Promise<{ text: string; spent: number }> => {
       let text: string;
       let spent: number;
       if (panelDoc) {
@@ -281,13 +280,27 @@ export class EvalManager {
         text = textOf(res.content);
         spent = usage.usd;
       }
+      return { text, spent };
+    };
+    // pointwise: each response scored on its own, never beside the other, so the order cannot sway it (a judge that
+    // picks whichever story it read first in four readings of five gives mostly ties pairwise)
+    const score = async (task: string, r: string): Promise<{ score: number | null; usd: number; why: string }> => {
+      const prompt = `You rate a response to a task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse:\n${r.slice(0, 12000)}\n\n${what}\nJudge this response on its own. Give a short reason, then a last line exactly 'Score: N', where N is 1 (very poor) to 10 (excellent).`;
+      const { text, spent } = await judgeText(prompt);
+      const all = [...text.matchAll(/score:\s*\**\s*(\d+(?:\.\d+)?)/gi)];
+      const n = all.length ? Number(all.at(-1)![1]) : null;
+      return { score: n !== null && n >= 1 && n <= 10 ? n : null, usd: spent, why: text.trim().slice(-600) };
+    };
+    const ask = async (task: string, r1: string, r2: string): Promise<{ pick: "1" | "2" | "tie" | null; usd: number; why: string }> => {
+      const prompt = `You compare two responses to the same task.\n\nTask:\n${task.slice(0, 4000)}\n\nResponse 1:\n${r1.slice(0, 12000)}\n\nResponse 2:\n${r2.slice(0, 12000)}\n\n${what}\nGive a short reason, then a last line exactly 'Better: 1', 'Better: 2' or 'Better: tie'.`;
+      const { text, spent } = await judgeText(prompt);
       // the last verdict line counts; "Better: Response 1" is read as 1
       const all = [...text.matchAll(/better:\s*\**\s*(?:response\s*)?(1|2|tie)\b/gi)];
       const pick = (all.at(-1)?.[1]?.toLowerCase() as "1" | "2" | "tie" | undefined) ?? null;
       return { pick, usd: spent, why: text.trim().slice(-600) };
     };
     // judging only reads the two evaluations: several judges can work on them at once (each keeps its own file)
-    const label = panel ? `${panel.name} on ${judge ?? "its models"}` : (judge ?? "default");
+    const label = (panel ? `${panel.name} on ${judge ?? "its models"}` : (judge ?? "default")) + (pointwise ? " (pointwise)" : "");
     const key = `${aId}|${bId}|${label}`;
     const progress = { a: aId, b: bId, judge: label, done: 0, total: shared.length, started: new Date().toISOString() } as { a: string; b: string; judge: string; done: number; total: number; started: string; error?: string };
     this.judging.set(key, progress);
@@ -295,6 +308,15 @@ export class EvalManager {
       const per: PairwiseResult["per"] = [];
       let usd = 0;
       for (const q of shared) {
+        if (pointwise) {
+          const sa = await score(q, oa.get(q)!);
+          const sb = await score(q, ob.get(q)!);
+          usd += sa.usd + sb.usd;
+          const v = sa.score === null || sb.score === null ? "unread" : sa.score > sb.score ? "a" : sb.score > sa.score ? "b" : "tie";
+          per.push({ input: q, first: v, second: v, verdict: v === "unread" ? "tie" : v, why: [sa.why, sb.why], scores: [sa.score, sb.score] });
+          progress.done++;
+          continue;
+        }
         const x = await ask(q, oa.get(q)!, ob.get(q)!); // a first
         const y = await ask(q, ob.get(q)!, oa.get(q)!); // b first
         usd += x.usd + y.usd;
@@ -310,6 +332,7 @@ export class EvalManager {
         a_name: a.system_name,
         b_name: b.system_name,
         judge: label,
+        ...(pointwise ? { mode: "pointwise" as const } : {}),
         criterion: what,
         a_wins: per.filter((p) => p.verdict === "a").length,
         b_wins: per.filter((p) => p.verdict === "b").length,

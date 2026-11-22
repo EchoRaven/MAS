@@ -219,6 +219,31 @@ describe("evaluations", () => {
     await expect(Promise.race([bad, Promise.resolve("started")])).rejects.toThrow(/No such evaluation/);
   });
 
+  it("scores each output alone in pointwise mode, so order cannot sway it", async () => {
+    const writer = (id: string, text: string) => {
+      const b = new Builder(id, "");
+      b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+        .node("f", "function", 200, 0, { name: "W", fn: { lang: "js", code: `return ${JSON.stringify(text)};` } })
+        .edge("me", "f", "message")
+        .edge("f", "me", "message");
+      // scores in order: q1 a 8, q1 b 5; q2 a 6, q2 b 6
+      b.doc.models.push({ id: "judge_s", provider: "mock", model: "mock", api: { params: { script: ["good. Score: 8", "weaker. Score: 5", "fine. Score: 6", "fine. Score: 6"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+      return { ...b.doc, id };
+    };
+    const cases = [{ input: "a cat", expected: "" }, { input: "a lake", expected: "" }];
+    const da = writer("sys_sa", "one");
+    store.putSystem(da);
+    const ea = await finish(evals.start(da, { grader: "none", cases }).id);
+    const eb = await finish(evals.start(writer("sys_sb", "two"), { grader: "none", cases }).id);
+    const r = await evals.pairwise(ea.id, eb.id, "judge_s", undefined, undefined, true);
+    expect(r.mode).toBe("pointwise");
+    expect(r.judge).toBe("judge_s (pointwise)");
+    expect(r.per.map((x) => [x.verdict, x.scores])).toEqual([["a", [8, 5]], ["tie", [6, 6]]]);
+    expect([r.a_wins, r.b_wins, r.ties]).toEqual([1, 0, 1]);
+    const { firstPicks } = await import("@/run/evals");
+    expect(firstPicks(r.per, r.mode)).toEqual({ first: 0, picked: 0 });
+  });
+
   it("lets a system judge pairwise (a referee panel), reading the verdict from its output", async () => {
     const writer = (id: string, text: string) => {
       const b = new Builder(id, "");

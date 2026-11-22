@@ -32,7 +32,9 @@ export interface PairwiseResult {
   b_wins: number;
   ties: number;
   /** per question: the pick in each order ("unread": the judge gave no verdict line), the verdict, and the end of each reply */
-  per: { input: string; first: "a" | "b" | "tie" | "unread"; second: "a" | "b" | "tie" | "unread"; verdict: "a" | "b" | "tie"; why?: [string, string] }[];
+  per: { input: string; first: "a" | "b" | "tie" | "unread"; second: "a" | "b" | "tie" | "unread"; verdict: "a" | "b" | "tie"; why?: [string, string]; scores?: [number | null, number | null] }[];
+  /** pointwise: each output scored alone (1-10) and the higher score wins; first and second are then that verdict */
+  mode?: "pairwise" | "pointwise";
   usd: number;
   at: string;
 }
@@ -41,7 +43,8 @@ export interface PairwiseResult {
  * How often a pairwise judge picked whichever response it was shown first, of the readings where it picked one.
  * Near half is no position bias; near all of them means the order decided, and its verdicts are mostly ties.
  */
-export function firstPicks(per: PairwiseResult["per"]): { first: number; picked: number } {
+export function firstPicks(per: PairwiseResult["per"], mode?: PairwiseResult["mode"]): { first: number; picked: number } {
+  if (mode === "pointwise") return { first: 0, picked: 0 }; // no order: each output was read alone
   let first = 0, picked = 0;
   for (const x of per) {
     // reading 1 shows a first, reading 2 shows b first

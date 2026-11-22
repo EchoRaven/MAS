@@ -76,7 +76,7 @@ export function OpenEnded() {
             <tbody>
               {s.judged.map((p) => {
                 const unread = p.per.filter((x) => x.first === "unread" || x.second === "unread").length;
-                const pos = firstPicks(p.per);
+                const pos = firstPicks(p.per, p.mode);
                 const biased = pos.picked >= 6 && pos.first / pos.picked >= 0.8;
                 const invalid = [p.a, p.b].map((id) => s.evals.find((e) => e.id === id)?.invalid).find(Boolean);
                 return (

@@ -112,9 +112,9 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     }
   });
   r.on("POST", "/api/evals/pairwise", async (req) => {
-    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string; judge_system?: string; wait?: boolean };
+    const b = ((await req.body()) ?? {}) as { a?: string; b?: string; judge?: string; criterion?: string; judge_system?: string; wait?: boolean; pointwise?: boolean };
     if (!b.a || !b.b || b.a === b.b) throw new HttpError(400, "Give two different evaluations, a and b");
-    const job = evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined, b.judge_system ? String(b.judge_system) : undefined);
+    const job = evals.pairwise(String(b.a), String(b.b), b.judge ? String(b.judge) : undefined, b.criterion ? String(b.criterion) : undefined, b.judge_system ? String(b.judge_system) : undefined, b.pointwise === true);
     if (b.wait === false) {
       // in the background: GET /api/evals/:id/pairwise lists it while it runs (or why it failed), then its result
       // its checks (the evaluations, a shared question, the judging system) run before its first await, so a request
