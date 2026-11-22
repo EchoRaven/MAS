@@ -18,7 +18,7 @@ const rounds = Math.max(0, Math.min(5, Number(ctx.vars.rounds ?? 2)));
 const turns = [{ who: "User", text: ${JSON.stringify(ASK)} + " " + question + " " + ${JSON.stringify(FORMAT)} }];
 const render = () => turns.map((t) => "[" + t.who + "]\\n" + t.text).join("\\n\\n") + "\\n\\n[Assistant]\\n";
 // the reply alone: a model that goes on to write the user's next turn is cut there
-const clean = (s) => { const m = /^\\\\s*\\\\[(?:User|Assistant)\\\\]\\\\s*$/m.exec(s); return (m ? s.slice(0, m.index) : s).trim(); };
+const clean = (s) => { const m = /^\\s*\\[(?:User|Assistant)\\]\\s*$/m.exec(s); return (m ? s.slice(0, m.index) : s).trim(); };
 const boxed = (s) => { const i = s.lastIndexOf("\\\\boxed{"); if (i < 0) return "?"; let d = 0, j = i + 7; for (; j < s.length; j++) { if (s[j] === "{") d++; else if (s[j] === "}") { if (d === 0) break; d--; } } return s.slice(i + 7, j).trim(); };
 let answer = clean(String(await ctx.call("Model", render())));
 turns.push({ who: "Assistant", text: answer });
