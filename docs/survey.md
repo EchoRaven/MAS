@@ -233,7 +233,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   and a single call asked for as many uses 16–1 with 23 ties, at eleven times
   the cost. A judge that saw only the first 12,000 characters of each answer
   first called that 19–0, reading the long lists as unfinished; judges now see
-  answers whole.
+  answers whole. On flash-lite even that edge goes: 2–1 with 17 ties at
+  matched count.
 - **What a system learns can choose its team.** DyLAN, carrying its agents'
   importance across runs, ranked the Programmer and the Mathematician far above
   the Skeptic and the Generalist on computation questions; a team of those two
