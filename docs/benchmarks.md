@@ -1688,7 +1688,8 @@ by exact match of the sorted list (case and punctuation ignored).
 - **The gain is real, and larger than the paper's.** The single agent already
   thinks step by step, so this is the paper's chain-of-thought column: 71%
   against Meta-Prompting's 91%, where GPT-4 had 83.6 against 84.0. A weaker
-  model leaves more room.
+  model leaves more room: on gemini-3.8-flash the single agent sorts all 49
+  lists ($0.014), and no system can gain.
 - **It is not the experts alone.** In 32 and 31 of 49 questions the conductor
   gave its final answer in the first round without calling anyone; there it
   still beat the single agent, 54 to 43 over both runs. When it did call
