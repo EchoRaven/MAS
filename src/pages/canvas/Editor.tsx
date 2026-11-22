@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useReactFlow } from "@xyflow/react";
-import { Code2, Download, History, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Wand2, Workflow } from "lucide-react";
+import { Code2, Download, History, LayoutGrid, PanelRightClose, PanelRightOpen, PlayCircle, Redo2, Undo2, Wand2, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AgentView } from "@/canvas/agent/AgentView";
@@ -55,6 +55,12 @@ export function Editor({ doc }: { doc: SystemDoc }) {
   const systems = useSystems((s) => s.systems);
   const updateStore = useSystems((s) => s.update);
   const replace = useSystems((s) => s.replace);
+  const undoStore = useSystems((s) => s.undo);
+  const redoStore = useSystems((s) => s.redo);
+  // re-render when a history changes, so the buttons below are enabled when there is something to undo
+  useSystems((s) => s.historyTick);
+  const canUndo = useSystems.getState().canUndo(doc.id);
+  const canRedo = useSystems.getState().canRedo(doc.id);
   const rf = useReactFlow();
   const [view, setView] = useState<"canvas" | "yaml">("canvas");
   const [inspectorOpen, setInspectorOpen] = useState(true);
@@ -120,6 +126,25 @@ export function Editor({ doc }: { doc: SystemDoc }) {
     setInspectorOpen(true);
   };
 
+  // undo / redo: Ctrl or Cmd + Z, and Ctrl + Shift + Z or Ctrl + Y (not while typing, where the field undoes itself)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName) || t.closest("[role=dialog],[role=menu],[role=listbox]"))) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undoStore(doc.id);
+      } else if ((k === "z" && e.shiftKey) || k === "y") {
+        e.preventDefault();
+        redoStore(doc.id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [doc.id, undoStore, redoStore]);
+
   // single-key shortcuts add a component (not while typing)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -171,6 +196,12 @@ export function Editor({ doc }: { doc: SystemDoc }) {
                   <LayoutGrid className="mr-1.5 h-3.5 w-3.5" /> Tidy
                 </Button>
               ))}
+            <Button variant="ghost" size="sm" disabled={!canUndo} onClick={() => undoStore(doc.id)} title="Undo the last change (Ctrl/Cmd+Z)" aria-label="Undo">
+              <Undo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="sm" disabled={!canRedo} onClick={() => redoStore(doc.id)} title="Redo (Ctrl/Cmd+Shift+Z or Ctrl+Y)" aria-label="Redo">
+              <Redo2 className="h-3.5 w-3.5" />
+            </Button>
             {connected && (
               <Button variant="ghost" size="sm" onClick={() => setHistory(true)} title="Earlier versions of this system, to look back at or restore">
                 <History className="mr-1.5 h-3.5 w-3.5" /> History

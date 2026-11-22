@@ -107,12 +107,49 @@ interface SystemsState {
   remove: (id: string) => void;
   /** replace the whole list (server sync) */
   setAll: (systems: SystemDoc[]) => void;
+  /** undo / redo of edits to one system (update and replace); a burst of edits within 600 ms is one step */
+  undo: (id: string) => void;
+  redo: (id: string) => void;
+  canUndo: (id: string) => boolean;
+  canRedo: (id: string) => boolean;
+  /** bumped whenever a history changes, so undo and redo buttons re-render */
+  historyTick: number;
 }
+
+/** Edits within this many milliseconds of the last recorded one join it (a drag is one step, not fifty). */
+export const HISTORY_COALESCE_MS = 600;
+const HISTORY_LIMIT = 100;
 
 export const useSystems = create<SystemsState>((set, get) => {
   const commit = (systems: SystemDoc[]) => {
     save(systems);
     set({ systems });
+  };
+  // per system: earlier versions to undo to, later ones to redo to, and when the last step was recorded
+  const history = new Map<string, { past: SystemDoc[]; future: SystemDoc[]; at: number }>();
+  const tick = () => set({ historyTick: get().historyTick + 1 });
+  const record = (prev: SystemDoc | undefined) => {
+    if (!prev) return;
+    const h = history.get(prev.id) ?? { past: [], future: [], at: 0 };
+    const now = Date.now();
+    if (now - h.at > HISTORY_COALESCE_MS || !h.past.length) {
+      h.past.push(prev);
+      if (h.past.length > HISTORY_LIMIT) h.past.shift();
+    }
+    h.at = now;
+    h.future = [];
+    history.set(prev.id, h);
+    tick();
+  };
+  const restore = (id: string, from: "past" | "future") => {
+    const h = history.get(id);
+    const cur = get().get(id);
+    const target = h?.[from].pop();
+    if (!h || !cur || !target) return;
+    (from === "past" ? h.future : h.past).push(cur);
+    h.at = 0; // the next edit starts a new step
+    commit(get().systems.map((s) => (s.id === id ? { ...target, updated_at: new Date().toISOString() } : s)));
+    tick();
   };
   return {
     systems: loadOrSeed(),
@@ -129,11 +166,18 @@ export const useSystems = create<SystemsState>((set, get) => {
       return copy;
     },
     update: (id, fn) => {
+      record(get().get(id));
       commit(get().systems.map((s) => (s.id === id ? { ...fn(s), updated_at: new Date().toISOString() } : s)));
     },
     replace: (doc) => {
+      record(get().get(doc.id));
       commit(get().systems.map((s) => (s.id === doc.id ? { ...doc, updated_at: new Date().toISOString() } : s)));
     },
+    undo: (id) => restore(id, "past"),
+    redo: (id) => restore(id, "future"),
+    canUndo: (id) => !!history.get(id)?.past.length,
+    canRedo: (id) => !!history.get(id)?.future.length,
+    historyTick: 0,
     duplicate: (id) => {
       const src = get().get(id);
       if (!src) return undefined;
