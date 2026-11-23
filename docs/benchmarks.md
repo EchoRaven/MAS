@@ -1122,6 +1122,10 @@ corrected ones on the same question.
   On arithmetic the model rereads its own reasoning and finds it plausible;
   a check from outside (running code) is what changes the answer, as with
   one agent with a sandbox above.
+- **Self-Refine on the same fifty does no better.** Its critic redoes every
+  computation and almost never answers NO ISSUES (2.6 and 2.7 revisions of 3
+  on average). First answers 35 and 39, last 34 and 34: 9 right → wrong and
+  3 wrong → right (p 0.15), read from the Evaluate page's answers by step.
 
 The paper's other finding, that debate gains no more than a vote over the same
 number of answers, is checked in [Debate or vote?](#debate-or-vote-what-the-rounds-add).
