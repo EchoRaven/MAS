@@ -50,6 +50,6 @@ export const MEASURED: Record<string, string[]> = {
   "paper-spp": [
     "Hard computation: 20, 22 on flash-lite (as debate), 25 and 24 on gemma (debate 26, 25; one agent 27, 24).",
     "MMLU medical (75): 73, 73, as MedAgents and debate, at a quarter of their cost.",
-    "Meta-Prompting's tasks, flash-lite, two runs: word sorting (49) 45 and 47, against one agent 35 and 35 and Meta-Prompting 45 and 44; Game of 24 (50) 37 and 43, against one agent 30 and 35 and Meta-Prompting without Python 36 and 37, at a fifth of its cost.",
+    "Its own Trivia Creative Writing (20 stories of five generated questions, flash-lite, one run): 99 of 100 answers, as one plain call: the questions leave no room. Graded on the story after 'Final answer:', so answers named only in the personas' discussion do not count.", "Meta-Prompting's tasks, flash-lite, two runs: word sorting (49) 45 and 47, against one agent 35 and 35 and Meta-Prompting 45 and 44; Game of 24 (50) 37 and 43, against one agent 30 and 35 and Meta-Prompting without Python 36 and 37, at a fifth of its cost.",
   ],
 };

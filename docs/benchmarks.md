@@ -1842,6 +1842,19 @@ now capped at 4,096 tokens (the authors' configuration has 1,024). An
 uncapped run of the Python version (46 of 50, $0.92) is left out of the
 table for the same reason.
 
+## Solo Performance Prompting on its own task: no room
+
+SPP's headline task is Trivia Creative Writing: a short story on a topic that
+works in the answers to five trivia questions (the paper's GPT-4: standard
+prompting 74.6%, SPP 79.9%). `benchmarks/trivia-writing` has twenty such
+tasks, written for this project from well-known facts whose answers are names
+(Jupiter, Canberra, Beethoven), never numbers or common words a story would
+use anyway. A `check` counts the answers in the story, after the last "Final
+answer:" when there is one, so answers SPP's personas name while discussing do
+not count. On flash-lite one plain call and SPP both find 99 of 100 ($0.008
+and $0.021). The paper's questions come from TriviaQA and are harder; well-known
+facts leave no room, and harder ones written from memory would risk wrong keys.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
