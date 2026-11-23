@@ -55,32 +55,34 @@ export function DatasetsPage() {
           <p className="mt-0.5 text-[12px] text-muted-foreground">
             The questions evaluations run on. A dataset's version is a hash of its cases, so two evaluations with the same version ran the same questions. Add one on the Evaluate page ("Save these questions as a dataset…") or with <code className="rounded bg-secondary px-1">POST /api/datasets</code>.
           </p>
-          <table className="mt-3 w-full text-left text-[12px]">
+          {/* on a phone the source and version columns give way, and the table scrolls rather than clipping its delete buttons */}
+          <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-[12px]">
             <thead className="text-muted-foreground">
               <tr className="border-b border-border/70">
                 <th className="py-1.5 font-medium">Name</th>
                 <th className="py-1.5 text-right font-medium">Questions</th>
                 <th className="py-1.5 pl-3 font-medium">Grader</th>
-                <th className="py-1.5 font-medium">Source · license</th>
-                <th className="py-1.5 font-medium">Version</th>
+                <th className="hidden py-1.5 font-medium sm:table-cell">Source · license</th>
+                <th className="hidden py-1.5 font-medium sm:table-cell">Version</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {list?.map((d) => (
                 <tr key={d.id} className={cn("cursor-pointer border-b border-border/40 align-top hover:bg-secondary/40", open === d.id && "bg-secondary/50")} onClick={() => setOpen(open === d.id ? null : d.id)} aria-selected={open === d.id}>
-                  <td className="py-1.5 pr-2">
+                  <td className="py-1.5 pr-2 [overflow-wrap:anywhere]">
                     <span className="font-medium">{d.name}</span>
                     {d.builtin && <span className="ml-1.5 rounded-full bg-secondary px-1.5 text-[10.5px] text-muted-foreground">built in</span>}
                     {d.description && <span className="block text-[11px] text-muted-foreground">{d.description}</span>}
                   </td>
                   <td className="py-1.5 text-right tabular-nums">{d.total}</td>
                   <td className="py-1.5 pl-3">{GRADER[d.grader] ?? d.grader}</td>
-                  <td className="max-w-72 py-1.5 pr-2 text-[11px] text-muted-foreground">
+                  <td className="hidden max-w-72 py-1.5 pr-2 text-[11px] text-muted-foreground sm:table-cell">
                     {d.source?.origin ? (/^https?:\/\//.test(d.source.origin.split(" ")[0]) ? <a href={d.source.origin.split(" ")[0]} target="_blank" rel="noreferrer" className="break-all text-info hover:underline" onClick={(e) => e.stopPropagation()}>{d.source.origin}</a> : d.source.origin) : "—"}
                     {d.source?.license && <span className="block">{d.source.license}</span>}
                   </td>
-                  <td className="py-1.5 font-mono text-[11px] text-muted-foreground">{d.version}</td>
+                  <td className="hidden py-1.5 font-mono text-[11px] text-muted-foreground sm:table-cell">{d.version}</td>
                   <td className="py-1.5 text-right">
                     {!d.builtin && (
                       <Button
@@ -101,6 +103,7 @@ export function DatasetsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </section>
         {open && (
           <section className="glass-panel rounded-xl p-4" aria-label="Dataset questions">
