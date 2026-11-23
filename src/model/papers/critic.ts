@@ -6,6 +6,7 @@
 import { Builder, type TemplateInfo } from "../builder";
 import { port } from "../ports";
 import type { SystemDoc } from "../types";
+import { CRITIC_CRITIQUE_FEWSHOT, CRITIC_POT_FEWSHOT } from "./criticPrompts";
 
 // the head of the authors' prompts/gsm8k/pot.md, and their critic and revision cues (src/program/critic.py)
 const POT = "# Write Python Code to solve the following questions. Store your result as a variable named 'answer'.";
@@ -13,6 +14,10 @@ const POT = "# Write Python Code to solve the following questions. Store your re
 const LOOP = `const question = String(input?.text ?? input ?? "");
 const withTool = String(ctx.vars.tool ?? "true") !== "false";
 const maxIter = Math.max(0, Math.min(8, Number(ctx.vars.iterations ?? 4)));
+// shots=paper: the authors' few-shot prompts (nine programs, four critiques) before each call, as their code sends them
+const paper = String(ctx.vars.shots ?? "") === "paper";
+const POT_FS = ${JSON.stringify(CRITIC_POT_FEWSHOT)};
+const CRIT_FS = ${JSON.stringify(CRITIC_CRITIQUE_FEWSHOT)};
 // the code of a reply: the first python block, else the reply up to a closing fence
 const codeOf = (s) => {
   const m = /\\\`\\\`\\\`(?:python|py)?[^\\n]*\\n([\\s\\S]*?)(?:\\\`\\\`\\\`|$)/.exec(s);
@@ -36,17 +41,19 @@ const run = async (code) => {
   const err = /Terminated|timed out/i.test(out) ? "TimeoutError: execution timeout" : lines[lines.length - 1] || "no output";
   return { report: err, pred: null };
 };
-let code = codeOf(String(await ctx.call("Model", ${JSON.stringify(POT)} + "\\n\\nQuestion: " + question + "\\n\\n# Python code, return answer\\n")));
+let code = codeOf(String(await ctx.call("Model", paper ? POT_FS + "\\n\\nQuestion: " + question + "\\n# Python code, return answer\\n" : ${JSON.stringify(POT)} + "\\n\\nQuestion: " + question + "\\n\\n# Python code, return answer\\n")));
 let res = await run(code);
 const trail = [String(res.pred)];
 let same = 0;
 if (noSandbox) ctx.log("no sandbox to run the code (" + noSandbox + "): no corrections");
 for (let i = 0; i < (noSandbox ? 0 : maxIter); i++) {
   const shown = "Question: " + question + "\\n\\\`\\\`\\\`python\\n" + code.split("\\n").filter((l) => !/^\\s*#/.test(l)).join("\\n") + "\\n\\\`\\\`\\\`\\n" + (withTool ? "Execution: " + res.report + "\\nOutput: answer = " + res.pred + "\\n" : "") + "\\nWhat's the problem with the above code?\\n";
-  const critique = String(await ctx.call("Model", shown)).split(/Here's a better solution/i)[0].trim();
+  const critique = String(await ctx.call("Model", (paper ? CRIT_FS + "\\n\\n" : "") + shown)).split(/Here's a better solution/i)[0].trim();
   // the authors' few-shot revisions all store the result in answer; zero-shot, a model prints it instead, and a revision
-  // with no answer cannot be taken, so the instruction of their program prompt is repeated before the cue
-  const next = codeOf(String(await ctx.call("Model", shown + critique + "\\n\\n# Store your result as a variable named 'answer'.\\nHere's a better solution:\\n\\\`\\\`\\\`python\\n")));
+  // with no answer cannot be taken, so zero-shot the instruction of their program prompt is repeated before the cue
+  const next = codeOf(String(await ctx.call("Model", paper
+    ? CRIT_FS + "\\n\\n" + shown + critique + "\\n\\nHere's a better solution:\\n\\\`\\\`\\\`python\\n"
+    : shown + critique + "\\n\\n# Store your result as a variable named 'answer'.\\nHere's a better solution:\\n\\\`\\\`\\\`python\\n")));
   if (!next || next === code) { trail.push(String(res.pred)); same++; if (same >= 2) break; continue; }
   const r = await run(next);
   const prev = String(res.pred);
@@ -98,7 +105,7 @@ export const critic: TemplateInfo = {
       "Every correction's executed answer goes into the run log, so changes can be counted.",
     ],
     differs: [
-      "Zero-shot: the authors prompt with few-shot examples of programs and critiques, which are not copied here. Their examples' revisions all store the result in answer; zero-shot, nine revisions in ten printed it instead and could not be taken, so the revision prompt repeats their program instruction ('Store your result as a variable named 'answer'.') before 'Here's a better solution:'.",
+      "By default zero-shot; the run variable shots=paper puts the authors' few-shot prompts (their pot.md and critic.md for GSM8K, MIT) before each call, as their code does. Zero-shot: Their examples' revisions all store the result in answer; zero-shot, nine revisions in ten printed it instead and could not be taken, so the revision prompt repeats their program instruction ('Store your result as a variable named 'answer'.') before 'Here's a better solution:'.",
       "Their code runs all four corrections without the stopping rule the paper states; this follows the paper.",
       "Replies are capped at 4,096 tokens where their calls use 500 and 400, room for a reasoning model.",
     ],

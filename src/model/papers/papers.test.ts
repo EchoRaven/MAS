@@ -121,6 +121,23 @@ describe("paper reproductions", () => {
     expect(s.logs).toContain("answers by correction: 12 → 13 → 13 → 13");
   });
 
+  it("CRITIC with shots=paper sends the authors' few-shot prompts before each call", async () => {
+    let file = "";
+    const s = script(["```python\nanswer = 12\n```", "Wrong: +1.", "answer = 13\n```", "Fine.", "answer = 13\n```", "Fine.", "answer = 13\n```"], async (name, a) => {
+      if (name === "edit_file") return (file = a.content ?? ""), "ok";
+      return "__ANSWER__=" + /answer = (\d+)/.exec(file)![1];
+    });
+    s.ctx.vars = { shots: "paper" } as never;
+    await new AsyncFn("input", "ctx", fnCode("paper-critic"))({ text: "3*4+1?" }, s.ctx);
+    expect(s.seen[0].startsWith("# Write Python Code to solve the following questions.")).toBe(true);
+    expect(s.seen[0]).toContain("Janet");
+    expect(s.seen[0].endsWith("Question: 3*4+1?\n# Python code, return answer\n")).toBe(true);
+    expect(s.seen[1].startsWith("Question: Janet hires six employees.")).toBe(true);
+    expect(s.seen[1].endsWith("What's the problem with the above code?\n")).toBe(true);
+    expect(s.seen[2]).not.toContain("# Store your result as a variable named 'answer'.\nHere's a better solution");
+    expect(s.seen[2].endsWith("Here's a better solution:\n```python\n")).toBe(true);
+  });
+
   it("CRITIC keeps the last code that gave an answer, and stops when a revision without one changes nothing twice", async () => {
     let file = "";
     const s = script(["```python\nanswer = 12\n```", "The output looks wrong.", "result = 12\nprint(result)\n```", "Still wrong.", "result = 12\nprint(result)\n```"], async (name, a) => {
