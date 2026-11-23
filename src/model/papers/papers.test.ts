@@ -159,6 +159,15 @@ describe("paper reproductions", () => {
     expect(await vote(["Final: (B)", "Final: B", "Final: C"])).toMatch(/Final: \(B\)$/);
   });
 
+  it("self-consistency's vote reads expressions, numbers and letters as Agent Forest's does", async () => {
+    // its samples arrive as an object of replies (one port per sample), not a list
+    const vote = (replies: string[]) => new AsyncFn("input", "ctx", fnCode("self-consistency"))(Object.fromEntries(replies.map((r, i) => [`s${i}`, r])), { vars: {}, log: () => {} }) as Promise<string>;
+    const g = await vote(["Final: 5 + 5 + 13 + 1", "Final: **5 * 5 - 13 / 13**", "Final: 5*5 - 13/13"]);
+    expect(g).toMatch(/Final: 5 \* 5 - 13 \/ 13$/);
+    expect(await vote(["Final: 99", "Final: 1,234", "Final: 1234.", "Final: **1234**"])).toMatch(/Final: 1,234$/);
+    expect(await vote(["Final: C", "Final: (B)", "Final: B"])).toMatch(/Final: \(B\)$/);
+  });
+
   it("ReConcile's vote keeps a fraction apart from the integer with the same digits, and groups option letters", async () => {
     const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
     const codes = Object.values(doc.nodes as unknown as Record<string, { data?: { fn?: { code: string } } }>).map((n) => n.data?.fn?.code).filter(Boolean) as string[];
