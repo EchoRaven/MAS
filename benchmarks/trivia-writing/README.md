@@ -9,3 +9,11 @@ would use anyway, so an answer found in a story was put there. `expected` is a J
 Grade with `check` and `check.js`: a story passes when it contains every answer (any alias, whole words, case
 ignored); the reason says how many of the five it found, the paper's metric. The paper's GPT-4, N = 5: standard
 prompting 74.6%, SPP 79.9%.
+
+`from_spp.py` turns Solo Performance Prompting's own set (100 tasks, N = 5, questions from TriviaQA) into the same
+form. That set is not bundled: its repository has no license. Download
+`data/trivia_creative_writing/trivia_creative_writing_100_n_5.jsonl` from
+https://github.com/MikeWangWZHL/Solo-Performance-Prompting and run `python3 from_spp.py <file> > spp-trivia-100.jsonl`;
+grade it with `check.js`. Some of its answers are ordinary words ("Exile", the band); the paper scores by the same
+containment, so they are kept.
+
