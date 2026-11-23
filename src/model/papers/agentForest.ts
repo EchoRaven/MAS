@@ -7,8 +7,8 @@ import { port } from "../ports";
 import type { SystemDoc } from "../types";
 
 const VOTE = `// the replies of every sample: the most common final answer wins
-const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? String(t).trim().split("\\n").pop() ?? "").replace(/\\*+/g, "").trim();
-const norm = (a) => a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");
+const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? String(t).trim().split("\\n").pop() ?? "").replace(/\\*\\*(.+?)\\*\\*/g, "$1").replace(/^\\*+|\\*+$/g, "").trim();
+const norm = (a) => /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(a) ? a.replace(/\\s+/g, "") : a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");
 const counts = {}, shown = {};
 for (const t of input) { const f = finalOf(t); if (!f) continue; const k = norm(f); counts[k] = (counts[k] ?? 0) + 1; shown[k] ??= f; }
 const ranked = Object.entries(counts).sort((x, y) => y[1] - x[1]);

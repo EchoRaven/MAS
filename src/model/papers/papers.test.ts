@@ -148,6 +148,17 @@ describe("paper reproductions", () => {
     expect(open.logs.some((l) => l.startsWith("answers by"))).toBe(false);
   });
 
+  it("Agent Forest's vote keeps a product's * and groups expressions apart from numbers and letters", async () => {
+    const vote = (replies: string[]) => new AsyncFn("input", "ctx", fnCode("paper-agent-forest"))(replies, { vars: {}, log: () => {} }) as Promise<string>;
+    // Game of 24: the * of a product survives (it was once stripped as Markdown), and 5+5 is not 5*5
+    const g = await vote(["Work.\nFinal: **5 * 5 - 13 / 13**", "Final: 5*5 - 13/13", "Final: 5 + 5 + 13 + 1", "Final: (5 + 5) * 13 / 13"]);
+    expect(g).toMatch(/Final: 5 \* 5 - 13 \/ 13$/);
+    expect(g).toContain("×2");
+    // numbers and option letters group as before
+    expect(await vote(["Final: 1,234", "Final: 1234.", "Final: **1234**", "Final: 99"])).toMatch(/×3.*\nFinal: 1,234$/s);
+    expect(await vote(["Final: (B)", "Final: B", "Final: C"])).toMatch(/Final: \(B\)$/);
+  });
+
   it("intrinsic self-correction keeps only the model's own turn, and logs every round's boxed answer", async () => {
     const s = script(["work \\boxed{12}", "Problem: step 2.\n\n[User]\ninvented turn", "\\boxed{\\frac{26}{2}}", "fine", "\\boxed{13}"]);
     expect(await new AsyncFn("input", "ctx", fnCode("paper-self-correct"))({ text: "q" }, s.ctx)).toBe("\\boxed{13}");
