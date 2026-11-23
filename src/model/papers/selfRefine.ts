@@ -14,6 +14,9 @@ const rounds = Math.max(0, Math.min(6, Math.floor(Number(ctx.vars.rounds ?? 3)))
 const open = String(ctx.vars.mode ?? "") === "open";
 const first = open ? question : "Solve the question step by step and end with a last line 'Answer: X'.\\n\\nQuestion:\\n" + question;
 let answer = await ctx.call("Writer", first);
+// each version's final answer, for the Evaluate page's answers by step (questions with one answer only)
+const final = (s) => { const m = [...String(s).matchAll(/Answer:\\s*(.+)/gi)]; return m.length ? m[m.length - 1][1].trim() : String(s).trim().split("\\n").pop(); };
+const trail = [final(answer)];
 for (let r = 0; r < rounds; r++) {
   const critique = open
     ? "Request:\\n" + question + "\\n\\nA response:\\n" + answer + "\\n\\nGive specific, actionable feedback: what is wrong, missing, unclear or unneeded, and how to fix each. If the response needs no change, reply with exactly: NO ISSUES"
@@ -23,7 +26,9 @@ for (let r = 0; r < rounds; r++) {
   answer = await ctx.call("Writer", open
     ? "Request:\\n" + question + "\\n\\nYour previous response:\\n" + answer + "\\n\\nFeedback on it:\\n" + feedback + "\\n\\nWrite the improved response, using the feedback where it is right. Reply with the response itself only."
     : "Question:\\n" + question + "\\n\\nYour previous answer:\\n" + answer + "\\n\\nFeedback on it:\\n" + feedback + "\\n\\nWrite the corrected solution step by step, using the feedback where it is right, and end with a last line 'Answer: X'.");
+  trail.push(final(answer));
 }
+if (!open) ctx.log("answers by revision: " + trail.join(" → "));
 return answer;`;
 
 function build(): SystemDoc {
@@ -62,6 +67,7 @@ export const selfRefine: TemplateInfo = {
     mapped: [
       "The Writer and the Critic are two model components on the same model, as the paper's one model prompted three ways (generate, feedback, refine).",
       "The loop is a function calling them with ctx.call: answer; then up to `rounds` times, feedback, and a revision unless the feedback says NO ISSUES.",
+      "On questions with one answer, each version's final answer is logged ('answers by revision: 12 → 13'), so the Evaluate page shows which revisions fixed answers and which broke them.",
     ],
     differs: [
       "The paper gives the model few-shot examples of feedback and refinement per task; here the instructions are zero-shot.",

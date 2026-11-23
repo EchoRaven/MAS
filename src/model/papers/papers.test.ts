@@ -137,6 +137,17 @@ describe("paper reproductions", () => {
     expect(s.logs).toContain("answers by correction: 12 → 12 → 12");
   });
 
+  it("Self-Refine logs each version's final answer on questions, and stops when the critic finds nothing", async () => {
+    const s = script(["Work.\nAnswer: 12", "Step 2 is wrong: 3*4+1.", "Fixed.\nAnswer: 13", "NO ISSUES"]);
+    expect(await new AsyncFn("input", "ctx", fnCode("paper-self-refine"))({ text: "3*4+1?" }, s.ctx)).toBe("Fixed.\nAnswer: 13");
+    expect(s.seen).toHaveLength(4);
+    expect(s.logs).toContain("answers by revision: 12 → 13");
+    const open = script(["An essay.", "NO ISSUES"]);
+    open.ctx.vars = { mode: "open" } as never;
+    await new AsyncFn("input", "ctx", fnCode("paper-self-refine"))({ text: "Write" }, open.ctx);
+    expect(open.logs.some((l) => l.startsWith("answers by"))).toBe(false);
+  });
+
   it("intrinsic self-correction keeps only the model's own turn, and logs every round's boxed answer", async () => {
     const s = script(["work \\boxed{12}", "Problem: step 2.\n\n[User]\ninvented turn", "\\boxed{\\frac{26}{2}}", "fine", "\\boxed{13}"]);
     expect(await new AsyncFn("input", "ctx", fnCode("paper-self-correct"))({ text: "q" }, s.ctx)).toBe("\\boxed{13}");
