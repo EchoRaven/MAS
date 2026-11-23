@@ -134,8 +134,12 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   questions fixed and lost against a reference with McNemar's p, misses a
   member had and lost, cost per correct answer, a chart of accuracy against
   cost with the cost frontier named, and a question-by-question grid. Runs
-  of one setup started separately pool into one row; an evaluation with
-  cases whose answer is not known says so, with a link to retry them.
+  of one setup started separately pool into one row, if they ran the same
+  system version: each evaluation records a hash of the system it ran (layout
+  aside), so a template fixed in between is not pooled with its old runs, and
+  pooled pairwise judgements name the version where a setup has several. An
+  evaluation with cases whose answer is not known says so, with a link to
+  retry them.
   Open-ended sets list their pairwise judgements, with shape and links.
 - **Invalid evaluations** (a setup bug found after they ran) are marked with
   the reason. They are kept and listed, but left out of comparisons and pooled
