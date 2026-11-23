@@ -1860,6 +1860,13 @@ output goes back to the conductor.
 - **Discussion lands between one call with personas and a vote.** Multiagent
   Debate gets 40 and 42 at half the vote's cost; no method without code
   reaches one agent with a sandbox.
+- **Teams lose answers they had.** Regraded with "had it, lost" (a member
+  wrote an expression the check passes, the final answer failed it), misses
+  with a right answer inside the team, per run: debate 3 and 3 of 8 and 10,
+  Mixture-of-Agents 4 and 2 of 18 and 16, Meta-Prompting 2 and 2, ten-sample
+  voting 2 and 2 (a right sample outvoted), Self-Refine 1 and 2, Meta-Prompting
+  with Python none. Keeping any member's checked answer would have added two
+  or three games to each.
 - **Every miss without code was a claim that no solution exists**, or a
   wrong expression; every game has one, and the record keeps it.
 
