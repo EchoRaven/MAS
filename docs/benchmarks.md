@@ -1140,7 +1140,9 @@ corrected ones on the same question.
   critic mostly says NO ISSUES (0.3 revisions on average, not 2.7), and what it
   sends back is right: first answers 37 and 36, last 41 and 42, 10 wrong →
   right and none right → wrong (p 0.002), at $0.08 a run against $0.25. The
-  weak critic's fault was finding problems that were not there.
+  weak critic's fault was finding problems that were not there. As a way to
+  answer, though, it does not pay: gemini-3.8-flash answering alone gets 40
+  and 41 at $0.028, nearly as many for a third of the cost.
 
 The paper's other finding, that debate gains no more than a vote over the same
 number of answers, is checked in [Debate or vote?](#debate-or-vote-what-the-rounds-add).
