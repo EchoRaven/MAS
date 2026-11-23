@@ -1812,6 +1812,7 @@ output goes back to the conductor.
 | Solo Performance Prompting (multi-persona, one call) | 37 | 43 | $0.15 |
 | Meta-Prompting with Python | 43 | 42 | $0.21 |
 | Multiagent Debate, three debaters, two rounds | 40 | 42 | $0.53 |
+| Self-Refine | 44 | 43 | $0.36 |
 | Agent Forest, 10 samples and a vote | 42 | 44 | $1.04 |
 | **One agent with a Python sandbox** | **50** | **50** | $0.12 |
 
@@ -1833,6 +1834,11 @@ output goes back to the conductor.
   the vote stripped every `*` as Markdown, so right products lost their
   signs; Agent Forest, self-consistency, MAV and EoT shared the bug, which
   answers that are numbers never showed.
+- **Self-Refine gains here, as on word sorting.** Its revisions turned 16
+  wrong answers right and 2 right ones wrong over two runs (first answers 34
+  and 39, last 44 and 43; p 0.001), where on GSM-Hard they lost (3 against 9).
+  A 24 answer can be checked by doing the arithmetic, as a sorted list by
+  reading it; a GSM-Hard answer only by redoing the reasoning.
 - **Discussion lands between one call with personas and a vote.** Multiagent
   Debate gets 40 and 42 at half the vote's cost; no method without code
   reaches one agent with a sandbox.
