@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
+import { systemVersion } from "@/model/templates";
 import type { ResultSpec, SystemDoc } from "@/model/types";
 import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, type TrailStats, answerTrail, trailStats, DEFAULT_CRITERION, criterionTag, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
@@ -100,6 +101,8 @@ export class EvalManager {
   }
 
   start(original: SystemDoc, opts: EvalOptions, queued = false): EvalRecord {
+    // the system as saved, before this evaluation's models and limits: what its runs pool on
+    const version = systemVersion(original);
     const doc = this.prepare(original, opts);
     const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
@@ -109,6 +112,7 @@ export class EvalManager {
       id: `eval_${Date.now().toString(36)}_${randomUUID().slice(0, 6)}`,
       system_id: doc.id,
       system_name: doc.name,
+      system_version: version,
       grader: opts.grader,
       ...(opts.grader === "check" && opts.check ? { check: opts.check } : {}),
       mock: !!opts.mock,

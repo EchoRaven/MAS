@@ -181,6 +181,8 @@ export interface EvalRecord {
   id: string;
   system_id: string;
   system_name: string;
+  /** a hash of what the system does (systemVersion): runs of different versions are not pooled */
+  system_version?: string;
   grader: Grader;
   /**
    * for grader "check": JS run on each output, with `output`, `answer` (the final answer), `expected` and

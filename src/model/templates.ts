@@ -423,6 +423,19 @@ export function contentHash(doc: SystemDoc): string {
   return (h >>> 0).toString(36) + text.length.toString(36);
 }
 
+/**
+ * What a system does, as a short hash: its content without its id, edit time, seed record and layout (where its
+ * parts sit on a canvas). Two evaluations of the same system id with different versions ran different systems (a
+ * template fixed in between), so their runs are not pooled.
+ */
+export function systemVersion(doc: SystemDoc): string {
+  const { id: _id, updated_at: _u, seed: _s, ...content } = doc;
+  const text = JSON.stringify(content, (k, v) => (k === "position" || k === "layout" ? undefined : v));
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(36);
+}
+
 /** A seeded copy of a template, ready to store. */
 export function buildSeed(t: TemplateInfo): SystemDoc {
   const doc = { ...t.build(), id: seedId(t.id), updated_at: new Date().toISOString() };

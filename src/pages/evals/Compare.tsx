@@ -66,7 +66,7 @@ export function ComparePage() {
   const groups = useMemo(() => {
     const by = new Map<string, EvalSummary[]>();
     for (const e of rawMembers) {
-      const k = pool && !incomplete(e) && !noAnswers(e) && !e.invalid ? `${e.system_id}|${modelsLabel(e)}|${e.grader}` : e.id;
+      const k = pool && !incomplete(e) && !noAnswers(e) && !e.invalid ? `${e.system_id}|${e.system_version ?? ""}|${modelsLabel(e)}|${e.grader}` : e.id;
       by.set(k, [...(by.get(k) ?? []), e]);
     }
     return [...by.values()].map((g) => [...g].sort((a, b) => a.started_at.localeCompare(b.started_at)));

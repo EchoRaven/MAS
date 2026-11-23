@@ -1,7 +1,7 @@
 import { finalAnswer } from "@/run/evals";
 import { describe, expect, it } from "vitest";
 import { simulate } from "@/run/simulate";
-import { TEMPLATES } from "../templates";
+import { systemVersion, TEMPLATES } from "../templates";
 import { PAPER_TEMPLATES } from ".";
 import { MEASURED } from "./measured";
 
@@ -194,6 +194,17 @@ describe("paper reproductions", () => {
     expect(await new AsyncFn("input", "ctx", fnCode("paper-meta-prompting"))({ text: "sort b a" }, s.ctx)).toBe("Answer: a b");
     expect(expertGot).toEqual(["sort b a"]);
     expect(s.seen[1]).not.toContain("copied…");
+  });
+
+  it("a system's version ignores its id and layout, and changes with what it does", () => {
+    const a = TEMPLATES.find((t) => t.id === "paper-critic")!.build();
+    const moved = structuredClone(a);
+    for (const n of Object.values(moved.nodes as unknown as Record<string, { position?: { x: number; y: number } }>)) if (n.position) n.position = { x: n.position.x + 40, y: n.position.y - 7 };
+    expect(systemVersion({ ...moved, id: "another" })).toBe(systemVersion(a));
+    const edited = structuredClone(a);
+    const fn = Object.values(edited.nodes as unknown as Record<string, { data?: { fn?: { code: string } } }>).find((n) => n.data?.fn)!;
+    fn.data!.fn!.code += "\n// changed";
+    expect(systemVersion(edited)).not.toBe(systemVersion(a));
   });
 
   it("every measurement belongs to a template, and reaches it", () => {
