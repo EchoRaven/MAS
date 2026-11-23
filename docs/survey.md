@@ -258,7 +258,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   the better.** Intrinsic self-correction (Huang et al.), reviewing and
   improving its own answer twice, kept the same answer in about three runs of
   four; on GSM-Hard every verdict it changed went from right to wrong (5 to 0),
-  on Hard computation it gained 4 and lost 2. Self-Refine gains where a slip
+  on Hard computation it gained 4 and lost 2. Self-Refine on the same GSM-Hard
+  questions did no better (9 right → wrong, 3 back). Self-Refine gains where a slip
   shows on rereading (word order); on arithmetic the check that changes
   answers comes from outside, such as running code.
   Even then, the outside check has to be trusted: CRITIC shows the critic its

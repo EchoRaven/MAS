@@ -60,6 +60,13 @@ exact McNemar tests against one agent on the same questions.
   Self-Refine 49, 48. On Game of 24, Meta-Prompting with an Expert Python
   gains (43, 42 against 30, 35), but one agent with a sandbox solves all
   fifty twice at half the cost ([Meta-Prompting](#meta-prompting-word-sorting-and-what-else-gains-as-much)).
+- **Revising one's own arithmetic loses answers, even with the interpreter's
+  output.** On GSM-Hard (50, flash-lite, two runs each), changed answers went
+  right → wrong far more than back: intrinsic self-correction 5 to 0,
+  Self-Refine 9 to 3, CRITIC 15 to 3 with the execution shown and 20 to 2
+  without. CRITIC's first program is its gain
+  ([self-correction](#self-correction-without-feedback-what-the-second-look-changes),
+  [CRITIC](#critic-criticising-with-the-interpreters-output)).
 - **Debate gains on open-ended answers too, at the highest cost.** Three
   debaters revising after reading each other (open mode) beat gemini-3.8-flash
   alone 33–1 over two runs, 36–1 on content, 26–6 at matched length, at $0.48
