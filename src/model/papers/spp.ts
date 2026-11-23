@@ -15,7 +15,7 @@ Participants: AI Assistant (you); <the others>
 Start collaboration!
 <the discussion, each turn starting with the participant's name>
 Finish collaboration!
-Final answer: <the answer>
+Final answer: <the answer: when the task asks for a piece of writing (a story, a poem), the whole piece itself, not a summary of it>
 
 When the task asks for one value, end with a last line 'Answer: X' giving only it.
 
@@ -47,6 +47,7 @@ export const spp: TemplateInfo = {
       "The prompt follows the paper's: identify participants, start the collaboration, let each persona contribute and criticise, revise until agreement, give the final answer.",
     ],
     differs: [
+      "The final answer is spelled out as the whole piece when the task asks for writing: without the paper's demonstrations, flash-lite ended stories with a list of the answers they worked in.",
       "The paper's prompt carries two worked demonstrations (a 24-game and a poem); here the instruction alone, to keep the call short. Add them to the prompt to match the paper exactly.",
     ],
   },
