@@ -38,6 +38,8 @@ export interface EvalOptions {
   time_limit_min?: number;
   /** each run's spending limit in USD, instead of the system's own budget: a run that passes it stops */
   usd_limit?: number;
+  /** the whole evaluation's spending limit in USD: once its runs have spent more, no further case starts */
+  max_usd?: number;
   /** serve chosen models with others, after on_model: { sonnet: "gemini", gpt: "gemini_lite" } */
   model_map?: Record<string, string>;
   /** what every answer must be, checked on each run as the system's own result would be (marked: an "Answer:" line) */
@@ -85,6 +87,7 @@ export class EvalManager {
     const usd = Number(opts.usd_limit);
     if (opts.usd_limit != null && !(usd > 0 && usd <= 50)) throw new Error("usd_limit must be more than 0 and at most 50 USD");
     if (opts.usd_limit != null) doc = { ...doc, budget: { ...doc.budget, usd } };
+    if (opts.max_usd != null && !(Number(opts.max_usd) > 0 && Number(opts.max_usd) <= 500)) throw new Error("max_usd must be more than 0 and at most 500 USD");
     if (opts.model_map && Object.keys(opts.model_map).length) doc = remapModels(doc, opts.model_map, DEFAULT_MODELS);
     // the evaluation's expectation adds to what the system declares (its own type stays when it has one)
     if (opts.expect) doc = { ...doc, result: doc.result ? { ...doc.result, ...(opts.expect.marked ? { marked: true } : {}) } : opts.expect };
@@ -115,6 +118,7 @@ export class EvalManager {
       ...(opts.on_model ? { on_model: opts.on_model } : {}),
       ...(opts.time_limit_min != null ? { time_limit_min: Number(opts.time_limit_min) } : {}),
       ...(opts.usd_limit != null ? { usd_limit: Number(opts.usd_limit) } : {}),
+      ...(opts.max_usd != null ? { max_usd: Number(opts.max_usd) } : {}),
       ...(opts.model_map && Object.keys(opts.model_map).length ? { model_map: opts.model_map } : {}),
       ...(opts.expect ? { expect: opts.expect } : {}),
       status: queued ? "queued" : "running",
@@ -510,6 +514,7 @@ export class EvalManager {
       ...(rec.on_model ? { on_model: rec.on_model } : {}),
       ...(rec.time_limit_min != null ? { time_limit_min: rec.time_limit_min } : {}),
       ...(rec.usd_limit != null ? { usd_limit: rec.usd_limit } : {}),
+      ...(rec.max_usd != null ? { max_usd: rec.max_usd } : {}),
       ...(rec.model_map ? { model_map: rec.model_map } : {}),
       ...(rec.expect ? { expect: rec.expect } : {}),
     };
@@ -590,6 +595,11 @@ export class EvalManager {
         }
         c.seconds = Math.round((Date.now() - t0) / 100) / 10;
         save();
+        // past the evaluation's spending limit: no further case starts (those already running finish)
+        if (opts.max_usd != null && rec.usd > opts.max_usd && !this.stopped.has(rec.id)) {
+          rec.stop_reason = `Stopped: the evaluation has spent $${rec.usd.toFixed(2)}, past its limit of $${opts.max_usd}`;
+          this.stopped.add(rec.id);
+        }
       }
     };
     const workers = Number.isFinite(Number(opts.concurrency)) ? Math.max(1, Math.min(Math.floor(Number(opts.concurrency)), 8)) : 2;

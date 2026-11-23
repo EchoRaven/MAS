@@ -390,6 +390,23 @@ describe("evaluations", () => {
     expect(() => evals.start(echo(), { grader: "number", cases: [{ input: "4", expected: "4" }], usd_limit: 500 })).toThrow(/usd_limit/);
   });
 
+  it("stops starting cases once the evaluation has spent past its limit, and says so", async () => {
+    const cases = Array.from({ length: 6 }, (_, i) => ({ input: String(i), expected: String(i) }));
+    // a priced model, so each run costs something (the plain echo model is free)
+    const priced = echo();
+    priced.models = priced.models.map((m) => (m.id === "echo" ? { ...m, price_in: 1e6, price_out: 1e6 } : m));
+    const rec = evals.start(priced, { grader: "number", cases, concurrency: 1, max_usd: 0.000001 });
+    expect(rec.max_usd).toBe(0.000001);
+    const done = await finish(rec.id);
+    expect(done.usd).toBeGreaterThan(0.000001);
+    expect(done.status).toBe("stopped");
+    expect(done.stop_reason).toMatch(/past its limit of \$0\.000001/);
+    expect(done.cases.filter((c) => c.status === "done")).toHaveLength(1);
+    // without a limit, all six run
+    expect((await finish(evals.start(priced, { grader: "number", cases, concurrency: 1 }).id)).cases.filter((c) => c.status === "done")).toHaveLength(6);
+    expect(() => evals.start(echo(), { grader: "number", cases, max_usd: 0 })).toThrow(/max_usd/);
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

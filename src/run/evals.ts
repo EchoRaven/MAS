@@ -196,6 +196,8 @@ export interface EvalRecord {
   time_limit_min?: number;
   /** each run's spending limit (USD), when it replaced the system's budget */
   usd_limit?: number;
+  /** the whole evaluation's spending limit (USD): past it, no further case started */
+  max_usd?: number;
   /** run variables every case started with */
   vars?: Record<string, unknown>;
   /** the dataset the cases came from, its version, and the sample drawn from it */

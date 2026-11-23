@@ -14,7 +14,7 @@ import { checkDoc } from "./systems";
 const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "check", "none"];
 
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
-  type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; usd_limit?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean; expect?: ResultSpec | null; check?: string };
+  type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; usd_limit?: number; max_usd?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean; expect?: ResultSpec | null; check?: string };
   // the questions and options of an evaluation, shared by one system and a batch of them
   /** What every answer must be (an evaluation's own result check): a known type, optionally marked. */
   const checkExpect = (x: unknown): ResultSpec | undefined => {
@@ -41,7 +41,7 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     if (!Array.isArray(cases) || !cases.length) throw new HttpError(400, "Give cases: [{input, expected}, …], or a dataset_id");
     grader ??= "answer";
     if (!GRADERS.includes(grader)) throw new HttpError(400, `grader must be one of ${GRADERS.join(", ")}`);
-    return { dataset, cases, grader, ...(grader === "check" ? { check } : {}), mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined, time_limit_min: b.time_limit_min ?? undefined, usd_limit: b.usd_limit ?? undefined, repeats: b.repeats, model_map: b.model_map, vars: b.vars && typeof b.vars === "object" ? b.vars : undefined, expect: checkExpect(b.expect) };
+    return { dataset, cases, grader, ...(grader === "check" ? { check } : {}), mock: !!b.mock, concurrency: b.concurrency, judge: b.judge, on_model: b.on_model || undefined, time_limit_min: b.time_limit_min ?? undefined, usd_limit: b.usd_limit ?? undefined, max_usd: b.max_usd ?? undefined, repeats: b.repeats, model_map: b.model_map, vars: b.vars && typeof b.vars === "object" ? b.vars : undefined, expect: checkExpect(b.expect) };
   };
   const checkValid = (doc: SystemDoc, force?: boolean) => {
     const errors = validate(doc).filter((i) => i.severity === "error");
