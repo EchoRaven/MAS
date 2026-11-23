@@ -1175,11 +1175,12 @@ logged.
   Reading the execution, the critic still overruled correct results: in one
   run it called its own program's right product "incorrect output", against
   its mental arithmetic, and wrote another program.
-- **Zero-shot is a caveat.** The authors prompt with few-shot critiques, many
-  of which judge the code correct before revising; without them the critic
-  may look for problems more readily. The revision prompt also repeats their
-  instruction to store the result in `answer`, which zero-shot revisions
-  otherwise ignored.
+- **The authors' few-shot prompts do not change it.** With their pot.md and
+  critic.md before each call (`shots=paper`; nine programs, four critiques),
+  the first programs are a little better and the corrections still only lose:
+  over two runs each, 82 → 71 with the execution shown (11 right → wrong, none
+  back) and 80 → 70 without it (10 and none), at $0.43 a run. Zero-shot was not
+  the cause.
 
 Two template fixes came before these numbers. The first version compared each
 revision's result with the previous one even when the revision had stored no
@@ -1877,7 +1878,7 @@ now capped at 4,096 tokens (the authors' configuration has 1,024). An
 uncapped run of the Python version (46 of 50, $0.92) is left out of the
 table for the same reason.
 
-## Solo Performance Prompting on its own task: no room
+## Solo Performance Prompting on its own task
 
 SPP's headline task is Trivia Creative Writing: a short story on a topic that
 works in the answers to five trivia questions (the paper's GPT-4: standard
@@ -1887,8 +1888,17 @@ tasks, written for this project from well-known facts whose answers are names
 use anyway. A `check` counts the answers in the story, after the last "Final
 answer:" when there is one, so answers SPP's personas name while discussing do
 not count. On flash-lite one plain call and SPP both find 99 of 100 ($0.008
-and $0.021). The paper's questions come from TriviaQA and are harder; well-known
-facts leave no room, and harder ones written from memory would risk wrong keys.
+and $0.021): well-known facts leave no room.
+
+On the paper's own set (100 tasks of five TriviaQA questions, from the SPP
+repository; kept on the server, not bundled, as it carries no license), one
+plain call works in 82.0% and 80.6% of the answers, SPP 79.2% and 80.4%, at
+two and a half times the cost: no gain, where the paper's GPT-4 went from
+74.6% to 79.9%. The first SPP run was graded on a list: without the paper's
+demonstrations, flash-lite ended its stories with "Final answer:" and a list of
+the answers it had worked in, which the check read. The template now asks for
+the whole piece as the final answer to a writing task, and 97 of 100 runs give
+the story there.
 
 ## Earlier sets
 

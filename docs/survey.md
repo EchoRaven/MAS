@@ -267,7 +267,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   answers comes from outside, such as running code.
   Even then, the outside check has to be trusted: CRITIC shows the critic its
   program's output, and on GSM-Hard flash-lite still overruled right results
-  (15 right → wrong against 3 back; without the output 20 against 2), while
+  (15 right → wrong against 3 back; without the output 20 against 2; with the
+  authors' few-shot prompts 11 against none), while
   its first program alone matched one agent with a sandbox.
 - **A paper's gain needs room to show.** On GSM8K the single agent already
   scores 97, so a debate cannot show the paper's 77 → 85; on MMLU, 95 against
