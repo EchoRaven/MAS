@@ -259,7 +259,8 @@ From [benchmarks.md](benchmarks.md), all on the same model:
   improving its own answer twice, kept the same answer in about three runs of
   four; on GSM-Hard every verdict it changed went from right to wrong (5 to 0),
   on Hard computation it gained 4 and lost 2. Self-Refine on the same GSM-Hard
-  questions did no better (9 right → wrong, 3 back). Self-Refine gains where a slip
+  questions did no better (9 right → wrong, 3 back), until a stronger model
+  criticised: then 10 wrong → right and none back, as it rarely objected. Self-Refine gains where a slip
   shows on rereading (word order) or on doing the arithmetic (Game of 24: 16
   wrong → right against 2); on arithmetic the check that changes
   answers comes from outside, such as running code.

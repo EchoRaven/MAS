@@ -1135,6 +1135,12 @@ corrected ones on the same question.
   computation and almost never answers NO ISSUES (2.6 and 2.7 revisions of 3
   on average). First answers 35 and 39, last 34 and 34: 9 right → wrong and
   3 wrong → right (p 0.15), read from the Evaluate page's answers by step.
+- **With a stronger critic the same loop gains.** flash-lite still answers
+  and revises, gemini-3.8-flash criticises (`model_map` `node:critic`). The
+  critic mostly says NO ISSUES (0.3 revisions on average, not 2.7), and what it
+  sends back is right: first answers 37 and 36, last 41 and 42, 10 wrong →
+  right and none right → wrong (p 0.002), at $0.08 a run against $0.25. The
+  weak critic's fault was finding problems that were not there.
 
 The paper's other finding, that debate gains no more than a vote over the same
 number of answers, is checked in [Debate or vote?](#debate-or-vote-what-the-rounds-add).
