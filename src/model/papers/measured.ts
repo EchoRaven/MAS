@@ -3,7 +3,7 @@
 // 30-question set; flash-lite is gemini-3.1-flash-lite, where a single agent scores 19.
 export const MEASURED: Record<string, string[]> = {
   "paper-debate": [
-    "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26, 25 against one agent's 27, 24; on the stronger 3.8-flash, 26, 26 against 26, 27.",
+    "Game of 24 (50, flash-lite, two runs): 40 and 42, against one agent's 30 and 35, SPP's 37 and 43, ten-sample voting's 42 and 44, and one agent with a sandbox's 50 and 50; $0.53 a run.", "Hard computation (flash-lite): 21, 21 against one agent's 19; on the weaker gemma, 26, 25 against one agent's 27, 24; on the stronger 3.8-flash, 26, 26 against 26, 27.",
     "Open-ended instructions (20, mode open, gemini-3.8-flash, judged pairwise): 17–0 and 16–1 against the model alone, 20–0 and 16–1 judged on content, 13–1 and 13–5 at matched length; $0.48 for twenty, more than Self-Refine or MoA for about the same gain. On flash-lite it loses to one call: 6–14 (p 0.12), 7–18 judged on content (p 0.04), with shorter answers. Against Self-Refine on the same model over fifty instructions: 34–18 (p 0.04), at about twice its cost.",
     "With 2, 3, 5 debaters (flash-lite): 20, 21, 22.5; five beat one agent significantly (+8 −1, p 0.04), at 17 times its cost.",
     "Five in a ring, each reading its neighbours (sparse communication): 22, 22, a question below the full exchange; a third less to read, but output dominates the cost.",

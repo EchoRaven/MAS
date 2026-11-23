@@ -1811,6 +1811,7 @@ output goes back to the conductor.
 | Meta-Prompting | 36 | 37 | $0.80 |
 | Solo Performance Prompting (multi-persona, one call) | 37 | 43 | $0.15 |
 | Meta-Prompting with Python | 43 | 42 | $0.21 |
+| Multiagent Debate, three debaters, two rounds | 40 | 42 | $0.53 |
 | Agent Forest, 10 samples and a vote | 42 | 44 | $1.04 |
 | **One agent with a Python sandbox** | **50** | **50** | $0.12 |
 
@@ -1832,6 +1833,9 @@ output goes back to the conductor.
   the vote stripped every `*` as Markdown, so right products lost their
   signs; Agent Forest, self-consistency, MAV and EoT shared the bug, which
   answers that are numbers never showed.
+- **Discussion lands between one call with personas and a vote.** Multiagent
+  Debate gets 40 and 42 at half the vote's cost; no method without code
+  reaches one agent with a sandbox.
 - **Every miss without code was a claim that no solution exists**, or a
   wrong expression; every game has one, and the record keeps it.
 
