@@ -144,9 +144,9 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       throw new HttpError(400, (e as Error).message);
     }
   });
-  r.on("GET", "/api/evals/:id/trail", (req) => {
+  r.on("GET", "/api/evals/:id/trail", async (req) => {
     try {
-      return { trail: evals.trail(req.params.id) };
+      return { trail: await evals.trail(req.params.id) };
     } catch (e) {
       throw new HttpError(404, (e as Error).message);
     }

@@ -722,12 +722,17 @@ export interface TrailStats {
   by_step: { step: number; right: number; cases: number }[];
 }
 
-export function trailStats(cases: { answers: string[]; expected: string; input: string }[], grader: RuleGrader, label = "step"): TrailStats {
+export function trailStats(
+  cases: { answers: string[]; expected: string; input: string }[],
+  /** a rule grader, or a verdict per answer already worked out (a check grader runs async, before) */
+  grader: RuleGrader | ((answer: string, expected: string, input: string) => boolean),
+  label = "step",
+): TrailStats {
   const s: TrailStats = { label, cases: 0, first: 0, last: 0, right_to_wrong: 0, wrong_to_right: 0, unchanged: 0, mean_steps: 0, by_step: [] };
   let steps = 0;
   for (const c of cases) {
     if (!c.answers.length) continue;
-    const ok = c.answers.map((a) => gradeByRule(grader, `Answer: ${a}`, c.expected, c.input).pass);
+    const ok = c.answers.map((a) => (typeof grader === "function" ? grader(a, c.expected, c.input) : gradeByRule(grader, `Answer: ${a}`, c.expected, c.input).pass));
     s.cases++;
     steps += c.answers.length - 1;
     const [f, l] = [ok[0], ok[ok.length - 1]];

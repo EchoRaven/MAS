@@ -428,13 +428,13 @@ export class EvalManager {
 
   /**
    * How the answers moved, for systems that log an answer trail ("answers by round: 12 → 12 → 15"): every step graded
-   * by the evaluation's own rule grader, so a count of right-to-wrong changes reads answers as the score does. Null
-   * when no run logged a trail, or the grader is not a rule (the judge, a check, none).
+   * by the evaluation's own grader (a rule, or its check), so a count of right-to-wrong changes reads answers as the
+   * score does. Null when no run logged a trail, or the grader cannot grade one answer alone (the judge, code, none).
    */
-  trail(id: string): TrailStats | null {
+  async trail(id: string): Promise<TrailStats | null> {
     const rec = this.store.getEval(id);
     if (!rec) throw new Error("No such evaluation");
-    if (["llm", "code", "check", "none"].includes(rec.grader)) return null;
+    if (["llm", "code", "none"].includes(rec.grader) || (rec.grader === "check" && !rec.check)) return null;
     let label = "";
     const cases: { answers: string[]; expected: string; input: string }[] = [];
     for (const c of rec.cases) {
@@ -445,7 +445,16 @@ export class EvalManager {
       label ||= t.label;
       cases.push({ answers: t.answers, expected: c.expected, input: c.input });
     }
-    return cases.length ? trailStats(cases, rec.grader as RuleGrader, label) : null;
+    if (!cases.length) return null;
+    if (rec.grader !== "check") return trailStats(cases, rec.grader as RuleGrader, label);
+    // the check runs async: every step's verdict first, then the same counts
+    const verdict = new Map<string, boolean>();
+    for (const c of cases)
+      for (const a of c.answers) {
+        const k = `${c.input}\u0000${a}`;
+        if (!verdict.has(k)) verdict.set(k, (await gradeCheck(rec.check!, `Answer: ${a}`, c.expected, c.input)).pass);
+      }
+    return trailStats(cases, (a, _e, input) => verdict.get(`${input}\u0000${a}`) ?? false, label);
   }
 
   /** The pairwise judgements kept for an evaluation (either side). */

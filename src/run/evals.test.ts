@@ -393,6 +393,11 @@ describe("answer trails", () => {
     expect(answerTrail(["answers by correction: 1 → 2", "answers by correction: 3 → 4"])?.answers).toEqual(["3", "4"]);
     expect(answerTrail(["no trail here"])).toBeNull();
   });
+  it("takes verdicts worked out before, as a check grader gives them", () => {
+    const right = new Set(["(6 - 4) * (5 + 7)"]);
+    const t = trailStats([{ answers: ["6 * 4", "(6 - 4) * (5 + 7)"], expected: "4 5 6 7", input: "q" }, { answers: ["(6 - 4) * (5 + 7)", "6 + 4"], expected: "4 5 6 7", input: "q2" }], (a) => right.has(a), "revision");
+    expect(t).toMatchObject({ label: "revision", cases: 2, first: 1, last: 1, wrong_to_right: 1, right_to_wrong: 1 });
+  });
   it("grades every step as the score does, Decimal reprs and equal numbers included", () => {
     const t = trailStats(
       [
