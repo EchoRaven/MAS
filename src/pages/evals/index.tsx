@@ -580,7 +580,7 @@ function Evals({ systemId }: { systemId: string }) {
               {ev.vars && <Stat label="Variables" value={formatVars(ev.vars)} />}
               {(ev.on_model || ev.model_map) && <Stat label="Models" value={[ev.on_model && `all on ${ev.on_model}`, ...Object.entries(ev.model_map ?? {}).map(([a, b]) => `${a} → ${b}`)].filter(Boolean).join(", ")} />}
               <Stat label="Status" value={ev.status === "queued" ? "queued: starts when the one before it ends" : record?.active ? `running · ${ev.cases.filter((c) => c.status === "done" || c.status === "error").length}/${ev.cases.length}${(() => { const s = etaSeconds(ev); return s === null ? "" : ` · about ${s < 90 ? `${s} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1)} h`} left`; })()}` : ev.status} />
-              <div className="ml-auto flex gap-1.5">
+              <div className="ml-auto flex flex-wrap justify-end gap-1.5">
                 {record?.active ? (
                   <Button variant="outline" size="sm" onClick={() => void Api.stopEval(ev.id).catch((e) => setError(e.message))}>
                     <Square className="mr-1.5 h-3.5 w-3.5" /> Stop
