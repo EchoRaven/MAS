@@ -1821,6 +1821,7 @@ output goes back to the conductor.
 | Meta-Prompting | 36 | 37 | $0.80 |
 | Solo Performance Prompting (multi-persona, one call) | 37 | 43 | $0.15 |
 | Meta-Prompting with Python | 43 | 42 | $0.21 |
+| Mixture-of-Agents, all flash-lite | 34 | 32 | $0.25 |
 | Multiagent Debate, three debaters, two rounds | 40 | 42 | $0.53 |
 | Self-Refine | 44 | 43 | $0.36 |
 | Agent Forest, 10 samples and a vote | 42 | 44 | $1.04 |
@@ -1849,6 +1850,11 @@ output goes back to the conductor.
   and 39, last 44 and 43; p 0.001), where on GSM-Hard they lost (3 against 9).
   A 24 answer can be checked by doing the arithmetic, as a sorted list by
   reading it; a GSM-Hard answer only by redoing the reasoning.
+- **Mixture-of-Agents gains nothing here.** 34 and 32, as one agent. Its
+  aggregator declared 9 and 10 games impossible, and in 3 of the first run's
+  16 misses a proposer had written a right expression that the aggregator
+  dropped; in the other 13 no proposer had one. Merging drafts does not check
+  them, where Self-Refine's critic does the arithmetic.
 - **Discussion lands between one call with personas and a vote.** Multiagent
   Debate gets 40 and 42 at half the vote's cost; no method without code
   reaches one agent with a sandbox.
