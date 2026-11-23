@@ -8,7 +8,7 @@ import { DEFAULT_MODELS } from "@/model/defaults";
 import { modelUses, remapModels, runAllOn } from "@/model/modelUse";
 import { systemVersion } from "@/model/templates";
 import type { ResultSpec, SystemDoc } from "@/model/types";
-import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, type TrailStats, answerTrail, trailStats, DEFAULT_CRITERION, criterionTag, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
+import { type EvalCase, type EvalRecord, type Grader, type PairwiseResult, type RuleGrader, type TrailStats, answerTrail, hasMarkedAnswer, messageTexts, trailStats, DEFAULT_CRITERION, criterionTag, finalAnswer, outputShape, sourcedLinks, gradeByRule, reachedBy, retryableCase } from "@/run/evals";
 import type { RunEvent } from "@/run/events";
 import type { Store } from "../store/files";
 import type { Secrets } from "../store/secrets";
@@ -186,7 +186,13 @@ export class EvalManager {
       const code = check?.trim() || (rec.grader === "check" ? rec.check : undefined);
       if (!code) throw new Error("The grader check needs its JS: give check");
       if (rec.grader === "llm") throw new Error("This evaluation was graded by the LLM judge; regrading by a rule would replace those verdicts. Start a new evaluation to grade it another way");
-      for (const c of rec.cases) if (c.status === "done" && c.output) Object.assign(c, await gradeCheck(code, c.output, c.expected, c.input));
+      for (const c of rec.cases) {
+        if (c.status !== "done" || !c.output) continue;
+        Object.assign(c, await gradeCheck(code, c.output, c.expected, c.input));
+        delete c.reached;
+        const sys = c.pass === false && c.run_id ? this.store.getRunSystem(c.run_id) : null;
+        if (sys) c.reached = await reachedByCheck(memberMessages(this.store.events(c.run_id!) as RunEvent[]), memberName(sys), code, c.expected, c.input);
+      }
       rec.grader = "check";
       rec.check = code;
       rec.graded = rec.cases.filter((c) => c.pass !== undefined).length;
@@ -591,6 +597,8 @@ export class EvalManager {
             Object.assign(c, await gradeCode(c.expected, c.output, this.docker));
           } else if (opts.grader === "check") {
             Object.assign(c, await gradeCheck(rec.check ?? "", c.output, c.expected, c.input));
+            // a miss: did a member give an answer the check passes, and the team lose it?
+            if (c.pass === false) c.reached = await reachedByCheck(memberMessages(events), memberName(doc), rec.check ?? "", c.expected, c.input);
           } else if (opts.grader === "none") {
             // an open-ended task: the output is kept, ungraded, for a pairwise comparison
             c.answer = finalAnswer(c.output);
@@ -663,6 +671,33 @@ export class EvalManager {
 }
 
 /** The messages a run's components sent to one another (not the system's output). */
+/**
+ * reachedBy for a check grader: the members who gave an answer the dataset's check passes, though the system's final
+ * answer failed it. A message that marks an answer is read by its answer; one that does not (a Mixture-of-Agents
+ * proposer writes its expression mid-text) line by line, since a check passes only a whole answer, not a number met
+ * on the way as a rule grader might.
+ */
+async function reachedByCheck(messages: { from: string; text: string }[], nameOf: (id: string) => string | null, code: string, expected: string, question: string): Promise<string[]> {
+  const out = new Set<string>();
+  const seen = new Set<string>();
+  for (const m of messages) {
+    const name = nameOf(m.from);
+    if (!name || out.has(name)) continue;
+    for (const t of messageTexts(m.text)) {
+      if (typeof t !== "string" || seen.has(t)) continue;
+      seen.add(t);
+      const tries = hasMarkedAnswer(t) ? [t] : t.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 300).map((l) => `Answer: ${l}`);
+      let hit = false;
+      for (const x of tries) if ((hit = (await gradeCheck(code, x, expected, question)).pass)) break;
+      if (hit) {
+        out.add(name);
+        break;
+      }
+    }
+  }
+  return [...out];
+}
+
 function memberMessages(events: RunEvent[]): { from: string; text: string }[] {
   return events.filter((e): e is Extract<RunEvent, { type: "message" }> => e.type === "message").map((e) => ({ from: e.from, text: e.text }));
 }

@@ -537,7 +537,9 @@ that must meet constraints. It runs in the function sandbox, two seconds per
 output, with `output` (the whole output), `answer` (the final answer, as the
 other graders read it), `expected` and `question` in scope, and returns
 `true` / `false` or `{pass, why}`. An error or a timeout fails the case with
-the reason. The dataset keeps it as `check`, and so does every evaluation
+the reason. On a miss, the members whose answer the check passes are named
+("had it, lost"): a reply that marks its answer is read by it, one that does
+not line by line. The dataset keeps it as `check`, and so does every evaluation
 graded by it, so `POST /api/evals/:id/regrade {grader: "check", check?}`
 runs the same check again, or a corrected one, without calling a model.
 

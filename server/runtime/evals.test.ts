@@ -407,6 +407,51 @@ describe("evaluations", () => {
     expect(() => evals.start(echo(), { grader: "number", cases, max_usd: 0 })).toThrow(/max_usd/);
   });
 
+  it("with a check grader, names the member who had a passing answer the team lost", async () => {
+    const b = new Builder("Lost it", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("solver", 200, 0, { name: "Solver", model: "right", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .agent("editor", 400, 0, { name: "Editor", model: "wrong", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("me", "solver", "message")
+      .edge("solver", "editor", "message")
+      .edge("editor", "me", "message");
+    b.doc.models.push(
+      { id: "right", provider: "mock", model: "mock", api: { params: { script: ["Final: (6 - 4) * (5 + 7)"] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "wrong", provider: "mock", model: "mock", api: { params: { script: ["Final: 6 * 4"] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+    );
+    const check = `const nums = expected.split(" ").map(Number).sort((a, b) => a - b);
+const expr = answer.replace(/=.*$/, "").trim();
+const used = (expr.match(/\\d+/g) || []).map(Number).sort((a, b) => a - b);
+return used.join() === nums.join() && Math.abs(Function("return (" + expr + ")")() - 24) < 1e-9;`;
+    const rec = evals.start({ ...b.doc, id: "sys_lost" }, { grader: "check", check, cases: [{ input: "Make 24 from 4 5 6 7", expected: "4 5 6 7" }] });
+    const done = await finish(rec.id);
+    expect(done.cases[0]).toMatchObject({ pass: false, reached: ["Solver"] });
+  });
+
+  it("with a check grader, reads a member's unmarked reply line by line (a proposer's expression mid-text)", async () => {
+    const b = new Builder("Lost it, unmarked", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("p1", 200, 0, { name: "Proposer", model: "found", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .agent("p2", 200, 100, { name: "Guesser", model: "guess", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .agent("agg", 400, 0, { name: "Aggregator", model: "wrong", harness: { ...native(), loop: "single_shot", instructions: "" } })
+      .edge("me", "p1", "message")
+      .edge("p1", "p2", "message")
+      .edge("p2", "agg", "message")
+      .edge("agg", "me", "message");
+    b.doc.models.push(
+      { id: "found", provider: "mock", model: "mock", api: { params: { script: ["Let me try a few.\n(6 - 4) * (5 + 7) = 24\nThat works."] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "guess", provider: "mock", model: "mock", api: { params: { script: ["Maybe 6 * 4 = 24, using the 6 and the 4."] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+      { id: "wrong", provider: "mock", model: "mock", api: { params: { script: ["Final: No solution"] } }, price_in: 0, price_out: 0, modalities: ["text"] },
+    );
+    const check = `const nums = expected.split(" ").map(Number).sort((a, b) => a - b);
+const expr = answer.replace(/=.*$/, "").trim();
+if (!/^[\\d\\s+*\\/().-]+$/.test(expr)) return false;
+const used = (expr.match(/\\d+/g) || []).map(Number).sort((a, b) => a - b);
+return used.join() === nums.join() && Math.abs(Function("return (" + expr + ")")() - 24) < 1e-9;`;
+    const rec = evals.start({ ...b.doc, id: "sys_lost2" }, { grader: "check", check, cases: [{ input: "Make 24 from 4 5 6 7", expected: "4 5 6 7" }] });
+    expect((await finish(rec.id)).cases[0]).toMatchObject({ pass: false, reached: ["Proposer"] });
+  });
+
   it("marks evaluations a restart cut off as stopped", () => {
     store.putEval({ id: "eval_cut", system_id: "s", system_name: "S", grader: "answer", mock: false, status: "running", started_at: new Date().toISOString(), cases: [{ input: "x", expected: "y", status: "running" }], passed: 0, graded: 0, usd: 0 });
     evals.recover();

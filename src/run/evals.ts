@@ -498,6 +498,26 @@ export function retryableCase(c: Pick<EvalCaseResult, "status" | "pass" | "why" 
  * lost, against one nobody found. A message counts only where it marks an answer ("Final:", "Answer:", \boxed{}),
  * so a number met in passing does not; a message that is a list (a component's replicas) counts item by item.
  */
+/**
+ * The answers one logged message holds: itself, or each item when it is a list of replies (a replicated model's
+ * samples), read as written even when the log cut the list short.
+ */
+export function messageTexts(text: string): unknown[] {
+  if (!/^\s*\["/.test(text)) return [text];
+  try {
+    const v = JSON.parse(text);
+    if (Array.isArray(v)) return v;
+  } catch {
+    // a list of strings cut short in the log (messages are kept to 6000 characters): split it at its item
+    // boundaries and read each item as written, so the items before the cut still count
+    return text
+      .replace(/^\s*\["/, "")
+      .split(/(?<!\\)"\s*,\s*"/)
+      .map((t) => t.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+  }
+  return [text];
+}
+
 export function reachedBy(
   messages: { from: string; text: string }[],
   nameOf: (id: string) => string | null,
@@ -511,21 +531,7 @@ export function reachedBy(
   for (const m of messages) {
     const name = nameOf(m.from);
     if (!name || out.has(name)) continue;
-    let texts: unknown[] = [m.text];
-    if (/^\s*\["/.test(m.text)) {
-      try {
-        const v = JSON.parse(m.text);
-        if (Array.isArray(v)) texts = v;
-      } catch {
-        // a list of strings cut short in the log (messages are kept to 6000 characters): split it at its item
-        // boundaries and read each item as written, so the items before the cut still count
-        texts = m.text
-          .replace(/^\s*\["/, "")
-          .split(/(?<!\\)"\s*,\s*"/)
-          .map((t) => t.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
-      }
-    }
-    for (const t of texts) {
+    for (const t of messageTexts(m.text)) {
       if (typeof t !== "string" || seen.has(t)) continue;
       seen.add(t);
       if (hasMarkedAnswer(t) && gradeByRule(grader, t, expected, question).pass) {

@@ -1851,9 +1851,11 @@ output goes back to the conductor.
   A 24 answer can be checked by doing the arithmetic, as a sorted list by
   reading it; a GSM-Hard answer only by redoing the reasoning.
 - **Mixture-of-Agents gains nothing here.** 34 and 32, as one agent. Its
-  aggregator declared 9 and 10 games impossible, and in 3 of the first run's
-  16 misses a proposer had written a right expression that the aggregator
-  dropped; in the other 13 no proposer had one. Merging drafts does not check
+  aggregator declared 9 and 10 games impossible, and in at least 2 of 16 and
+  4 of 18 misses a proposer had written a right expression that the aggregator
+  dropped (the Compare page's "had it, lost", which reads a line that is a
+  whole answer, not an expression inside a sentence); in the rest no proposer
+  had one. Merging drafts does not check
   them, where Self-Refine's critic does the arithmetic.
 - **Discussion lands between one call with personas and a vote.** Multiagent
   Debate gets 40 and 42 at half the vote's cost; no method without code
