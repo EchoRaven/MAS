@@ -1811,6 +1811,7 @@ output goes back to the conductor.
 | Meta-Prompting | 36 | 37 | $0.80 |
 | Solo Performance Prompting (multi-persona, one call) | 37 | 43 | $0.15 |
 | Meta-Prompting with Python | 43 | 42 | $0.21 |
+| Agent Forest, 10 samples and a vote (one run) | 42 | | $1.05 |
 | **One agent with a Python sandbox** | **50** | **50** | $0.12 |
 
 - **The interpreter is the gain, and the scaffold costs some of it.** One
@@ -1824,6 +1825,13 @@ output goes back to the conductor.
   one agent (p 0.006) and +18 −11 against Meta-Prompting (p 0.26), at a fifth
   of its cost (the paper's GPT-4: multi-persona 25.0, Meta −Py 11.0). With Python against
   without: +19 −7 (p 0.03).
+- **Voting works even with many right answers, at a price.** Ten samples
+  agreed often enough on the same expression (the top answer had 5.6 of 10
+  votes on average, about four different answers per game) to reach 42, as
+  many as the Python expert, at five times its cost. The first run scored 3:
+  the vote stripped every `*` as Markdown, so right products lost their
+  signs; Agent Forest, self-consistency, MAV and EoT shared the bug, which
+  answers that are numbers never showed.
 - **Every miss without code was a claim that no solution exists**, or a
   wrong expression; every game has one, and the record keeps it.
 
