@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -384,6 +384,20 @@ describe("cut-short cases", () => {
       { pass: true, status: "done", why: "", cut_short: true }, // a pass is not a failure, cut short or not
     ] as never);
     expect(out.map((r) => [r.reason, r.count])).toEqual([["cut short at a limit: the conversation did not end", 1], ["wrong answer", 1]]);
+  });
+});
+
+describe("pooled judgements", () => {
+  it("keeps judgements of different system versions apart, and says which is which", () => {
+    const e = (id: string, v?: string) => ({ id, system_name: id.startsWith("m") ? "MoA" : "One call", on_model: "gemini", system_version: v });
+    const evals = [e("m1", "aaaaa1"), e("m2", "bbbbb2"), e("b1", "ccccc3"), e("b2", "ccccc3")];
+    const j = (a: string, b: string, w: number) => ({ a, b, a_wins: w, b_wins: 0, ties: 0, judge: "j", per: [], criterion: DEFAULT_CRITERION }) as unknown as PairwiseResult;
+    const rows = poolJudgements(evals, [j("m1", "b1", 3), j("m2", "b2", 5)]);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.a).sort()).toEqual(["MoA · on gemini · version aaaaa", "MoA · on gemini · version bbbbb"]);
+    // one version: pooled under the plain label, as before
+    const one = poolJudgements([e("m1", "aaaaa1"), e("m2", "aaaaa1"), e("b1", "ccccc3")], [j("m1", "b1", 3), j("m2", "b1", 5)]);
+    expect(one).toEqual([expect.objectContaining({ a: "MoA · on gemini", n: 2, w: 8 })]);
   });
 });
 

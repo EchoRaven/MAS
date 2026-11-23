@@ -74,6 +74,8 @@ export interface PoolableEval {
   model_map?: Record<string, string>;
   vars?: Record<string, unknown>;
   invalid?: { reason: string } | null;
+  /** the system's version (systemVersion): judgements of different versions are not pooled */
+  system_version?: string;
 }
 
 /** A setup: the system with its models and run variables (MoA on flash-lite and MoA on gemini are not the same). */
@@ -91,12 +93,16 @@ export function setupLabel(e: PoolableEval): string {
  */
 export function poolJudgements(evals: PoolableEval[], judged: PairwiseResult[]): { a: string; b: string; judge: string; w: number; l: number; t: number; n: number }[] {
   const byId = new Map(evals.map((e) => [e.id, e]));
+  // a setup judged under more than one system version (a template fixed in between) is told apart by its version
+  const versions = new Map<string, Set<string>>();
+  for (const e of evals) if (!e.invalid) versions.set(setupLabel(e), (versions.get(setupLabel(e)) ?? new Set()).add(e.system_version ?? ""));
+  const label = (e: PoolableEval) => ((versions.get(setupLabel(e))?.size ?? 0) > 1 ? `${setupLabel(e)} · version ${e.system_version ? e.system_version.slice(0, 5) : "before versions"}` : setupLabel(e));
   const groups = new Map<string, { a: string; b: string; judge: string; w: number; l: number; t: number; n: number }>();
   for (const p of judged) {
     const ea = byId.get(p.a), eb = byId.get(p.b);
     if (!ea || !eb || ea.invalid || eb.invalid) continue;
     if (p.per.some((x) => x.first === "unread" || x.second === "unread")) continue;
-    const [sa, sb] = [setupLabel(ea), setupLabel(eb)];
+    const [sa, sb] = [label(ea), label(eb)];
     const flip = sa > sb;
     const [na, nb] = flip ? [sb, sa] : [sa, sb];
     const own = criterionTag(p.criterion);
