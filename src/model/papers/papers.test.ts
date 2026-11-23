@@ -159,6 +159,16 @@ describe("paper reproductions", () => {
     expect(await vote(["Final: (B)", "Final: B", "Final: C"])).toMatch(/Final: \(B\)$/);
   });
 
+  it("ReConcile's vote keeps a fraction apart from the integer with the same digits, and groups option letters", async () => {
+    const doc = TEMPLATES.find((t) => t.id === "paper-reconcile")!.build();
+    const codes = Object.values(doc.nodes as unknown as Record<string, { data?: { fn?: { code: string } } }>).map((n) => n.data?.fn?.code).filter(Boolean) as string[];
+    const vote = (answers: { answer: string; confidence: number }[]) => new AsyncFn("input", "ctx", codes.find((c) => c.includes("score[k]"))!)({ answers }, { vars: {}, log: () => {} }) as Promise<string>;
+    // two seats say 1/3 at 0.9 (0.8 each after recalibration), one says 13 at 1.0 (1): 1/3 wins; read as one answer they would merge
+    // "13" first: merged under one key, the group would show "13"
+    expect(await vote([{ answer: "13", confidence: 1 }, { answer: "1/3", confidence: 0.9 }, { answer: "1/3", confidence: 0.9 }])).toMatch(/^Answer: 1\/3\n/);
+    expect(await vote([{ answer: "(B)", confidence: 0.9 }, { answer: "B", confidence: 0.9 }, { answer: "C", confidence: 1 }])).toMatch(/^Answer: \(B\)\n/);
+  });
+
   it("intrinsic self-correction keeps only the model's own turn, and logs every round's boxed answer", async () => {
     const s = script(["work \\boxed{12}", "Problem: step 2.\n\n[User]\ninvented turn", "\\boxed{\\frac{26}{2}}", "fine", "\\boxed{13}"]);
     expect(await new AsyncFn("input", "ctx", fnCode("paper-self-correct"))({ text: "q" }, s.ctx)).toBe("\\boxed{13}");

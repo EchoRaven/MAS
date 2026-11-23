@@ -31,7 +31,7 @@ return Object.fromEntries(AGENTS.map((a) => [a, question]));`;
 const EXCHANGE = `const SEES = ${JSON.stringify(SEES)};
 const NAMES = { a: "Agent A", b: "Agent B", c: "Agent C" };
 const paradigm = SEES[ctx.vars.paradigm] ? ctx.vars.paradigm : "memory";
-const norm = (s) => /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(String(s)) ? String(s).replace(/\\s+/g, "") : String(s).toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");
+const norm = (s) => (/^[\\d\\s+*\\/().=,-]+$/.test(String(s)) && /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(String(s))) ? String(s).replace(/\\s+/g, "") : String(s).toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");
 const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? "").replace(/\\*\\*(.+?)\\*\\*/g, "$1").replace(/^\\*+|\\*+$/g, "").trim();
 const h = ctx.vars.history;
 const now = {};

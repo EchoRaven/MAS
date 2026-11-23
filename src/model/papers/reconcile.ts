@@ -16,7 +16,7 @@ const SEATS = [
 // a round of the table: parse each seat's answer and confidence, group equal answers,
 // and write the discussion the seats read next round
 const COLLECT = `const NAMES = ${JSON.stringify(Object.fromEntries(SEATS.map(([id, name]) => [id, name])))};
-const norm = (a) => String(a).toLowerCase().replace(/[^a-z0-9.\\-]/g, "").replace(/\\.+$/, "");
+const norm = (a) => ((/^[\\d\\s+*\\/().=,-]+$/.test(String(a)) && /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(String(a))) ? String(a).replace(/\\s+/g, "") : String(a).toLowerCase().replace(/[^a-z0-9.\\-\\/]/g, "").replace(/\\.+$/, ""));
 const parse = (t) => {
   const s = String(t);
   const answer = ((s.match(/Answer:\\s*(.+)/i) ?? [])[1] ?? "").trim().replace(/[.*]+$/, "");
@@ -38,7 +38,7 @@ return { role: "assistant", text: lines.join("\\n"), consensus, round, answers }
 
 // the paper's confidence recalibration, then a weighted vote
 const VOTE = `const f = (p) => (p >= 1 ? 1 : p >= 0.9 ? 0.8 : p >= 0.8 ? 0.5 : p > 0.6 ? 0.3 : 0.1);
-const norm = (a) => String(a).toLowerCase().replace(/[^a-z0-9.\\-]/g, "").replace(/\\.+$/, "");
+const norm = (a) => ((/^[\\d\\s+*\\/().=,-]+$/.test(String(a)) && /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(String(a))) ? String(a).replace(/\\s+/g, "") : String(a).toLowerCase().replace(/[^a-z0-9.\\-\\/]/g, "").replace(/\\.+$/, ""));
 const score = {}, shown = {};
 for (const a of input.answers ?? []) {
   if (!a.answer) continue; // a seat that gave no answer has no vote

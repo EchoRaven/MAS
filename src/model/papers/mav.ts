@@ -29,7 +29,7 @@ End with one line per attempt, in order, exactly: 'Attempt <number>: APPROVE' or
 const PICK = `// the most approved candidate wins; ties go to the answer more candidates share
 const cands = Array.isArray(input.candidates) ? input.candidates : [];
 const finalOf = (t) => ((String(t).match(/Final:\\s*(.+)/) ?? [])[1] ?? String(t).trim().split("\\n").pop() ?? "").replace(/\\*\\*(.+?)\\*\\*/g, "$1").replace(/^\\*+|\\*+$/g, "").trim();
-const norm = (a) => /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(a) ? a.replace(/\\s+/g, "") : a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");
+const norm = (a) => (/^[\\d\\s+*\\/().=,-]+$/.test(a) && /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(a)) ? a.replace(/\\s+/g, "") : a.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./-]+/g, " ").trim().replace(/\\.+$/, "");
 const votes = cands.map(() => 0);
 const verifiers = Object.keys(input).filter((k) => k !== "candidates");
 for (const k of verifiers) {

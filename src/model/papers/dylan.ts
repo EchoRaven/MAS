@@ -39,6 +39,8 @@ ctx.vars.last = got;
 // "The farmer has 9 sheep left." and "9" are the same answer: compare the number when there is one, else the words
 const WORDS = { zero: 0, none: 0, one: 1, once: 1, two: 2, twice: 2, three: 3, thrice: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 const norm = (s) => {
+  // an expression (a Game of 24 answer) is compared whole, spaces aside: its first number is not the answer
+  if (/^[\\d\\s+*\\/().=,-]+$/.test(s) && /\\d\\s*[-+*/]\\s*[\\d(]|\\)\\s*[-+*/]/.test(s)) return s.replace(/\\s+/g, "");
   // "1,098,240" is one number, and "1/221" one fraction
   const w = s.toLowerCase().replace(/(\\d),(?=\\d{3})/g, "$1").replace(/[^a-z0-9./ -]/g, " ").replace(/\\s+/g, " ").trim();
   const n = w.match(/-?\\d+(?:\\.\\d+)?(?:\\s*\\/\\s*\\d+)?/);
