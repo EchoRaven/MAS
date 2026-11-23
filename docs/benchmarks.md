@@ -1811,7 +1811,7 @@ output goes back to the conductor.
 | Meta-Prompting | 36 | 37 | $0.80 |
 | Solo Performance Prompting (multi-persona, one call) | 37 | 43 | $0.15 |
 | Meta-Prompting with Python | 43 | 42 | $0.21 |
-| Agent Forest, 10 samples and a vote (one run) | 42 | | $1.05 |
+| Agent Forest, 10 samples and a vote | 42 | 44 | $1.04 |
 | **One agent with a Python sandbox** | **50** | **50** | $0.12 |
 
 - **The interpreter is the gain, and the scaffold costs some of it.** One
@@ -1827,8 +1827,8 @@ output goes back to the conductor.
   without: +19 −7 (p 0.03).
 - **Voting works even with many right answers, at a price.** Ten samples
   agreed often enough on the same expression (the top answer had 5.6 of 10
-  votes on average, about four different answers per game) to reach 42, as
-  many as the Python expert, at five times its cost. The first run scored 3:
+  votes on average, about four different answers per game) to reach 42 and
+  44, as many as the Python expert, at five times its cost. The first run scored 3:
   the vote stripped every `*` as Markdown, so right products lost their
   signs; Agent Forest, self-consistency, MAV and EoT shared the bug, which
   answers that are numbers never showed.
