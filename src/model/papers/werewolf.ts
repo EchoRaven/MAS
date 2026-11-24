@@ -8,8 +8,8 @@ const PLAYERS: [string, string, string][] = [
   ["alice", "Alice", "werewolf"],
   ["bob", "Bob", "werewolf"],
   ["carol", "Carol", "seer"],
-  ["dave", "Dave", "villager"],
-  ["eve", "Eve", "villager"],
+  ["dave", "Dave", "witch"],
+  ["eve", "Eve", "guard"],
   ["frank", "Frank", "villager"],
   ["grace", "Grace", "villager"],
 ];
@@ -17,6 +17,8 @@ const PLAYERS: [string, string, string][] = [
 const ROLE_BRIEF: Record<string, string> = {
   werewolf: "You are secretly a WEREWOLF, together with {mates}. At night you choose a villager to kill. By day, hide what you are: blend in, cast suspicion on others, and never admit your role. You win when werewolves are as many as everyone else.",
   seer: "You are secretly the SEER. Each night you may inspect one player and learn whether they are a werewolf. Use what you learn to steer the village's vote, but revealing yourself makes you a target. You win when every werewolf is voted out.",
+  witch: "You are secretly the WITCH. You have two potions, each usable once in the game: a healing potion that saves the werewolves' victim of the night, and a poison that kills anyone you choose. You win when every werewolf is voted out or killed.",
+  guard: "You are secretly the GUARD. Each night you protect one player from the werewolves (never the same player two nights running). You win when every werewolf is voted out or killed.",
   villager: "You are a VILLAGER. You know nothing secret. Listen, reason about who is lying, and vote out the werewolves. You win when every werewolf is voted out.",
 };
 
@@ -31,7 +33,15 @@ const tally = (votes) => Object.entries(votes).sort((a, b) => b[1] - a[1])[0]?.[
 const verdict = (votes) => { const [first, second] = Object.entries(votes).sort((a, b) => b[1] - a[1]); return first && (!second || first[1] > second[1]) ? first[0] : null; };
 const over = () => (!wolves().length ? "The villagers win: every werewolf is gone." : wolves().length >= others().length ? "The werewolves win: they are as many as everyone else." : "");
 const story = [];
-for (let day = 1; day <= (ctx.vars.days ?? 4); day++) {
+// how often the village's own ballots (the werewolves' excluded) fall on a werewolf: what the game measures
+let hits = 0, cast = 0;
+// the witch's two potions, each once a game; whom the guard protected last night (not twice in a row)
+const potions = { heal: true, poison: true };
+let lastGuarded = null;
+for (let day = 1; day <= (ctx.vars.days ?? 6); day++) {
+  // a new order every night: models pick the first name offered (the werewolves killed the seer, listed first,
+  // in a trial game), so a fixed seating would decide the game; it also sets who speaks first
+  alive = alive.map((p) => [Math.random(), p]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
   // night: the werewolves choose a victim, privately
   const votes = {};
   for (const w of wolves()) {
@@ -39,21 +49,45 @@ for (let day = 1; day <= (ctx.vars.days ?? 4); day++) {
     const t = pick(r, others());
     if (t) votes[t] = (votes[t] ?? 0) + 1;
   }
-  const victim = tally(votes) ?? others()[0];
-  // the seer inspects one player, privately
-  if (alive.includes("Carol")) {
+  const attacked = tally(votes) ?? others()[0];
+  // the guard protects one player, privately
+  let guarded = null;
+  if (alive.includes("Eve")) {
+    const can = alive.filter((p) => p !== lastGuarded);
+    guarded = pick(await tools.call_agent("Eve", "Night " + day + ". Choose one player to protect tonight: " + can.join(", ") + (lastGuarded ? " (not " + lastGuarded + ", whom you protected last night)" : "") + ". Reply with the name only."), can) ?? null;
+    lastGuarded = guarded;
+  }
+  let killed = attacked === guarded ? null : attacked;
+  // the witch learns the victim and may heal them, and may poison someone, each once a game
+  let poisoned = null;
+  if (alive.includes("Dave")) {
+    if (potions.heal && killed) {
+      const r = await tools.call_agent("Dave", "Night " + day + ". The werewolves attacked " + killed + " tonight. Use your one healing potion to save them? Reply YES or NO.");
+      if (/\byes\b/i.test(r)) { killed = null; potions.heal = false; }
+    }
+    if (potions.poison) {
+      const can = alive.filter((p) => p !== "Dave");
+      const r = await tools.call_agent("Dave", "Night " + day + ". Use your one poison tonight? Reply with one name of " + can.join(", ") + ", or NO to keep it.");
+      const t = /^\W*no\b/i.test(r) ? null : pick(r, can);
+      if (t) { poisoned = t; potions.poison = false; }
+    }
+  }
+  const dead = [...new Set([killed, poisoned].filter(Boolean))];
+  // the seer inspects one player, privately; seer=false withholds her visions (the ablation)
+  if (alive.includes("Carol") && ctx.vars.seer !== false && ctx.vars.seer !== "false") {
     const r = await tools.call_agent("Carol", "Night " + day + ". Choose one player to inspect: " + alive.filter((p) => p !== "Carol").join(", ") + ". Reply with the name only.");
     const who = pick(r, alive.filter((p) => p !== "Carol"));
     if (who) await tools.call_agent("Carol", "Your vision: " + who + " is " + (players[who] === "werewolf" ? "a WEREWOLF" : "not a werewolf") + ". Remember it. Reply OK.");
   }
-  alive = alive.filter((p) => p !== victim);
-  story.push("Night " + day + ": " + victim + " was killed (" + players[victim] + ").");
-  emit("night " + day, victim + " was killed");
+  alive = alive.filter((p) => !dead.includes(p));
+  const news = dead.length ? dead.join(" and ") + (dead.length > 1 ? " were" : " was") + " found dead this morning." : "Nobody died in the night.";
+  story.push("Night " + day + ": " + (dead.length ? dead.map((p) => p + " died (" + players[p] + (p === poisoned ? ", poisoned" : "") + ")").join("; ") : "nobody died (" + attacked + " attacked, " + (attacked === guarded ? "guarded" : "healed") + ")") + ".");
+  emit("night " + day, news);
   if (over()) break;
   // day: everyone alive speaks, in turn, hearing what was said before them
   const said = [];
   for (const p of alive) {
-    const r = await tools.call_agent(p, "Day " + day + ". " + victim + " was found dead this morning. Alive: " + alive.join(", ") + ".\\nSaid so far today:\\n" + (said.join("\\n") || "(nobody has spoken yet)") + "\\nSpeak to the village in at most two sentences.");
+    const r = await tools.call_agent(p, "Day " + day + ". " + news + " Alive: " + alive.join(", ") + ".\\nSaid so far today:\\n" + (said.join("\\n") || "(nobody has spoken yet)") + "\\nSpeak to the village in at most two sentences.");
     said.push(p + ": " + r.replace(/\\s+/g, " ").slice(0, 300));
   }
   // vote
@@ -62,6 +96,7 @@ for (let day = 1; day <= (ctx.vars.days ?? 4); day++) {
     const r = await tools.call_agent(p, "Day " + day + ". The discussion:\\n" + said.join("\\n") + "\\nVote to eliminate one of " + alive.filter((x) => x !== p).join(", ") + ". Reply with the name only.");
     const t = pick(r, alive.filter((x) => x !== p));
     if (t) ballots[t] = (ballots[t] ?? 0) + 1;
+    if (t && players[p] !== "werewolf") { cast++; if (players[t] === "werewolf") hits++; }
   }
   const out = verdict(ballots);
   if (!out) {
@@ -75,12 +110,12 @@ for (let day = 1; day <= (ctx.vars.days ?? 4); day++) {
   }
   if (over()) break;
 }
-return story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 4) + " days. Still alive: " + alive.join(", ") + ".") + "\\nRoles: " + JSON.stringify(players);`;
+return story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 6) + " days. Still alive: " + alive.join(", ") + ".") + "\\nVillage ballots on werewolves: " + hits + " of " + cast + ".\\nRoles: " + JSON.stringify(players);`;
 
 function build(): SystemDoc {
   const b = new Builder(
     "Werewolf",
-    "Seven players, two of them secretly werewolves and one a seer. The moderator runs the game as code: at night the werewolves choose a victim and the seer inspects someone, privately; by day everyone speaks in turn and votes someone out. Each player only ever learns what its role allows, and remembers its own game.",
+    "Seven players, as in the paper: two secretly werewolves, a seer, a witch, a guard and two villagers. The moderator runs the game as code: at night the werewolves choose a victim, the guard protects someone, the witch may heal the victim or poison anyone (each once), and the seer inspects someone, all privately; by day everyone speaks in turn and votes someone out. Each player only ever learns what its role allows, and remembers its own game.",
   );
   b.node("host", "human", 0, 160, { name: "Host", role: "Starts the game and reads the outcome", approves: false })
     .agent("moderator", 280, 140, {
@@ -103,7 +138,7 @@ function build(): SystemDoc {
     });
     b.edge("moderator", id, "call");
   });
-  b.doc.budget = { usd: 1, max_rounds: 120, wallclock_min: 30 };
+  b.doc.budget = { usd: 1, max_rounds: 300, wallclock_min: 30 };
   return b.doc;
 }
 
@@ -116,12 +151,12 @@ export const werewolf: TemplateInfo = {
   notes: {
     mapped: [
       "The moderator is a custom loop: the game's rules are code (night and day, who may know what, vote tallies, win conditions), and only the players' choices go to models.",
-      "Hidden information is per agent: each player's secret role is in its own instructions, and the moderator tells each one only what its role allows — the seer's visions go to the seer alone.",
+      "Hidden information is per agent: each player's secret role is in its own instructions, and the moderator tells each one only what its role allows — the seer's visions go to the seer alone, the night's victim to the witch alone.",
       "Each player keeps its own history across the whole game (a long window), so it can remember what was said and, for the seer, what it saw.",
     ],
     differs: [
       "The paper's players also retrieve lessons from past games (an experience pool) and reflect before speaking; here each player plays from its own memory of this game only. A memory plugin per player would add the experience pool.",
-      "Seven players as in the paper, but fewer roles: the witch and the guard are villagers here.",
+      "The paper's roles (two werewolves, seer, witch, guard, two villagers), but fixed to names; the seating is shuffled every night instead, as models pick the first name offered. Seer=false withholds the seer's visions, an ablation the paper does not run.",
     ],
   },
 };

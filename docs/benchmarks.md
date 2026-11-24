@@ -2022,6 +2022,42 @@ two-hour trial day the residents also called `enter` themselves; they now see
 only `look`, `move`, `say` and `wait` (an env edge can list the tools it
 allows), and the reset, the clock and the report are the day's alone.
 
+## Werewolf: does the seer's knowledge reach the vote?
+
+Xu et al.'s seven-player game (two werewolves, a seer, a witch, a guard, two
+villagers; `paper-werewolf`) with the moderator as code and every choice made
+by a player agent (flash-lite). The question measured: does the seer's private
+knowledge make the village vote better? `seer=false` withholds her visions; the
+game is otherwise the same. Twenty games each, the seating shuffled every
+night.
+
+| Twenty games each | Villagers won | Village ballots on a werewolf | Cost |
+|---|---|---|---|
+| Seer sees | 6 (30%) | 56 of 130 (43%) | $0.10 |
+| Seer sees nothing | 3 (15%) | 42 of 104 (40%) | $0.07 |
+
+- **Little difference, and none that twenty games can show** (Fisher p 0.45).
+  The village's ballots fall on a werewolf about as often as a random vote
+  would (two of five on day 1, 40%), with or without the seer.
+- **The seer hints instead of telling.** Shown that Alice is a werewolf, she
+  says "I am very suspicious of Alice… I have a strong feeling she is not on
+  the side of the village", never that she saw it: her brief warns that
+  revealing herself makes her a target, and she obeys it. A hint carries no
+  more weight than anyone else's suspicion.
+- **The witch decides more games than the seer.** Her poison killed a werewolf
+  in 8 and 6 games, against 9 and 6 voted out by the village; the guard and
+  the healing potion left 5 and 3 nights without a death.
+- **The game needed the paper's rules.** In a trial with a fixed seating both
+  werewolves killed the seer, listed first, and she inspected the first name
+  listed; the seating is now shuffled every night. With only villagers and a
+  seer, ten games all ended on night 2: one wrong vote on day 1 left the
+  werewolves as many as the rest. The witch and the guard (as in the paper)
+  make games last two to three nights.
+
+The paper's own measure, its experience pool (lessons retrieved from past
+games), is not built; a memory plugin per player with scope `agent` would
+carry them.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
