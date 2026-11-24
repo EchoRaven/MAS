@@ -593,7 +593,9 @@ export class HostedServices {
     }
     // by id, or by name when no service has that id: a template can name "town" without knowing this server's id
     const want = e.hosted.service.trim().toLowerCase();
-    const s = this.get(e.hosted.service) ?? this.list().find((x) => x.name.toLowerCase() === want || x.manifest.name?.toLowerCase() === want) ?? this.must(e.hosted.service);
+    const byId = /^svc_[a-z0-9_]+$/.test(e.hosted.service) ? this.get(e.hosted.service) : null;
+    const s = byId ?? this.list().find((x) => x.name.toLowerCase() === want || x.manifest.name?.toLowerCase() === want);
+    if (!s) throw new HttpError(404, `No hosted service ${e.hosted.service} (by id or name): host it first`);
     if (s.manifest.expose.kind === "mcp-stdio") return await this.stdioCommand(s.id);
     const st = await this.start(s.id);
     this.touch(s.id);
