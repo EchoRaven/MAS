@@ -39,12 +39,14 @@ for (let m = 1; m <= months; m++) {
     const nums = [...String(r).matchAll(/catch\W*\s*(\d+(?:\.\d+)?)/gi)];
     const any = String(r).match(/\d+(?:\.\d+)?/g) ?? [];
     const n = Number(nums.length ? nums[nums.length - 1][1] : any.length ? any[any.length - 1] : 0);
-    catches[f] = Math.max(0, Math.min(stock, Number.isFinite(n) ? n : 0));
+    // tenths of a ton: fractional catches otherwise leave sums like 63.599999999999994 in the story
+    catches[f] = Math.round(Math.max(0, Math.min(stock, Number.isFinite(n) ? n : 0)) * 10) / 10;
   }
   // the catches are served in a random order: when they ask for more than there is, the last get what is left
   let left = stock;
-  for (const f of order) { const got = Math.min(catches[f], left); catches[f] = got; left -= got; earned[f] += got; }
-  const total = fishers.reduce((s, f) => s + catches[f], 0);
+  const tenth = (x) => Math.round(x * 10) / 10;
+  for (const f of order) { const got = Math.min(catches[f], left); catches[f] = got; left = tenth(left - got); earned[f] = tenth(earned[f] + got); }
+  const total = tenth(fishers.reduce((s, f) => s + catches[f], 0));
   const line = "Month " + m + ": " + stock + " tons; caught " + total + " (" + fishers.map((f) => f + " " + catches[f]).join(", ") + "); " + left + " left";
   if (left < collapseBelow) {
     story.push(line + ", below " + collapseBelow + ": the lake collapsed.");
@@ -65,7 +67,7 @@ for (let m = 1; m <= months; m++) {
   }
   lastTalk = said;
 }
-const sum = fishers.reduce((s, f) => s + earned[f], 0);
+const sum = Math.round(fishers.reduce((s, f) => s + earned[f], 0) * 10) / 10;
 // equality: 1 minus the Gini coefficient of what each earned, as the paper reports it
 let gini = 0;
 for (const a of fishers) for (const b of fishers) gini += Math.abs(earned[a] - earned[b]);

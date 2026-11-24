@@ -2134,6 +2134,7 @@ catch and every word is a fisher's (flash-lite). Twelve months, five runs each.
 | As in the paper | 5 of 5 | 12 each | 100% | $0.51 |
 | No talk (`talk=false`) | 5 of 5 | 12 each | 100% (one run 90%) | $0.10 |
 | One fisher told privately to think only of himself (`greedy=true`) | 0 of 5 | 0, 2, 2, 2, 3 | 17–26% | $0.04 |
+| The same, with the universalization prompt | 1 of 5 | 2, 3, 3, 8, 12 | 27–74% | $0.23 |
 
 - **Cooperation needs no talk here.** In every run all five caught exactly 10
   tons in the first month, before anyone had spoken: the sustainable share,
@@ -2148,10 +2149,15 @@ catch and every word is a fisher's (flash-lite). Twelve months, five runs each.
   runs some raised their own catch to 12–16 tons in month 2 ("if you do not
   respect the limit…"), which hastened the end.
 
+- **The universalization prompt helps a little.** Asking each fisher before it
+  chooses what would happen if everyone caught as much (`universalization=true`,
+  the paper's remedy), with the greedy fisher still in: the lake lasted 2, 3, 3,
+  8 and 12 months (one-sided p 0.05 against 0, 2, 2, 2, 3). In the run that
+  held, the other four did what none did before: they cut to 2 tons each for
+  six months and absorbed his 18, at the price of equality (0.74).
+
 The paper's agents also reflect and plan with a memory of past months, and its
-newcomer is a persona rather than a private note; the universalization prompt
-(`universalization=true`) is built but not run, as there was no collapse for it
-to prevent.
+newcomer is a persona rather than a private note.
 
 ## Earlier sets
 
