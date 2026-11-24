@@ -1948,6 +1948,20 @@ With twelve residents, the six added mostly starting away from the cafe
   resident was, a reply or a repeat included; the paper interviewed each agent
   about what it knew. Read the counts as exposure, an upper bound on knowing.
 
+So the day now ends as the paper's does: each resident is asked whether it
+knows of a party today, and counts as knowing only with a yes that names
+Isabella or the cafe.
+
+| Interviewed, two days each | Exposed | Knew when asked | Came |
+|---|---|---|---|
+| Six residents | 5, 5 of 5 | 3, 5 | 2, 2 |
+| Twelve residents | 11, 11 of 11 | 7, 8 | 5, 7 |
+
+- **Hearing of it is not knowing it.** Among twelve, 15 of 22 knew when asked
+  (68%), against 100% exposed, nearer the paper's 52%. Klaus answered that he
+  "never managed to find out who was hosting it or where"; Sam said yes, to "a
+  party being hosted by the town in the park", and is counted as not knowing.
+
 The town is hosted once per server (`examples/hosted/town-mcp`, under the name
 `town`); days of it run one after another, as it is one shared world. In a
 two-hour trial day the residents also called `enter` themselves; they now see
