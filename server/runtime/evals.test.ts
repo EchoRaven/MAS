@@ -80,6 +80,13 @@ describe("evaluations", () => {
     await expect(evals.regrade(done.id, "code")).rejects.toThrow(/cannot switch/);
   });
 
+  it("runs a case up to 20 times, not silently 5", async () => {
+    const doc = echo(["Answer: 1"], "twelve");
+    const done = await finish(evals.start(doc, { grader: "number", repeats: 12, concurrency: 4, cases: [{ input: "q", expected: "1" }] }).id);
+    expect(done.repeats).toBe(12);
+    expect(done.cases).toHaveLength(12);
+  });
+
   it("repeats every question, and reports each repeat's accuracy and their spread", async () => {
     // the echo alternates right and wrong across calls: repeat 1 and repeat 2 differ
     // its own model id: a mock's place in its script is kept per model across runs

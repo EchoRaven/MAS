@@ -48,6 +48,7 @@ export interface EvalOptions {
 }
 
 const MAX_CASES = 200;
+export const MAX_REPEATS = 20;
 /** errors no retry fixes: a rejected or disabled key, no credit, a used-up quota, a model that is gone */
 const ACCOUNT_ERROR = /\b(401|403)\b|api[ _]key|service account|credit|billing|quota|permission denied|no longer available|model .*not found|does not exist/i;
 
@@ -104,7 +105,8 @@ export class EvalManager {
     // the system as saved, before this evaluation's models and limits: what its runs pool on
     const version = systemVersion(original);
     const doc = this.prepare(original, opts);
-    const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), 5)) : 1;
+    // up to 20: a game or a simulation is one case run many times (Werewolf asked for 10 and was cut to 5, silently)
+    const repeats = Number.isFinite(Number(opts.repeats ?? 1)) ? Math.max(1, Math.min(Math.floor(Number(opts.repeats ?? 1)), MAX_REPEATS)) : 1;
     const cases = opts.cases.filter((c) => String(c.input ?? "").trim()).slice(0, Math.floor(MAX_CASES / repeats));
     if (!cases.length) throw new Error("No cases: each needs an input");
     if (opts.grader === "check" && !opts.check?.trim()) throw new Error("The grader check needs its JS: a dataset that carries one, or check in the request");

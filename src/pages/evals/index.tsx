@@ -378,7 +378,7 @@ function Evals({ systemId }: { systemId: string }) {
             </label>
             <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Run every question this many times: scores move between runs, and the spread says how much">
               Repeats
-              <Select value={repeats} onValueChange={setRepeats} items={["1", "2", "3", "5"].map((v) => ({ value: v, label: v }))} ariaLabel="Repeats" />
+              <Select value={repeats} onValueChange={setRepeats} items={["1", "2", "3", "5", "10", "20"].map((v) => ({ value: v, label: v }))} ariaLabel="Repeats" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Each run's time limit, instead of the system's own. A slower model needs longer: a run cut off by its limit has no answer">
               Minutes
