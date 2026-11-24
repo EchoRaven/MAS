@@ -1,0 +1,9 @@
+# How MAS Studio runs this project when it is hosted (Connections page).
+# A world must be shared by every agent and last between their calls, so it is
+# one long-running container reached over HTTP (mcp-http), not a container per
+# connection (mcp-stdio).
+name: Town
+start: python app.py
+expose: { kind: mcp-http, port: 8000, path: /mcp, health: /health }
+egress: []        # no network
+idle_minutes: 60  # stopped after an hour unused; its world starts over
