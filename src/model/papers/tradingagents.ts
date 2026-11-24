@@ -17,9 +17,14 @@ const RISK: [string, string, string][] = [
   ["safe", "Conservative risk analyst", "Argue for protecting capital: what could go wrong, and how badly?"],
 ];
 
-function build(): SystemDoc {
+// in a backtest the analysts see only the prices in the request: the news, sentiment and fundamentals analysts
+// must not invent what they were not given (the paper's data feeds are not connected)
+const ONLY_GIVEN = " Use only the data in the request. Where it has nothing for your part (no news, no filings, no posts), say so and keep your outlook neutral rather than guessing.";
+
+/** backtest: no person approves (an evaluation runs unattended) and the risk manager ends with the final action */
+function build(backtest = false): SystemDoc {
   const b = new Builder(
-    "TradingAgents",
+    backtest ? "TradingAgents (backtest)" : "TradingAgents",
     "A trading firm as agents. Four analysts report in parallel; a bull and a bear researcher debate the reports and a research manager writes the investment plan; a trader turns it into a trade; three risk analysts debate the trade; the risk manager adjusts it; and a fund manager — a person — approves it before it is placed.",
   );
   b.schema({
@@ -31,7 +36,7 @@ function build(): SystemDoc {
 
   // 1. analysts, in parallel, joined once all four have reported
   ANALYSTS.forEach(([id, name, task], i) =>
-    b.agent(id, 260, i * 130, { name, role: task.split(":")[0], model: "haiku", harness: { ...native(), loop: "single_shot", instructions: `${task} Write a short report ending with your outlook: bullish, bearish or neutral.` } }),
+    b.agent(id, 260, i * 130, { name, role: task.split(":")[0], model: "haiku", harness: { ...native(), loop: "single_shot", instructions: `${task} Write a short report ending with your outlook: bullish, bearish or neutral.${backtest ? ONLY_GIVEN : ""}` } }),
   );
   b.node("reports", "function", 540, 200, {
     name: "All four reports",
@@ -65,9 +70,12 @@ function build(): SystemDoc {
   b.edge("risk", "risky", "message").edge("risky", "neutral", "handoff", { carry: "full" }).edge("neutral", "safe", "handoff", { carry: "full" }).edge("safe", "risk", "handoff", { carry: "full" });
 
   // 5. the risk manager adjusts the trade, and the fund manager approves it
-  b.agent("risk_manager", 1960, 160, { name: "Risk manager", role: "Decides the final trade", model: "opus", harness: { ...native(), instructions: "Weigh the risk debate and decide the final trade (it may be smaller than proposed, or HOLD). Before it can be placed, ask the fund manager to approve it. Then report the decision and whether it was approved." } })
-    .node("fund_manager", "human", 2240, 300, { name: "Fund manager", role: "Approves trades before they are placed", approves: true })
-    .edge("client", "fundamentals", "message", { label: "Ticker and date" });
+  if (backtest)
+    b.agent("risk_manager", 1960, 160, { name: "Risk manager", role: "Decides the final trade", model: "opus", harness: { ...native(), loop: "single_shot", instructions: "Weigh the risk debate and decide the final trade for the next trading day (it may be smaller than proposed, or HOLD). End with a last line exactly 'Answer: BUY', 'Answer: SELL' or 'Answer: HOLD'." } });
+  else
+    b.agent("risk_manager", 1960, 160, { name: "Risk manager", role: "Decides the final trade", model: "opus", harness: { ...native(), instructions: "Weigh the risk debate and decide the final trade (it may be smaller than proposed, or HOLD). Before it can be placed, ask the fund manager to approve it. Then report the decision and whether it was approved." } })
+      .node("fund_manager", "human", 2240, 300, { name: "Fund manager", role: "Approves trades before they are placed", approves: true });
+  b.edge("client", "fundamentals", "message", { label: "Ticker and date" });
   for (const [id] of ANALYSTS.slice(1)) b.edge("client", id, "message");
   for (const [id] of ANALYSTS) b.edge(id, "reports", "message", { target_port: id });
   b.edge("reports", "research", "message")
@@ -75,8 +83,8 @@ function build(): SystemDoc {
     .edge("research_manager", "trader", "message", { label: "Investment plan" })
     .edge("trader", "risk", "message", { transform: { lang: "template", code: "Proposed trade: {{input.action}} {{input.size_pct}}% of the portfolio.\nRationale: {{input.rationale}}" } })
     .edge("risk", "risk_manager", "message")
-    .edge("risk_manager", "fund_manager", "call", { label: "Approve the trade?" })
     .edge("risk_manager", "client", "message", { label: "Decision" });
+  if (!backtest) b.edge("risk_manager", "fund_manager", "call", { label: "Approve the trade?" });
   b.doc.entry = { node: "client" };
   b.doc.budget = { usd: 2, max_rounds: 30, wallclock_min: 20 };
   return b.doc;
@@ -97,7 +105,16 @@ export const tradingagents: TemplateInfo = {
     ],
     differs: [
       "The analysts have no market data here: they reason from what the models know. Connect data sources as tools (an MCP env for prices, news and filings) to give them the paper's inputs.",
-      "No order is placed: the decision is reported. The paper backtests the trades.",
+      "No order is placed: the decision is reported. The backtest variant decides one day from the prices given, with no approval step, and benchmarks/tradingagents scores its decisions against the next day's moves (long only).",
     ],
   },
+};
+
+// a day's decision from prices alone, scored against the next day's move (benchmarks/tradingagents)
+export const tradingagentsBacktest: TemplateInfo = {
+  ...tradingagents,
+  id: "paper-tradingagents-backtest",
+  name: "TradingAgents (backtest)",
+  summary: "the same firm deciding one trading day from the prices given, with no approval step: for backtests",
+  build: () => build(true),
 };
