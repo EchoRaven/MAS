@@ -22,7 +22,7 @@ import { debate } from "./debate";
 import { dylan } from "./dylan";
 import { eot } from "./eot";
 import { generativeAgents } from "./generativeAgents";
-import { generativeTown } from "./generativeTown";
+import { generativeTown, generativeTown12 } from "./generativeTown";
 import { mad } from "./mad";
 import { metaPrompting, metaPromptingPython } from "./metaPrompting";
 import { selfCorrect } from "./selfCorrect";
@@ -44,7 +44,7 @@ import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf } from "./werewolf";
 
-const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex, mav, macm, selfRefine, dmad, longAgent, frugalgpt, usc, llmDiscussion, metaPrompting, metaPromptingPython, selfCorrect, critic, generativeTown];
+const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex, mav, macm, selfRefine, dmad, longAgent, frugalgpt, usc, llmDiscussion, metaPrompting, metaPromptingPython, selfCorrect, critic, generativeTown, generativeTown12];
 
 // each with what it scored here, beside how it maps to its paper
 export const PAPER_TEMPLATES: TemplateInfo[] = PAPERS.map((t) => (t.notes && MEASURED[t.id] ? { ...t, notes: { ...t.notes, measured: MEASURED[t.id] } } : t));

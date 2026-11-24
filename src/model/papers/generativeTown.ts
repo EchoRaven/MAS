@@ -14,10 +14,17 @@ const RESIDENTS: { id: string; name: string; start: string; seed: string }[] = [
   { id: "tom", name: "Tom", start: "store", seed: "You run the Harvey Oak Supply Store and chat with customers." },
   { id: "ayesha", name: "Ayesha", start: "houses", seed: "You are a writer who lives on the residential street and takes walks in the park." },
   { id: "carlos", name: "Carlos", start: "park", seed: "You are a poet who spends the day in the park and drops by the cafe." },
+  // six more for the larger town, mostly starting away from the cafe
+  { id: "sam", name: "Sam", start: "houses", seed: "You are a retired shopkeeper who lives on the residential street and is thinking of running for mayor." },
+  { id: "jennifer", name: "Jennifer", start: "library", seed: "You are the town librarian; you spend the day at the library desk." },
+  { id: "eddy", name: "Eddy", start: "college", seed: "You are a music student at Oak Hill College who practises composition between classes." },
+  { id: "wolfgang", name: "Wolfgang", start: "college", seed: "You are a professor at Oak Hill College who lectures in the morning and reads in the afternoon." },
+  { id: "abigail", name: "Abigail", start: "houses", seed: "You are an animator who works from home on the residential street." },
+  { id: "rajiv", name: "Rajiv", start: "store", seed: "You are a painter who buys supplies at the store and paints outdoors." },
 ];
 
-const DAY = `const T = (name, args) => ctx.tool(name, args ?? {});
-const R = ${JSON.stringify(RESIDENTS.map((r) => ({ name: r.name, start: r.start })))};
+const day = (rs: typeof RESIDENTS) => `const T = (name, args) => ctx.tool(name, args ?? {});
+const R = ${JSON.stringify(rs.map((r) => ({ name: r.name, start: r.start })))};
 const step = Math.max(10, Math.min(120, Number(ctx.vars.step ?? 60)));
 const until = String(ctx.vars.until ?? "19:00");
 // no town to act in (not hosted on this server, or a dry run): say what is missing instead of failing the run
@@ -44,15 +51,16 @@ const others = R.length - 1;
 ctx.log("heard of the party: " + heard.length + " of " + others + " (" + heard.join(", ") + "); at the cafe 17:00-19:00: " + came.length + " (" + came.join(", ") + ")");
 return "Heard of the party: " + heard.length + " of " + others + (heard.length ? " (" + heard.join(", ") + ")" : "") + ". At Hobbs Cafe from 17:00 to 19:00: " + came.length + (came.length ? " (" + came.join(", ") + ")" : "") + ".\\nAnswer: " + heard.length;`;
 
-function build(): SystemDoc {
+function build(n = 6): SystemDoc {
+  const rs = RESIDENTS.slice(0, n);
   const b = new Builder(
-    "Generative Agents (town)",
-    "Six residents act in a hosted town (the service named town: examples/hosted/town-mcp), each starting in a place of their own. Every hour from 08:00 to 19:00 each takes a turn through the town's tools; what is said is heard only where it is said. Isabella plans a party at Hobbs Cafe at 17:00; at the end the town reports who heard of it and who came.",
+    n === 6 ? "Generative Agents (town)" : `Generative Agents (town, ${n} residents)`,
+    (n === 6 ? "Six" : String(n)) + " residents act in a hosted town (the service named town: examples/hosted/town-mcp), each starting in a place of their own. Every hour from 08:00 to 19:00 each takes a turn through the town's tools; what is said is heard only where it is said. Isabella plans a party at Hobbs Cafe at 17:00; at the end the town reports who heard of it and who came.",
   );
   b.node("asker", "human", 0, 160, { name: "Narrator", role: "Starts the day", approves: false }).node("day", "function", 260, 160, {
     name: "The day",
     join: "any",
-    fn: { lang: "js", code: DAY, timeout_ms: 3_600_000 },
+    fn: { lang: "js", code: day(rs), timeout_ms: 3_600_000 },
     interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] },
   });
   b.node("town", "env", 260, 420, {
@@ -70,7 +78,7 @@ function build(): SystemDoc {
       exposes: { mcp: { transport: "http", auth: "none", tools: ["look", "move", "say", "wait", "time", "enter", "report", "advance", "reset"], endpoint: { hosted: { service: "town" } } }, http: [] },
     },
   } as never);
-  RESIDENTS.forEach((r, i) => {
+  rs.forEach((r, i) => {
     b.agent(r.id, 600, i * 110, {
       name: r.name,
       role: r.seed,
@@ -85,7 +93,7 @@ function build(): SystemDoc {
     b.edge("day", r.id, "call", { label: "Your turn" }).edge(r.id, "town", "access", { access: "read_write", binding: { mode: "tool", tools: ["look", "move", "say", "wait"] } } as never);
   });
   b.edge("asker", "day", "message", { label: "Begin" }).edge("day", "town", "access", { access: "read_write" }).edge("day", "asker", "message", { label: "What happened" });
-  b.doc.budget = { usd: 1, max_rounds: 400, wallclock_min: 60 };
+  b.doc.budget = { usd: n > 6 ? 2 : 1, max_rounds: 400 * Math.ceil(n / 6), wallclock_min: 60 * Math.ceil(n / 6) };
   b.doc.termination = ["all_idle", "budget_exceeded"];
   return b.doc;
 }
@@ -94,7 +102,7 @@ export const generativeTown: TemplateInfo = {
   id: "paper-generative-agents-town",
   name: "Generative Agents (town)",
   summary: "six residents in a hosted town · a day in hourly steps · who heard of the party, who came",
-  build,
+  build: () => build(6),
   paper: { title: "Generative Agents: Interactive Simulacra of Human Behavior", authors: "Park et al.", year: 2023, url: "https://arxiv.org/abs/2304.03442" },
   notes: {
     mapped: [
@@ -108,4 +116,12 @@ export const generativeTown: TemplateInfo = {
       "Who heard of the party is counted from what each resident was present for, not from interviews; the paper asked each agent.",
     ],
   },
+};
+
+export const generativeTown12: TemplateInfo = {
+  ...generativeTown,
+  id: "paper-generative-agents-town-12",
+  name: "Generative Agents (town, 12 residents)",
+  summary: "the town with twelve residents, most starting away from the cafe · who heard of the party, who came",
+  build: () => build(12),
 };
