@@ -314,6 +314,9 @@ the vocabulary:
   votes about at random. With the paper's experience pool (each player's
   lessons kept across games by a memory plugin of scope `agent`) the village's
   ballots on werewolves rose from 43% to 54% (p 0.07).
+  GovSim's fishery is the same shape (the rules as code, a fisher agent per
+  choice): flash-lite kept the lake in every run, with or without talk, and
+  one fisher told to be greedy collapsed it in every run.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:

@@ -43,8 +43,9 @@ import { tradingagents, tradingagentsBacktest } from "./tradingagents";
 import { virtuallab } from "./virtuallab";
 import { voyager } from "./voyager";
 import { werewolf, werewolfExperience } from "./werewolf";
+import { govsim } from "./govsim";
 
-const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex, mav, macm, selfRefine, dmad, longAgent, frugalgpt, usc, llmDiscussion, metaPrompting, metaPromptingPython, selfCorrect, critic, generativeTown, generativeTown12, generativeTown25, generativeTown25Short, generativeTown25Memory, werewolfExperience, tradingagentsBacktest];
+const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex, mav, macm, selfRefine, dmad, longAgent, frugalgpt, usc, llmDiscussion, metaPrompting, metaPromptingPython, selfCorrect, critic, generativeTown, generativeTown12, generativeTown25, generativeTown25Short, generativeTown25Memory, werewolfExperience, tradingagentsBacktest, govsim];
 
 // each with what it scored here, beside how it maps to its paper
 export const PAPER_TEMPLATES: TemplateInfo[] = PAPERS.map((t) => (t.notes && MEASURED[t.id] ? { ...t, notes: { ...t.notes, measured: MEASURED[t.id] } } : t));

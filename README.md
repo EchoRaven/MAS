@@ -211,6 +211,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [DyLAN](https://arxiv.org/abs/2310.02170) | Agents in layers: a ranker keeps the best for the next layer, early stop at two-thirds agreement, importance scores |
 | [TradingAgents](https://arxiv.org/abs/2412.20138) | A trading firm: parallel analysts, a bull/bear debate, a structured trade, a risk debate, a person's approval |
 | [Werewolf](https://arxiv.org/abs/2309.04658) | Hidden roles: the rules are code, each player is an agent told only what its role allows |
+| [GovSim](https://arxiv.org/abs/2404.16698) | A commons: five fishers share a lake that regrows; private catches, talk between months, the rules as code |
 | [MAD](https://arxiv.org/abs/2305.19118) | An angel and a devil who must disagree; a moderator ends the debate once one side is clearly right, else a judge decides after three rounds |
 | [Chain-of-Agents](https://arxiv.org/abs/2406.02818) | A long input split into chunks; workers pass a note of the evidence down the chain, a manager answers from the last note |
 | [ReConcile](https://arxiv.org/abs/2309.13007) | A round table of different models: answers with confidence, grouped discussion each round, stop at consensus, a confidence-weighted vote |
