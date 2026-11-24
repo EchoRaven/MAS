@@ -1962,6 +1962,23 @@ Isabella or the cafe.
   "never managed to find out who was hosting it or where"; Sam said yes, to "a
   party being hosted by the town in the park", and is counted as not knowing.
 
+At the paper's scale ("Generative Agents (town, 25 residents, 2 days)": 25
+residents, the party on the second day, as the paper's was planned on the 13th
+for the 14th; hourly steps, interviews at the end of day 2):
+
+| Twenty-five residents, two days | Run 1 | Run 2 | Paper |
+|---|---|---|---|
+| Knew of the party when asked (of 24) | 15 | 17 | about half |
+| At the cafe, day 2, 17:00–19:00 | 9 | 11 | 5 of the 12 invited |
+| Exposed | 24 | 24 | |
+| Cost (about 1,800 model calls) | $0.74 | $0.74 | |
+
+- **Close to the paper.** 32 of 48 knew when asked (67%), against the paper's
+  52%, nearer than with six (80%) or twelve (68%, one day) residents; everyone
+  had been present when it was spoken of.
+- **Everyone who came knew.** All 20 at the party had said they knew of it;
+  about three in five of those who knew came.
+
 The town is hosted once per server (`examples/hosted/town-mcp`, under the name
 `town`); days of it run one after another, as it is one shared world. In a
 two-hour trial day the residents also called `enter` themselves; they now see
