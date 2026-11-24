@@ -1929,6 +1929,25 @@ day, each resident taking a turn every hour from 08:00 to 19:00.
 - **A day costs six cents.** About 190 model calls: 66 looks, 65 things said,
   19 to 26 moves.
 
+With twelve residents, the six added mostly starting away from the cafe
+("Generative Agents (town, 12 residents)"), word travels further, not less:
+
+| Twelve residents | Heard of the party (of 11) | At the cafe 17:00–19:00 | Cost |
+|---|---|---|---|
+| Day 1 | 11 | 5 | $0.128 |
+| Day 2 | 11 | 3 | $0.126 |
+| Day 3 | 10 | 3 | $0.121 |
+
+- **More people pass it on.** 97% heard, against 80% among six: besides
+  Isabella, 8, 8 and 6 residents spoke of the party themselves on the three
+  days, so a larger town has more carriers.
+- **Fewer of those who heard come.** 11 of 32 who heard came (34%), against
+  10 of 12 (83%) among six; the paper had 5 of 12 invited. Hearing of it is not
+  deciding to go.
+- **"Heard" is generous.** It counts any line with "party" said where a
+  resident was, a reply or a repeat included; the paper interviewed each agent
+  about what it knew. Read the counts as exposure, an upper bound on knowing.
+
 The town is hosted once per server (`examples/hosted/town-mcp`, under the name
 `town`); days of it run one after another, as it is one shared world. In a
 two-hour trial day the residents also called `enter` themselves; they now see
