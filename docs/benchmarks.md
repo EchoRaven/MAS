@@ -2101,22 +2101,25 @@ same cases is the control. All on flash-lite.
 |---|---|---|---|---|---|
 | Buy and hold | | +3.2% | +3.8% | −17.7% | |
 | One agent (two runs) | 45 of 111, 44 of 114 (40%) | −6.1%, +0.9% | −9.6%, −4.3% | −17.7%, −20.2% | $0.10 |
-| TradingAgents | 28 of 60 (47%) | +0.5% | −6.0% | −14.3% | $2.23 |
+| TradingAgents (two runs) | 28 of 60, 19 of 50 (43%) | +0.5%, −1.3% | −6.0%, −11.4% | −14.3%, −7.2% | $2.23 |
 
 - **Neither reads the next day from prices.** Up and down days were even (60
-  of 120); the firm's calls are a coin's (p 0.70), the single agent's worse
+  of 120); the firm's calls are a coin's (p 0.70 and 0.12), the single agent's worse
   than one (p 0.06 and 0.02): it mostly buys (69 and 76 of 120), and in this
   stretch rises were followed by falls.
-- **The firm's gain is its caution.** It held in half its decisions (60 of
-  120), against 5 and 7 for one agent, so it was out of the market more: a
+- **The firm's gain is its caution.** It held in half its decisions or more
+  (60 and 70 of 120), against 5 and 7 for one agent, so it was out of the market more: a
   smaller loss than buy and hold on the falling stock (GOOGL), a loss against
-  it on the two that rose. Its Sharpe ratio is below buy and hold's on AAPL and
-  AMZN and near it on GOOGL (−2.82 against −2.57).
+  it on the two that rose, in both runs. Its Sharpe ratio is below buy and
+  hold's on every stock in both runs, GOOGL included (−2.82 and −3.14 against
+  −2.57): a smaller loss there, not a better return for its risk.
 - **Twenty-two times the cost** of one agent for that.
 
 The paper reports large gains over buy and hold (Q1 2024, with its news and
 fundamentals feeds and GPT-4o models); with prices alone and over 40 days,
-none appears here. One run of the firm: a second would show its spread.
+none appears here. Graded on the Evaluate page by `benchmarks/tradingagents/check.js`
+(right direction of all decisions): 45 and 44 of 120 for one agent, 28 and 19
+for the firm, as the backtest script counts.
 
 ## Earlier sets
 
