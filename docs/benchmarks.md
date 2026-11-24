@@ -1900,6 +1900,41 @@ the answers it had worked in, which the check read. The template now asks for
 the whole piece as the final answer to a writing task, and 97 of 100 runs give
 the story there.
 
+## Generative Agents in a town: who heard of the party, who came
+
+Generative Agents' measured outcome is social: Isabella plans a Valentine's
+Day party and, over two simulated days among 25 residents, word of it reaches
+about half of them and 5 of the 12 invited come. That needs a world where news
+has to travel, which a shared room is not (everyone hears everything).
+`examples/hosted/town-mcp` is one: six places joined by paths, speech heard
+only where it is said (or found there soon after), a clock that moves between
+steps for everyone at once, and a `report` of who heard a keyword and who was
+where. "Generative Agents (town)" puts six residents in it, each starting in a
+place of their own, only Isabella knowing of the party; a function runs the
+day, each resident taking a turn every hour from 08:00 to 19:00.
+
+| Six residents, flash-lite, hourly steps | Heard of the party (of 5) | At the cafe 17:00–19:00 | Cost |
+|---|---|---|---|
+| Day 1 | 3 | 3 | $0.061 |
+| Day 2 | 4 | 4 | $0.058 |
+| Day 3 | 5 | 3 | $0.057 |
+
+- **News travels by place.** Klaus, who starts in the library (two walks from
+  the cafe), was the one who missed it on two days of three; Maria, Tom and
+  Carlos, who pass the cafe, heard every time. Word reached 80% on average,
+  more than the paper's half: six people in six places meet far more often
+  than 25 in a town of many buildings.
+- **Most who heard, came.** 10 of the 12 who heard over three days were at the
+  cafe during the party.
+- **A day costs six cents.** About 190 model calls: 66 looks, 65 things said,
+  19 to 26 moves.
+
+The town is hosted once per server (`examples/hosted/town-mcp`, under the name
+`town`); days of it run one after another, as it is one shared world. In a
+two-hour trial day the residents also called `enter` themselves; they now see
+only `look`, `move`, `say` and `wait` (an env edge can list the tools it
+allows), and the reset, the clock and the report are the day's alone.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these

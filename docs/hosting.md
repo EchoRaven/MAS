@@ -82,6 +82,14 @@ manifest:
                     endpoint: { hosted: { service: svc_text_world_… } } } }
 ```
 
+`town-mcp` grows the text world for Generative Agents' information
+diffusion: six places, speech heard only where it is said, a clock that moves
+only when the one running the simulation calls `advance` (`reset {driven: true}`),
+and `report`, which counts who heard a keyword and who was at a place in a time
+window. Host it under the name `town`: an endpoint can name a hosted service by
+its name as well as its id, so the "Generative Agents (town)" template needs no
+server-specific id.
+
 ## Compose projects
 
 An application env (an app, its database, its MCP server…) is hosted as its

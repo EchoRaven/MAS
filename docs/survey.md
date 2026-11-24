@@ -299,6 +299,10 @@ the vocabulary:
   it comes in as a hosted MCP service (`examples/hosted/text-world-mcp`: places,
   things, speech and a clock, shared by every agent connected to it) or an
   imported env (`mas-env/1`).
+  Generative Agents' party now runs in one (`examples/hosted/town-mcp`, six
+  places, a clock that moves between steps): over three days word reached 3, 4
+  and 5 of five residents, the one starting farthest from the cafe missing it
+  most.
 - **Learned components** (in part). Agents' Room fine-tunes its agents, which
   the platform does not (it runs prompted models). What is learned from one
   task to the next can now be carried: code keeps values across runs in
