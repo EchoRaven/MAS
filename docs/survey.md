@@ -314,6 +314,11 @@ the vocabulary:
   votes about at random. With the paper's experience pool (each player's
   lessons kept across games by a memory plugin of scope `agent`) the village's
   ballots on werewolves rose from 43% to 54% (p 0.07).
+- **External data** (connectable). TradingAgents' analysts read prices, news,
+  social media and filings; a backtest needs none of the platform's own
+  machinery, only cases that carry the day's data and a scorer:
+  `benchmarks/tradingagents` fetches daily prices at run time. From prices
+  alone the firm called the next day's direction no better than a coin.
 - **Learned components** (in part). Agents' Room fine-tunes its agents, which
   the platform does not (it runs prompted models). What is learned from one
   task to the next can now be carried: code keeps values across runs in

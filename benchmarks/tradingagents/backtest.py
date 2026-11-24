@@ -56,15 +56,17 @@ def cases(src: Path, days: int, lookback: int):
             }))
 
 
-ACTION = re.compile(r"answer\W*\s*(BUY|SELL|HOLD)\b", re.I)
+# the last answer line, as the platform's grader reads one ("Answer:", "Final answer:", "Final:"), in any case: a
+# single agent writes "Final: Buy"
+ACTION = re.compile(r"(?:final answer|answer|final|decision)\W*\s*(buy|sell|hold)\b", re.I)
 
 
 def action(output: str):
     m = ACTION.findall(output or "")
     if m:
         return m[-1].upper()
-    m = re.findall(r"\b(BUY|SELL|HOLD)\b", output or "")
-    return m[-1] if m else None
+    m = re.findall(r"\b(buy|sell|hold)\b", output or "", re.I)
+    return m[-1].upper() if m else None
 
 
 def stats(rets):
@@ -91,7 +93,14 @@ def score(paths):
             a = action(c.get("output") or "")
             missing += a is None
             by.setdefault(x["ticker"], []).append((x["date"], a, x["next_return"]))
-        print(f"{e['id']} {e.get('system_name')} · no action in {missing} of {len(e['cases'])}")
+        # direction: a BUY before a rise or a SELL before a fall is a hit; HOLD calls no direction
+        calls = [(a, r) for ds in by.values() for _, a, r in ds if a in ("BUY", "SELL") and r != 0]
+        hits = sum(1 for a, r in calls if (a == "BUY") == (r > 0))
+        n = len(calls)
+        # two-sided binomial p against a coin
+        k = min(hits, n - hits)
+        p = min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n) if n else 1.0
+        print(f"{e['id']} {e.get('system_name')} · no action in {missing} of {len(e['cases'])} · direction right {hits} of {n} calls (p {p:.2f} against a coin)")
         for t, days in sorted(by.items()):
             days.sort()
             pos, strat, hold, acts = 0, [], [], {"BUY": 0, "SELL": 0, "HOLD": 0, None: 0}

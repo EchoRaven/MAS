@@ -2084,6 +2084,40 @@ Twenty games run one after another, so the pool grows.
   "share my discovery about Alice … immediately during the first day". Both
   sides learn, so the werewolves' lessons work against the village's.
 
+## TradingAgents: a backtest from prices alone
+
+Xiao et al.'s firm (`paper-tradingagents-backtest`: four analysts, a bull and
+bear debate, a trader, a risk debate, a risk manager; no approval step, as an
+evaluation runs unattended) decides each trading day from the 30 days of daily
+prices before it, for the paper's three stocks, over the 40 trading days from
+2026-09-28 to 2026-11-20 (after the models' training, so no model can recall
+them). Its analysts are told to use only the prices given: the paper's news,
+social media and filings are not connected. `benchmarks/tradingagents`
+fetches the prices at run time and scores long only (BUY holds the stock,
+SELL holds cash, HOLD keeps the last position). One agent, one call, on the
+same cases is the control. All on flash-lite.
+
+| 120 decisions (3 stocks × 40 days) | Direction right (BUY before a rise, SELL before a fall) | AAPL | AMZN | GOOGL | Cost |
+|---|---|---|---|---|---|
+| Buy and hold | | +3.2% | +3.8% | −17.7% | |
+| One agent (two runs) | 45 of 111, 44 of 114 (40%) | −6.1%, +0.9% | −9.6%, −4.3% | −17.7%, −20.2% | $0.10 |
+| TradingAgents | 28 of 60 (47%) | +0.5% | −6.0% | −14.3% | $2.23 |
+
+- **Neither reads the next day from prices.** Up and down days were even (60
+  of 120); the firm's calls are a coin's (p 0.70), the single agent's worse
+  than one (p 0.06 and 0.02): it mostly buys (69 and 76 of 120), and in this
+  stretch rises were followed by falls.
+- **The firm's gain is its caution.** It held in half its decisions (60 of
+  120), against 5 and 7 for one agent, so it was out of the market more: a
+  smaller loss than buy and hold on the falling stock (GOOGL), a loss against
+  it on the two that rose. Its Sharpe ratio is below buy and hold's on AAPL and
+  AMZN and near it on GOOGL (−2.82 against −2.57).
+- **Twenty-two times the cost** of one agent for that.
+
+The paper reports large gains over buy and hold (Q1 2024, with its news and
+fundamentals feeds and GPT-4o models); with prices alone and over 40 days,
+none appears here. One run of the firm: a second would show its spread.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
