@@ -311,7 +311,9 @@ the vocabulary:
   Werewolf's game, with the paper's seven roles and the rules as code, needs
   no world: over twenty games each the seer's visions moved the villagers'
   wins from 3 to 6 (p 0.45), as she hints rather than tells and the village
-  votes about at random.
+  votes about at random. With the paper's experience pool (each player's
+  lessons kept across games by a memory plugin of scope `agent`) the village's
+  ballots on werewolves rose from 43% to 54% (p 0.07).
 - **Learned components** (in part). Agents' Room fine-tunes its agents, which
   the platform does not (it runs prompted models). What is learned from one
   task to the next can now be carried: code keeps values across runs in

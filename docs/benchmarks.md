@@ -2035,6 +2035,7 @@ night.
 |---|---|---|---|
 | Seer sees | 6 (30%) | 56 of 130 (43%) | $0.10 |
 | Seer sees nothing | 3 (15%) | 42 of 104 (40%) | $0.07 |
+| Seer sees, with the experience pool (games in sequence) | 7 (35%) | 76 of 141 (54%) | $0.22 |
 
 - **Little difference, and none that twenty games can show** (Fisher p 0.45).
   The village's ballots fall on a werewolf about as often as a random vote
@@ -2054,9 +2055,26 @@ night.
   werewolves as many as the rest. The witch and the guard (as in the paper)
   make games last two to three nights.
 
-The paper's own measure, its experience pool (lessons retrieved from past
-games), is not built; a memory plugin per player with scope `agent` would
-carry them.
+**The experience pool** (`paper-werewolf-experience`, the paper's own
+addition): after each game every player, the dead too, is shown how it went
+and writes one lesson for its role; a memory plugin with scope `agent` keeps
+each player's lessons across games (only replies starting "Lesson:" are
+stored, no model call) and shows the five most recent before every answer.
+Twenty games run one after another, so the pool grows.
+
+- **The lessons are specific and sound.** The witch: "I will prioritize
+  protecting the Seer with my healing potion as early as possible"; a werewolf:
+  "identify and eliminate the witch early, as their poison was the direct cause
+  of my elimination"; a villager: "prioritize my own analysis of voting
+  patterns rather than relying on the consensus".
+- **The village votes better, not significantly.** Ballots on a werewolf rose
+  from 43% to 54% (p 0.07 counting ballots as independent, which they are not
+  within a game); wins 6 to 7. Both halves of the sequence are alike (55%,
+  53%): what helps arrives with the first lessons, not by accumulating.
+- **The seer still does not say what she saw.** She claimed her role in 1 of
+  15 games without the pool and 0 of 14 with it, though her own lesson reads
+  "share my discovery about Alice … immediately during the first day". Both
+  sides learn, so the werewolves' lessons work against the village's.
 
 ## Earlier sets
 

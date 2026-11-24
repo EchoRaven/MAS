@@ -2,6 +2,7 @@
 // nights, the days and the votes, and tells each player only what that player
 // may know; every choice is made by a player agent that remembers its own game.
 import { Builder, native, type TemplateInfo } from "../builder";
+import { defaultPlugin } from "../plugins";
 import type { SystemDoc } from "../types";
 
 const PLAYERS: [string, string, string][] = [
@@ -110,9 +111,44 @@ for (let day = 1; day <= (ctx.vars.days ?? 6); day++) {
   }
   if (over()) break;
 }
-return story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 6) + " days. Still alive: " + alive.join(", ") + ".") + "\\nVillage ballots on werewolves: " + hits + " of " + cast + ".\\nRoles: " + JSON.stringify(players);`;
+const result = story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 6) + " days. Still alive: " + alive.join(", ") + ".") + "\\nVillage ballots on werewolves: " + hits + " of " + cast + ".\\nRoles: " + JSON.stringify(players);
+return result;`;
 
-function build(): SystemDoc {
+// The experience pool: after the game every player, the dead too, is shown how it went and draws one lesson for its
+// role, which its memory keeps (only a reply that starts "Lesson:" is stored) and shows it in later games.
+const MODERATOR_EXPERIENCE = MODERATOR.replace(
+  "return result;",
+  `for (const p of Object.keys(players)) {
+  await tools.call_agent(p, "The game is over.\\n" + result + "\\nYou were " + p + ", a " + players[p] + ". In one sentence, what will you do differently, or again, the next time you play this role? Start your reply with Lesson:");
+}
+return result;`,
+);
+
+/** each player's own lessons, kept across games (scope agent), the five most recent shown before every answer */
+function experiencePool() {
+  const p = defaultPlugin("memory");
+  p.name = "Experience pool";
+  p.spec.scope = "agent";
+  p.spec.retrieval = {
+    rewrite: { use: "none", params: {} },
+    search: [{ use: "recent", params: { k: 5 } }],
+    fuse: { use: "rrf", params: {} },
+    filters: [],
+    rerank: { use: "none", params: {} },
+    select: { use: "top_k", params: { k: 5 } },
+    format: { use: "bullets", params: {} },
+  };
+  p.spec.memory = {
+    extract: { use: "rules", params: { patterns: "Reply: Lesson:[^\\n]+" } },
+    classify: { use: "none", params: {} },
+    merge: { use: "append", params: {} },
+    retain: { use: "forever", params: {} },
+    consolidate: { use: "none", params: {} },
+  };
+  return p;
+}
+
+function build(experience = false): SystemDoc {
   const b = new Builder(
     "Werewolf",
     "Seven players, as in the paper: two secretly werewolves, a seer, a witch, a guard and two villagers. The moderator runs the game as code: at night the werewolves choose a victim, the guard protects someone, the witch may heal the victim or poison anyone (each once), and the seer inspects someone, all privately; by day everyone speaks in turn and votes someone out. Each player only ever learns what its role allows, and remembers its own game.",
@@ -122,10 +158,11 @@ function build(): SystemDoc {
       name: "Moderator",
       role: "Runs the game by its rules",
       model: "haiku",
-      harness: { ...native(), loop: "custom", loop_fn: { lang: "js", code: MODERATOR }, instructions: "Run the game." },
+      harness: { ...native(), loop: "custom", loop_fn: { lang: "js", code: experience ? MODERATOR_EXPERIENCE : MODERATOR }, instructions: "Run the game." },
     })
     .edge("host", "moderator", "message", { label: "Start" })
     .edge("moderator", "host", "message", { label: "Outcome" });
+  if (experience) b.doc.nodes.push({ id: "pool", position: { x: 940, y: 260 }, data: experiencePool() } as never);
   PLAYERS.forEach(([id, name, role], i) => {
     const mates = PLAYERS.filter(([, n, r]) => r === "werewolf" && n !== name).map(([, n]) => n).join(", ");
     b.agent(id, 620, i * 120 - 100, {
@@ -137,6 +174,7 @@ function build(): SystemDoc {
       context: { budget_total: 60000, history_strategy: "window", history_window: 60, mask_tool_output: false },
     });
     b.edge("moderator", id, "call");
+    if (experience) b.edge(id, "pool", "access", { access: "read_write", binding: { mode: "auto_inject", read: { budget_tokens: 600 }, write: { when: "after_turn" } } } as never);
   });
   b.doc.budget = { usd: 1, max_rounds: 300, wallclock_min: 30 };
   return b.doc;
@@ -155,8 +193,16 @@ export const werewolf: TemplateInfo = {
       "Each player keeps its own history across the whole game (a long window), so it can remember what was said and, for the seer, what it saw.",
     ],
     differs: [
-      "The paper's players also retrieve lessons from past games (an experience pool) and reflect before speaking; here each player plays from its own memory of this game only. A memory plugin per player would add the experience pool.",
+      "The paper's players also retrieve lessons from past games (an experience pool) and reflect before speaking. Here the plain game plays from each player's memory of this game only; the experience-pool variant keeps one lesson per player per game (scope agent) and shows the five most recent, not the paper's retrieval by situation and score.",
       "The paper's roles (two werewolves, seer, witch, guard, two villagers), but fixed to names; the seating is shuffled every night instead, as models pick the first name offered. Seer=false withholds the seer's visions, an ablation the paper does not run.",
     ],
   },
+};
+
+export const werewolfExperience: TemplateInfo = {
+  ...werewolf,
+  id: "paper-werewolf-experience",
+  name: "Werewolf (experience pool)",
+  summary: "the same game, with each player's lessons from earlier games carried into the next",
+  build: () => build(true),
 };
