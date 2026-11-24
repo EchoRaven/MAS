@@ -251,7 +251,7 @@ export function ComparePage() {
               <th>Models · variables</th>
               <th className="text-right">Accuracy</th>
               <th className="hidden text-right sm:table-cell">Per repeat</th>
-              <th className="hidden text-right lg:table-cell" title="Questions this system got right that the reference got wrong (+), and the other way (−); p: exact McNemar test on those">vs reference</th>
+              <th className="hidden text-right lg:table-cell" title="Questions this system got right that the reference got wrong (+), and the other way (−); p: exact McNemar test on those. One or two questions run many times (a game) compare the runs instead: passed of graded, Fisher's exact test">vs reference</th>
               <th className="hidden text-right lg:table-cell" title="Of the misses checked, those where a member marked the right answer during the run and the team's answer lost it. An evaluation from before this was recorded shows –; regrade it on the Evaluate page to check its runs">Had it, lost</th>
               <th className="text-right">Cost</th>
               <th className="hidden text-right sm:table-cell">Per correct answer</th>
@@ -303,6 +303,15 @@ export function ComparePage() {
                       (() => {
                         const d = vsRef.get(e.id);
                         if (!d) return "…";
+                        const pText = <span className={cn("ml-1", d.p < 0.05 ? "font-medium text-foreground" : "text-muted-foreground")}>p {d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)}</span>;
+                        // one question run many times (a game): the runs themselves, passed of graded, by Fisher's test
+                        if (d.runs)
+                          return (
+                            <button type="button" className="hover:underline" title={`One or two questions, repeated: runs passed, this system against the reference, compared by Fisher's exact test.\nClick to make this the reference.`} onClick={() => setRefPick(e.id)}>
+                              {d.runs.sys.passed}/{d.runs.sys.graded} vs {d.runs.ref.passed}/{d.runs.ref.graded}
+                              {pText}
+                            </button>
+                          );
                         return (
                           <button
                             type="button"
@@ -311,7 +320,7 @@ export function ComparePage() {
                             onClick={() => setRefPick(e.id)}
                           >
                             <span className="text-emerald-700 dark:text-emerald-300">+{d.fixed.length}</span> <span className="text-destructive">−{d.lost.length}</span>
-                            <span className={cn("ml-1", d.p < 0.05 ? "font-medium text-foreground" : "text-muted-foreground")}>p {d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)}</span>
+                            {pText}
                           </button>
                         );
                       })()

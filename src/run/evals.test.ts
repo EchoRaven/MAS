@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -307,6 +307,17 @@ describe("paired comparison", () => {
     // q1: 2 of 3 right → fixed; q2: 1 of 3 → lost; q3 right; q4 wrong; q5 only in ref (not shared)
     const sys = { cases: [c("q2", true, 0, 1), c("q1", true, 0, 0), c("q3", true, 0, 2), c("q4", false, 0, 3), c("q1", true, 1, 0), c("q2", false, 1, 1), c("q1", false, 2, 0), c("q2", false, 2, 1)] };
     expect(pairedDiff(sys, ref)).toEqual({ fixed: [0], lost: [1], both: 1, neither: 1, shared: 4, p: 1 });
+  });
+
+  it("compares one question run many times as two samples, by Fisher's exact test", () => {
+    const runs = (won: number, n: number) => ({ cases: Array.from({ length: n }, (_, i) => ({ case: 0, input: "Start the game.", expected: "win", status: "done", pass: i < won })) }) as never;
+    // Werewolf: the villagers won 6 of 20 games with the seer's visions and 3 of 20 without
+    const d = pairedDiff(runs(6, 20), runs(3, 20));
+    expect(d.runs).toEqual({ sys: { passed: 6, graded: 20 }, ref: { passed: 3, graded: 20 } });
+    expect(d.p).toBeCloseTo(0.4506, 3);
+    // one run each is nothing to compare as samples: the paired count stays
+    expect(pairedDiff(runs(1, 1), runs(0, 1)).runs).toBeUndefined();
+    expect(fisherP(10, 10, 0, 10)).toBeCloseTo(1.08e-5, 6);
   });
 });
 

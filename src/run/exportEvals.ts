@@ -16,6 +16,8 @@ const cellText = (s: string) => s.replace(/\|/g, "\\|").replace(/\n/g, " ");
 export function vsText(rec: EvalRecord, ref: EvalRecord): string {
   if (rec === ref) return "reference";
   const d = pairedDiff(rec, ref);
+  const p = `p ${d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)}`;
+  if (d.runs) return `${d.runs.sys.passed}/${d.runs.sys.graded} vs ${d.runs.ref.passed}/${d.runs.ref.graded} runs (${p}, Fisher)`;
   return `+${d.fixed.length} −${d.lost.length} (p ${d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)})`;
 }
 

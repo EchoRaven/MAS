@@ -371,10 +371,32 @@ export function mcnemarP(fixed: number, lost: number): number {
   return Math.min(1, 2 * tail);
 }
 
+/** Two-sided Fisher's exact p for a passed of n against b passed of m (unpaired: two sets of independent runs). */
+export function fisherP(a: number, n: number, b: number, m: number): number {
+  const k = a + b;
+  const N = n + m;
+  const logC = (x: number, r: number) => {
+    if (r < 0 || r > x) return -Infinity;
+    let s = 0;
+    for (let i = 1; i <= r; i++) s += Math.log(x - r + i) - Math.log(i);
+    return s;
+  };
+  const prob = (i: number) => Math.exp(logC(n, i) + logC(m, k - i) - logC(N, k));
+  const p0 = prob(a);
+  let p = 0;
+  for (let i = Math.max(0, k - m); i <= Math.min(n, k); i++) {
+    const q = prob(i);
+    if (q <= p0 * (1 + 1e-9)) p += q;
+  }
+  return Math.min(1, p);
+}
+
 /**
  * A system against a reference on the same questions, question by question: the ones it fixed (the reference
  * got wrong), the ones it lost, and whether that difference is more than chance (exact McNemar). With repeats, a
  * question counts as right for a system when more than half its runs got it. Questions are matched by their text.
+ * With only one or two shared questions, each repeated, `runs` holds each side's passed of graded runs and p is
+ * Fisher's exact test on them instead.
  */
 export function pairedDiff(sys: Pick<EvalRecord, "cases">, ref: Pick<EvalRecord, "cases">) {
   const right = (rec: Pick<EvalRecord, "cases">) => {
@@ -404,7 +426,21 @@ export function pairedDiff(sys: Pick<EvalRecord, "cases">, ref: Pick<EvalRecord,
   }
   fixed.sort((m, n) => m - n);
   lost.sort((m, n) => m - n);
-  return { fixed, lost, both, neither, shared: fixed.length + lost.length + both + neither, p: mcnemarP(fixed.length, lost.length) };
+  const shared = fixed.length + lost.length + both + neither;
+  // one or two questions run many times (a game, a simulation): question by question there is nothing to pair, so
+  // the runs are compared as two samples, passed of graded on each side, by Fisher's exact test
+  const runs = (rec: Pick<EvalRecord, "cases">) => {
+    const on = rec.cases.filter((c) => c.pass !== undefined && a.has(c.input) && b.has(c.input));
+    const each = new Map<string, number>();
+    for (const c of on) each.set(c.input, (each.get(c.input) ?? 0) + 1);
+    return { passed: on.filter((c) => c.pass).length, graded: on.length, repeated: each.size > 0 && [...each.values()].every((n) => n > 1) };
+  };
+  if (shared && shared <= 2) {
+    const { repeated: rx, ...x } = runs(sys);
+    const { repeated: ry, ...y } = runs(ref);
+    if (rx && ry) return { fixed, lost, both, neither, shared, p: fisherP(x.passed, x.graded, y.passed, y.graded), runs: { sys: x, ref: y } };
+  }
+  return { fixed, lost, both, neither, shared, p: mcnemarP(fixed.length, lost.length) };
 }
 
 const ANSWER_LINE = /(?:^|\n)\s*(?:\*\*)?(?:final answer|answer|final)(?:\*\*)?\s*[:：]\s*(?:\*\*)?([^\n]+)/gi;
