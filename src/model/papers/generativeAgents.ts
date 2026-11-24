@@ -5,13 +5,14 @@ import { Builder, native, type TemplateInfo } from "../builder";
 import { defaultPlugin } from "../plugins";
 import type { SystemDoc } from "../types";
 
-function memoryStream() {
+/** the paper's memory stream as a plugin; embedding: the embedding model it retrieves with */
+export function memoryStream(embedding = "embed") {
   const p = defaultPlugin("memory");
   p.name = "Memory stream";
   p.spec.scope = "agent"; // one plugin, a private stream per agent
   p.spec.retrieval = {
     rewrite: { use: "none", params: {} },
-    search: [{ use: "vector", params: { embedding: "embed", k: 100, metric: "cosine" } }],
+    search: [{ use: "vector", params: { embedding, k: 100, metric: "cosine" } }],
     // score = recency + importance + relevance, each normalised to [0, 1], equal weights
     fuse: {
       use: "custom",

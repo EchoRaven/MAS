@@ -6,6 +6,7 @@
 import { Builder, native, type TemplateInfo } from "../builder";
 import { port } from "../ports";
 import type { SystemDoc } from "../types";
+import { memoryStream } from "./generativeAgents";
 
 const RESIDENTS: { id: string; name: string; start: string; seed: string }[] = [
   { id: "isabella", name: "Isabella", start: "cafe", seed: "You run Hobbs Cafe. You are planning a Valentine's Day party at the cafe today from 5pm to 7pm and want as many people as possible to come." },
@@ -118,11 +119,18 @@ if (String(ctx.vars.interview ?? "true") !== "false") {
 ctx.log("heard of the party: " + heard.length + " of " + others + "; knew it when asked: " + knows.length + " (" + knows.join(", ") + "); at the cafe on the last day 17:00-19:00: " + came.length + " (" + came.join(", ") + ")");
 return "Heard of the party: " + heard.length + " of " + others + ". Knew of it when asked: " + knows.length + (knows.length ? " (" + knows.join(", ") + ")" : "") + ". At Hobbs Cafe on day " + DAYS + " from 17:00 to 19:00: " + came.length + (came.length ? " (" + came.join(", ") + ")" : "") + ".\\nAnswer: " + knows.length;`;
 
-function build(n = 6, nDays = 1): SystemDoc {
+/**
+ * How residents remember: full (their whole conversation, summarised past 30 messages: the default), short (only the
+ * last 8 messages, older ones dropped), or stream (short, plus the paper's memory stream with retrieval and reflection).
+ */
+type Memory = "full" | "short" | "stream";
+const SHORT = { budget_total: 120000, history_strategy: "window" as const, history_window: 8, mask_tool_output: true };
+
+function build(n = 6, nDays = 1, memory: Memory = "full"): SystemDoc {
   // over several days the party is on the last one, as in the paper (planned on the 13th for the 14th)
   const rs = RESIDENTS.slice(0, n).map((r) => (nDays > 1 && r.id === "isabella" ? { ...r, seed: `You run Hobbs Cafe. You are planning a Valentine's Day party at the cafe on day ${nDays}, from 5pm to 7pm, and want as many people as possible to come.` } : r));
   const b = new Builder(
-    n === 6 && nDays === 1 ? "Generative Agents (town)" : `Generative Agents (town, ${n} residents${nDays > 1 ? `, ${nDays} days` : ""})`,
+    n === 6 && nDays === 1 && memory === "full" ? "Generative Agents (town)" : `Generative Agents (town, ${n} residents${nDays > 1 ? `, ${nDays} days` : ""}${memory === "short" ? ", short memory" : memory === "stream" ? ", memory stream" : ""})`,
     (n === 6 ? "Six" : String(n)) + " residents act in a hosted town (the service named town: examples/hosted/town-mcp), each starting in a place of their own. Every hour from 08:00 to 19:00 each takes a turn through the town's tools; what is said is heard only where it is said. Isabella plans a party at Hobbs Cafe at 17:00; at the end the town reports who heard of it and who came.",
   );
   b.node("asker", "human", 0, 160, { name: "Narrator", role: "Starts the day", approves: false }).node("day", "function", 260, 160, {
@@ -146,6 +154,8 @@ function build(n = 6, nDays = 1): SystemDoc {
       exposes: { mcp: { transport: "http", auth: "none", tools: ["look", "move", "say", "wait", "time", "enter", "report", "advance", "reset"], endpoint: { hosted: { service: "town" } } }, http: [] },
     },
   } as never);
+  // the memory stream exists before the residents' edges to it
+  if (memory === "stream") b.doc.nodes.push({ id: "memory", position: { x: 940, y: 420 }, data: memoryStream("gemini_embed") } as never);
   rs.forEach((r, i) => {
     b.agent(r.id, 600, i * 110, {
       name: r.name,
@@ -156,7 +166,12 @@ function build(n = 6, nDays = 1): SystemDoc {
         loop: "react",
         instructions: `You are ${r.name}. ${r.seed} You live in a small town and act in it only through its tools (look, move, say, wait), always with who="${r.name}". Talk with the people you meet as you naturally would.`,
       },
-    });
+      // a copy each: one shared object would come out of YAML as an anchor and its aliases
+      ...(memory === "full" ? {} : { context: { ...SHORT } }),
+      // what the town shows them is what the memory stream records, as in the room-based template
+      ...(memory === "stream" ? { hooks: { after_tool: { lang: "js", code: "// observations of the world are what the memory stream records\nctx.observe(event.result);\nreturn event;" } } } : {}),
+    } as never);
+    if (memory === "stream") b.edge(r.id, "memory", "access", { access: "read_write", binding: { mode: "auto_inject", read: { budget_tokens: 3000 }, write: { when: "after_turn" } } } as never);
     // residents get only what a person in town can do; reset, enter, advance and report are the day's alone
     b.edge("day", r.id, "call", { label: "Your turn" }).edge(r.id, "town", "access", { access: "read_write", binding: { mode: "tool", tools: ["look", "move", "say", "wait"] } } as never);
   });
@@ -201,3 +216,22 @@ export const generativeTown25: TemplateInfo = {
   summary: "the paper's scale: twenty-five residents over two days, the party on the second · who heard, who knew, who came",
   build: () => build(25, 2),
 };
+
+// the memory ablation at the paper's scale: residents who keep only their last few messages, without and with the
+// paper's memory stream (retrieval by recency, importance and relevance; reflection)
+export const generativeTown25Short: TemplateInfo = {
+  ...generativeTown,
+  id: "paper-generative-agents-town-25-short",
+  name: "Generative Agents (town, 25 residents, 2 days, short memory)",
+  summary: "the paper's scale with residents who keep only their last 8 messages · the control for the memory stream",
+  build: () => build(25, 2, "short"),
+};
+
+export const generativeTown25Memory: TemplateInfo = {
+  ...generativeTown,
+  id: "paper-generative-agents-town-25-memory",
+  name: "Generative Agents (town, 25 residents, 2 days, memory stream)",
+  summary: "the paper's scale with short histories and the paper's memory stream: retrieval by recency, importance and relevance; reflection",
+  build: () => build(25, 2, "stream"),
+};
+
