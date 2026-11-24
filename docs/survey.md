@@ -302,7 +302,9 @@ the vocabulary:
   Generative Agents' party now runs in one (`examples/hosted/town-mcp`, six
   places, a clock that moves between steps): over three days word reached 3, 4
   and 5 of five residents, the one starting farthest from the cafe missing it
-  most.
+  most. At the paper's scale (25 residents, two days, interviews at the end),
+  15 and 17 of 24 knew of the party when asked, against the paper's half, and
+  9 and 11 came, all of them among those who knew.
 - **Learned components** (in part). Agents' Room fine-tunes its agents, which
   the platform does not (it runs prompted models). What is learned from one
   task to the next can now be carried: code keeps values across runs in
