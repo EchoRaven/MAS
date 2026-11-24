@@ -134,6 +134,14 @@ export class HostedServices {
     this.lastUsed.set(id, now);
   }
 
+  /** The same for an endpoint that names a service by id or by name; anything else is ignored. */
+  touchEndpoint(e: Endpoint, now = Date.now()) {
+    if (!("hosted" in e)) return;
+    const want = e.hosted.service.trim().toLowerCase();
+    const s = /^svc_[a-z0-9_]+$/.test(e.hosted.service) ? this.get(e.hosted.service) : this.list().find((x) => x.name.toLowerCase() === want || x.manifest.name?.toLowerCase() === want);
+    if (s) this.touch(s.id, now);
+  }
+
   // ---- storage ---------------------------------------------------------------------------
   private dir(id: string) {
     if (!/^svc_[a-z0-9_]+$/.test(id)) throw new HttpError(400, "Not a service id");

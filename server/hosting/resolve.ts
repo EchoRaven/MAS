@@ -24,5 +24,15 @@ export async function resolveEndpoint(rc: Pick<RunCtx, "secrets" | "hosted">, e:
 /** An MCP client for an endpoint, whichever way it is reached. */
 export async function mcpClientFor(rc: Pick<RunCtx, "secrets" | "hosted">, e: Endpoint): Promise<McpClient> {
   const r = await resolveEndpoint(rc, e);
-  return new McpClient("url" in r ? { url: r.url, headers: r.headers } : { command: r.command, env: r.env });
+  const client = new McpClient("url" in r ? { url: r.url, headers: r.headers } : { command: r.command, env: r.env });
+  // each call through it is a use of the hosted service: a run longer than its idle time must not have it stopped
+  // midway, as happened when only the first connection was noted (Generative Agents' town, over an hour)
+  if ("hosted" in e && rc.hosted) {
+    const call = client.call.bind(client);
+    client.call = async (name, args) => {
+      rc.hosted?.touchEndpoint(e);
+      return call(name, args);
+    };
+  }
+  return client;
 }

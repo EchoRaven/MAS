@@ -149,6 +149,22 @@ describe("idle services", () => {
     // b is never stopped for being idle; a, stopped, is no longer tracked
     expect(await h.stopIdle(t0 + 600 * 60_000)).toEqual([]);
   });
+
+  it("counts a use through an endpoint naming the service, by name or id, so a long run keeps its service", async () => {
+    const h = new HostedServices(fs.mkdtempSync(path.join(dir, "idle2-")), "true", secrets);
+    const town = await h.create({ name: "town", filename: "t.tar.gz", archive_base64: tarOf({ "app.py": "", "mas-host.yaml": "name: Town\nstart: python app.py\nexpose: { kind: mcp-http, port: 8000, path: /mcp }\nidle_minutes: 10\n" }) });
+    const t0 = 2_000_000;
+    h.touch(town.id, t0);
+    // a call nine minutes in, through an endpoint that names the service: eleven minutes in, it is not idle
+    h.touchEndpoint({ hosted: { service: "town" } }, t0 + 9 * 60_000);
+    expect(await h.stopIdle(t0 + 11 * 60_000)).toEqual([]);
+    h.touchEndpoint({ hosted: { service: town.id } }, t0 + 15 * 60_000);
+    expect(await h.stopIdle(t0 + 24 * 60_000)).toEqual([]);
+    expect(await h.stopIdle(t0 + 26 * 60_000)).toEqual([town.id]);
+    // an endpoint that names no service, or a remote one, changes nothing
+    expect(() => h.touchEndpoint({ hosted: { service: "nowhere" } })).not.toThrow();
+    expect(() => h.touchEndpoint({ remote: { url: "https://x" } })).not.toThrow();
+  });
 });
 
 describe("compose projects", () => {
