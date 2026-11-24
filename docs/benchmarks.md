@@ -2035,6 +2035,7 @@ night.
 |---|---|---|---|
 | Seer sees | 6 (30%) | 56 of 130 (43%) | $0.10 |
 | Seer sees nothing | 3 (15%) | 42 of 104 (40%) | $0.07 |
+| Seer sees and is told to say so (`seer_open`) | 5 (25%) | 75 of 133 (56%) | $0.10 |
 | Seer sees, with the experience pool (games in sequence) | 7 (35%) | 76 of 141 (54%) | $0.22 |
 
 - **Little difference, and none that twenty games can show** (Fisher p 0.45).
@@ -2045,6 +2046,13 @@ night.
   the side of the village", never that she saw it: her brief warns that
   revealing herself makes her a target, and she obeys it. A hint carries no
   more weight than anyone else's suspicion.
+- **Told to say it, she does, and the vote follows; the game does not.** With
+  `seer_open` the moderator privately advises her to name herself and whom
+  she saw: she did in 10 of the 16 games where she spoke (1 of 15 before), and
+  ballots on a werewolf rose from 43% to 56% (p 0.03, counting ballots as
+  independent). Werewolves voted out rose from 9 to 13, but the witch poisoned
+  only 2 instead of 8, and the village voted the seer herself out 9 times
+  either way; the villagers won 5 games.
 - **The witch decides more games than the seer.** Her poison killed a werewolf
   in 8 and 6 games, against 9 and 6 voted out by the village; the guard and
   the healing potion left 5 and 3 nights without a death.

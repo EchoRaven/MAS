@@ -39,6 +39,9 @@ let hits = 0, cast = 0;
 // the witch's two potions, each once a game; whom the guard protected last night (not twice in a row)
 const potions = { heal: true, poison: true };
 let lastGuarded = null;
+// seer_open: the seer is told, privately, to say what she saw (her brief warns that revealing herself makes her a
+// target, and she kept quiet in nearly every game): does her knowledge reach the vote when she tells it?
+if (ctx.vars.seer_open === true || ctx.vars.seer_open === "true") await tools.call_agent("Carol", "Advice for this game: your visions help the village only if it hears them. When you have seen a werewolf, say plainly by day that you are the seer and whom you saw. Reply OK.");
 for (let day = 1; day <= (ctx.vars.days ?? 6); day++) {
   // a new order every night: models pick the first name offered (the werewolves killed the seer, listed first,
   // in a trial game), so a fixed seating would decide the game; it also sets who speaks first
@@ -194,7 +197,7 @@ export const werewolf: TemplateInfo = {
     ],
     differs: [
       "The paper's players also retrieve lessons from past games (an experience pool) and reflect before speaking. Here the plain game plays from each player's memory of this game only; the experience-pool variant keeps one lesson per player per game (scope agent) and shows the five most recent, not the paper's retrieval by situation and score.",
-      "The paper's roles (two werewolves, seer, witch, guard, two villagers), but fixed to names; the seating is shuffled every night instead, as models pick the first name offered. Seer=false withholds the seer's visions, an ablation the paper does not run.",
+      "The paper's roles (two werewolves, seer, witch, guard, two villagers), but fixed to names; the seating is shuffled every night instead, as models pick the first name offered. seer=false withholds the seer's visions and seer_open advises her to tell them, ablations the paper does not run.",
     ],
   },
 };
