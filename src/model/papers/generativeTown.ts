@@ -81,7 +81,8 @@ function build(): SystemDoc {
         instructions: `You are ${r.name}. ${r.seed} You live in a small town and act in it only through its tools (look, move, say, wait), always with who="${r.name}". Talk with the people you meet as you naturally would.`,
       },
     });
-    b.edge("day", r.id, "call", { label: "Your turn" }).edge(r.id, "town", "access", { access: "read_write" });
+    // residents get only what a person in town can do; reset, enter, advance and report are the day's alone
+    b.edge("day", r.id, "call", { label: "Your turn" }).edge(r.id, "town", "access", { access: "read_write", binding: { mode: "tool", tools: ["look", "move", "say", "wait"] } } as never);
   });
   b.edge("asker", "day", "message", { label: "Begin" }).edge("day", "town", "access", { access: "read_write" }).edge("day", "asker", "message", { label: "What happened" });
   b.doc.budget = { usd: 1, max_rounds: 400, wallclock_min: 60 };
@@ -99,7 +100,7 @@ export const generativeTown: TemplateInfo = {
     mapped: [
       "The town is a hosted service (examples/hosted/town-mcp, hosted under the name town): six places, speech heard only where it is said or found there soon after, and a clock that moves only between steps, as the paper's game clock does.",
       "A function runs the day: each resident takes a turn every hour from 08:00 to 19:00 (run variables step and until), then the town reports who heard of the party besides Isabella and who was at Hobbs Cafe from 17:00 to 19:00: the paper's information diffusion and party attendance.",
-      "Only Isabella knows of the party at the start, as in the paper's seeded scenario.",
+      "Only Isabella knows of the party at the start, as in the paper's seeded scenario. Residents can only look, move, say and wait; resetting, entering, moving the clock and the report belong to the function running the day.",
     ],
     differs: [
       "Six residents rather than twenty-five, over one day in hourly steps rather than ten-minute ones.",
