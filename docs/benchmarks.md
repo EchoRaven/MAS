@@ -1979,6 +1979,31 @@ for the 14th; hourly steps, interviews at the end of day 2):
 - **Everyone who came knew.** All 20 at the party had said they knew of it;
   about three in five of those who knew came.
 
+**Does the memory stream matter?** By default a resident keeps its whole
+conversation (summarised past 30 messages), which leaves a memory stream
+nothing to add. So two variants keep only each resident's last 8 messages, and
+one adds the paper's memory stream (retrieval by recency, importance and
+relevance, gemini embeddings; reflection when importance passes 150):
+
+| Twenty-five residents, two days, two runs each | Knew when asked (of 24) | Came | Cost per run |
+|---|---|---|---|
+| Whole conversation | 15, 17 (67%) | 9, 11 | $0.74 |
+| Last 8 messages only | 8, 13 (44%) | 8, 14 | $0.51 |
+| Last 8 messages + memory stream | 16, 14 (63%) | 7, 13 | $1.16, $1.19 |
+
+- **The stream recovers most of what forgetting loses.** Knowing falls from
+  67% to 44% when residents keep only their last few messages, and comes back
+  to 63% with the memory stream. Runs vary a lot (8 and 13 for the same
+  setup), so this is a direction over two runs, not a settled size.
+- **Reflection never fired.** No resident's recent importance reached 150 in
+  two days of hourly steps; what is measured is retrieval, not reflection.
+- **Attendance says nothing here.** 7 to 14 came under every setup.
+
+A first memory-stream run failed on day 2 ("fetch failed", $1.15): a hosted
+service's idle clock was touched only when a run first connected, so after an
+hour the town was stopped under it. Every call through a hosted endpoint now
+counts as a use; the rerun went past the hour untouched.
+
 The town is hosted once per server (`examples/hosted/town-mcp`, under the name
 `town`); days of it run one after another, as it is one shared world. In a
 two-hour trial day the residents also called `enter` themselves; they now see
