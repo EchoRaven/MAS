@@ -44,6 +44,10 @@ def clock(m=None):
     return f"{(m // 60) % 24:02d}:{m % 60:02d}"
 
 
+def day_of(m=None):
+    return (state["minute"] if m is None else m) // 1440
+
+
 def minutes(hhmm):
     h, m = str(hhmm).split(":")
     return int(h) * 60 + int(m)
@@ -100,14 +104,16 @@ def report(a):
         out["keyword"] = {"word": key, "first_said_by": first, "said_by": sorted(speakers), "heard_by": heard,
                           "heard_by_others": [w for w in heard if w != first]}
     if place:
-        lo, hi = minutes(a.get("from", "00:00")), minutes(a.get("to", "23:59"))
+        # day: which day of the simulation the window is on (0 the first); the clock counts on across days
+        day = max(0, int(a.get("day", 0) or 0))
+        lo, hi = day * 1440 + minutes(a.get("from", "00:00")), day * 1440 + minutes(a.get("to", "23:59"))
         came = []
         for who, visits in state["visits"].items():
             # where each was from each move until the next: present in the window if any stay overlaps it
             stays = visits + [(state["minute"] + 1, None)]
             if any(p == place and t < hi and stays[i + 1][0] > lo for i, (t, p) in enumerate(stays[:-1])):
                 came.append(who)
-        out["place"] = {"place": place, "from": clock(lo), "to": clock(hi), "there": sorted(came)}
+        out["place"] = {"place": place, "day": day, "from": clock(lo), "to": clock(hi), "there": sorted(came)}
     return json.dumps(out)
 
 
@@ -118,7 +124,7 @@ def act(name, a):
         state["minute"] += max(1, min(240, int(a.get("minutes", 30))))
         return clock()
     if name == "time":
-        return clock()
+        return clock() if day_of() == 0 else f"day {day_of() + 1}, {clock()}"
     if name == "report":
         return report(a)
     who = str(a.get("who", "")).strip()
@@ -165,7 +171,7 @@ TOOLS = [
     {"name": "wait", "description": "Let time pass where you are (30 minutes unless given, 5 to 120)", "inputSchema": {"type": "object", "properties": {"who": WHO, "minutes": {"type": "integer"}}, "required": ["who"]}},
     {"name": "time", "description": "The time in town", "inputSchema": {"type": "object", "properties": {}}},
     {"name": "enter", "description": "Put someone in town at a place, once, at the start", "inputSchema": {"type": "object", "properties": {"who": WHO, "place": {"type": "string"}}, "required": ["who", "place"]}},
-    {"name": "report", "description": "Who heard a keyword, and who was at a place between two times (HH:MM), as JSON", "inputSchema": {"type": "object", "properties": {"keyword": {"type": "string"}, "place": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"}}}},
+    {"name": "report", "description": "Who heard a keyword, and who was at a place between two times (HH:MM) on a day (0 the first), as JSON", "inputSchema": {"type": "object", "properties": {"keyword": {"type": "string"}, "place": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"}, "day": {"type": "integer"}}}},
     {"name": "advance", "description": "Move the clock on (the one running the simulation, between steps)", "inputSchema": {"type": "object", "properties": {"minutes": {"type": "integer"}}}},
     {"name": "reset", "description": "Start the town over (08:00, nobody in it); driven: the clock moves only by advance", "inputSchema": {"type": "object", "properties": {"driven": {"type": "boolean"}}}},
 ]

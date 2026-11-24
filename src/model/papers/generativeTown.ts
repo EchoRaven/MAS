@@ -21,6 +21,20 @@ const RESIDENTS: { id: string; name: string; start: string; seed: string }[] = [
   { id: "wolfgang", name: "Wolfgang", start: "college", seed: "You are a professor at Oak Hill College who lectures in the morning and reads in the afternoon." },
   { id: "abigail", name: "Abigail", start: "houses", seed: "You are an animator who works from home on the residential street." },
   { id: "rajiv", name: "Rajiv", start: "store", seed: "You are a painter who buys supplies at the store and paints outdoors." },
+  // thirteen more for the paper's twenty-five
+  { id: "hailey", name: "Hailey", start: "houses", seed: "You are a writer who works on a novel at home and walks to the store for groceries." },
+  { id: "arthur", name: "Arthur", start: "store", seed: "You own the bar next to the store and spend the morning stocking up there." },
+  { id: "latoya", name: "Latoya", start: "park", seed: "You are a photographer who spends the day taking pictures around the park." },
+  { id: "giorgio", name: "Giorgio", start: "library", seed: "You are a mathematician who reads in the library and lectures at the college in the afternoon." },
+  { id: "yuriko", name: "Yuriko", start: "houses", seed: "You are a tax lawyer who works from home and takes a break in the park." },
+  { id: "jane", name: "Jane", start: "houses", seed: "You are a homemaker who looks after the house and shops at the store." },
+  { id: "mei", name: "Mei", start: "college", seed: "You are a philosophy professor at the college who meets students on the lawn." },
+  { id: "francisco", name: "Francisco", start: "park", seed: "You are a comedian who rehearses routines on the park benches." },
+  { id: "adam", name: "Adam", start: "library", seed: "You are a philosophy student who studies in the library all day." },
+  { id: "ryan", name: "Ryan", start: "college", seed: "You are a software engineer taking an evening course at the college." },
+  { id: "tamara", name: "Tamara", start: "houses", seed: "You are a children's book author who writes at home and reads in the library." },
+  { id: "carmen", name: "Carmen", start: "store", seed: "You are a shopkeeper who helps at the supply store in the morning." },
+  { id: "john", name: "John", start: "houses", seed: "You are a pharmacist who walks to work past the store and the cafe." },
 ];
 
 const day = (rs: typeof RESIDENTS) => `const T = (name, args) => ctx.tool(name, args ?? {});
@@ -60,16 +74,61 @@ if (String(ctx.vars.interview ?? "true") !== "false") {
 ctx.log("heard of the party: " + heard.length + " of " + others + " (" + heard.join(", ") + "); knew it when asked: " + knows.length + " (" + knows.join(", ") + "); at the cafe 17:00-19:00: " + came.length + " (" + came.join(", ") + ")");
 return "Heard of the party: " + heard.length + " of " + others + (heard.length ? " (" + heard.join(", ") + ")" : "") + ". Knew of it when asked: " + knows.length + (knows.length ? " (" + knows.join(", ") + ")" : "") + ". At Hobbs Cafe from 17:00 to 19:00: " + came.length + (came.length ? " (" + came.join(", ") + ")" : "") + ".\\nAnswer: " + knows.length;`;
 
-function build(n = 6): SystemDoc {
-  const rs = RESIDENTS.slice(0, n);
+const days = (rs: typeof RESIDENTS, n: number) => `const T = (name, args) => ctx.tool(name, args ?? {});
+const R = ${JSON.stringify(rs.map((r) => ({ name: r.name, start: r.start })))};
+const DAYS = ${n};
+const step = Math.max(10, Math.min(120, Number(ctx.vars.step ?? 60)));
+const [uh, um] = String(ctx.vars.until ?? "19:00").split(":").map(Number);
+const until = uh * 60 + (um || 0);
+const hhmm = (m) => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+try {
+  await T("reset", { driven: true });
+} catch (e) {
+  const why = String(e?.message ?? e);
+  ctx.log("no town: " + why);
+  return "The town is not available (" + why + "). Host examples/hosted/town-mcp under the name town (Connections), then run the days again.";
+}
+for (const r of R) await T("enter", { who: r.name, place: r.start });
+let clock = 8 * 60; // minutes since the first day's midnight, as the town counts them
+for (let d = 0; d < DAYS; d++) {
+  for (let m = 8 * 60; m < until; m += step) {
+    const now = "day " + (d + 1) + ", " + hhmm(m);
+    for (const r of R) await ctx.call(r.name, "It is " + now + " in town. Take your turn as " + r.name + ": look around, then do what you would at this hour (move, say something to whoever is there, or wait). At most three actions; reply with one line on what you did.");
+    await T("advance", { minutes: step });
+    clock += step;
+  }
+  if (d < DAYS - 1) {
+    // overnight: to the next day's 08:00, in steps the town accepts
+    let gap = (d + 1) * 1440 + 8 * 60 - clock;
+    while (gap > 0) { const k = Math.min(240, gap); await T("advance", { minutes: k }); gap -= k; clock += k; }
+  }
+}
+const party = JSON.parse(String(await T("report", { keyword: "party", place: "cafe", from: "17:00", to: "19:00", day: DAYS - 1 })));
+const heard = party.keyword.heard_by_others.filter((w) => w !== "Isabella");
+const came = party.place.there.filter((w) => w !== "Isabella");
+const others = R.length - 1;
+const knows = [];
+if (String(ctx.vars.interview ?? "true") !== "false") {
+  for (const r of R) {
+    if (r.name === "Isabella") continue;
+    const a = String(await ctx.call(r.name, "The day is over; an interviewer asks you, without any tools: do you know of a party happening today? If you do, say who is hosting it, where and when. Reply in one line starting with Yes or No."));
+    if (/^\\W*yes\\b/i.test(a.trim()) && /isabella|hobbs|cafe|café/i.test(a)) knows.push(r.name);
+  }
+}
+ctx.log("heard of the party: " + heard.length + " of " + others + "; knew it when asked: " + knows.length + " (" + knows.join(", ") + "); at the cafe on the last day 17:00-19:00: " + came.length + " (" + came.join(", ") + ")");
+return "Heard of the party: " + heard.length + " of " + others + ". Knew of it when asked: " + knows.length + (knows.length ? " (" + knows.join(", ") + ")" : "") + ". At Hobbs Cafe on day " + DAYS + " from 17:00 to 19:00: " + came.length + (came.length ? " (" + came.join(", ") + ")" : "") + ".\\nAnswer: " + knows.length;`;
+
+function build(n = 6, nDays = 1): SystemDoc {
+  // over several days the party is on the last one, as in the paper (planned on the 13th for the 14th)
+  const rs = RESIDENTS.slice(0, n).map((r) => (nDays > 1 && r.id === "isabella" ? { ...r, seed: `You run Hobbs Cafe. You are planning a Valentine's Day party at the cafe on day ${nDays}, from 5pm to 7pm, and want as many people as possible to come.` } : r));
   const b = new Builder(
-    n === 6 ? "Generative Agents (town)" : `Generative Agents (town, ${n} residents)`,
+    n === 6 && nDays === 1 ? "Generative Agents (town)" : `Generative Agents (town, ${n} residents${nDays > 1 ? `, ${nDays} days` : ""})`,
     (n === 6 ? "Six" : String(n)) + " residents act in a hosted town (the service named town: examples/hosted/town-mcp), each starting in a place of their own. Every hour from 08:00 to 19:00 each takes a turn through the town's tools; what is said is heard only where it is said. Isabella plans a party at Hobbs Cafe at 17:00; at the end the town reports who heard of it and who came.",
   );
   b.node("asker", "human", 0, 160, { name: "Narrator", role: "Starts the day", approves: false }).node("day", "function", 260, 160, {
     name: "The day",
     join: "any",
-    fn: { lang: "js", code: day(rs), timeout_ms: 3_600_000 },
+    fn: { lang: "js", code: nDays > 1 ? days(rs, nDays) : day(rs), timeout_ms: nDays > 1 ? 3_600_000 * nDays * Math.ceil(n / 6) : 3_600_000 },
     interface: { inputs: [port("in", "text")], outputs: [port("out", "text")] },
   });
   b.node("town", "env", 260, 420, {
@@ -102,7 +161,7 @@ function build(n = 6): SystemDoc {
     b.edge("day", r.id, "call", { label: "Your turn" }).edge(r.id, "town", "access", { access: "read_write", binding: { mode: "tool", tools: ["look", "move", "say", "wait"] } } as never);
   });
   b.edge("asker", "day", "message", { label: "Begin" }).edge("day", "town", "access", { access: "read_write" }).edge("day", "asker", "message", { label: "What happened" });
-  b.doc.budget = { usd: n > 6 ? 2 : 1, max_rounds: 400 * Math.ceil(n / 6), wallclock_min: 60 * Math.ceil(n / 6) };
+  b.doc.budget = { usd: n > 6 ? 2 * nDays : 1, max_rounds: 400 * Math.ceil(n / 6) * nDays, wallclock_min: 60 * Math.ceil(n / 6) * nDays };
   b.doc.termination = ["all_idle", "budget_exceeded"];
   return b.doc;
 }
@@ -133,4 +192,12 @@ export const generativeTown12: TemplateInfo = {
   name: "Generative Agents (town, 12 residents)",
   summary: "the town with twelve residents, most starting away from the cafe · who heard of the party, who came",
   build: () => build(12),
+};
+
+export const generativeTown25: TemplateInfo = {
+  ...generativeTown,
+  id: "paper-generative-agents-town-25",
+  name: "Generative Agents (town, 25 residents, 2 days)",
+  summary: "the paper's scale: twenty-five residents over two days, the party on the second · who heard, who knew, who came",
+  build: () => build(25, 2),
 };
