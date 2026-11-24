@@ -591,7 +591,9 @@ export class HostedServices {
       }
       return { url: e.remote.url, headers };
     }
-    const s = this.must(e.hosted.service);
+    // by id, or by name when no service has that id: a template can name "town" without knowing this server's id
+    const want = e.hosted.service.trim().toLowerCase();
+    const s = this.get(e.hosted.service) ?? this.list().find((x) => x.name.toLowerCase() === want || x.manifest.name?.toLowerCase() === want) ?? this.must(e.hosted.service);
     if (s.manifest.expose.kind === "mcp-stdio") return await this.stdioCommand(s.id);
     const st = await this.start(s.id);
     this.touch(s.id);

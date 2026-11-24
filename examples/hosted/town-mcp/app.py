@@ -7,7 +7,7 @@ It also keeps what the paper measures: who heard what (every line said where som
 and where everyone was over the day, so `report` can count who heard of something and who came to a place in a time
 window (information diffusion and party attendance in Generative Agents).
 
-Tools: look, move, say, wait, time, enter, report, reset.
+Tools: look, move, say, wait, time, enter, report, advance, reset.
 MCP: JSON-RPC 2.0 over POST /mcp (plain JSON replies); GET /health.
 """
 import json
@@ -28,10 +28,12 @@ lock = Lock()
 state = {}
 
 
-def reset():
+def reset(driven=False):
     state.clear()
-    state.update({"minute": 8 * 60, "where": {}, "said": {k: [] for k in MAP}, "heard": {}, "visits": {}})
-    return "The town starts over: 08:00, nobody in it."
+    # driven: the clock moves only when the one running the simulation calls advance, so everyone acts in the same
+    # step (the paper's game clock), instead of every action moving it
+    state.update({"minute": 8 * 60, "where": {}, "said": {k: [] for k in MAP}, "heard": {}, "visits": {}, "driven": bool(driven)})
+    return "The town starts over: 08:00, nobody in it." + (" The clock moves in steps." if driven else "")
 
 
 reset()
@@ -48,7 +50,8 @@ def minutes(hhmm):
 
 
 def tick(n):
-    state["minute"] += n
+    if not state.get("driven"):
+        state["minute"] += n
 
 
 def hear(who, line):
@@ -110,7 +113,10 @@ def report(a):
 
 def act(name, a):
     if name == "reset":
-        return reset()
+        return reset(a.get("driven", False))
+    if name == "advance":
+        state["minute"] += max(1, min(240, int(a.get("minutes", 30))))
+        return clock()
     if name == "time":
         return clock()
     if name == "report":
@@ -160,7 +166,8 @@ TOOLS = [
     {"name": "time", "description": "The time in town", "inputSchema": {"type": "object", "properties": {}}},
     {"name": "enter", "description": "Put someone in town at a place, once, at the start", "inputSchema": {"type": "object", "properties": {"who": WHO, "place": {"type": "string"}}, "required": ["who", "place"]}},
     {"name": "report", "description": "Who heard a keyword, and who was at a place between two times (HH:MM), as JSON", "inputSchema": {"type": "object", "properties": {"keyword": {"type": "string"}, "place": {"type": "string"}, "from": {"type": "string"}, "to": {"type": "string"}}}},
-    {"name": "reset", "description": "Start the town over (08:00, nobody in it)", "inputSchema": {"type": "object", "properties": {}}},
+    {"name": "advance", "description": "Move the clock on (the one running the simulation, between steps)", "inputSchema": {"type": "object", "properties": {"minutes": {"type": "integer"}}}},
+    {"name": "reset", "description": "Start the town over (08:00, nobody in it); driven: the clock moves only by advance", "inputSchema": {"type": "object", "properties": {"driven": {"type": "boolean"}}}},
 ]
 
 
