@@ -80,6 +80,17 @@ describe("evaluations", () => {
     await expect(evals.regrade(done.id, "code")).rejects.toThrow(/cannot switch/);
   });
 
+  it("grades an ungraded evaluation afterwards when its cases carry what to check, not when they are open-ended", async () => {
+    const doc = echo(["Answer: BUY"], "backtest");
+    const done = await finish(evals.start(doc, { grader: "none", concurrency: 1, cases: [{ input: "AAPL day 1", expected: '{"next_return":0.01}' }, { input: "AAPL day 2", expected: '{"next_return":-0.02}' }] }).id);
+    const check = "const r = JSON.parse(expected).next_return; return { pass: output.includes('BUY') === r > 0, why: String(r) };";
+    const again = await evals.regrade(done.id, "check", check);
+    expect([again.grader, again.passed, again.graded]).toEqual(["check", 1, 2]);
+    const open = await finish(evals.start(echo(["a story"], "story"), { grader: "none", concurrency: 1, cases: [{ input: "Write a story", expected: "" }] }).id);
+    await expect(evals.regrade(open.id, "check", check)).rejects.toThrow(/compared pairwise/);
+    await expect(evals.regrade(done.id, "none" as never)).rejects.toThrow(/grade nothing/);
+  });
+
   it("runs a case up to 20 times, not silently 5", async () => {
     const doc = echo(["Answer: 1"], "twelve");
     const done = await finish(evals.start(doc, { grader: "number", repeats: 12, concurrency: 4, cases: [{ input: "q", expected: "1" }] }).id);

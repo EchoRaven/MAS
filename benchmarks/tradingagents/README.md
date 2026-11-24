@@ -17,3 +17,7 @@ keeps the last position (cash at the start), a long-only reading of the three ac
 Run `paper-tradingagents-backtest` (the firm with no approval step; its analysts are told to use only the prices
 given) against `baseline` (one agent, one call). The paper's analysts also read news, social media and filings,
 which are not connected here; and choose days after the models' training, so a model cannot recall the prices.
+
+To see the direction in the platform itself, grade with `check` and `check.js`: a decision passes when BUY came before
+a rise or SELL before a fall, so accuracy is right calls of all decisions (HOLD fails), and the reason names the
+action and the move.

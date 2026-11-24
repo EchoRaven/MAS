@@ -182,7 +182,11 @@ export class EvalManager {
     if (this.active.has(id)) throw new Error("The evaluation is still running");
     const g = grader ?? rec.grader;
     if (g === "llm") throw new Error("Regrading with the LLM judge would call a model; start a new evaluation for that");
-    if (g === "none" || rec.grader === "none") throw new Error("An evaluation that grades nothing is compared pairwise, not regraded");
+    if (g === "none") throw new Error("Regrading by none would grade nothing");
+    // open-ended answers (nothing expected) are compared pairwise; but an evaluation run ungraded whose cases do carry
+    // what to check against (a backtest's next-day move) can be graded afterwards by a rule or a check
+    if (rec.grader === "none" && rec.cases.some((c) => c.status === "done" && !String(c.expected ?? "").trim()))
+      throw new Error("An evaluation that grades nothing, with no expected answers, is compared pairwise, not regraded");
     if (g === "check") {
       // the stored outputs checked again (no model is called): after a fix to the check, given here, or with the one kept
       const code = check?.trim() || (rec.grader === "check" ? rec.check : undefined);

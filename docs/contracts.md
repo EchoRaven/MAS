@@ -542,6 +542,9 @@ the reason. On a miss, the members whose answer the check passes are named
 not line by line. The dataset keeps it as `check`, and so does every evaluation
 graded by it, so `POST /api/evals/:id/regrade {grader: "check", check?}`
 runs the same check again, or a corrected one, without calling a model.
+An evaluation run with grader `none` can be graded this way afterwards when
+every case carries an `expected` (a backtest's next-day move); open-ended
+ones, with nothing expected, are compared pairwise instead.
 
 ```js
 // Game of 24: expected holds the four numbers
