@@ -1987,17 +1987,29 @@ nothing to add. So a variant keeps only each resident's last 8 messages:
 |---|---|---|---|
 | Whole conversation | 15, 17 (67%) | 9, 11 | $0.74 |
 | Last 8 messages only | 8, 13 (44%) | 8, 14 | $0.51 |
+| Last 8 messages + the paper's memory stream | 19, 10 (60%) | 19, 7 | $1.20 |
 
 - **Forgetting costs knowing, noisily.** Knowing falls from 67% to 44% when
   residents keep only their last few messages; runs vary a lot (8 and 13 for
   the same setup).
-- **The memory-stream runs are withdrawn.** Two runs with the paper's memory
-  stream added reported 16 and 14 knowing, but its plugin scope was `agent`,
-  kept across runs, so residents started with memories of earlier runs, the
-  party among them; and reflection never fired, because its trigger read a run
-  variable that was never set and is shared by every agent. A new scope,
-  `agent_run` (each agent's own, empty every run), and a per-agent trigger fix
-  both; the runs are marked invalid and are being repeated.
+- **The memory stream wins some of it back, too noisily to say how much.**
+  With the paper's memory stream added to the short history (retrieval by
+  recency, importance and relevance; reflection once recent importance passes
+  30), 19 and then 10 of 24 knew: on average between short memory and the whole
+  conversation, but one run is the best of all six and the other near the
+  worst. Two runs per setup cannot separate these; more would be needed.
+- **Reflection fires, once per agent per few hours.** 103 and 101 reflections,
+  every resident 3 to 6 times, never twice within seconds; no errors. It
+  doubles the cost of the short-memory town (importance ratings and
+  reflections on every observation).
+- **Earlier memory-stream runs are withdrawn.** Two runs reported 16 and 14
+  knowing, but the plugin's scope was `agent`, kept across runs, so residents
+  started with memories of earlier runs, the party among them; and reflection
+  never fired (its trigger read a run variable that was never set and is shared
+  by every agent). A new scope, `agent_run` (each agent's own, empty every
+  run), a per-agent trigger, and writes serialised per agent (overlapping
+  writes had lost records and repeated reflections) fix them; the numbers above
+  are from the fixed runs.
 
 A first memory-stream run failed on day 2 ("fetch failed", $1.15): a hosted
 service's idle clock was touched only when a run first connected, so after an
