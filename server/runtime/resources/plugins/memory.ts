@@ -52,6 +52,23 @@ export class MemoryPlugin implements Resource {
     writeState(this.file(agent), m);
   }
 
+  /**
+   * Writes to one agent's memory, one after another. A write reads the file, waits on models (importance, a
+   * reflection), then saves: two at once read the same file, so each reflected on the same memories and the later
+   * save dropped the other's records (a resident reflected four times in eight seconds).
+   */
+  private queues = new Map<string, Promise<unknown>>();
+  private serial<T>(agent: string, job: () => Promise<T>): Promise<T> {
+    const key = this.file(agent);
+    const run = (this.queues.get(key) ?? Promise.resolve()).then(job, job);
+    const tail = run.then(() => undefined, () => undefined);
+    this.queues.set(key, tail);
+    void tail.then(() => {
+      if (this.queues.get(key) === tail) this.queues.delete(key);
+    });
+    return run;
+  }
+
   async search(agent: string, query: string, edge?: SysEdge): Promise<{ text: string; count: number }> {
     const mem = this.load(agent);
     const spec = this.node.data.spec.retrieval ?? defaultRetrieval("memory");
@@ -59,18 +76,24 @@ export class MemoryPlugin implements Resource {
     const r = await new Retriever(this.rc, agent).run(spec, query, { docs: async () => mem.records }, { override: edge?.binding?.read?.retrieval, topK: edge?.binding?.read?.top_k });
     if (r.hits.length) {
       const ids = new Set(r.hits.map((h) => h.id));
-      for (const rec of mem.records)
+      // onto the file as it is now: a write may have saved while the retrieval awaited (read and save, no await between)
+      const now = this.load(agent);
+      for (const rec of now.records)
         if (ids.has(rec.id)) {
           rec.recalled = Date.now();
           rec.meta = { ...(rec.meta ?? {}), last_accessed: rec.recalled };
         }
-      this.save(agent, mem);
+      this.save(agent, now);
     }
     return { text: r.text, count: r.hits.length };
   }
 
-  /** The memory policy on one turn. */
+  /** The memory policy on one turn (one agent's writes queued, see serial). */
   async write(agent: string, turnText: string, extractOverride?: import("@/model/types").FunctionSpec | null) {
+    return this.serial(agent, () => this.writeNow(agent, turnText, extractOverride));
+  }
+
+  private async writeNow(agent: string, turnText: string, extractOverride?: import("@/model/types").FunctionSpec | null) {
     const pol = this.policy;
     const rc = this.rc;
     // extract
@@ -196,12 +219,13 @@ export class MemoryPlugin implements Resource {
   async tools(edge: SysEdge): Promise<RtTool[]> {
     const all: RtTool[] = [
       { name: "memory_search", description: "Search remembered facts", input_schema: schema({ query: S }), effect: "read", source: this.id, run: async (a, c) => (await this.search(c.node, String(a.query ?? ""), edge)).text || "No matching memories." },
-      { name: "memory_write", description: "Remember a fact for later", input_schema: schema({ text: S }), effect: "write", source: this.id, run: async (a, c) => {
-        const mem = this.load(c.node);
-        mem.records.push({ id: uid(), text: String(a.text ?? ""), type: "fact", ts: Date.now(), strength: 1 });
-        this.save(c.node, mem);
-        return "Remembered.";
-      } },
+      { name: "memory_write", description: "Remember a fact for later", input_schema: schema({ text: S }), effect: "write", source: this.id, run: (a, c) =>
+        this.serial(c.node, async () => {
+          const mem = this.load(c.node);
+          mem.records.push({ id: uid(), text: String(a.text ?? ""), type: "fact", ts: Date.now(), strength: 1 });
+          this.save(c.node, mem);
+          return "Remembered.";
+        }) },
     ];
     const declared = new Set(this.node.data.spec.tools.map((t) => t.name));
     return all.filter((t) => declared.has(t.name) && (edge.access !== "read" || t.effect === "read"));
