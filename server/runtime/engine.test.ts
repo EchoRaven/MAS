@@ -1517,7 +1517,10 @@ describe("runtime", () => {
       const { rec, events } = await run(t.build(), "Build a small todo app");
       expect({ template: t.id, errors: errors(events) }).toEqual({ template: t.id, errors: [] });
       expect({ template: t.id, status: rec.status }).toEqual({ template: t.id, status: "finished" });
-      expect(usages(events).length, t.id).toBeGreaterThan(0);
+      // a template that lives in a hosted service (Generative Agents' town) cannot reach it here: it ends cleanly,
+      // saying what is missing, before any model call
+      const hosted = /"hosted":\{"service"/.test(JSON.stringify(t.build()));
+      if (!hosted) expect(usages(events).length, t.id).toBeGreaterThan(0);
     }
   }, 60_000);
 });

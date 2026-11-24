@@ -141,7 +141,8 @@ export function conformPlugin(p: PluginData): Conformance {
   const b = s?.backend;
   c.must("backend.kind", "Backend is builtin / mcp / http / code", !!b && ["builtin", "mcp", "http", "code"].includes(b.kind), `got "${String(b?.kind)}"`);
   if (b?.kind === "http") c.must("backend.http", "HTTP backend has a URL", isUrl(b.url), `url is "${b.url ?? ""}"`);
-  if (b?.kind === "mcp") c.must("backend.mcp", "MCP backend has a URL or a launch command", isUrl(b.url) || !!b.command?.trim(), "give url (http transport) or command (stdio)");
+  // a hosted or remote endpoint stands in for url / command (where the server is, resolved when the run starts)
+  if (b?.kind === "mcp") c.must("backend.mcp", "MCP backend has a URL, a launch command or an endpoint", isUrl(b.url) || !!b.command?.trim() || !!b.endpoint, "give url (http transport), command (stdio) or endpoint (remote or hosted)");
   if (b?.kind === "code") c.must("backend.code", "Code backend has a command", !!b.command?.trim(), "command is empty");
   const tools = s?.tools ?? [];
   const badTools = tools.filter((t) => !NAME.test(t.name) || !["pure", "read", "write", "irreversible"].includes(t.effect)).map((t) => t.name);
@@ -171,7 +172,7 @@ export function conformEnv(m: EnvManifest): Conformance {
   c.must("exposes.http", "HTTP bases are URLs", badBases.length === 0, `bad: ${badBases.join(", ")}`);
   const mcp = m.exposes?.mcp;
   if (mcp) {
-    c.must("exposes.mcp.transport", "MCP transport is http or stdio, with a URL or a start command", (mcp.transport === "http" && (isUrl(mcp.url) || !!mcp.start)) || (mcp.transport === "stdio" && !!mcp.start), `transport ${String(mcp.transport)}, url ${mcp.url ?? "-"}, start ${mcp.start ?? "-"}`);
+    c.must("exposes.mcp.transport", "MCP transport is http or stdio, with a URL, a start command or an endpoint", (mcp.transport === "http" && (isUrl(mcp.url) || !!mcp.start || !!mcp.endpoint)) || (mcp.transport === "stdio" && (!!mcp.start || !!mcp.endpoint)), `transport ${String(mcp.transport)}, url ${mcp.url ?? "-"}, start ${mcp.start ?? "-"}, endpoint ${mcp.endpoint ? "set" : "-"}`);
     c.must("exposes.mcp.tools", "MCP tool names are unique identifiers", mcp.tools.every((t) => NAME.test(t)) && new Set(mcp.tools).size === mcp.tools.length, "check the tool list");
     c.should("exposes.mcp.listed", "Lists its MCP tools", mcp.tools.length > 0, "they will only be discovered when it starts");
     c.should("auth.login", "OAuth MCP has a login route for test users", mcp.auth !== "oauth_jwks" || !!m.auth?.login, "auth.login is missing");
