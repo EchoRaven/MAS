@@ -48,8 +48,17 @@ const party = JSON.parse(String(await T("report", { keyword: "party", place: "ca
 const heard = party.keyword.heard_by_others.filter((w) => w !== "Isabella");
 const came = party.place.there.filter((w) => w !== "Isabella");
 const others = R.length - 1;
-ctx.log("heard of the party: " + heard.length + " of " + others + " (" + heard.join(", ") + "); at the cafe 17:00-19:00: " + came.length + " (" + came.join(", ") + ")");
-return "Heard of the party: " + heard.length + " of " + others + (heard.length ? " (" + heard.join(", ") + ")" : "") + ". At Hobbs Cafe from 17:00 to 19:00: " + came.length + (came.length ? " (" + came.join(", ") + ")" : "") + ".\\nAnswer: " + heard.length;`;
+// the paper's measure: ask each resident at the end of the day (interview=false skips it)
+const knows = [];
+if (String(ctx.vars.interview ?? "true") !== "false") {
+  for (const r of R) {
+    if (r.name === "Isabella") continue;
+    const a = String(await ctx.call(r.name, "The day is over; an interviewer asks you, without any tools: do you know of a party happening today? If you do, say who is hosting it, where and when. Reply in one line starting with Yes or No."));
+    if (/^\\W*yes\\b/i.test(a.trim()) && /isabella|hobbs|cafe|café/i.test(a)) knows.push(r.name);
+  }
+}
+ctx.log("heard of the party: " + heard.length + " of " + others + " (" + heard.join(", ") + "); knew it when asked: " + knows.length + " (" + knows.join(", ") + "); at the cafe 17:00-19:00: " + came.length + " (" + came.join(", ") + ")");
+return "Heard of the party: " + heard.length + " of " + others + (heard.length ? " (" + heard.join(", ") + ")" : "") + ". Knew of it when asked: " + knows.length + (knows.length ? " (" + knows.join(", ") + ")" : "") + ". At Hobbs Cafe from 17:00 to 19:00: " + came.length + (came.length ? " (" + came.join(", ") + ")" : "") + ".\\nAnswer: " + knows.length;`;
 
 function build(n = 6): SystemDoc {
   const rs = RESIDENTS.slice(0, n);
@@ -113,7 +122,7 @@ export const generativeTown: TemplateInfo = {
     differs: [
       "Six residents rather than twenty-five, over one day in hourly steps rather than ten-minute ones.",
       "No memory stream, reflection or planning: each resident remembers through its own conversation over the day. This tests the town and the spreading of news, not the agent architecture of the room-based template.",
-      "Who heard of the party is counted from what each resident was present for, not from interviews; the paper asked each agent.",
+      "Two counts of who knew: who was present when the party was spoken of (exposure, from the town's record), and who says so when asked at the end of the day (Yes, naming Isabella or the cafe), the paper's interviews. The interview is a call in the same conversation, so a resident answers from what it saw that day.",
     ],
   },
 };
