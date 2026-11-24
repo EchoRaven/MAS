@@ -224,6 +224,21 @@ describe("paper reproductions", () => {
     expect(systemVersion(edited)).not.toBe(systemVersion(a));
   });
 
+  it("the memory stream reflects once an agent's own recent memories pass the threshold, counting from its last reflection", async () => {
+    const { memoryStream } = await import("./generativeAgents");
+    const code = (memoryStream("e", "agent_run", 30).spec.memory as { consolidate: { fn: { code: string } } }).consolidate.fn.code;
+    const run = (records: unknown[]) =>
+      new AsyncFn("input", "ctx", "records", code)(records, { now: 5000, llm: async (q: string) => (q.startsWith("What 5") ? "insight one\ninsight two" : "q?"), retrieve: async () => ["x"], log: () => {} }, records) as Promise<{ type: string; text: string }[]>;
+    const mem = (t: number, importance: number) => ({ text: `m${t}`, type: "fact", ts: t, meta: { created: t, importance } });
+    // 20 points since nothing: no reflection (ctx.vars, the run's, used to be read and was never set)
+    expect(await run([mem(1, 10), mem(2, 10)])).toHaveLength(2);
+    const out = await run([mem(1, 10), mem(2, 10), mem(3, 15)]);
+    expect(out.filter((r) => r.type === "reflection").map((r) => r.text)).toEqual(["insight one", "insight two"]);
+    // after a reflection at 4000, only what came later counts
+    const after = [...out.map((r: any) => (r.type === "reflection" ? { ...r, meta: { ...r.meta, created: 4000 } } : r)), mem(4100, 10)];
+    expect((await run(after)).filter((r) => r.type === "reflection")).toHaveLength(2);
+  });
+
   it("every measurement belongs to a template, and reaches it", () => {
     for (const id of Object.keys(MEASURED)) {
       const t = PAPER_TEMPLATES.find((x) => x.id === id);

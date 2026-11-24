@@ -83,7 +83,7 @@ export class WorkspacePlugin implements Resource {
   root(agent: string): string {
     const scope = this.node.data.spec.scope;
     const base = sharedFolder(this.rc, this.node.data.spec.sources?.[0]) ?? this.rc.store.stateDir(this.rc.doc.id, this.node.id, "files");
-    const dir = scope === "agent" || scope === "group" || scope === "run" ? path.join(base, scopeKey(this.rc, this.node, agent).replace(/[^\w.-]/g, "_")) : base;
+    const dir = scope === "agent" || scope === "agent_run" || scope === "group" || scope === "run" ? path.join(base, scopeKey(this.rc, this.node, agent).replace(/[^\w.-]/g, "_")) : base;
     fs.mkdirSync(dir, { recursive: true });
     // the real path, so the files listed and the paths checked agree
     return fs.realpathSync(dir);

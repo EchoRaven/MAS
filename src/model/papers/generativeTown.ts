@@ -155,7 +155,7 @@ function build(n = 6, nDays = 1, memory: Memory = "full"): SystemDoc {
     },
   } as never);
   // the memory stream exists before the residents' edges to it
-  if (memory === "stream") b.doc.nodes.push({ id: "memory", position: { x: 940, y: 420 }, data: memoryStream("gemini_embed") } as never);
+  if (memory === "stream") b.doc.nodes.push({ id: "memory", position: { x: 940, y: 420 }, data: memoryStream("gemini_embed", "agent_run", 30) } as never);
   rs.forEach((r, i) => {
     b.agent(r.id, 600, i * 110, {
       name: r.name,

@@ -305,8 +305,8 @@ the vocabulary:
   most. At the paper's scale (25 residents, two days, interviews at the end),
   15 and 17 of 24 knew of the party when asked, against the paper's half, and
   9 and 11 came, all of them among those who knew. With residents keeping only
-  their last few messages, 44% knew; adding the paper's memory stream brought
-  it back to 63% (two runs each, noisy), though reflection never fired.
+  their last few messages, 44% knew (two runs, noisy); the runs adding the
+  paper's memory stream were withdrawn (memories carried over between runs).
 - **Learned components** (in part). Agents' Room fine-tunes its agents, which
   the platform does not (it runs prompted models). What is learned from one
   task to the next can now be carried: code keeps values across runs in

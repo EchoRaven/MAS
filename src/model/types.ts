@@ -321,8 +321,11 @@ export interface PluginSpec {
     /** non-secret settings; secrets go by env var name */
     config?: Record<string, string>;
   };
-  /** where its state lives and who shares it; run: each run starts empty (a scratchpad for one task) */
-  scope: "agent" | "group" | "end_user" | "run" | "system";
+  /**
+   * where its state lives and who shares it; run: each run starts empty (a scratchpad for one task); agent_run: each
+   * agent's own, starting empty every run (a simulated person's memory, which must not carry into the next run)
+   */
+  scope: "agent" | "agent_run" | "group" | "end_user" | "run" | "system";
   storage?: "builtin" | "pgvector" | "qdrant" | "sqlite" | "files" | "none";
   /** knowledge: documents to index · workspace: directories to mount */
   sources?: string[];

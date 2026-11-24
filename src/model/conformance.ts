@@ -137,7 +137,7 @@ export function conformPlugin(p: PluginData): Conformance {
   const c = new Checklist();
   const s = p.spec;
   c.must("identity", "Has a name", !!p.name?.trim(), "name is empty");
-  c.must("scope", "Scope is agent / group / end_user / run / system", ["agent", "group", "end_user", "run", "system"].includes(s?.scope), `got "${String(s?.scope)}"`);
+  c.must("scope", "Scope is agent / agent_run / group / end_user / run / system", ["agent", "agent_run", "group", "end_user", "run", "system"].includes(s?.scope), `got "${String(s?.scope)}"`);
   const b = s?.backend;
   c.must("backend.kind", "Backend is builtin / mcp / http / code", !!b && ["builtin", "mcp", "http", "code"].includes(b.kind), `got "${String(b?.kind)}"`);
   if (b?.kind === "http") c.must("backend.http", "HTTP backend has a URL", isUrl(b.url), `url is "${b.url ?? ""}"`);

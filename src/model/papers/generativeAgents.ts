@@ -5,11 +5,15 @@ import { Builder, native, type TemplateInfo } from "../builder";
 import { defaultPlugin } from "../plugins";
 import type { SystemDoc } from "../types";
 
-/** the paper's memory stream as a plugin; embedding: the embedding model it retrieves with */
-export function memoryStream(embedding = "embed") {
+/**
+ * the paper's memory stream as a plugin; embedding: the embedding model it retrieves with; scope: agent keeps each
+ * agent's stream across runs, agent_run starts it empty every run (a simulation); reflect_at: the importance of
+ * recent memories that triggers a reflection (the paper's 150)
+ */
+export function memoryStream(embedding = "embed", scope: "agent" | "agent_run" = "agent", reflectAt = 150) {
   const p = defaultPlugin("memory");
   p.name = "Memory stream";
-  p.spec.scope = "agent"; // one plugin, a private stream per agent
+  p.spec.scope = scope; // one plugin, a private stream per agent
   p.spec.retrieval = {
     rewrite: { use: "none", params: {} },
     search: [{ use: "vector", params: { embedding, k: 100, metric: "cosine" } }],
@@ -46,12 +50,15 @@ export function memoryStream(embedding = "embed") {
       fn: {
         lang: "js",
         code: [
-          "const since = records.filter((r) => r.meta.created > ctx.vars.last_reflection);",
-          "if (since.reduce((s, r) => s + r.meta.importance, 0) < 150) return records;",
+          // since this agent's own last reflection: ctx.vars is the run's, shared by every agent, and was never set
+          // before the first reflection, so the filter kept nothing and no reflection ever happened
+          "const last = records.filter((r) => r.type === 'reflection').reduce((m, r) => Math.max(m, r.meta?.created ?? r.ts ?? 0), 0);",
+          "const since = records.filter((r) => r.type !== 'reflection' && (r.meta?.created ?? r.ts ?? 0) > last);",
+          `if (since.reduce((s, r) => s + Number(r.meta?.importance ?? 1), 0) < ${reflectAt}) return records;`,
           "const questions = await ctx.llm('Given only the statements below, what are 3 most salient high-level questions we can answer about the subjects?', since.slice(-100));",
           "const insights = (await ctx.llm('What 5 high-level insights can you infer from these statements? One per line.', await ctx.retrieve(questions))).split('\\n').filter(Boolean);",
-          "ctx.vars.last_reflection = ctx.now;",
-          "return [...records, ...insights.map((text) => ({ text, type: 'reflection', meta: { importance: 8, created: ctx.now } }))];",
+          "ctx.log('reflection: ' + insights.length + ' insights from ' + since.length + ' memories');",
+          "return [...records, ...insights.map((text) => ({ id: 'r' + ctx.now + Math.random().toString(36).slice(2, 6), text, type: 'reflection', ts: ctx.now, strength: 1, meta: { importance: 8, created: ctx.now, last_accessed: ctx.now } }))];",
         ].join("\n"),
       },
     },

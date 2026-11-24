@@ -1981,23 +1981,23 @@ for the 14th; hourly steps, interviews at the end of day 2):
 
 **Does the memory stream matter?** By default a resident keeps its whole
 conversation (summarised past 30 messages), which leaves a memory stream
-nothing to add. So two variants keep only each resident's last 8 messages, and
-one adds the paper's memory stream (retrieval by recency, importance and
-relevance, gemini embeddings; reflection when importance passes 150):
+nothing to add. So a variant keeps only each resident's last 8 messages:
 
 | Twenty-five residents, two days, two runs each | Knew when asked (of 24) | Came | Cost per run |
 |---|---|---|---|
 | Whole conversation | 15, 17 (67%) | 9, 11 | $0.74 |
 | Last 8 messages only | 8, 13 (44%) | 8, 14 | $0.51 |
-| Last 8 messages + memory stream | 16, 14 (63%) | 7, 13 | $1.16, $1.19 |
 
-- **The stream recovers most of what forgetting loses.** Knowing falls from
-  67% to 44% when residents keep only their last few messages, and comes back
-  to 63% with the memory stream. Runs vary a lot (8 and 13 for the same
-  setup), so this is a direction over two runs, not a settled size.
-- **Reflection never fired.** No resident's recent importance reached 150 in
-  two days of hourly steps; what is measured is retrieval, not reflection.
-- **Attendance says nothing here.** 7 to 14 came under every setup.
+- **Forgetting costs knowing, noisily.** Knowing falls from 67% to 44% when
+  residents keep only their last few messages; runs vary a lot (8 and 13 for
+  the same setup).
+- **The memory-stream runs are withdrawn.** Two runs with the paper's memory
+  stream added reported 16 and 14 knowing, but its plugin scope was `agent`,
+  kept across runs, so residents started with memories of earlier runs, the
+  party among them; and reflection never fired, because its trigger read a run
+  variable that was never set and is shared by every agent. A new scope,
+  `agent_run` (each agent's own, empty every run), and a per-agent trigger fix
+  both; the runs are marked invalid and are being repeated.
 
 A first memory-stream run failed on day 2 ("fetch failed", $1.15): a hosted
 service's idle clock was touched only when a run first connected, so after an

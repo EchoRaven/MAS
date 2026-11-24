@@ -30,6 +30,9 @@ export function scopeKey(rc: RunCtx, plugin: SysNode<PluginData>, node: string):
   switch (plugin.data.spec.scope) {
     case "agent":
       return node;
+    // each agent's own, new every run: a simulated person's memory must not reach into the next simulation
+    case "agent_run":
+      return `${node}-run-${rc.runId}`;
     case "group":
       return rc.byId.get(node)?.parent ?? "root";
     case "end_user":

@@ -343,7 +343,7 @@ with the port the compose stack publishes.
 ```yaml
 contract: mas-plugin/1
 name: CRM lookup
-scope: agent | group | end_user | run | system   # run: empty at the start of every run; system: shared by all runs, kept
+scope: agent | agent_run | group | end_user | run | system   # run: empty at the start of every run; agent_run: each agent's own, empty every run; system: shared by all runs, kept
 backend: { kind: builtin | mcp | http | code, url, command, config }
 tools: [{ name, description, effect: pure | read | write | irreversible }]
 hooks:
