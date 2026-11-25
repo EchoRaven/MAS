@@ -2292,16 +2292,16 @@ The game experiments above ran on flash-lite. The key setups again on
 gemini-3.8-flash (`on_model: gemini`, every player and critic on it), the
 outcomes read from the runs' metrics; about $1.60 in all.
 
-| Experiment | flash-lite | gemini-3.8-flash |
-|---|---|---|
-| GovSim, one greedy fisher: months survived (5 runs) | 0, 2, 2, 2, 3 | 1, 1, 1, 1, 12 |
-| GovSim, greedy, with the universalization prompt | 2, 3, 3, 8, 12 | 1, 1, 1, 2, 12 |
-| Auction Arena, common values: agents' profit per auction (all three) / rule bidder's | $900 / $500 | $1,900 / $1,200 |
-| Negotiation with the critic: deals, mean price (10 runs of 4 games) | 27 of 40 closed, $19–20 | 40 of 40, $16.33 |
-| Negotiation without the critic | 40 of 40, $19.46 | 40 of 40, $14.65 |
-| Werewolf (20 games): villagers won / with `seer_open` | 6 / 5 | 10 / 13 |
-| Prisoner's Dilemma against a one-time defector (5 games) | retaliates once; forgives 3, exploits 2 | `JF FJ JJ … JJ FJ` in all five |
-| Battle of the Sexes against an alternating partner: rounds coordinated | 6, 1, 10, 2, 1 | 8, 8, 8, 6, 8 |
+| Experiment | flash-lite | gemini-3.8-flash | gemma-4-26b (open weights) |
+|---|---|---|---|
+| GovSim, one greedy fisher: months survived (5 runs; gemma 3) | 0, 2, 2, 2, 3 | 1, 1, 1, 1, 12 | 0, 0, 0 |
+| GovSim, greedy, with the universalization prompt | 2, 3, 3, 8, 12 | 1, 1, 1, 2, 12 | |
+| Auction Arena, common values: agents' profit per auction (all three) / rule bidder's | $900 / $500 | $1,900 / $1,200 | |
+| Negotiation with the critic: deals, mean price (10 runs of 4 games; gemma 3 of 2) | 27 of 40 closed, $19–20 | 40 of 40, $16.33 | 6 of 6, $15.96 |
+| Negotiation without the critic | 40 of 40, $19.46 | 40 of 40, $14.65 | 6 of 6, $17.61 |
+| Werewolf (20 games): villagers won / with `seer_open` | 6 / 5 | 10 / 13 | |
+| Prisoner's Dilemma against a one-time defector (5 games) | retaliates once; forgives 3, exploits 2 | `JF FJ JJ … JJ FJ` in all five | `JF FJ JJ … JJ FJ` in all five |
+| Battle of the Sexes against an alternating partner: rounds coordinated | 6, 1, 10, 2, 1 | 8, 8, 8, 6, 8 | 8, 8, 7, 8, 8 |
 
 - **The negotiation finding is the paper's on the stronger model, and the
   weak model's is not.** With 3.8-flash as seller, buyer and critic, the
@@ -2327,8 +2327,18 @@ outcomes read from the runs' metrics; about $1.60 in all.
   their games, and 13 of 20 when the seer was advised to speak (p 0.52 for
   10 against 13).
 
-The findings that hold on both: one greedy fisher ends the commons; no
-bidder pays above value. The ones that turn: whether coaching costs sales,
+- **A third model, from another line, sides with the stronger one.** Gemma
+  (open weights, free, 10 calls a minute; the cheaper setups only) played the
+  dilemma exactly as 3.8-flash did, move for move in all five games, and
+  found the alternation as it did; its greedy fisher took 80 to 95 tons in
+  the first month and emptied the lake every time. Its negotiation is too
+  small to read (three runs of two games, only the second coached, and the
+  uncoached runs happened to price higher).
+
+The findings that hold on all three: one greedy fisher ends the commons. On
+the two measured for it: no bidder pays above value. Flash-lite is the odd
+one in the repeated games: the two others follow the pattern and defect in
+the last round. The ones that turn: whether coaching costs sales,
 whether a player can follow a pattern, and how much a selfish note is obeyed.
 
 ## Earlier sets
