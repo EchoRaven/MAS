@@ -117,6 +117,31 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("Repeated games: the payoffs, the fixed opponents and the scores", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const play = async (reply: string, vars: Record<string, unknown>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-repeated-games")!.build();
+      doc.models.push(mock("m_play", [reply]));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = "m_play";
+      const { events } = await run(doc, "Start the game.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return (events.find((e) => e.type === "output") as { text: string }).text;
+    };
+    // always J against "defect once": 0 against 10 in round 1, then 8 each for nine rounds
+    const pd = await play("Choice: J", { game: "pd", opponent: "defect_once" });
+    expect(pd).toContain("Rounds (player, other): JF JJ JJ JJ JJ JJ JJ JJ JJ JJ");
+    expect(pd).toContain("Points: player 72, other 82");
+    expect(pd).toContain("The round after the other chose F, the player chose: J");
+    // "Choice: Option F" is read as F; against tit for tat F answers F from round 2: 10, then 5 a round
+    const tft = await play("I think so. Choice: Option F", { game: "pd", opponent: "tit_for_tat", rounds: 3 });
+    expect(tft).toContain("Rounds (player, other): FJ FF FF");
+    expect(tft).toContain("Points: player 20, other 10");
+    // Battle of the Sexes, always J against an alternating partner: coordinated in the odd rounds, 10 and 7 each time
+    const bos = await play("Choice: J", { game: "bos", opponent: "alternate" });
+    expect(bos).toContain("the same option as the other in 5 of 10");
+    expect(bos).toContain("Points: player 50, other 35");
+  });
+
   it("Werewolf's rules: the guard's protection, the witch's potions, the vote and the guard's no-twice rule", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const doc = TEMPLATES.find((t) => t.id === "paper-werewolf")!.build();
