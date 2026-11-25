@@ -466,3 +466,9 @@ export function refreshSeeds(docs: SystemDoc[]): SystemDoc[] {
 
 /** Names of the templates seeded by earlier versions (0.1, Chinese UI); stored copies are replaced on upgrade. */
 export const LEGACY_SEED_NAMES = ["\u8fa9\u8bba\u52a0\u88c1\u5224", "\u5171\u4eab\u4ed3\u5e93\u7684\u7f16\u7a0b\u56e2\u961f", "\u52a8\u6001\u62db\u52df\u7684\u7814\u7a76\u56e2\u961f", "\u5ba2\u670d\u5206\u8bca\u8f6c\u63a5"];
+
+/** a template matches when every word of the query is in its name, summary, paper title, authors or year */
+export function matchesTemplate(t: TemplateInfo, query: string): boolean {
+  const hay = [t.name, t.summary, t.paper?.title, t.paper?.authors, String(t.paper?.year ?? "")].join(" ").toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+}

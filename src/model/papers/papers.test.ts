@@ -247,3 +247,15 @@ describe("paper reproductions", () => {
     }
   });
 });
+
+describe("finding a template", () => {
+  it("matches every word of the query in its name, summary, paper or year, case ignored", async () => {
+    const { matchesTemplate, TEMPLATES } = await import("../templates");
+    const find = (q: string) => TEMPLATES.filter((t) => matchesTemplate(t, q)).map((t) => t.id);
+    expect(find("auction")).toEqual(["paper-auction-arena"]);
+    expect(find("Piatti 2024")).toEqual(["paper-govsim"]);
+    expect(find("werewolf experience")).toEqual(["paper-werewolf-experience"]);
+    expect(find("")).toHaveLength(TEMPLATES.length);
+  });
+});
+

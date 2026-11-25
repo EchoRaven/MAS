@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ExternalLink, PlayCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CanvasContext } from "@/canvas/context";
 import { FlowView } from "@/canvas/FlowView";
-import { TEMPLATES, type TemplateInfo } from "@/model/templates";
+import { matchesTemplate, TEMPLATES, type TemplateInfo } from "@/model/templates";
 import { useSystems } from "@/store/systems";
 
 function Notes({ t }: { t: TemplateInfo }) {
@@ -102,7 +103,10 @@ function Shelf({ title, subtitle, items, demos }: { title: string; subtitle: str
 }
 
 export function TemplatesPage() {
-  const papers = TEMPLATES.filter((t) => t.paper);
+  const [q, setQ] = useState("");
+  const [measuredOnly, setMeasuredOnly] = useState(false);
+  const all = TEMPLATES.filter((t) => t.paper);
+  const papers = all.filter((t) => matchesTemplate(t, q) && (!measuredOnly || t.notes?.measured));
   const [demos, setDemos] = useState<Set<string>>(new Set());
   useEffect(() => {
     fetch("/demos/index.json")
@@ -113,8 +117,15 @@ export function TemplatesPage() {
   return (
     <div className="h-full overflow-y-auto p-3 md:p-6">
       <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex flex-wrap items-center gap-3">
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search papers: debate, Park, 2024, auction…" aria-label="Search templates" className="max-w-sm" />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={measuredOnly} onChange={(e) => setMeasuredOnly(e.target.checked)} />
+            Measured here only
+          </label>
+        </div>
         <Shelf
-          title={`From papers (${papers.length})`}
+          title={`From papers (${papers.length}${papers.length !== all.length ? ` of ${all.length}` : ""})`}
           subtitle="Published multi-agent systems rebuilt from the framework's components, each with its mapping and where it departs from the paper. Where a recording exists, you can watch the system actually run."
           items={papers}
           demos={demos}
