@@ -316,12 +316,17 @@ the vocabulary:
   ballots on werewolves rose from 43% to 54% (p 0.07).
   GovSim's fishery is the same shape (the rules as code, a fisher agent per
   choice): flash-lite kept the lake in every run, with or without talk, and
-  one fisher told to be greedy collapsed it in every run. Akata et al.'s repeated games
-  are the smallest of the kind: a referee in code and one or two players. Fu et al.'s
-  negotiation adds a critic between games whose advice accumulates in the
-  seller's prompt: the price rises to the buyer's limit, and then deals fail. Auction Arena's auctioneer is
-  the same, with budgets and a rule bidder: agent bidders pay items' full
-  value, a win worth nothing.
+  one fisher told to be greedy collapsed it in every run (on 3.8-flash too,
+  faster). Akata et al.'s repeated games are the smallest of the kind: a
+  referee in code and one or two players. Fu et al.'s negotiation adds a
+  critic between games whose advice accumulates in the seller's prompt: on
+  flash-lite the price rises to the buyer's limit and then deals fail; on
+  gemini-3.8-flash it rises with no deal lost, as the paper found. Auction
+  Arena's auctioneer is the same, with budgets and a rule bidder: agent
+  bidders pay items' full value, a win worth nothing. Which findings hold
+  depends on the model: of these, a greedy fisher ending the commons and no
+  bidder paying above value hold on both models measured; whether coaching
+  costs sales and whether a player follows a pattern do not.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:
