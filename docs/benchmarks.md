@@ -2281,6 +2281,51 @@ report their profits as metrics. Five auctions each.
   or above their own value, and earned $580 each an auction; the rule bidder,
   still bidding while below its value, won 10 and earned $1,560.
 
+## The games on a stronger model
+
+The game experiments above ran on flash-lite. The key setups again on
+gemini-3.8-flash (`on_model: gemini`, every player and critic on it), the
+outcomes read from the runs' metrics; about $1.60 in all.
+
+| Experiment | flash-lite | gemini-3.8-flash |
+|---|---|---|
+| GovSim, one greedy fisher: months survived (5 runs) | 0, 2, 2, 2, 3 | 1, 1, 1, 1, 12 |
+| GovSim, greedy, with the universalization prompt | 2, 3, 3, 8, 12 | 1, 1, 1, 2, 12 |
+| Auction Arena, common values: agents' profit per auction (all three) / rule bidder's | $900 / $500 | $1,900 / $1,200 |
+| Negotiation with the critic: deals, mean price (10 runs of 4 games) | 27 of 40 closed, $19–20 | 40 of 40, $16.33 |
+| Negotiation without the critic | 40 of 40, $19.46 | 40 of 40, $14.65 |
+| Werewolf (20 games): villagers won / with `seer_open` | 6 / 5 | 10 / 13 |
+| Prisoner's Dilemma against a one-time defector (5 games) | retaliates once; forgives 3, exploits 2 | `JF FJ JJ … JJ FJ` in all five |
+| Battle of the Sexes against an alternating partner: rounds coordinated | 6, 1, 10, 2, 1 | 8, 8, 8, 6, 8 |
+
+- **The negotiation finding is the paper's on the stronger model, and the
+  weak model's is not.** With 3.8-flash as seller, buyer and critic, the
+  critic's advice raises the price from $14.65 to $16.33 and no deal is lost:
+  every one of the ten coached runs averaged more than every uncoached run
+  ($15.50 and up against $15.00 and down). On flash-lite the coached seller
+  overreached past the buyer's limit and lost a third of its sales; a stronger
+  buyer haggles to a lower price, and a stronger seller presses without
+  breaking.
+- **A stronger greedy fisher is greedier.** Told privately to catch "as much
+  as you can get away with", 3.8-flash took 50 or 55 tons in the first month
+  in four runs of five and the lake collapsed at once; in the fifth it took 10
+  and the lake held twelve months. Flash-lite took 20 and the lake lasted two
+  or three months. The others kept to 10 either way, and the universalization
+  prompt changed nothing here.
+- **Learning the pattern.** Against an alternating partner 3.8-flash found
+  the alternation by the fifth round in every game (6 to 8 rounds of 10
+  coordinated); flash-lite copied the last move and mostly missed. In the
+  dilemma it retaliates once, forgives, and defects in the last round, in all
+  five games alike: the end-game defection a fixed horizon invites.
+- **More profit, more wins.** Its bidders kept twice as much ($1,900 an
+  auction), still paying no item above its value; its villagers won half
+  their games, and 13 of 20 when the seer was advised to speak (p 0.52 for
+  10 against 13).
+
+The findings that hold on both: one greedy fisher ends the commons; no
+bidder pays above value. The ones that turn: whether coaching costs sales,
+whether a player can follow a pattern, and how much a selfish note is obeyed.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
