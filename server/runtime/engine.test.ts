@@ -117,6 +117,34 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("Werewolf's rules: the guard's protection, the witch's potions, the vote and the guard's no-twice rule", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const doc = TEMPLATES.find((t) => t.id === "paper-werewolf")!.build();
+    // each player's replies, in the order it is asked (a script repeats its last entry): chosen so that the game is
+    // the same whatever the shuffled seating
+    const scripts: Record<string, string[]> = {
+      alice: ["Dave"], // night 1: kill the witch
+      bob: ["Dave", "Hello.", "Dave", "Eve"], // night 1 kill, speech, vote (Dave is dead: no ballot), night 2 kill the guard
+      carol: ["Alice"], // the seer inspects and votes Alice
+      dave: ["NO"], // the witch neither heals nor poisons
+      eve: ["Frank"], // the guard protects Frank, and cannot on night 2
+      frank: ["Alice"],
+      grace: ["Alice"],
+    };
+    doc.models.push(...Object.entries(scripts).map(([id, sc]) => mock(`m_${id}`, sc)), mock("m_mod", ["ok"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "moderator" ? "m_mod" : `m_${n.id}`;
+    const { events } = await run(doc, "Start the game.", { mock: false, vars: { days: 2 } });
+    expect(errors(events)).toEqual([]);
+    const out = (events.find((e) => e.type === "output") as { text: string }).text;
+    expect(out).toContain("Night 1: Dave died (witch).");
+    expect(out).toContain("Day 1: the village voted out Alice, who was a werewolf.");
+    expect(out).toContain("Night 2: Eve died (guard).");
+    expect(out).toContain("Day 2: the vote was tied, so nobody was voted out.");
+    expect(out).toContain("No winner after 2 days.");
+    // the village's ballots on day 1: Carol, Frank and Grace on Alice, Eve on Frank (the werewolves' are not counted)
+    expect(out).toContain("Village ballots on werewolves: 3 of 4.");
+  });
+
   it("GovSim's fishery: sustainable catches keep the lake, one greedy fisher collapses it in month 3", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const fishery = (catches: Record<string, string>) => {
