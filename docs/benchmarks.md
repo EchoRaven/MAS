@@ -2218,6 +2218,34 @@ from its side, F its favourite in the Battle of the Sexes):
   settle on one option (4 and 7 rounds), though one still never meets. It
   helps against a partner who also adapts, not against a fixed alternation.
 
+## Negotiation with AI feedback: a higher price, or no sale
+
+Fu et al.'s bargaining (`paper-negotiation`): a seller and a buyer negotiate
+over a balloon listed at $20, each message ending with an offer or an
+acceptance; after each game a critic reads the negotiation and gives the
+seller three suggestions, which accumulate into every later game. Four games
+a run, ten runs, flash-lite in all three parts; the control has no critic.
+
+| Ten runs | Game 1 | Game 2 | Game 3 | Game 4 | Per game, no sale as $0 | Cost |
+|---|---|---|---|---|---|---|
+| With the critic: deals, mean price | 10, $19.19 | 9, $19.83 | 2, $20.00 | 6, $20.00 | $13.26 | $0.13 |
+| No critic | 10, $19.30 | 10, $19.60 | 10, $19.30 | 10, $19.65 | $19.46 | $0.06 |
+
+- **The coached seller's price rises to the ceiling**, as the paper found:
+  every deal from game 3 on is at $20, the most the buyer will pay.
+- **And then it stops selling.** The critic's advice is to "anchor higher",
+  "stay above your original listing" and "stop countering against your own
+  original list price"; the seller takes it and names floors the buyer cannot
+  meet ("my firm walk-away point remains at $23 … I am moving on"). In games
+  2 to 4, 17 of 30 negotiations closed against 30 of 30 without the critic
+  (Fisher p 0.00005): counting a lost sale as nothing, the coached seller
+  earns a third less per game.
+- **Setting the buyer was most of the work.** Told to pay "$10 or less", the
+  buyer held to it and no game of four closed; told it would "rather buy than
+  walk away", it paid $35 for the $20 balloon. The runs above have a buyer who
+  wants it, $10 ideally, never above the list price. The paper reports the
+  same trade-off for its harder bargainers: a higher price, more failed deals.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these

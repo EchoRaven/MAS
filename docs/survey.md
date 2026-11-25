@@ -317,7 +317,9 @@ the vocabulary:
   GovSim's fishery is the same shape (the rules as code, a fisher agent per
   choice): flash-lite kept the lake in every run, with or without talk, and
   one fisher told to be greedy collapsed it in every run. Akata et al.'s repeated games
-  are the smallest of the kind: a referee in code and one or two players.
+  are the smallest of the kind: a referee in code and one or two players. Fu et al.'s
+  negotiation adds a critic between games whose advice accumulates in the
+  seller's prompt: the price rises to the buyer's limit, and then deals fail.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:
