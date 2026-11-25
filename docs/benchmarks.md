@@ -2294,6 +2294,7 @@ outcomes read from the runs' metrics; about $1.60 in all.
 
 | Experiment | flash-lite | gemini-3.8-flash | gemma-4-26b (open weights) |
 |---|---|---|---|
+| GovSim, no greedy fisher, no talk: runs that kept the lake 12 months | 5 of 5 | 3 of 3 (100% efficiency) | |
 | GovSim, one greedy fisher: months survived (5 runs; gemma 3) | 0, 2, 2, 2, 3 | 1, 1, 1, 1, 12 | 0, 0, 0 |
 | GovSim, greedy, with the universalization prompt | 2, 3, 3, 8, 12 | 1, 1, 1, 2, 12 | |
 | Auction Arena, common values: agents' profit per auction (all three) / rule bidder's | $900 / $500 | $1,900 / $1,200 | |
