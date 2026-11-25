@@ -7,7 +7,7 @@ import { Api, type DatasetFlag, type EvalSummary } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
-import { csvGrid, markdownTable } from "@/run/exportEvals";
+import { csvGrid, markdownTable, metricsText } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
 import { type EvalRecord, pairedDiff, poolRuns, repeatStats, retryableCase, wilson } from "@/run/evals";
 import { OpenEnded } from "./OpenEnded";
@@ -277,6 +277,11 @@ export function ComparePage() {
                     <Link to={`/evals/${e.system_id}`} className="font-medium hover:underline">
                       {e.system_name}
                     </Link>
+                    {r && metricsText(r.rec) && (
+                      <span className="block text-[11px] tabular-nums text-muted-foreground" title="The runs' own metrics: each one's mean over the cases, with its range">
+                        {metricsText(r.rec)}
+                      </span>
+                    )}
                   </td>
                   <td className="py-2 pr-3 text-xs text-muted-foreground">{modelsLabel(e)}</td>
                   <td className="py-2 text-right font-medium tabular-nums">

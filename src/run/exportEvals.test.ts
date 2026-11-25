@@ -32,6 +32,17 @@ describe("exporting evaluations", () => {
     expect(md.split("\n")[3]).toContain("| reference |");
   });
 
+  it("a metrics column when the runs report their own numbers, each mean with its range", () => {
+    const sim = rec([[true], [false]], 0.1);
+    sim.cases[0].metrics = { "months survived": 2, equality: 0.8 };
+    sim.cases[1].metrics = { "months survived": 6, equality: 0.8 };
+    const md = markdownTable([{ label: "GovSim", setup: "greedy", rec: sim }]);
+    expect(md.split("\n")[0]).toBe("| System | Models · variables | Accuracy | Per repeat | Metrics | Cost | Per correct answer |");
+    expect(md.split("\n")[2]).toContain("| months survived 4 (2–6) · equality 0.8 |");
+    // without metrics there is no column
+    expect(markdownTable([{ label: "A", setup: "x", rec: rec([[true]], 0.1) }]).split("\n")[0]).not.toContain("Metrics");
+  });
+
   it("a CSV with one row per question and the share of runs that passed", () => {
     const csv = csvGrid([
       { label: "A", setup: "x", rec: rec([[true, true], [true, false]], 0.1) },

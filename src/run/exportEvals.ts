@@ -1,6 +1,6 @@
 // Evaluation results as text to take elsewhere: a Markdown table for a
 // write-up, and a CSV of which system got each question right.
-import { type EvalRecord, pairedDiff, repeatStats } from "./evals";
+import { type EvalRecord, metricStats, pairedDiff, repeatStats } from "./evals";
 
 export interface ExportRow {
   label: string;
@@ -21,16 +21,23 @@ export function vsText(rec: EvalRecord, ref: EvalRecord): string {
   return `+${d.fixed.length} −${d.lost.length} (p ${d.p < 0.001 ? "<0.001" : d.p.toFixed(d.p < 0.01 ? 3 : 2)})`;
 }
 
+/** "months survived 2.6 (0–6) · equality 0.8": each metric's mean over the cases, with its range. */
+export function metricsText(rec: Pick<EvalRecord, "cases">): string {
+  const r = (x: number) => Math.round(x * 100) / 100;
+  return metricStats(rec.cases).map((m) => `${m.name} ${r(m.mean)}${m.min !== m.max ? ` (${r(m.min)}–${r(m.max)})` : ""}`).join(" · ");
+}
+
 /** One row per evaluation, as it reads on the Compare page; with a reference, each row's fixed and lost questions against it. */
 export function markdownTable(rows: ExportRow[], ref?: EvalRecord): string {
-  const head = ref
-    ? "| System | Models · variables | Accuracy | Per repeat | vs reference | Cost | Per correct answer |\n| --- | --- | --- | --- | --- | --- | --- |"
-    : "| System | Models · variables | Accuracy | Per repeat | Cost | Per correct answer |\n| --- | --- | --- | --- | --- | --- |";
+  // a column for the runs' own metrics, when any row has them (games and simulations)
+  const withMetrics = rows.some(({ rec }) => metricsText(rec));
+  const cols = ["System", "Models · variables", "Accuracy", "Per repeat", ...(ref ? ["vs reference"] : []), ...(withMetrics ? ["Metrics"] : []), "Cost", "Per correct answer"];
+  const head = `| ${cols.join(" | ")} |\n|${cols.map(() => " --- |").join("")}`;
   const body = rows.map(({ label, setup, rec }) => {
     const st = repeatStats(rec);
     const acc = st.mean ?? (rec.graded ? rec.passed / rec.graded : 0);
     const per = st.per.length > 1 ? st.per.map((p) => Math.round(p * 100)).join(", ") + (st.sd !== null ? ` (sd ${Math.round(st.sd * 1000) / 10})` : "") : "one run";
-    return `| ${cellText(label)} | ${cellText(setup)} | ${pct(acc)} | ${per} |${ref ? ` ${vsText(rec, ref)} |` : ""} ${money(rec.usd)} | ${rec.passed ? money(rec.usd / rec.passed) : "–"} |`;
+    return `| ${cellText(label)} | ${cellText(setup)} | ${pct(acc)} | ${per} |${ref ? ` ${vsText(rec, ref)} |` : ""}${withMetrics ? ` ${cellText(metricsText(rec)) || "–"} |` : ""} ${money(rec.usd)} | ${rec.passed ? money(rec.usd / rec.passed) : "–"} |`;
   });
   return [head, ...body].join("\n");
 }
