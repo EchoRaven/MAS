@@ -181,6 +181,8 @@ export interface EvalCaseResult {
   reached?: string[];
   /** a second opinion on a miss graded by rule: the LLM judge's verdict (the grade stands; a "right" here is a grader to check) */
   audit?: { pass: boolean; why: string };
+  /** the numbers the run reported about itself (metric events), the last value of each name */
+  metrics?: Record<string, number>;
 }
 
 export interface EvalRecord {
@@ -369,6 +371,13 @@ export function mcnemarP(fixed: number, lost: number): number {
   let tail = 0;
   for (let i = 0; i <= k; i++) tail += Math.exp(logC(d, i) - d * Math.LN2);
   return Math.min(1, 2 * tail);
+}
+
+/** The metrics the cases reported (a custom loop's metric(name, value)): per name, how many cases, mean, min and max. */
+export function metricStats(cases: Pick<EvalCaseResult, "metrics">[]): { name: string; n: number; mean: number; min: number; max: number }[] {
+  const by = new Map<string, number[]>();
+  for (const c of cases) for (const [k, v] of Object.entries(c.metrics ?? {})) if (Number.isFinite(v)) by.set(k, [...(by.get(k) ?? []), v]);
+  return [...by].map(([name, xs]) => ({ name, n: xs.length, mean: xs.reduce((s, x) => s + x, 0) / xs.length, min: Math.min(...xs), max: Math.max(...xs) }));
 }
 
 /** Two-sided Fisher's exact p for a passed of n against b passed of m (unpaired: two sets of independent runs). */

@@ -61,6 +61,9 @@ for (let r = 1; r <= rounds; r++) {
   emit("round " + r, "player " + p + ", other " + o);
 }
 const moves = history.map((h) => h.p + h.o).join(" ");
+metric("player points", mine);
+metric("rounds coordinated", coordinated);
+metric("player chose J", playerJ);
 return "Game: " + (game === "bos" ? "Battle of the Sexes" : "Prisoner's Dilemma") + " against " + opponent + (predict ? ", predicting first" : "") +
   "\nRounds (player, other): " + moves +
   "\nPoints: player " + mine + ", other " + theirs +

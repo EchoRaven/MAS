@@ -74,6 +74,9 @@ for (const a of fishers) for (const b of fishers) gini += Math.abs(earned[a] - e
 gini = sum ? gini / (2 * fishers.length * sum) : 0;
 // efficiency: what was caught over the most a sustainable fishery yields (half the capacity, each month survived)
 const best = (capacity / 2) * months;
+metric("months survived", survived);
+metric("efficiency %", Math.round((100 * sum) / best));
+metric("equality", Math.round((1 - gini) * 100) / 100);
 return story.join("\n") + "\n\n" + (survived === months ? "The lake survived all " + months + " months." : "The lake collapsed in month " + (survived + 1) + ".") +
   "\nSurvived months: " + survived + "\nTotal caught: " + sum + " tons (efficiency " + Math.round((100 * sum) / best) + "%), equality " + (1 - gini).toFixed(2) +
   "\nAnswer: " + survived;`.replace("__NAMES__", JSON.stringify(FISHERS.map(([, n]) => n)));

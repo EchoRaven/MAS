@@ -23,6 +23,8 @@ export type RunEvent =
   | { t: number; type: "access"; node: string; target: string; edge: string; op: "read" | "write" }
   | { t: number; type: "gate"; edge: string; gate: string; passed: boolean; reason: string }
   | { t: number; type: "transform"; at: string; edge?: string; label: string; detail: string }
+  // a number a custom loop reports about its run (months a commons survived, a deal's price): evaluations average it
+  | { t: number; type: "metric"; node: string; name: string; value: number }
   | { t: number; type: "approval"; node: string; from: string; resolved: boolean }
   | { t: number; type: "usage"; node: string; tokens_in: number; tokens_out: number; usd: number; estimated: boolean; model?: string }
   | { t: number; type: "spawn"; node: string; template: string; count: number }

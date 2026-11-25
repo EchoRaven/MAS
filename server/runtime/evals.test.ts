@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { Builder, native } from "@/model/builder";
 import { port } from "@/model/ports";
-import { type EvalRecord, repeatStats } from "@/run/evals";
+import { type EvalRecord, metricStats, repeatStats } from "@/run/evals";
 import type { Config } from "../config";
 import { Store } from "../store/files";
 import { Secrets } from "../store/secrets";
@@ -89,6 +89,19 @@ describe("evaluations", () => {
     const open = await finish(evals.start(echo(["a story"], "story"), { grader: "none", concurrency: 1, cases: [{ input: "Write a story", expected: "" }] }).id);
     await expect(evals.regrade(open.id, "check", check)).rejects.toThrow(/compared pairwise/);
     await expect(evals.regrade(done.id, "none" as never)).rejects.toThrow(/grade nothing/);
+  });
+
+  it("keeps the numbers a run reports about itself (metric), the last of each name, and averages them", async () => {
+    const b = new Builder("Metrics", "");
+    // a custom loop reporting about its run: the input is the number of months, reported twice (the last value counts)
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Sim", model: "echo", harness: { ...native(), loop: "custom", loop_fn: { lang: "js", code: "metric('months survived', 0); metric('months survived', Number(ctx.task)); metric('ignored', 'not a number'); return 'Answer: ' + ctx.task;" }, instructions: "" } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    b.doc.models.push({ id: "echo", provider: "mock", model: "mock", api: { params: { script: ["x"] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const done = await finish(evals.start({ ...b.doc, id: "sys_metrics" }, { grader: "none", concurrency: 2, cases: [{ input: "2", expected: "" }, { input: "12", expected: "" }] }).id);
+    expect(done.cases.map((c) => c.metrics)).toEqual([{ "months survived": 2 }, { "months survived": 12 }]);
+    expect(metricStats(done.cases)).toEqual([{ name: "months survived", n: 2, mean: 7, min: 2, max: 12 }]);
   });
 
   it("runs a case up to 20 times, not silently 5", async () => {

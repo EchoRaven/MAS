@@ -114,6 +114,8 @@ for (let day = 1; day <= (ctx.vars.days ?? 6); day++) {
   }
   if (over()) break;
 }
+metric("villagers won", wolves().length ? 0 : 1);
+metric("village ballots on werewolves %", cast ? Math.round((100 * hits) / cast) : 0);
 const result = story.join("\\n") + "\\n\\n" + (over() || "No winner after " + (ctx.vars.days ?? 6) + " days. Still alive: " + alive.join(", ") + ".") + "\\nVillage ballots on werewolves: " + hits + " of " + cast + ".\\nRoles: " + JSON.stringify(players);
 return result;`;
 

@@ -168,6 +168,15 @@ export function TimelineItem({ e, nameOf }: { e: SimEvent; nameOf: ReturnType<ty
           <span className="ml-auto shrink-0">{time}</span>
         </li>
       );
+    case "metric":
+      return (
+        <li className="flex items-center gap-2 px-3 py-1 pl-14 text-xs text-muted-foreground">
+          <SquareFunction className="h-3.5 w-3.5 shrink-0 text-info" />
+          <span className="font-medium text-foreground">{e.name}</span>
+          <span className="tabular-nums">{e.value}</span>
+          <span className="ml-auto shrink-0">{time}</span>
+        </li>
+      );
     case "system_finished":
       return (
         <li className="mx-3 my-2 flex items-center gap-2 rounded-lg bg-secondary px-3 py-2 text-xs">
@@ -202,6 +211,8 @@ export function describe(e: SimEvent, n: (id: string) => string): string {
       return `${n(e.node)} spawned ${e.count}× ${n(e.template)}`;
     case "transform":
       return `${n(e.at)} ${e.label}: ${e.detail}`;
+    case "metric":
+      return `${n(e.node)} ${e.name} = ${e.value}`;
     case "human_request":
       return `${e.request.kind === "approval" ? "Approval" : "Input"} requested of ${n(e.request.node) || "you"} by ${n(e.request.from)}: ${e.request.text}`;
     case "human_response":

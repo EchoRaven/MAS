@@ -14,7 +14,7 @@ import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
-import { type EvalRecord, failureReasons, type Grader, parseCases, repeatStats, etaSeconds, retryableCase, wilson } from "@/run/evals";
+import { type EvalRecord, failureReasons, type Grader, parseCases, metricStats, repeatStats, etaSeconds, retryableCase, wilson } from "@/run/evals";
 import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
@@ -580,6 +580,9 @@ function Evals({ systemId }: { systemId: string }) {
                 const ok = kept.filter((c) => c.pass).length;
                 return <Stat label="Without flagged" value={`${ok} of ${kept.length} (${Math.round((ok / Math.max(1, kept.length)) * 1000) / 10}%): ${ev.cases.length - kept.length} flagged as broken, left out`} />;
               })()}
+              {metricStats(ev.cases).map((m) => (
+                <Stat key={m.name} label={m.name} value={`${Math.round(m.mean * 100) / 100} mean (${m.min}–${m.max}, ${m.n} cases)`} />
+              ))}
               <Stat label="Cost" value={usd(ev.usd)} />
               <Stat label="Per case" value={ev.graded ? usd(ev.usd / ev.graded) : ev.grader === "none" && ev.cases.length ? usd(ev.usd / ev.cases.length) : "–"} />
               <Stat label="Grader" value={`${GRADERS.find((g) => g.value === ev.grader)?.label}${ev.mock ? " · dry run" : ""}`} />

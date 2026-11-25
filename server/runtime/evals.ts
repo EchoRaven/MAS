@@ -581,6 +581,10 @@ export class EvalManager {
           const done = this.runs.get(run.id)!;
           const events = this.store.events(run.id) as RunEvent[];
           c.output = events.filter((e): e is Extract<RunEvent, { type: "output" }> => e.type === "output").map((e) => e.text).join("\n\n");
+          // what the run reported about itself, the last value of each name
+          const metrics: Record<string, number> = {};
+          for (const e of events) if (e.type === "metric") metrics[e.name] = e.value;
+          if (Object.keys(metrics).length) c.metrics = metrics;
           c.usd = done.usd;
           if (done.result_check) c.result_ok = done.result_check.ok;
           // stopped at a limit with the conversation unfinished: the answer is its last message, and the case says so

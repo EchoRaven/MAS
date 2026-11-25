@@ -120,6 +120,8 @@ The `model`, `tools` and `memory` that custom loops receive:
 | `model` | `model(prompt, data?)`, `model.call(prompt or messages, data?)` → text, `model.json(prompt, data?)` → parsed JSON |
 | `tools` | `tools.list()`, `tools.call(name, args)`, `tools.call_agent(name or id, instruction)` |
 | `memory` | `memory.search(query)`, `memory.write(text)` |
+| `emit` | `emit(label, detail?)`: a step shown on the run's timeline |
+| `metric` | `metric(name, value)`: a number about the run (months a commons survived, a deal's price). The run records it as a `metric` event; an evaluation keeps each case's last value of each name and shows each name's mean, range and count. Values that are not numbers are ignored |
 
 ## Agent stages (the wrapper)
 

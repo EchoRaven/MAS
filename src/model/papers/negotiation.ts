@@ -44,6 +44,9 @@ for (let g = 1; g <= games; g++) {
   }
 }
 const deals = prices.filter((p) => p !== null);
+metric("deals %", Math.round((100 * deals.length) / games));
+if (deals.length) metric("mean deal price", Math.round((100 * deals.reduce((s, p) => s + p, 0)) / deals.length) / 100);
+metric("per game, no sale as 0", Math.round((100 * deals.reduce((s, p) => s + p, 0)) / games) / 100);
 return story.join("\n") + "\n\nPrices by game: " + prices.map((p) => (p === null ? "none" : "$" + p)).join(", ") +
   "\nMean deal price: " + (deals.length ? "$" + (deals.reduce((s, p) => s + p, 0) / deals.length).toFixed(2) : "none") +
   "\nAnswer: " + (prices[prices.length - 1] ?? 0);`;
