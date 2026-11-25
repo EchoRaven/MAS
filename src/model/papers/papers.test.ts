@@ -259,3 +259,13 @@ describe("finding a template", () => {
   });
 });
 
+describe("the README", () => {
+  it("lists every paper a template reproduces", async () => {
+    const fs = await import("node:fs");
+    const { TEMPLATES } = await import("../templates");
+    // the tests run from the repository's root
+    const readme = fs.readFileSync(`${process.cwd()}/README.md`, "utf8");
+    const missing = [...new Set(TEMPLATES.filter((t) => t.paper).map((t) => t.paper!.url))].filter((url) => !readme.includes(url));
+    expect(missing).toEqual([]);
+  });
+});
