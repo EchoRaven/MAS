@@ -80,7 +80,7 @@ step.
 
 1. **Entry.** The input reaches the first speaker: a person's outgoing edge, a room, an `on_start` agent, or the first component.
 2. **Scheduling.** Each value is delivered along its edges; agents take turns per input (`coalesce`, `queue`, `parallel` or `interrupt` when busy); functions wait for their inputs (`join: any | all`); groups repeat while `iterate.until` is false; rooms wake speakers by policy (`round_robin`, `mention`, `selector`, `free`).
-3. **Events.** Every step emits an event (messages, tool calls, usage, transforms, approvals); the run page replays them, and they are stored as the run's record.
+3. **Events.** Every step emits an event (messages, tool calls, usage, transforms, approvals, and `metric`: a number a custom loop reports about its run); the run page replays them, and they are stored as the run's record.
 4. **Limits and policies.** Budget in dollars, rounds and minutes, per-agent budgets, and policies on tools, usage and outputs can block, ask a person, or end the run.
 5. **Result.** A value that reaches the person who started the run, the last word of a room conversation, an agent's `finish`, or a policy that ends the run on a value. A system that declares its result type (`result: {type: code}`, say) has the answer checked at the end.
 
@@ -118,6 +118,18 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   and their **sourced links**: the share of cited links that the run's own
   `web_search` and `fetch` returned, a check a judge cannot make on recent
   facts.
+- **Games and simulations** are one case run many times (up to 20 repeats).
+  Their rules are a custom loop, a referee or moderator in code that calls
+  each player agent through call edges and tells it only what its role may
+  know (Werewolf, GovSim's fishery, the repeated games, the negotiation,
+  Auction Arena); the loop reports its outcome with `metric(name, value)`,
+  and the evaluation keeps each case's metrics and shows their means and
+  ranges, on the Evaluate page and in Compare. With one or two questions run
+  many times, Compare tests a difference by Fisher's exact test on the runs
+  instead of McNemar's on questions. The referees' rules are tested end to end
+  on scripted players (`server/runtime/engine.test.ts`). An evaluation run
+  ungraded whose cases carry what to check against (a backtest's next-day
+  move) can be graded afterwards by a rule or a check.
 - **Baselines** are templates: one model call with the request as it is
   (the control for systems of plain calls), one writer, one writer with
   search, one agent with code, and self-consistency. A baseline's prompt can
