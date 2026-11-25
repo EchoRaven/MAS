@@ -117,6 +117,31 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("Auction Arena: the last bidder pays its bid, budgets bind, overpaying is counted", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const auction = async (replies: Record<string, string>, vars: Record<string, unknown>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-auction-arena")!.build();
+      doc.models.push(...Object.entries(replies).map(([id, r]) => mock(`m_${id}`, [r])), mock("m_auc", ["ok"]));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "auctioneer" ? "m_auc" : `m_${n.id}`;
+      const { events } = await run(doc, "Start the auction.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return { out: (events.find((e) => e.type === "output") as { text: string }).text, metrics: events.filter((e) => e.type === "metric") as { name: string; value: number }[] };
+    };
+    // one bidder bids, the others withdraw: it takes every item at its starting price, $10,000 for $33,000 of value
+    const solo = await auction({ alice: "Bid", bob: "Withdraw", carol: "Withdraw" }, { rule: false });
+    expect(solo.out).toContain("Silver vase (value $2000): Alice for $1000");
+    expect(solo.out).toContain("Alice $23000 (6 items, $10000 left)");
+    expect(solo.metrics.find((m) => m.name === "agent bidders' profit")?.value).toBe(23000);
+    // two who always bid, with $5,000 each: the vase goes for the whole budget, above its value
+    const war = await auction({ alice: "Bid", bob: "Bid", carol: "Withdraw" }, { rule: false, budget: 5000 });
+    expect(war.out).toMatch(/Silver vase \(value \$2000\): (Alice|Bob) for \$5000/);
+    expect(war.metrics.find((m) => m.name === "items sold above their value")?.value).toBe(1);
+    // the rule bidder bids only below the value: against bidders who withdraw it takes each item at its start
+    const rule = await auction({ alice: "Withdraw", bob: "Withdraw", carol: "Withdraw" }, {});
+    expect(rule.out).toContain("Gold watch (value $10000): Rule for $3000");
+    expect(rule.metrics.find((m) => m.name === "rule bidder's profit")?.value).toBe(23000);
+  });
+
   it("Negotiation: an accepted offer is the deal, a game without one is no deal, the critic's advice reaches the seller", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const haggle = async (scripts: Record<string, string[]>, vars: Record<string, unknown>) => {
