@@ -2283,6 +2283,11 @@ report their profits as metrics. Five auctions each.
 
 ## The games on a stronger model
 
+Each game setup here can be rerun with one command, with the server up:
+`npx --no-install tsx scripts/simulate.mts paper-govsim --repeats 5 --on gemini --vars '{"greedy":true}' --usd 1`
+starts the evaluation, waits, and prints every metric's mean, range and
+values (the runs stay on the Evaluate and Compare pages).
+
 The game experiments above ran on flash-lite. The key setups again on
 gemini-3.8-flash (`on_model: gemini`, every player and critic on it), the
 outcomes read from the runs' metrics; about $1.60 in all.
