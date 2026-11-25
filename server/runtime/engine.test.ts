@@ -117,6 +117,29 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("Negotiation: an accepted offer is the deal, a game without one is no deal, the critic's advice reaches the seller", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const haggle = async (scripts: Record<string, string[]>, vars: Record<string, unknown>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-negotiation")!.build();
+      doc.models.push(...Object.entries(scripts).map(([id, sc]) => mock(`m_${id}`, sc)), mock("m_ref", ["ok"]));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "referee" ? "m_ref" : `m_${n.id}`;
+      const { events } = await run(doc, "Start.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return { out: (events.find((e) => e.type === "output") as { text: string }).text, events };
+    };
+    // the buyer counters once, then accepts the seller's $18: the deal is the offer accepted, not the buyer's own
+    const deal = await haggle({ seller: ["A fine balloon. Offer: $18"], buyer: ["Too much. Offer: $10", "Fine.\nAccept"], critic: ["Open higher.\nHold firm.\nStress quality."] }, { games: 2 });
+    expect(deal.out).toContain("Game 1: deal at $18 (4 messages)");
+    expect(deal.out).toContain("Prices by game: $18, $18");
+    // the critic's three suggestions are in the seller's prompt in game 2
+    const toSeller = deal.events.filter((e) => e.type === "message" && (e as { to?: string }).to === "seller").map((e) => (e as { text: string }).text);
+    expect(toSeller.some((t) => t.includes("Advice from your coach") && t.includes("1. Open higher.") && t.includes("3. Stress quality."))).toBe(true);
+    // neither ever accepts: no deal after the limit of messages
+    const none = await haggle({ seller: ["Offer: $20"], buyer: ["Offer: $10"], critic: ["x"] }, { games: 1, turns: 6 });
+    expect(none.out).toContain("Game 1: no deal in 6 messages");
+    expect(none.out).toContain("Mean deal price: none");
+  });
+
   it("Repeated games: the payoffs, the fixed opponents and the scores", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const play = async (reply: string, vars: Record<string, unknown>) => {
