@@ -2159,6 +2159,47 @@ catch and every word is a fisher's (flash-lite). Twelve months, five runs each.
 The paper's agents also reflect and plan with a memory of past months, and its
 newcomer is a persona rather than a private note.
 
+## Repeated games: forgiving, and coordinating with a pattern
+
+Akata et al.'s games (`paper-repeated-games`): an agent plays ten rounds of a
+2×2 game against a fixed strategy, the options named J and F so that no word
+primes the choice, each round's prompt stating the rules and the whole
+history. Five games each, flash-lite, a cent per five games.
+
+**Prisoner's Dilemma against an opponent who defects once** (F in round 1,
+then J forever; J is to cooperate):
+
+| Five games each | Rounds (player, other) | Points (player, other) |
+|---|---|---|
+| Plain | `JF FJ JJ JJ JJ JJ JJ JJ JJ JJ` ×3, `JF FJ FJ FJ …` ×2 | 74/74 ×3, 90/10 ×2 |
+| Predicting the other's move first (`predict=true`) | `JF FJ FJ FJ …` ×5 (once J in the last round) | 90/10 ×4, 88/18 |
+
+- **It retaliates once, every time**, then either forgives (three of five,
+  cooperating to the end) or keeps defecting against an opponent who never
+  defects again (two of five). The paper's GPT-4 was unforgiving; here the
+  lasting defection is exploitation, not a grudge: the opponent cooperates
+  throughout.
+- **Predicting first makes it exploit.** Asked to predict the other's move,
+  it predicts J, and F is the best answer to J: all five games exploit the
+  opponent, against two of five without the prediction. The paper's remedy
+  is for coordination; here it costs the opponent.
+
+**Battle of the Sexes against an opponent who alternates** (J, F, J, F, …;
+the player prefers J, the other F, and both get nothing when they differ):
+
+| Five games each | Rounds coordinated (of 10) | The player copied the other's last move (of 9) |
+|---|---|---|
+| Plain | 6, 1, 10, 2, 1 | 4, 9, 0, 8, 9 |
+| Predicting first | 1, 3, 2, 2, 2 | 9, 7, 8, 8, 8 |
+
+- **It copies the last move, one step behind.** Against an alternating
+  partner, choosing what the other chose last round is always wrong; in three
+  of five plain games it did so almost every round, as the paper found of
+  GPT-4. One game found the pattern and coordinated all ten rounds.
+- **Predicting first does not help here.** Its predictions are the same
+  copying ("they are returning to the option that yielded mutual points"):
+  1 to 3 rounds coordinated, against the paper's gain from the same prompt.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
