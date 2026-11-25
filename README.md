@@ -213,6 +213,7 @@ Results of running these systems against a single agent and self-consistency on 
 | [Werewolf](https://arxiv.org/abs/2309.04658) | Hidden roles: the rules are code, each player is an agent told only what its role allows |
 | [Repeated games](https://arxiv.org/abs/2305.16867) | Ten rounds of the Prisoner's Dilemma or the Battle of the Sexes against fixed strategies or another agent; the rules as code |
 | [Negotiation with AI feedback](https://arxiv.org/abs/2305.10142) | A seller and a buyer bargain; a critic coaches the seller between games, its advice accumulating |
+| [Auction Arena](https://arxiv.org/abs/2310.05746) | Bidders with budgets in ascending auctions for a series of items; agent bidders against a rule bidder, the auctioneer as code |
 | [GovSim](https://arxiv.org/abs/2404.16698) | A commons: five fishers share a lake that regrows; private catches, talk between months, the rules as code |
 | [MAD](https://arxiv.org/abs/2305.19118) | An angel and a devil who must disagree; a moderator ends the debate once one side is clearly right, else a judge decides after three rounds |
 | [Chain-of-Agents](https://arxiv.org/abs/2406.02818) | A long input split into chunks; workers pass a note of the evidence down the chain, a manager answers from the last note |

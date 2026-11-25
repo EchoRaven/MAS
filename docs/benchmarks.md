@@ -2246,6 +2246,34 @@ a run, ten runs, flash-lite in all three parts; the control has no critic.
   wants it, $10 ideally, never above the list price. The paper reports the
   same trade-off for its harder bargainers: a higher price, more failed deals.
 
+## Auction Arena: bidding to the last dollar
+
+Chen et al.'s auctions (`paper-auction-arena`): bidders with $20,000 each
+compete for six items sold one after another (values $2,000 to $10,000,
+$33,000 in all, known to everyone), each auction rising in $500 steps until
+one bidder is left, who pays its last bid. Three agent bidders (flash-lite),
+with or without the paper's rule bidder, which bids while the price is below
+the item's value. The auctioneer, budgets and profits are code; the runs
+report their profits as metrics. Five auctions each.
+
+| Five auctions each | Agents' profit per auction | Rule bidder's | Items above value | Agent wins at full value | Cost |
+|---|---|---|---|---|---|
+| Three agents and the rule bidder | $500–1,500 (mean $900) | $0–1,000 (mean $500) | 0 | 16 of 25 | $0.08 |
+| Three agents | $500–1,500 (mean $1,100) | | 0 | 19 of 30 | $0.11 |
+
+- **Nobody overpays, and nobody profits.** No item in ten auctions went above
+  its value, but prices ran up to it: of $33,000 of goods, the bidders kept
+  $500 to $1,500 an auction.
+- **The agents win by paying the whole value.** 35 of their 55 wins were at
+  exactly the item's value, a win worth nothing; asked "do you bid $6,000?"
+  for an item worth $6,000, they bid. The rule bidder, which stops a step
+  below, earned $500 a win and on average more than any one agent ($500
+  against $300 a bidder an auction).
+- **Budgets were never the constraint.** Bidders ended with thousands left,
+  one often never winning anything: with values common to all, the auction
+  is decided at the item's value, and planning for later items had nothing to
+  change.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
