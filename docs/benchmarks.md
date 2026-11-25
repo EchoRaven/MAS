@@ -2200,6 +2200,24 @@ the player prefers J, the other F, and both get nothing when they differ):
   copying ("they are returning to the option that yielded mutual points"):
   1 to 3 rounds coordinated, against the paper's gain from the same prompt.
 
+**Two agents against each other** (`opponent=agent`; the other sees the game
+from its side, F its favourite in the Battle of the Sexes):
+
+| Five games each | Rounds | Coordinated (of 10) |
+|---|---|---|
+| Prisoner's Dilemma | `JJ` all ten rounds, every game | 10 each |
+| Battle of the Sexes | `JF FJ JF FJ …` in four games, `JJ` ×9 in one | 0, 0, 9, 0, 0 |
+| Battle of the Sexes, both predicting first | | 0, 1, 9, 4, 7 |
+
+- **Two agents always cooperate in the dilemma**: 80 points each, no defection
+  in 50 rounds.
+- **In the Battle of the Sexes they swap past each other.** Each opens with
+  its own favourite, then each copies the other's last move, so they change
+  places every round and never meet: no points at all in four games of five.
+- **Here predicting first does help**, as the paper found: two more games
+  settle on one option (4 and 7 rounds), though one still never meets. It
+  helps against a partner who also adapts, not against a fixed alternation.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
