@@ -324,9 +324,10 @@ the vocabulary:
   gemini-3.8-flash it rises with no deal lost, as the paper found. Auction
   Arena's auctioneer is the same, with budgets and a rule bidder: agent
   bidders pay items' full value, a win worth nothing. Which findings hold
-  depends on the model: of these, a greedy fisher ending the commons and no
-  bidder paying above value hold on both models measured; whether coaching
-  costs sales and whether a player follows a pattern do not.
+  depends on the model: a greedy fisher ending the commons holds on all three
+  measured (flash-lite, 3.8-flash, open-weight gemma), no bidder paying above
+  value on both measured for it; whether coaching costs sales and whether a
+  player follows a pattern do not, flash-lite being the odd one.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:
