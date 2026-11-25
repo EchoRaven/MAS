@@ -29,9 +29,13 @@ const budget = Object.fromEntries(bidders.map((b) => [b, budget0]));
 const profit = Object.fromEntries(bidders.map((b) => [b, 0]));
 const won = Object.fromEntries(bidders.map((b) => [b, []]));
 let overpaid = 0;
+// private=true: each bidder values each item differently (0.8 to 1.2 times its listed value, rounded to $100) and
+// knows only its own value, the paper's private-value setting; by default every bidder's value is the listed one
+const priv = ctx.vars.private === true || ctx.vars.private === "true";
+const valueOf = Object.fromEntries(bidders.map((b) => [b, items.map((x) => (priv ? Math.round((x.value * (0.8 + 0.4 * Math.random())) / 100) * 100 : x.value))]));
 const story = [];
 for (const [k, it] of items.entries()) {
-  const left = items.slice(k + 1).map((x) => x.name + " (value $" + x.value + ")").join(", ") || "none";
+  const leftFor = (b) => items.slice(k + 1).map((x, j) => x.name + " (worth $" + valueOf[b][k + 1 + j] + " to you)").join(", ") || "none";
   let price = it.start, leader = null;
   let active = bidders.filter((b) => budget[b] >= price);
   // rounds: each active bidder other than the leader raises by $500 or withdraws, in a shuffled order
@@ -43,11 +47,11 @@ for (const [k, it] of items.entries()) {
       const ask = leader ? price + step : price;
       if (budget[b] < ask) { active = active.filter((x) => x !== b); continue; }
       let yes;
-      if (b === "Rule") yes = ask < it.value;
+      if (b === "Rule") yes = ask < valueOf.Rule[k];
       else {
-        const r = await tools.call_agent(b, "Item " + (k + 1) + " of " + items.length + ": " + it.name + ", worth $" + it.value + " to you. " +
+        const r = await tools.call_agent(b, "Item " + (k + 1) + " of " + items.length + ": " + it.name + ", worth $" + valueOf[b][k] + " to you" + (priv ? " (others may value it differently)" : "") + ". " +
           (leader ? "The highest bid is $" + price + " (" + (leader === b ? "yours" : "another bidder's") + ")." : "Bidding opens at $" + price + ".") +
-          " Your budget left: $" + budget[b] + ". Items still to come: " + left + "." +
+          " Your budget left: $" + budget[b] + ". Items still to come: " + leftFor(b) + "." +
           "\nDo you bid $" + ask + "? End with a last line 'Bid' or 'Withdraw'.");
         yes = /\bbid\b/i.test(String(r).split("\n").pop() ?? "") && !/withdraw/i.test(String(r).split("\n").pop() ?? "");
       }
@@ -58,10 +62,11 @@ for (const [k, it] of items.entries()) {
   }
   if (leader) {
     budget[leader] -= price;
-    profit[leader] += it.value - price;
+    const v = valueOf[leader][k];
+    profit[leader] += v - price;
     won[leader].push(it.name);
-    if (price > it.value) overpaid++;
-    story.push(it.name + " (value $" + it.value + "): " + leader + " for $" + price);
+    if (price > v) overpaid++;
+    story.push(it.name + " (value $" + v + (priv ? " to " + leader : "") + "): " + leader + " for $" + price);
     emit(it.name, leader + " for $" + price);
   } else story.push(it.name + ": unsold");
 }
@@ -107,11 +112,12 @@ export const auctionArena: TemplateInfo = {
     mapped: [
       "The auctioneer is a custom loop: six items sold in turn, each from its starting price in $500 steps, a bidder dropping out when it withdraws or cannot afford the next bid; the winner pays its last bid. Prices, budgets and profits are code; each agent bidder's bid is a model's.",
       "The rule bidder bids while the price is below the item's value, the paper's baseline; rule=false leaves three agent bidders.",
-      "Metrics: the agent bidders' and the rule bidder's profit, items sold above their value, items won by agents.",
+      "Metrics: the agent bidders' and the rule bidder's profit, items sold above their value (to the winner), items won by agents.",
+      "private=true gives each bidder its own value of each item (0.8 to 1.2 times the listed one) and tells it only its own, the paper's private-value setting.",
     ],
     differs: [
       "The paper's bidders plan, reflect and update beliefs between items in a structured way; here each answers each bid with what it remembers of the auction.",
-      "The paper's items have values that differ between bidders in some settings; here every bidder values each item the same, as in its common-value setting.",
+      "By default every bidder values each item the same (the paper's common values); with private=true the values differ by a random factor rather than the paper's own draws.",
     ],
   },
 };

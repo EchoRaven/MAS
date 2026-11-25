@@ -2260,6 +2260,7 @@ report their profits as metrics. Five auctions each.
 |---|---|---|---|---|---|
 | Three agents and the rule bidder | $500–1,500 (mean $900) | $0–1,000 (mean $500) | 0 | 16 of 25 | $0.08 |
 | Three agents | $500–1,500 (mean $1,100) | | 0 | 19 of 30 | $0.11 |
+| Private values (`private=true`), with the rule bidder | $500–2,700 (mean $1,740) | $300–2,900 (mean $1,560) | 1 | 3 of 20 at or above its own value | $0.09 |
 
 - **Nobody overpays, and nobody profits.** No item in ten auctions went above
   its value, but prices ran up to it: of $33,000 of goods, the bidders kept
@@ -2273,6 +2274,12 @@ report their profits as metrics. Five auctions each.
   one often never winning anything: with values common to all, the auction
   is decided at the item's value, and planning for later items had nothing to
   change.
+- **With private values there is profit, and the rule bidder takes most of
+  it.** Each bidder told only its own value (0.8 to 1.2 times the listed one,
+  the paper's private-value setting): prices stop where the second-highest
+  value drops out, and the bidders keep more. The agents won 20 items, 3 at
+  or above their own value, and earned $580 each an auction; the rule bidder,
+  still bidding while below its value, won 10 and earned $1,560.
 
 ## Earlier sets
 
