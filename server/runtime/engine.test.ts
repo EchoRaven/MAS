@@ -117,6 +117,34 @@ describe("runtime", () => {
     expect(events.filter((e) => e.type === "message" && e.kind === "call").map((e) => (e as { to: string }).to)).toEqual(["terminal"]);
   });
 
+  it("GovSim's fishery: sustainable catches keep the lake, one greedy fisher collapses it in month 3", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const fishery = (catches: Record<string, string>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-govsim")!.build();
+      doc.models.push(...Object.entries(catches).map(([id, c]) => mock(id, [`Catch: ${c}`])));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "moderator" ? "fair" : n.id === "luke" ? "luke" : "fair";
+      return doc;
+    };
+    const outcome = async (doc: SystemDoc, vars: Record<string, unknown> = {}) => {
+      const { events } = await run(doc, "Start the fishery.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return (events.find((e) => e.type === "output") as { text: string }).text;
+    };
+    // ten tons each is half the lake, which doubles back to 100: every month alike
+    const fair = await outcome(fishery({ fair: "10", luke: "10" }));
+    expect(fair).toContain("The lake survived all 12 months.");
+    expect(fair).toContain("Total caught: 600 tons (efficiency 100%), equality 1.00");
+    // 20 for one: 100 → 40 left → 80 → 20 left → 40, and month 3 asks 60 of 40: nothing is left
+    const greedy = await outcome(fishery({ fair: "10", luke: "20" }), { talk: false });
+    expect(greedy).toContain("Month 2: 80 tons; caught 60");
+    expect(greedy).toContain("The lake collapsed in month 3.");
+    expect(greedy).toContain("Survived months: 2");
+    // fractional catches stay in tenths of a ton (no 63.599999999999994)
+    const tenths = await outcome(fishery({ fair: "3.3", luke: "3.3" }), { months: 2, talk: false });
+    expect(tenths).toContain("caught 16.5");
+    expect(tenths).not.toMatch(/\d\.\d{3,}/);
+  });
+
   it("DyLAN keeps the best-ranked agents for the next layer and stops at two thirds", async () => {
     const doc = TEMPLATES.find((t) => t.id === "paper-dylan")!.build();
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
