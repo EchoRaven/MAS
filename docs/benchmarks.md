@@ -2397,19 +2397,21 @@ The one set where gemini-3.8-flash is off the ceiling: LiveCodeBench's
 hard AtCoder problems from January to April 2025 (`benchmarks/livecodebench`,
 60 problems, stdin programs, standard library only, graded by the public and
 up to ten hidden tests each in the Docker sandbox, 6 seconds a test). All on
-3.8-flash; AgentCoder and MapCoder stopped at their $1.50 limit, so they are
-compared with one agent on the problems they reached.
+3.8-flash; AgentCoder and MapCoder were run to the end in a second pass over
+the problems their first, capped pass had not reached (MapCoder's spending
+cap stopped it three short of 60).
 
 | System | Solved | Against one agent on the same problems | Cost per problem |
 |---|---|---|---|
 | One agent | 46 of 60 (77%) | | $0.009 |
-| One agent with a Python sandbox | 40 of 60 | +3 −9 (p 0.15) | $0.021 |
-| AgentCoder (programmer, test designer, executor) | 21 of 28 | 26 of 28: +0 −5 (p 0.06) | $0.058 |
-| MapCoder (recall, plan, code, debug) | 21 of 23 | 22 of 23: +0 −1 | $0.083 |
+| One agent with a Python sandbox (two runs) | 40, 42 of 60 | +3 −9, +5 −9 | $0.021 |
+| AgentCoder (programmer, test designer, executor) | 39 of 60 | +2 −9 (p 0.07) | $0.06 |
+| MapCoder (recall, plan, code, debug) | 45 of 57 | 45 of the same 57: +3 −3 | $0.11 |
 
 - **Nothing beats one agent here either.** With room to gain (14 problems
-  one agent misses), no system fixed more than three of them, and each lost
-  more than it fixed, at two to nine times the cost.
+  one agent misses), no system fixed more than five of them; AgentCoder and
+  the sandbox agent lost more than they fixed, and MapCoder tied (+3 −3), at
+  two to twelve times the cost.
 - **Tools cost the agent its answer.** The sandbox agent tested and retimed
   its programs until it ran out of steps, then returned "I ran out of steps
   before finishing" with no program, on 7 of its 20 misses.

@@ -334,8 +334,8 @@ the vocabulary:
   measured on flash-lite against one agent is gone on 3.8-flash, where one
   agent nears the ceiling of these sets. On the one set off its
   ceiling (LiveCodeBench's hard AtCoder problems, 46 of 60 for one agent),
-  AgentCoder, MapCoder and an agent with a sandbox each lost more problems
-  than they fixed.
+  AgentCoder and an agent with a sandbox lost more problems than they fixed
+  and MapCoder tied (+3 −3), at six to twelve times the cost.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:
