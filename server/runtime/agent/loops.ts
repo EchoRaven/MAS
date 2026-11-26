@@ -41,6 +41,14 @@ export async function react(io: AgentIO, li: LoopInput, extraUser = ""): Promise
   const said = [...messages].reverse().map((m) => (m.role === "assistant" ? textOf(m.content).trim() : "")).find(Boolean);
   if (said) return said;
   const found = [...messages].reverse().flatMap((m) => m.content.filter((p): p is Extract<Part, { type: "tool_result" }> => p.type === "tool_result")).map((p) => p.content)[0];
+  // the program it was last working on, as written to a .py file: its work, which a grader can still run (an agent
+  // with a sandbox on LiveCodeBench ran out of steps testing a program and returned only "exit 0")
+  const program = [...messages]
+    .reverse()
+    .flatMap((m) => m.content.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call"))
+    .map((p) => p.input as { path?: unknown; content?: unknown })
+    .find((x) => typeof x?.path === "string" && /\.py$/.test(x.path) && typeof x.content === "string" && x.content.trim());
+  if (program) return `I ran out of steps before finishing. My last program (${program.path}):\n\n\`\`\`python\n${String(program.content).trimEnd()}\n\`\`\`${found ? `\n\nIts last run printed:\n${found.slice(0, 1000)}` : ""}`;
   return `I ran out of steps before finishing.${found ? ` The last thing I found:\n${found.slice(0, 2000)}` : ""}`;
 }
 

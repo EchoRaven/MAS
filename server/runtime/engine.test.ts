@@ -1431,6 +1431,22 @@ describe("runtime", () => {
     expect(out.text).toBe("Looking it up.");
   });
 
+  it("an agent that runs out of steps with no words returns the last program it wrote", async () => {
+    const b = new Builder("Steps", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Coder", model: "coder", tools: ["fetch"], harness: { ...native(), max_steps: 2, instructions: "" } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    // it writes two versions of a program and never says anything; the forced final answer is empty (the mock calls
+    // only tools the agent has, so the program goes through fetch's input here: the loop reads any call's path and
+    // content, as the sandbox's edit_file takes them)
+    b.doc.models.push({ id: "coder", provider: "mock", model: "mock", api: { params: { script: [{ tool: "fetch", input: { url: "https://example.invalid", path: "sol.py", content: "print(1)" } }, { tool: "fetch", input: { url: "https://example.invalid", path: "sol.py", content: "print(2)\n" } }, ""] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("My last program (sol.py):");
+    expect(out.text).toContain("```python\nprint(2)\n```");
+  });
+
   it("a tool an env already serves is offered once", async () => {
     const b = new Builder("Tools", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
