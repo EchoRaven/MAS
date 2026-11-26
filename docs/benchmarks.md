@@ -2391,6 +2391,32 @@ GSM-Hard sample, 26 and 27 on Hard computation, measured before).
   recovers: 5 and 7 of the round-1 replies give no boxed answer, the rest
   change and change back.
 
+## Hard code on a strong model: LiveCodeBench
+
+The one set where gemini-3.8-flash is off the ceiling: LiveCodeBench's
+hard AtCoder problems from January to April 2025 (`benchmarks/livecodebench`,
+60 problems, stdin programs, standard library only, graded by the public and
+up to ten hidden tests each in the Docker sandbox, 6 seconds a test). All on
+3.8-flash; AgentCoder and MapCoder stopped at their $1.50 limit, so they are
+compared with one agent on the problems they reached.
+
+| System | Solved | Against one agent on the same problems | Cost per problem |
+|---|---|---|---|
+| One agent | 46 of 60 (77%) | | $0.009 |
+| One agent with a Python sandbox | 40 of 60 | +3 −9 (p 0.15) | $0.021 |
+| AgentCoder (programmer, test designer, executor) | 21 of 28 | 26 of 28: +0 −5 (p 0.06) | $0.058 |
+| MapCoder (recall, plan, code, debug) | 21 of 23 | 22 of 23: +0 −1 | $0.083 |
+
+- **Nothing beats one agent here either.** With room to gain (14 problems
+  one agent misses), no system fixed more than three of them, and each lost
+  more than it fixed, at two to nine times the cost.
+- **Tools cost the agent its answer.** The sandbox agent tested and retimed
+  its programs until it ran out of steps, then returned "I ran out of steps
+  before finishing" with no program, on 7 of its 20 misses.
+- **Half of one agent's misses are its length.** Eight of its fourteen have
+  no whole program: a long derivation cut at the output limit, or a program
+  cut mid-line. The limit is the same for every system.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these

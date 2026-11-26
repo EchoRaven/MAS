@@ -332,7 +332,10 @@ the vocabulary:
   still trails one agent, but self-correction stops hurting and
   Chain-of-Agents', MacNet's and Meta-Prompting's gains vanish: every gain
   measured on flash-lite against one agent is gone on 3.8-flash, where one
-  agent nears the ceiling of these sets.
+  agent nears the ceiling of these sets. On the one set off its
+  ceiling (LiveCodeBench's hard AtCoder problems, 46 of 60 for one agent),
+  AgentCoder, MapCoder and an agent with a sandbox each lost more problems
+  than they fixed.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:
