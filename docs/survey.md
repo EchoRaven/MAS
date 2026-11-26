@@ -330,8 +330,9 @@ the vocabulary:
   player follows a pattern do not, flash-lite being the odd one. The same holds
   beyond games: on 3.8-flash CRITIC's critique still costs answers and CAMEL
   still trails one agent, but self-correction stops hurting and
-  Chain-of-Agents' gain on long ledgers vanishes (one agent reads the whole
-  ledger).
+  Chain-of-Agents', MacNet's and Meta-Prompting's gains vanish: every gain
+  measured on flash-lite against one agent is gone on 3.8-flash, where one
+  agent nears the ceiling of these sets.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:

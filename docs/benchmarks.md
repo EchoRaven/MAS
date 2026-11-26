@@ -2352,11 +2352,14 @@ GSM-Hard sample, 26 and 27 on Hard computation, measured before).
 
 | System | Set | flash-lite | gemini-3.8-flash | One agent, 3.8-flash |
 |---|---|---|---|---|
-| Self-Correct: first → after two rounds | GSM-Hard 50 | 38 → 35 (5 right → wrong, 0 back) | 39 → 41 (1 right → wrong, 3 back) | 40, 41 |
+| Self-Correct: first → after two rounds | GSM-Hard 50 | 38 → 35 (5 right → wrong, 0 back) | 39 → 41 (1 → wrong, 3 back); 42 → 42 (2, 2) | 40, 41 |
 | CRITIC, execution shown: first → corrected | GSM-Hard 50 | 40 → 35 (15 → wrong, 3 back over two runs) | 42 → 37 (6 → wrong, 1 back) | 40, 41 |
 | CAMEL | Hard computation 30 | 12, 14 | 21 | 26, 27 |
 | AutoAgents | Hard computation 30 | 14, 14 | 25 | 26, 27 |
 | Chain-of-Agents | Ledger totals 20 (~44,000 characters) | 13, 15 (one agent 9, 9) | 20 | 19 |
+| MAD | Hard computation 30 | 14, 14 | 27 | 26, 27 |
+| MacNet, star of 4 | Hard computation 30 | 23, 22 (+8 −1 against one agent) | 26 | 26, 27 |
+| Meta-Prompting with Python | Game of 24 (50) | 43, 42 (one agent 30, 35) | 50 | 50 ($0.017, against $0.40) |
 
 - **Held:** CRITIC's critique still costs answers (six right answers argued
   wrong for one fixed), and CAMEL's role-play still falls below one agent.
@@ -2365,7 +2368,17 @@ GSM-Hard sample, 26 and 27 on Hard computation, measured before).
   deficit nearly closes (25 against 26 and 27).
 - **Vanished:** Chain-of-Agents' gain was flash-lite's difficulty with a long
   ledger, not the chain's: one 3.8-flash agent reading the whole ledger gets
-  19 of 20, the chain 20.
+  19 of 20, the chain 20. So with MacNet's star (26, level with one agent)
+  and Meta-Prompting with Python (50 of 50, as one agent alone at a
+  twenty-third of the cost); MAD's loss vanishes the same way (27).
+- **The pattern:** every gain measured on flash-lite against one agent is
+  gone on 3.8-flash, where one agent is near the ceiling of these sets; two
+  losses stay (CRITIC, CAMEL). A multi-agent gain on a weak model is a claim
+  about that model's failures, to be rechecked on a strong one before it is
+  made about the method.
+- Self-correction's middle round dips (33 and 30 right) and the last
+  recovers: 5 and 7 of the round-1 replies give no boxed answer, the rest
+  change and change back.
 
 ## Earlier sets
 
