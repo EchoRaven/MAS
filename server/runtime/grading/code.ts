@@ -16,12 +16,20 @@ export interface CodeSpec {
   test: string;
   /** the function under test: HumanEval calls check(entry_point) */
   entry_point?: string;
+  /**
+   * stdin/stdout tests (competitive programming: LiveCodeBench, AtCoder): the answer is a whole program, run once
+   * per test with the input on stdin; its output must equal the expected one, token by token. `test` is then unused.
+   */
+  io?: { input: string; output: string }[];
+  /** seconds for the whole run (default 10); with io, each test also has its own limit (per_test, default 6) */
+  seconds?: number;
+  per_test?: number;
 }
 
 export function parseCodeSpec(expected: string): CodeSpec | null {
   try {
     const s = JSON.parse(expected) as CodeSpec;
-    return s && s.kind === "code" && typeof s.test === "string" ? s : null;
+    return s && s.kind === "code" && (typeof s.test === "string" || Array.isArray(s.io)) ? s : null;
   } catch {
     return null;
   }
@@ -42,8 +50,42 @@ export function extractCode(output: string): string {
 const NAME = String.raw`[A-Za-z_][\w.]*`;
 const IMPORT_LINE = new RegExp(String.raw`^(?:import\s+${NAME}(?:\s+as\s+\w+)?(?:\s*,\s*${NAME}(?:\s+as\s+\w+)?)*|from\s+(?:\.+(?:${NAME})?|${NAME})\s+import\s+(?:\*|\(?\s*\w+(?:\s+as\s+\w+)?(?:\s*,\s*\w+(?:\s+as\s+\w+)?)*\s*,?\s*\)?))\s*(?:#.*)?$`);
 
+/**
+ * A program that runs a whole-program answer on each stdin test: the answer's source is exec'd fresh per test with
+ * stdin and stdout redirected (as __main__, so a main guard runs), under a per-test alarm; the first wrong output
+ * or error fails it, naming the test.
+ */
+function ioProgram(spec: CodeSpec, code: string): string {
+  return `import io, json, signal, sys
+SRC = ${JSON.stringify(code)}
+TESTS = json.loads(${JSON.stringify(JSON.stringify(spec.io))})
+def _alarm(signum, frame):
+    raise TimeoutError("over ${spec.per_test ?? 6}s")
+signal.signal(signal.SIGALRM, _alarm)
+code = compile(SRC, "<answer>", "exec")
+for i, t in enumerate(TESTS):
+    sys.stdin = io.StringIO(t["input"])
+    out, real = io.StringIO(), sys.stdout
+    sys.stdout = out
+    signal.alarm(${spec.per_test ?? 6})
+    try:
+        exec(code, {"__name__": "__main__"})
+    except SystemExit:
+        pass
+    finally:
+        signal.alarm(0)
+        sys.stdout = real
+    if out.getvalue().split() != t["output"].split():
+        got = " ".join(out.getvalue().split())[:60]
+        print(f"test {i + 1} of {len(TESTS)}: wrong output ({got!r})")
+        sys.exit(1)
+print(f"{len(TESTS)} tests pass")
+`;
+}
+
 export function buildProgram(spec: CodeSpec, answer: string): string {
   const code = extractCode(answer);
+  if (spec.io) return ioProgram(spec, code);
   const prompt = spec.prompt ?? "";
   const definesIt = spec.entry_point ? new RegExp(`^\\s*def\\s+${spec.entry_point}\\s*\\(`, "m").test(code) : true;
   // only real import statements, moved to the top level: one inside the prompt's function ("    import math")
@@ -95,6 +137,6 @@ export async function gradeCode(expected: string, output: string, docker: string
   const spec = parseCodeSpec(expected);
   if (!spec) return { pass: false, answer: "", why: "this case has no tests to run (its expected value is not a code spec)" };
   const answer = extractCode(output);
-  const r = await runProgram(buildProgram(spec, output), { docker });
+  const r = await runProgram(buildProgram(spec, output), { docker, seconds: spec.seconds });
   return { ...r, answer: answer.split("\n").find((l) => l.trim()) ?? "" };
 }

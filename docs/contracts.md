@@ -544,6 +544,10 @@ the reason. On a miss, the members whose answer the check passes are named
 not line by line. The dataset keeps it as `check`, and so does every evaluation
 graded by it, so `POST /api/evals/:id/regrade {grader: "check", check?}`
 runs the same check again, or a corrected one, without calling a model.
+A `code` case's spec can also hold `io`, stdin/stdout tests for whole
+programs (competitive programming): the answer is run once per test with the
+input on stdin and its output compared token by token, each test under its
+own limit (`per_test`, default 6 s) and the run under `seconds`.
 An evaluation run with grader `none` can be graded this way afterwards when
 every case carries an `expected` (a backtest's next-day move); open-ended
 ones, with nothing expected, are compared pairwise instead.

@@ -54,6 +54,25 @@ describe("code grading", () => {
     for (const f of forms) expect(all).toContain(`${f}\n`);
   });
 
+  it("runs a whole program on stdin tests, token by token, failing on the first wrong output", async () => {
+    const { execFileSync } = await import("node:child_process");
+    const spec = { kind: "code" as const, test: "", io: [{ input: "3 4\n", output: "7\n" }, { input: "10 -2", output: "8" }] };
+    const run = (answer: string) => {
+      try {
+        return { ok: true, out: execFileSync("python3", ["-c", buildProgram(spec, answer)], { encoding: "utf8" }) };
+      } catch (e) {
+        return { ok: false, out: String((e as { stdout?: string }).stdout ?? "") };
+      }
+    };
+    // a whole program with a main guard: exec'd as __main__ for each test
+    const right = run("```python\nimport sys\ndef main():\n    a, b = map(int, sys.stdin.read().split())\n    print(a + b)\nif __name__ == '__main__':\n    main()\n```");
+    expect(right).toEqual({ ok: true, out: "2 tests pass\n" });
+    const wrong = run("```python\na, b = map(int, input().split())\nprint(a * b)\n```");
+    expect(wrong.ok).toBe(false);
+    expect(wrong.out).toContain("test 1 of 2: wrong output ('12')");
+    expect(parseCodeSpec(JSON.stringify(spec))?.io).toHaveLength(2);
+  });
+
   it.skipIf(!dockerWorks)("passes a right answer and fails a wrong one, a hang and a network call, in Docker", async () => {
     const expected = caseFromRecord(record)!.expected;
     const ok = await gradeCode(expected, "```python\ndef add_all(xs):\n    return sum(xs)\n```", "docker");
