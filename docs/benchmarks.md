@@ -2412,6 +2412,9 @@ cap stopped it three short of 60).
   one agent misses), no system fixed more than five of them; AgentCoder and
   the sandbox agent lost more than they fixed, and MapCoder tied (+3 −3), at
   two to twelve times the cost.
+- **On a weaker open model the set is hard indeed.** One gemma-4-26b agent
+  (free, 10 calls a minute) solves 5 of a seeded 20 of these problems; most
+  misses give no program at all, its thinking running past the output limit.
 - **Tools cost the agent its answer.** The sandbox agent tested and retimed
   its programs until it ran out of steps, then returned "I ran out of steps
   before finishing" with no program, on 7 of its 20 misses.
