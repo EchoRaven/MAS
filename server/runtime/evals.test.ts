@@ -438,6 +438,19 @@ describe("evaluations", () => {
     expect(() => evals.start(echo(), { grader: "number", cases, max_usd: 0 })).toThrow(/max_usd/);
   });
 
+  it("does not start a case that would, at the mean cost so far, take it past its limit", async () => {
+    const cases = Array.from({ length: 6 }, (_, i) => ({ input: String(i), expected: String(i) }));
+    const priced = echo();
+    priced.models = priced.models.map((m) => (m.id === "echo" ? { ...m, price_in: 1e6, price_out: 1e6 } : m));
+    // what one case costs
+    const one = (await finish(evals.start(priced, { grader: "number", cases: cases.slice(0, 1), concurrency: 1 }).id)).usd;
+    // room for two and a half: after two, a third (at their mean) would pass it, so it is not started
+    const done = await finish(evals.start(priced, { grader: "number", cases, concurrency: 1, max_usd: 2.5 * one }).id);
+    expect(done.cases.filter((c) => c.status === "done")).toHaveLength(2);
+    expect(done.usd).toBeLessThanOrEqual(2.5 * one);
+    expect(done.stop_reason).toMatch(/Stopped before its limit/);
+  });
+
   it("with a check grader, names the member who had a passing answer the team lost", async () => {
     const b = new Builder("Lost it", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

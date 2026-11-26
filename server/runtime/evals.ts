@@ -567,6 +567,20 @@ export class EvalManager {
     let fatalStreak = 0;
     const worker = async () => {
       while (next < rec.cases.length && !this.stopped.has(rec.id)) {
+        // a case starts only if what is spent, plus the cases running and this one at the mean cost so far, stays within
+        // the limit: checking only finished cases let every worker start one more, and MapCoder spent $4.32 of $3.60
+        if (opts.max_usd != null && !(only && !only.has(next))) {
+          const priced = rec.cases.filter((x) => x.status === "done" && x.usd !== undefined);
+          const running = rec.cases.filter((x) => x.status === "running").length;
+          if (priced.length >= 2) {
+            const mean = priced.reduce((s, x) => s + (x.usd ?? 0), 0) / priced.length;
+            if (rec.usd + (running + 1) * mean > opts.max_usd) {
+              rec.stop_reason = `Stopped before its limit: $${rec.usd.toFixed(2)} spent and ${running} running at about $${mean.toFixed(3)} a case; one more would pass $${opts.max_usd}`;
+              this.stopped.add(rec.id);
+              break;
+            }
+          }
+        }
         const idx = next++;
         // a retry runs only the cases it reset
         if (only && !only.has(idx)) continue;
