@@ -2415,7 +2415,10 @@ compared with one agent on the problems they reached.
   before finishing" with no program, on 7 of its 20 misses.
 - **Half of one agent's misses are its length.** Eight of its fourteen have
   no whole program: a long derivation cut at the output limit, or a program
-  cut mid-line. The limit is the same for every system.
+  cut mid-line. The limit is the same for every system. Its thinking counts
+  against the limit: rerun on its fourteen misses with 65,536 output tokens
+  instead of 32,768, it solved 2, and seven others ran past the run's time
+  limit still thinking. They are hard for it, not merely cut short.
 
 ## Earlier sets
 
