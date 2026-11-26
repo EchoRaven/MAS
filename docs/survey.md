@@ -339,7 +339,8 @@ the vocabulary:
   coders win clearly (AgentCoder +15 −0, MapCoder +17 −2), but one model
   trying up to ten programs against the statement's samples does as well
   (32 of 60) at a tenth of their cost: the gain is retrying against tests, not
-  the roles, and one strong agent still beats all of them.
+  the roles (on 3.8-flash the same retrying adds +3 −1), and one strong agent
+  still beats all of them.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:

@@ -2407,6 +2407,7 @@ cap stopped it three short of 60).
 | One agent with a Python sandbox (two runs) | 40, 42 of 60 | +3 −9, +5 −9 | $0.021 |
 | AgentCoder (programmer, test designer, executor) | 39 of 60 | +2 −9 (p 0.07) | $0.06 |
 | MapCoder (recall, plan, code, debug) | 45 of 57 | 45 of the same 57: +3 −3 | $0.11 |
+| Best of 10 against the samples (one model, no roles) | 48 of 60 | +3 −1 (p 0.63) | $0.016 |
 
 - **Nothing beats one agent here either.** With room to gain (14 problems
   one agent misses), no system fixed more than five of them; AgentCoder and
@@ -2430,7 +2431,9 @@ cap stopped it three short of 60).
   most: with ten tries it solves 32, as many as AgentCoder (31 against 32 on
   the 56 AgentCoder reached, +5 −6) at a tenth of its cost. The sandbox agent
   alone gained little because it wrote one program and seldom tried again;
-  what helps the weak model is more attempts checked against tests. It is a
+  what helps the weak model is more attempts checked against tests. On
+  3.8-flash the same ten tries get 48 of 60 against one try's 46 (+3 −1):
+  the strong model's first program is usually its best. It is a
   gain for the weak model only: on
   3.8-flash the same systems tie or lose, and one 3.8-flash agent (46 of 60,
   77%, $0.009 a problem) beats either system on flash-lite at a tenth of its
