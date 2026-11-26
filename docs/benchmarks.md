@@ -2421,10 +2421,17 @@ cap stopped it three short of 60).
   | One agent with a Python sandbox | 23 of 60 | +6 −1 (p 0.13) | $0.025 |
   | AgentCoder | 32 of 56 | +15 −0 (p 0.0001) | $0.094 |
   | MapCoder | 33 of 59 | +17 −2 (p 0.0007) | $0.07 |
+  | Best of 5 against the samples (one model, no roles) | 28 of 60 | +14 −4 (p 0.03) | $0.006 |
+  | Best of 10 against the samples | 32 of 60 | +16 −2 (p 0.001) | $0.010 |
 
-  The sandbox alone adds little: the gain is the roles (a test designer and
-  an executor in AgentCoder; recall, planning and debugging in MapCoder), not
-  merely running the code. It is a gain for the weak model only: on
+  The gain is not the roles. `baseline-best-of-n` has one model write a
+  program, run it on the statement's own sample tests in the sandbox, and
+  write another until one passes them (up to n), keeping the one that passed
+  most: with ten tries it solves 32, as many as AgentCoder (31 against 32 on
+  the 56 AgentCoder reached, +5 −6) at a tenth of its cost. The sandbox agent
+  alone gained little because it wrote one program and seldom tried again;
+  what helps the weak model is more attempts checked against tests. It is a
+  gain for the weak model only: on
   3.8-flash the same systems tie or lose, and one 3.8-flash agent (46 of 60,
   77%, $0.009 a problem) beats either system on flash-lite at a tenth of its
   cost. A team lifts a weak model toward a strong one; it does not lift the

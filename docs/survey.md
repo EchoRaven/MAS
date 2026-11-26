@@ -336,9 +336,10 @@ the vocabulary:
   ceiling (LiveCodeBench's hard AtCoder problems, 46 of 60 for one agent),
   AgentCoder and an agent with a sandbox lost more problems than they fixed
   and MapCoder tied (+3 −3), at six to twelve times the cost. On flash-lite the same
-  coders win clearly (AgentCoder +15 −0, MapCoder +17 −2), where a sandbox
-  alone adds little: a team lifts a weak model toward a strong one, and one
-  strong agent still beats both at a tenth of their cost.
+  coders win clearly (AgentCoder +15 −0, MapCoder +17 −2), but one model
+  trying up to ten programs against the statement's samples does as well
+  (32 of 60) at a tenth of their cost: the gain is retrying against tests, not
+  the roles, and one strong agent still beats all of them.
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:
