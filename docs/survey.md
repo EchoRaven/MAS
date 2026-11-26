@@ -327,7 +327,11 @@ the vocabulary:
   depends on the model: a greedy fisher ending the commons holds on all three
   measured (flash-lite, 3.8-flash, open-weight gemma), no bidder paying above
   value on both measured for it; whether coaching costs sales and whether a
-  player follows a pattern do not, flash-lite being the odd one.
+  player follows a pattern do not, flash-lite being the odd one. The same holds
+  beyond games: on 3.8-flash CRITIC's critique still costs answers and CAMEL
+  still trails one agent, but self-correction stops hurting and
+  Chain-of-Agents' gain on long ledgers vanishes (one agent reads the whole
+  ledger).
 - **External data** (connectable). TradingAgents' analysts read prices, news,
   social media and filings; a backtest needs none of the platform's own
   machinery, only cases that carry the day's data and a scorer:

@@ -2342,6 +2342,31 @@ one in the repeated games: the two others follow the pattern and defect in
 the last round. The ones that turn: whether coaching costs sales,
 whether a player can follow a pattern, and how much a selfish note is obeyed.
 
+## Older results on a stronger model
+
+Several reasoning results above were measured on flash-lite only. The
+clearest of them again on gemini-3.8-flash, on the same questions (GSM-Hard's
+sample of 50 with seed 1, Hard computation's 30, the 20 long ledgers), one run
+each, about $2.50; one agent on 3.8-flash is the control (40 and 41 on the
+GSM-Hard sample, 26 and 27 on Hard computation, measured before).
+
+| System | Set | flash-lite | gemini-3.8-flash | One agent, 3.8-flash |
+|---|---|---|---|---|
+| Self-Correct: first → after two rounds | GSM-Hard 50 | 38 → 35 (5 right → wrong, 0 back) | 39 → 41 (1 right → wrong, 3 back) | 40, 41 |
+| CRITIC, execution shown: first → corrected | GSM-Hard 50 | 40 → 35 (15 → wrong, 3 back over two runs) | 42 → 37 (6 → wrong, 1 back) | 40, 41 |
+| CAMEL | Hard computation 30 | 12, 14 | 21 | 26, 27 |
+| AutoAgents | Hard computation 30 | 14, 14 | 25 | 26, 27 |
+| Chain-of-Agents | Ledger totals 20 (~44,000 characters) | 13, 15 (one agent 9, 9) | 20 | 19 |
+
+- **Held:** CRITIC's critique still costs answers (six right answers argued
+  wrong for one fixed), and CAMEL's role-play still falls below one agent.
+- **Turned:** intrinsic self-correction no longer hurts on the stronger
+  model (a net two fixed), though it ends level with one agent; AutoAgents'
+  deficit nearly closes (25 against 26 and 27).
+- **Vanished:** Chain-of-Agents' gain was flash-lite's difficulty with a long
+  ledger, not the chain's: one 3.8-flash agent reading the whole ledger gets
+  19 of 20, the chain 20.
+
 ## Earlier sets
 
 The sets "Reasoning traps" (6) and "Competition" (20) are too easy for these
