@@ -1447,6 +1447,23 @@ describe("runtime", () => {
     expect(out.text).toContain("```python\nprint(2)\n```");
   });
 
+  it("out of steps, the last program is read from a shell heredoc too, a test file passed over", async () => {
+    const b = new Builder("Steps", "");
+    b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })
+      .agent("a", 200, 0, { name: "Coder", model: "coder2", tools: ["fetch"], harness: { ...native(), max_steps: 2, instructions: "" } })
+      .edge("me", "a", "message")
+      .edge("a", "me", "message");
+    // the solution in a heredoc, then a brute-force test file: the solution is the answer
+    const sol = "cat << 'EOF' > sol.py\nimport sys\nprint(sum(map(int, sys.stdin.read().split())))\nEOF\npython3 sol.py < in.txt";
+    const test = "cat << 'EOF' > test_sol.py\nprint('brute force')\nEOF";
+    b.doc.models.push({ id: "coder2", provider: "mock", model: "mock", api: { params: { script: [{ tool: "fetch", input: { url: "https://example.invalid", command: sol } }, { tool: "fetch", input: { url: "https://example.invalid", command: test } }, ""] } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const { events } = await run(b.doc, "go", { mock: false });
+    const out = events.find((e) => e.type === "output") as { text: string };
+    expect(out.text).toContain("My last program (sol.py):");
+    expect(out.text).toContain("print(sum(map(int, sys.stdin.read().split())))");
+    expect(out.text).not.toContain("brute force");
+  });
+
   it("a tool an env already serves is offered once", async () => {
     const b = new Builder("Tools", "");
     b.node("me", "human", 0, 0, { name: "Me", role: "", approves: false })

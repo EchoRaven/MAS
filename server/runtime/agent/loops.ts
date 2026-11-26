@@ -43,11 +43,18 @@ export async function react(io: AgentIO, li: LoopInput, extraUser = ""): Promise
   const found = [...messages].reverse().flatMap((m) => m.content.filter((p): p is Extract<Part, { type: "tool_result" }> => p.type === "tool_result")).map((p) => p.content)[0];
   // the program it was last working on, as written to a .py file: its work, which a grader can still run (an agent
   // with a sandbox on LiveCodeBench ran out of steps testing a program and returned only "exit 0")
-  const program = [...messages]
-    .reverse()
+  // a file written by edit_file (path, content) or by a heredoc in a shell command (cat << 'EOF' > sol.py); the last
+  // one not named test* (an agent checks its program with a brute-force test_*.py), else the last one
+  const written = [...messages]
     .flatMap((m) => m.content.filter((p): p is Extract<Part, { type: "tool_call" }> => p.type === "tool_call"))
-    .map((p) => p.input as { path?: unknown; content?: unknown })
-    .find((x) => typeof x?.path === "string" && /\.py$/.test(x.path) && typeof x.content === "string" && x.content.trim());
+    .flatMap((p) => {
+      const x = p.input as { path?: unknown; content?: unknown; command?: unknown };
+      if (typeof x?.path === "string" && /\.py$/.test(x.path) && typeof x.content === "string" && x.content.trim()) return [{ path: x.path, content: x.content }];
+      if (typeof x?.command !== "string") return [];
+      return [...x.command.matchAll(/cat\s*<<-?\s*['"]?(\w+)['"]?\s*>\s*(\S+\.py)\s*\n([\s\S]*?)\n\1(?:\s|$)/g)].map((m) => ({ path: m[2], content: m[3] }));
+    });
+  const isTest = (f: { path: string }) => /(^|\/)test[^/]*\.py$|_test\.py$/.test(f.path);
+  const program = [...written].reverse().find((f) => !isTest(f)) ?? written[written.length - 1];
   if (program) return `I ran out of steps before finishing. My last program (${program.path}):\n\n\`\`\`python\n${String(program.content).trimEnd()}\n\`\`\`${found ? `\n\nIts last run printed:\n${found.slice(0, 1000)}` : ""}`;
   return `I ran out of steps before finishing.${found ? ` The last thing I found:\n${found.slice(0, 2000)}` : ""}`;
 }
