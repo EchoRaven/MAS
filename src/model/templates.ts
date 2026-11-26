@@ -360,6 +360,29 @@ function baselineWithCode(): SystemDoc {
 }
 
 /**
+ * Best of n against the statement's samples: one model writes a program, runs it on the examples the problem gives,
+ * and writes another until one passes them all (up to n, 5 by default), returning the one that passed most. The
+ * control for a coding team: as many tries, checked by the same kind of tests, without the roles.
+ */
+function bestOfNSamples(): SystemDoc {
+  const b = new Builder("Best of n against the samples (baseline)", "One model writes a program, runs it in a sandbox on the problem's own sample tests, and tries again until one passes them all (the run variable n, 5 by default). The control for a coding team: more tries, checked by tests, but no roles.");
+  b.node("asker", "human", 0, 0, { name: "Asker", role: "Gives the problem", approves: false })
+    .agent("solver", 340, 0, {
+      name: "Solver",
+      role: "Writes programs and keeps the first that passes the samples",
+      model: "sonnet",
+      tools: ["bash", "edit_file"],
+      harness: { ...native(), loop: "custom", loop_fn: { lang: "js", code: 'const task = String(ctx.task ?? "");\nconst n = Math.max(1, Math.min(10, Number(ctx.vars.n ?? 5)));\n// the statement\'s own examples ("Sample Input 1 … Sample Output 1 …"), the only tests a contestant has\nconst samples = [...task.matchAll(/Sample Input (\\d+)\\s*\\n\\n([\\s\\S]*?)\\n\\nSample Output \\1\\s*\\n\\n([\\s\\S]*?)(?:\\n\\n|$)/g)].map((m) => ({ input: m[2].replace(/\\r/g, ""), output: m[3].replace(/\\r/g, "") }));\nconst extract = (t) => { const b = [...String(t).matchAll(/```(?:python|py)?[^\\n]*\\n([\\s\\S]*?)```/gi)].map((m) => m[1]); return b.length ? b[b.length - 1] : String(t); };\nconst words = (s) => String(s).split(/\\s+/).filter(Boolean).join(" ");\nlet best = "", bestPassed = -1, tries = 0;\nfor (let k = 0; k < n; k++) {\n  tries++;\n  const code = extract(await model(task + (k ? "\\n\\n(An earlier program failed the samples: write a new one.)" : "")));\n  await tools.call("edit_file", { path: "sol.py", content: code });\n  let passed = 0;\n  for (const [i, s] of samples.entries()) {\n    await tools.call("edit_file", { path: "in" + i + ".txt", content: s.input });\n    const r = String(await tools.call("bash", { command: "timeout 6 python3 sol.py < in" + i + ".txt" }));\n    const [head, ...rest] = r.split("\\n");\n    if (head.trim() === "exit 0" && words(rest.join("\\n")) === words(s.output)) passed++;\n  }\n  emit("program " + (k + 1), passed + " of " + samples.length + " samples");\n  if (passed > bestPassed) { best = code; bestPassed = passed; }\n  if (samples.length && passed === samples.length) break;\n}\nmetric("programs written", tries);\nmetric("samples passed by the answer", bestPassed);\nreturn "```python\\n" + best.trimEnd() + "\\n```";' }, instructions: "Solve the programming problem. Put the whole program in one ```python block." },
+    })
+    .node("sandbox", "env", 340, 220, { name: "Sandbox", env_kind: "sandbox", image: "python:3.12" })
+    .edge("asker", "solver", "message", { label: "Problem" })
+    .edge("solver", "asker", "message", { label: "Program" })
+    .edge("solver", "sandbox", "access", { access: "read_write" });
+  b.doc.budget = { usd: 0.5, max_rounds: 40, wallclock_min: 20 };
+  return b.doc;
+}
+
+/**
  * Self-consistency: the same model sampled several times, majority vote.
  * The equal-compute baseline a multi-agent system should beat.
  */
@@ -394,6 +417,7 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "fact-check-judge", name: "Fact-checking judge", summary: "a judge with web search, for pairwise judging on recent topics", build: factCheckJudge },
   { id: "baseline-writer-search", name: "Single writer with search (baseline)", summary: "one agent · web search · then writes · the baseline for research-and-write systems", build: baselineWriterSearch },
   { id: "baseline-code", name: "Single agent with code (baseline)", summary: "one agent + a Python sandbox · the baseline for code-executing systems", build: baselineWithCode },
+  { id: "baseline-best-of-n", name: "Best of n against the samples (baseline)", summary: "one model, up to n programs, the first that passes the problem's samples · the control for coding teams", build: bestOfNSamples },
   { id: "self-consistency", name: "Self-consistency (baseline)", summary: "5 samples · majority vote · the equal-compute baseline", build: selfConsistency },
   { id: "debate", name: "Debate with a judge", summary: "room env · output wrapper parses a Verdict", build: debate },
   { id: "coding", name: "Coding team", summary: "Claude Code · gate · routed outputs · edge transform", build: codingTeam },
