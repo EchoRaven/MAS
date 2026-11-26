@@ -573,9 +573,13 @@ export class EvalManager {
           const priced = rec.cases.filter((x) => x.status === "done" && x.usd !== undefined);
           const running = rec.cases.filter((x) => x.status === "running").length;
           if (priced.length >= 2) {
-            const mean = priced.reduce((s, x) => s + (x.usd ?? 0), 0) / priced.length;
-            if (rec.usd + (running + 1) * mean > opts.max_usd) {
-              rec.stop_reason = `Stopped before its limit: $${rec.usd.toFixed(2)} spent and ${running} running at about $${mean.toFixed(3)} a case; one more would pass $${opts.max_usd}`;
+            // a case's cost has a long tail (MapCoder: mean $0.07, the dearest $0.30), so the mean let it pass $3.50 by
+            // $0.62: with five or more finished, a running case is counted at the 90th percentile of their costs
+            const costs = priced.map((x) => x.usd ?? 0).sort((a, b) => a - b);
+            const mean = costs.reduce((s, x) => s + x, 0) / costs.length;
+            const each = costs.length >= 5 ? Math.max(mean, costs[Math.min(costs.length - 1, Math.floor(costs.length * 0.9))]) : mean;
+            if (rec.usd + (running + 1) * each > opts.max_usd) {
+              rec.stop_reason = `Stopped before its limit: $${rec.usd.toFixed(2)} spent and ${running} running at about $${each.toFixed(3)} a case; one more would pass $${opts.max_usd}`;
               this.stopped.add(rec.id);
               break;
             }
