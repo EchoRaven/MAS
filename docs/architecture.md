@@ -105,10 +105,12 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   `model_map`, where `node:<id>` serves one node apart from the slot it
   shares), set run variables (`vars`: ensemble size, debate rounds), and
   give each run a longer time limit (`time_limit_min`) for a slower model.
-- **Graders** are rules (`answer`, `number`, `contains`), an LLM judge,
-  `code`, which runs the answer with the problem's tests in a throwaway
-  container, or `none` for open-ended tasks (stories, articles,
-  instructions).
+- **Graders** are rules (`answer`, `number`, `contains`, and `math`, which
+  compares LaTeX answers by form and, for expressions without variables, by
+  value), an LLM judge, `code`, which runs the answer with the problem's tests
+  in a throwaway container (a function with its tests, or a whole program on
+  stdin/stdout tests, each under its own time limit), or `none` for
+  open-ended tasks (stories, articles, instructions).
 - **Open-ended outputs are judged pairwise.** Two evaluations of the same
   questions are read side by side by a judge model, or by a judging system
   such as ChatEval's panel (`judge_system`). Each question is judged in both
