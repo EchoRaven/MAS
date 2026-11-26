@@ -2412,6 +2412,23 @@ cap stopped it three short of 60).
   one agent misses), no system fixed more than five of them; AgentCoder and
   the sandbox agent lost more than they fixed, and MapCoder tied (+3 −3), at
   two to twelve times the cost.
+- **On flash-lite the multi-agent coders win, and by a lot.** The same 60
+  problems with every role on gemini-3.1-flash-lite:
+
+  | flash-lite | Solved | Against one agent on the same problems | Cost per problem |
+  |---|---|---|---|
+  | One agent | 18 of 60 (30%) | | $0.002 |
+  | One agent with a Python sandbox | 23 of 60 | +6 −1 (p 0.13) | $0.025 |
+  | AgentCoder | 32 of 56 | +15 −0 (p 0.0001) | $0.094 |
+  | MapCoder | 33 of 59 | +17 −2 (p 0.0007) | $0.07 |
+
+  The sandbox alone adds little: the gain is the roles (a test designer and
+  an executor in AgentCoder; recall, planning and debugging in MapCoder), not
+  merely running the code. It is a gain for the weak model only: on
+  3.8-flash the same systems tie or lose, and one 3.8-flash agent (46 of 60,
+  77%, $0.009 a problem) beats either system on flash-lite at a tenth of its
+  cost. A team lifts a weak model toward a strong one; it does not lift the
+  strong one.
 - **On a weaker open model the set is hard indeed.** One gemma-4-26b agent
   (free, 10 calls a minute) solves 5 of a seeded 20 of these problems; most
   misses give no program at all, its thinking running past the output limit.
