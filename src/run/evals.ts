@@ -725,8 +725,128 @@ function mathValue(s: string): number | null {
   // \frac43 and \frac{4}{3} both read as 4/3
   // mathForm writes 0.25 as .25; parseNumber needs the leading zero back
   const t = plain(mathForm(s)).replace(/[{}\s]/g, "").replace(/^(-?)\./, "$10.");
-  if (!/^-?[\d.,/]+$/.test(t)) return null;
-  return parseNumber(t);
+  if (/^-?[\d.,/]+$/.test(t)) return parseNumber(t);
+  // an expression with no variable (\frac{7}{3}\sqrt{3}, (3+\sqrt{6})^{-1/3}): its value, so that equal answers
+  // written differently agree (HMMT's answers marked 7\sqrt{3}/3 wrong against \frac{7}{3}\sqrt{3})
+  return latexValue(mathForm(s));
+}
+
+/**
+ * The value of a LaTeX expression without variables: numbers, + - * /, \cdot, \times, ^ (braced or one digit),
+ * \frac, \sqrt and \sqrt[n], \pi, parentheses and braces, and multiplication by juxtaposition (2\sqrt{3}). Null
+ * for anything else (a variable, a comma, an interval) or a value that is not finite. A parser, not eval.
+ */
+export function latexValue(src: string): number | null {
+  const s = src.replace(/\\left|\\right/g, "").replace(/\\[dt]frac/g, "\\frac").replace(/\\(?:cdot|times)/g, "*").replace(/\s+/g, "");
+  let i = 0;
+  const fail = () => {
+    throw new Error("not a value");
+  };
+  const peek = () => s[i];
+  const word = () => {
+    const m = /^\\[a-zA-Z]+/.exec(s.slice(i));
+    return m ? m[0] : null;
+  };
+  const group = (): number => {
+    // {expr}, or a single digit or a command's own value (\frac12, ^2, \sqrt\pi)
+    if (peek() === "{") {
+      i++;
+      const v = expr();
+      if (peek() !== "}") fail();
+      i++;
+      return v;
+    }
+    if (/\d/.test(peek() ?? "")) return Number(s[i++]);
+    return primary();
+  };
+  const primary = (): number => {
+    const c = peek();
+    if (c === undefined) fail();
+    if (/[\d.]/.test(c)) {
+      const m = /^\d*\.?\d+|^\d+/.exec(s.slice(i))!;
+      i += m[0].length;
+      return Number(m[0]);
+    }
+    if (c === "(" || c === "{" || c === "[") {
+      const close = c === "(" ? ")" : c === "{" ? "}" : "]";
+      i++;
+      const v = expr();
+      if (peek() !== close) fail();
+      i++;
+      return v;
+    }
+    const w = word();
+    if (w === "\\pi") {
+      i += 3;
+      return Math.PI;
+    }
+    if (w === "\\frac") {
+      i += 5;
+      const a = group();
+      const b = group();
+      return a / b;
+    }
+    if (w === "\\sqrt") {
+      i += 5;
+      let n = 2;
+      if (peek() === "[") {
+        i++;
+        n = expr();
+        if (peek() !== "]") fail();
+        i++;
+      }
+      const x = group();
+      // an odd root of a negative number is real
+      return x < 0 && n % 2 === 1 ? -Math.pow(-x, 1 / n) : Math.pow(x, 1 / n);
+    }
+    return fail();
+  };
+  const power = (): number => {
+    const base = primary();
+    if (peek() !== "^") return base;
+    i++;
+    const e = peek() === "-" ? (i++, -group()) : group();
+    return Math.pow(base, e);
+  };
+  const unary = (): number => {
+    if (peek() === "-") {
+      i++;
+      return -unary();
+    }
+    if (peek() === "+") {
+      i++;
+      return unary();
+    }
+    return power();
+  };
+  const term = (): number => {
+    let v = unary();
+    for (;;) {
+      const c = peek();
+      if (c === "*" || c === "/") {
+        i++;
+        const r = unary();
+        v = c === "*" ? v * r : v / r;
+      } else if (c !== undefined && (/[\d.({]/.test(c) || (c === "\\" && ["\\frac", "\\sqrt", "\\pi"].includes(word() ?? "")))) v *= power();
+      else return v;
+    }
+  };
+  function expr(): number {
+    let v = term();
+    while (peek() === "+" || peek() === "-") {
+      const c = s[i++];
+      const r = term();
+      v = c === "+" ? v + r : v - r;
+    }
+    return v;
+  }
+  try {
+    if (!s) return null;
+    const v = expr();
+    return i === s.length && Number.isFinite(v) ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 export const normalize = (s: string) =>

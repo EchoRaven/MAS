@@ -2379,8 +2379,14 @@ GSM-Hard sample, 26 and 27 on Hard computation, measured before).
 - **The sets are too easy for 3.8-flash to test a gain.** Even MATH level 5
   (the same 50) is 48 of 50 for one 3.8-flash agent, at $0.06: the ceiling
   leaves a multi-agent system two questions to win. Testing whether these
-  methods help a strong model needs harder sets than this platform holds
-  (competition problems newer than its training, longer code tasks).
+  methods help a strong model needs harder sets. Competition problems from
+  February 2026 (`benchmarks/competition-math`, fetched from MathArena at run
+  time) are not hard enough either: one 3.8-flash agent solves AIME 2026 30 of
+  30 and HMMT February 2026 31 of 33, $0.08 each. (HMMT first read 27: the
+  `math` grader compared forms, and four right answers written differently,
+  7\sqrt{3}/3 for \frac{7}{3}\sqrt{3} and the like, were marked wrong. It now
+  compares the values of expressions without variables; regraded, no other
+  earlier `math` answer changes on that account.)
 - Self-correction's middle round dips (33 and 30 right) and the last
   recovers: 5 and 7 of the round-1 replies give no boxed answer, the rest
   change and change back.

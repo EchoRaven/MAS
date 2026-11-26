@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, latexValue, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -443,3 +443,27 @@ describe("answer trails", () => {
     ]);
   });
 });
+
+describe("math answers by value", () => {
+  it("reads LaTeX expressions without variables", () => {
+    expect(latexValue("\\frac{7}{3}\\sqrt{3}")).toBeCloseTo((7 / 3) * Math.sqrt(3), 12);
+    expect(latexValue("(3+\\sqrt{6})^{-1/3}")).toBeCloseTo(Math.pow(3 + Math.sqrt(6), -1 / 3), 12);
+    expect(latexValue("\\sqrt[3]{\\frac{3-\\sqrt{6}}{3}}")).toBeCloseTo(Math.cbrt((3 - Math.sqrt(6)) / 3), 12);
+    expect(latexValue("2 - \\frac{\\pi}{2}")).toBeCloseTo(2 - Math.PI / 2, 12);
+    expect(latexValue("3 \\cdot 2^{10}")).toBe(3072);
+    expect(latexValue("x+1")).toBeNull();
+    expect(latexValue("(1,2)")).toBeNull();
+  });
+
+  it("grades equal answers written differently as right (HMMT February 2026's misses that were not)", () => {
+    const right = (answer: string, expected: string) => gradeByRule("math", `Answer: ${answer}`, expected).pass;
+    expect(right("\\frac{7\\sqrt{3}}{3}", "\\frac{7}{3}\\sqrt{3}")).toBe(true);
+    expect(right("\\frac{2\\sqrt{435}}{3}", "\\frac{\\sqrt{1740}}{3}")).toBe(true);
+    expect(right("\\sqrt[3]{\\frac{3-\\sqrt{6}}{3}}", "(3+\\sqrt{6})^{-1/3}")).toBe(true);
+    expect(right("\\frac{100(2^{100}-1)}{2^{101}-1}", "50(1 - \\frac{1}{2^{101} - 1})")).toBe(true);
+    // and still wrong when the value differs
+    expect(right("80", "74^\\circ")).toBe(false);
+    expect(right("\\frac{7\\sqrt{3}}{2}", "\\frac{7}{3}\\sqrt{3}")).toBe(false);
+  });
+});
+
