@@ -2469,7 +2469,7 @@ says "had it: <member>" and groups under "a member had it, the team lost it".
 
 ### The controls a multi-agent system should beat
 
-Every claimed gain on this page was checked against the same four controls,
+Every claimed gain on this page was checked against the same controls,
 each one a system in the library, and each has explained away some gain:
 
 | Control | System | What it rules out | Where it mattered |
@@ -2478,9 +2478,11 @@ each one a system in the library, and each has explained away some gain:
 | Several samples and a vote | Self-consistency, or Agent Forest with `n` | that discussion beat plain voting | voting matched debate on both models |
 | One call imagining the discussion | Solo Performance Prompting | that the gain needs separate agents | it matched debate on flash-lite, on gemma (25 and 26, both just below one agent's 27) and on medical MMLU |
 | One agent with the same tools | Single agent with code | that the agents, not the tool, did the work | it matched AutoGen, Magentic-One and tool-equipped debate |
+| For code: as many tries, checked by tests | Best of n against the samples | that the roles, not retrying, did the work | it matched AgentCoder on LiveCodeBench (flash-lite) at a tenth of the cost |
 
 Run them on the same questions and models (on the Evaluate page, Compare with
-other systems → Add the four controls, or a batch), with repeats when the gaps are small, and read the paired column
+other systems → Add the controls: for a code grader, one agent, one with a
+sandbox and best of n; else the first four; or a batch), with repeats when the gaps are small, and read the paired column
 (fixed, lost, p) on Compare rather than the accuracies alone.
 
 To sweep a run variable, write its values with `|` in the Evaluate page's

@@ -448,18 +448,20 @@ function Evals({ systemId }: { systemId: string }) {
             <summary className="cursor-pointer hover:text-foreground">Compare with other systems{alsoDocs.length ? ` (${alsoDocs.length})` : ""}</summary>
             <p className="mt-1">They run on the same questions and models, one after another, and show up together under Compare systems.</p>
             {(() => {
-              // the four controls a multi-agent system should beat (docs/benchmarks.md): one agent, a vote, one call
-              // imagining the discussion, one agent with the same tools
-              const controls = ["sys_baseline", "sys_self_consistency", "sys_paper_spp", "sys_baseline_code"].filter((id) => id !== doc.id && systems.some((x) => x.id === id));
+              // the controls a multi-agent system should beat (docs/benchmarks.md): one agent, a vote, one call imagining the
+              // discussion, one agent with the same tools; for code, one agent, one with a sandbox, and best of n against the
+              // problem's samples (as many tries as a coding team, checked by tests: on LiveCodeBench it matched AgentCoder)
+              const forCode = grader === "code";
+              const controls = (forCode ? ["sys_baseline", "sys_baseline_code", "sys_baseline_best_of_n"] : ["sys_baseline", "sys_self_consistency", "sys_paper_spp", "sys_baseline_code"]).filter((id) => id !== doc.id && systems.some((x) => x.id === id));
               if (!controls.length || controls.every((id) => also.includes(id))) return null;
               return (
                 <button
                   type="button"
                   className="mt-1 text-primary hover:underline"
-                  title="One agent, several samples and a vote, one call imagining the discussion (Solo Performance Prompting), one agent with code: each has explained away a claimed gain"
+                  title={forCode ? "One agent, one agent with a sandbox, and one model trying up to n programs against the problem's samples: the last matched a coding team at a tenth of its cost" : "One agent, several samples and a vote, one call imagining the discussion (Solo Performance Prompting), one agent with code: each has explained away a claimed gain"}
                   onClick={() => setAlso((a) => [...new Set([...a, ...controls])].slice(0, 9))}
                 >
-                  Add the four controls
+                  Add the {controls.length} controls
                 </button>
               );
             })()}
