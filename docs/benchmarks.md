@@ -2376,6 +2376,11 @@ GSM-Hard sample, 26 and 27 on Hard computation, measured before).
   losses stay (CRITIC, CAMEL). A multi-agent gain on a weak model is a claim
   about that model's failures, to be rechecked on a strong one before it is
   made about the method.
+- **The sets are too easy for 3.8-flash to test a gain.** Even MATH level 5
+  (the same 50) is 48 of 50 for one 3.8-flash agent, at $0.06: the ceiling
+  leaves a multi-agent system two questions to win. Testing whether these
+  methods help a strong model needs harder sets than this platform holds
+  (competition problems newer than its training, longer code tasks).
 - Self-correction's middle round dips (33 and 30 right) and the last
   recovers: 5 and 7 of the round-1 replies give no boxed answer, the rest
   change and change back.
