@@ -175,7 +175,7 @@ describe("runtime", () => {
       expect(errors(events)).toEqual([]);
       return { out: (events.find((e) => e.type === "output") as { text: string }).text, events };
     };
-    const metric = (events: { type: string }[], name: string) => (events.find((e) => e.type === "metric" && (e as { name: string }).name === name) as { value: number } | undefined)?.value;
+    const metric = (events: { type: string }[], name: string) => (events.find((e) => e.type === "metric" && (e as unknown as { name: string }).name === name) as { value: number } | undefined)?.value;
     // A1 B1 C1 D1 E2 is one of the seven deals that pass
     const ok = await talk("Let us settle.\nProposal: A1, B1, C1, D1, E2", { rounds: 1, greedy: 6 });
     expect(ok.out).toContain("Final proposal: A1 B1 C1 D1 E2");
