@@ -328,8 +328,8 @@ the vocabulary:
   bidders pay items' full value, a win worth nothing. SOTOPIA's social scenarios
   are the same shape with an evaluator agent as the scorer: on
   gemini-3.8-flash one writer knowing both goals scores 0.9 higher than two
-  agents each knowing only its own (p < 0.001), the follow-up paper's finding;
-  on flash-lite no gain. Which findings hold
+  agents each knowing only its own (p < 0.001), the follow-up paper's finding,
+  under either model as judge; on flash-lite no gain under either. Which findings hold
   depends on the model: a greedy fisher ending the commons holds on all three
   measured (flash-lite, 3.8-flash, open-weight gemma), no bidder paying above
   value on both measured for it; whether coaching costs sales and whether a
