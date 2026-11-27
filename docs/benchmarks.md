@@ -2431,6 +2431,43 @@ stubborn agent where there is one):
 - Starting numbers differ from game to game, so these are averages over
   different games; the paper's robot-formation task is not built.
 
+## LLM-Stakeholders: six parties, a veto and five of six
+
+Abdelnabi et al.'s negotiation (`paper-stakeholders`), in a scenario written
+for the template: six parties (Council, Residents' Association, Local
+Businesses, Green Coalition, Youth Club, Builder) settle a community centre's
+site, budget, hours, parking and operator, three options each. Each has
+private scores and a minimum; a deal passes if the Council (which proposes
+last) and the Residents' Association (a veto) accept it and five of six reach
+their minimum, which only 7 of the 243 deals do (the Council's own best is
+not one). Three rounds of six messages, then the Council's final proposal,
+checked by the rule. Twenty games a row:
+
+| 20 games each | Final deal passes | A passing deal proposed on the way | Parties at their minimum | Local Businesses' score | Green Coalition's score | Cost |
+|---|---|---|---|---|---|---|
+| gemini-3.8-flash, all cooperative | **12** | 16 | 4.45 | 52.6 | 64.8 | $0.52 |
+| Local Businesses greedy | 12 | 14 | 4.55 | **43.7** | 72.0 | $0.52 |
+| Green Coalition a saboteur | 9 | 10 | 4.40 | 41.2 | **80.8** | $0.52 |
+| flash-lite, all cooperative | **0** | 1 | 3.10 | 51.0 | 59.5 | $0.22 |
+| Local Businesses greedy | 0 | 6 | 3.20 | 52.0 | 57.0 | $0.22 |
+| Green Coalition a saboteur | 0 | 7 | 2.55 | 46.2 | 50.9 | $0.23 |
+
+- **The smaller model never closes.** flash-lite passed no deal in 60 games
+  (3.1 parties at their minimum on average) though in 14 a passing deal was
+  put on the table along the way; 3.8-flash passed 12 of 20. The paper's
+  finding: small models mostly fail, strong ones still fail often.
+- **Greed backfires.** A greedy Local Businesses ended with less (43.7 against
+  52.6 when cooperative, below its minimum of 50), and the deals passed as
+  often: the others planned around it.
+- **A saboteur costs a few deals and gains ground.** Nine of 20 passed with a
+  secret saboteur against 12 (Fisher p 0.53, not significant over 20), and
+  the saboteur's pretended scores did best of all (80.8): the others conceded
+  to its stated wishes. On flash-lite it pushed parties further below their
+  minimums (2.55 against 3.10).
+- **Proposed, then lost.** On 3.8-flash 16 cooperative games saw a passing
+  deal proposed and 12 ended on one: the Council's last proposal is not
+  always the best one on the table.
+
 ## The games on a stronger model
 
 Each game setup here can be rerun with one command, with the server up:

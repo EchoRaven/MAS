@@ -336,7 +336,10 @@ the vocabulary:
   answer better. In Chen et al.'s consensus game the agents move
   to the mean of what they see, as the paper found; the network decides how
   fast and where they meet (a star's hub pulls, a stubborn agent in a ring
-  stalls the group). Which findings hold
+  stalls the group). In the LLM-Stakeholders negotiation (six parties,
+  a veto, five of six to pass) 3.8-flash passes 12 of 20 deals and flash-lite
+  none of 60; a greedy party ends with less, a secret saboteur costs a few
+  deals and gets its stated wishes. Which findings hold
   depends on the model: a greedy fisher ending the commons holds on all three
   measured (flash-lite, 3.8-flash, open-weight gemma), no bidder paying above
   value on both measured for it; whether coaching costs sales and whether a
