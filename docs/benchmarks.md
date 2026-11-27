@@ -2389,6 +2389,48 @@ majority vote over independent samples (12 is the society's number of calls):
 - One model; the paper uses gpt-3.5 and others on MMLU, MATH and chess. Not run on gemini-3.8-flash: one agent
   already solves 61 of these 63 (30 and 31).
 
+## Consensus seeking: the network and a stubborn agent
+
+Chen et al.'s consensus game (`paper-consensus`): five agents each start with
+a whole number from 0 to 100 (drawn anew every game), and each round every
+agent sees only its neighbours' numbers and states a new one; they agree when
+the spread is at most 1 (six rounds at most). The paper found that agents
+mostly move to their neighbours' average, and that the network and stubborn
+agents change how fast and where they meet. Twenty games a row; "pull" is
+how far the meeting point ends from agent 1's start (the hub in the star, the
+stubborn agent where there is one):
+
+| 20 games each | Agreed | Rounds (when agreed) | From the starting mean | Agent 1's pull (distance from its start) | Moves toward the neighbours' mean | Cost |
+|---|---|---|---|---|---|---|
+| gemini-3.8-flash, full | 20 | 1.7 | 5.0 | 16.8 | 93% | $0.03 |
+| ring | 13 | 4.8 | 1.6 | 23.6 | 99% | $0.12 |
+| star | 20 | 5.0 | 5.4 | **11.3** | 77% | $0.10 |
+| full, agent 1 stubborn | 20 | 4.3 | 6.6 | 16.9 | 87% | $0.10 |
+| ring, agent 1 stubborn | **2** | 4.5 | 12.0 | **12.0** | 98% | $0.13 |
+| flash-lite, full | 20 | 2.5 | 1.8 | 25.6 | 89% | $0.03 |
+| ring | 18 | 5.6 | 0.9 | 25.2 | 92% | $0.06 |
+| star | 18 | 4.9 | 7.0 | **13.5** | 73% | $0.05 |
+| full, agent 1 stubborn | 20 | 4.2 | 2.2 | 21.1 | 87% | $0.05 |
+| ring, agent 1 stubborn | **5** | 5.6 | 10.6 | **13.5** | 90% | $0.06 |
+
+- **The average strategy, as the paper found.** On both models 73% to 99% of
+  changes move toward the mean of what the agent sees, and with everyone
+  seeing everyone the group meets near the starting mean (within 2 to 5 of
+  it) in two or three rounds.
+- **A sparse network is slower but fairer.** In a ring agreement takes about
+  five rounds and fails in 7 and 2 of 20 games within six, but where it is
+  reached it lies closest to the starting mean (1.6 and 0.9).
+- **The hub pulls.** In the star, the agent who sees everyone (and whom the
+  others see) ends the game about 11 to 14 from where the group meets,
+  against 17 to 26 for an ordinary agent: the others move toward it.
+- **A stubborn agent is felt in a ring, hardly with everyone seeing it.** With
+  full sight the stubborn agent slows agreement (about 4 rounds against 2)
+  but the meeting point is no nearer its number (16.9 against 16.8 on
+  3.8-flash; 21.1 against 25.6 on flash-lite). In a ring it stalls the group
+  (2 and 5 of 20 agree) and drags its neighbours toward it (12.0 and 13.5).
+- Starting numbers differ from game to game, so these are averages over
+  different games; the paper's robot-formation task is not built.
+
 ## The games on a stronger model
 
 Each game setup here can be rerun with one command, with the server up:

@@ -333,7 +333,10 @@ the vocabulary:
   of three, which debates or reflects round by round, beats one agent and a
   vote of as many samples on AIME and HMMT 2026 (flash-lite), but reflecting
   first did as well as debating first: debate made the agents agree, not
-  answer better. Which findings hold
+  answer better. In Chen et al.'s consensus game the agents move
+  to the mean of what they see, as the paper found; the network decides how
+  fast and where they meet (a star's hub pulls, a stubborn agent in a ring
+  stalls the group). Which findings hold
   depends on the model: a greedy fisher ending the commons holds on all three
   measured (flash-lite, 3.8-flash, open-weight gemma), no bidder paying above
   value on both measured for it; whether coaching costs sales and whether a
