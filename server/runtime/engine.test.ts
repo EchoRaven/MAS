@@ -165,6 +165,27 @@ describe("runtime", () => {
     expect(none.out).toContain("Mean deal price: none");
   });
 
+  it("MachineSoM: debate shows the others' answers, reflection only one's own, the last round's majority answers", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const doc = TEMPLATES.find((t) => t.id === "paper-machinesom")!.build();
+    // agent 3 says C, then B after the debate; the others hold B: a reflection round follows
+    const scripts: Record<string, string[]> = { agent_1: ["Answer: B"], agent_2: ["Answer: (B)"], agent_3: ["Answer: C", "Answer: B"] };
+    doc.models.push(...Object.entries(scripts).map(([id, sc]) => mock(`m_${id}`, sc)), mock("m_s", ["ok"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "society" ? "m_s" : `m_${n.id}`;
+    const { events } = await run(doc, "Which? (A) 1 (B) 2 (C) 3", { mock: false, vars: { strategy: "dr", traits: "OEE" } });
+    expect(errors(events)).toEqual([]);
+    const out = (events.find((e) => e.type === "output") as { text: string }).text;
+    expect(out).toContain("Society OEE, strategy dr");
+    expect(out).toMatch(/Answer: \(?B\)?$/);
+    expect(events.find((e) => e.type === "metric" && (e as { name: string }).name === "answers changed")).toMatchObject({ value: 1 });
+    const to3 = events.filter((e) => e.type === "message" && (e as { to?: string }).to === "agent_3").map((e) => (e as { text: string }).text);
+    expect(to3[1]).toContain("The other agents' answers");
+    expect(to3[2]).toContain("Reflect on your answer");
+    expect(to3[2]).not.toContain("The other agents' answers");
+    const to1 = events.filter((e) => e.type === "message" && (e as { to?: string }).to === "agent_1").map((e) => (e as { text: string }).text);
+    expect(to1[0]).toContain("confident in your own reasoning");
+  });
+
   it("SOTOPIA: turns, leaving, the evaluator's scores and the script mode", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const talk = async (scripts: Record<string, string[]>, vars: Record<string, unknown>) => {
