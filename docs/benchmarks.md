@@ -2346,6 +2346,41 @@ writing and judging:
   against 0.63, p 0.004; 0.62 against -0.09, p 0.007). No human scores are
   compared.
 
+## MachineSoM: debate or reflect, and in which order
+
+Zhang et al.'s society (`paper-machinesom`): three agents answer, then go
+through three rounds; in each round every agent either debates (reads the
+others' last answers) or reflects (reads only its own), as the run variable
+`strategy` sets (`ddd` … `rrr`); the last round's majority is the answer. The
+paper found that strategies opening with debate beat those opening with
+reflection. Three easygoing agents (`traits=EEE`), flash-lite, AIME 2026
+(30) and HMMT February 2026 (33), against one agent and Agent Forest's
+majority vote over independent samples (12 is the society's number of calls):
+
+| flash-lite, 63 problems | AIME | HMMT | Correct | Agents agreeing at the end | Cost |
+|---|---|---|---|---|---|
+| One agent | 13 | 10 | 23 | | $0.09 |
+| Vote over 3 samples | 18 | 11 | 29 | | $0.30 |
+| Vote over 12 samples | 18 | 12 | 30 | | $1.19 |
+| `ddd` (debate, debate, debate) | 18 | 16 | 34 | 2.79 of 3 | $1.53 |
+| `rdd` | 18 | 15 | 33 | 2.76 | $1.47 |
+| `drr` | 21 | 15 | 36 | 2.43 | $1.45 |
+| `rrr` (reflect only) | 20 | 17 | **37** | 2.24 | $1.38 |
+
+- **Every society beats one agent** (`ddd` +13 −2, p 0.007; `rrr` +16 −2,
+  p 0.001), and the society's rounds add to a plain vote: `rrr` beats the
+  12-sample vote at the same number of calls (+8 −1, p 0.04).
+- **Debate first does not win here.** The order the paper found is reversed
+  in the counts (`rrr` 37 and `drr` 36 against `ddd` 34 and `rdd` 33), but
+  neither difference is significant (`rrr` against `ddd` +5 −2, p 0.45; `drr`
+  against `rdd` the same).
+- **Debate makes agents agree, not answer better.** After debate rounds
+  nearly all three end on the same answer (2.79 of 3 for `ddd`); after
+  reflection rounds they agree less (2.24) and are right more often: the
+  paper's conformity, at a cost of the vote's independence.
+- One model, one society (EEE); the paper also varies traits and uses
+  gpt-3.5 on MMLU, MATH and chess. Not yet measured on gemini-3.8-flash.
+
 ## The games on a stronger model
 
 Each game setup here can be rerun with one command, with the server up:
