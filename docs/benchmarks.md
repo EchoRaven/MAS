@@ -2011,6 +2011,27 @@ nothing to add. So a variant keeps only each resident's last 8 messages:
   writes had lost records and repeated reflections) fix them; the numbers above
   are from the fixed runs.
 
+**The same ablation on gemini-3.8-flash** (two runs each, 25 residents, two
+days, the fixed memory stream):
+
+| gemini-3.8-flash, two runs each | Knew when asked (of 24) | Came | Heard of it | Cost per run |
+|---|---|---|---|---|
+| Last 8 messages only | 10, 13 (48%) | 11, 13 | 17, 18 | $1.51 |
+| Last 8 messages + the paper's memory stream | 18, 15 (69%) | 12, 13 | 24, 20 | $3.10, $3.30 |
+
+- **The memory stream helps knowing on the stronger model, about as much as
+  the whole conversation did on flash-lite.** Both stream runs beat both
+  short-memory runs (pooled 33 of 48 against 23 of 48, Fisher p 0.06). The
+  news also travels further: 44 of 48 heard of it against 35 (p 0.03).
+- **It does not bring more guests.** 25 came with the stream and 24 without
+  (p 1.0); on this model knowing and coming separate, as about half of those
+  who knew stayed away.
+- **Reflection fires more often, and it doubles the cost.** 237 reflection
+  events in the second stream run (flash-lite: about 100). A first stream
+  run on course to pass its $4 limit was stopped and is marked invalid; the
+  two above ran with $7 limits.
+- The whole-conversation town was not rerun on this model.
+
 A first memory-stream run failed on day 2 ("fetch failed", $1.15): a hosted
 service's idle clock was touched only when a run first connected, so after an
 hour the town was stopped under it. Every call through a hosted endpoint now

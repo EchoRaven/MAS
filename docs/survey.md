@@ -307,7 +307,9 @@ the vocabulary:
   9 and 11 came, all of them among those who knew. With residents keeping only
   their last few messages, 44% knew (two runs, noisy); adding the paper's
   memory stream, with reflection firing 3 to 6 times per resident, 19 and 10
-  knew: between the two, too noisy over two runs to say more.
+  knew: between the two, too noisy over two runs to say more (flash-lite). On
+  gemini-3.8-flash the stream is clearer: 18 and 15 knew against 10 and 13
+  with short memory (p 0.06), though no more came, at twice the cost.
   Werewolf's game, with the paper's seven roles and the rules as code, needs
   no world: over twenty games each the seer's visions moved the villagers'
   wins from 3 to 6 (p 0.45), as she hints rather than tells and the village
