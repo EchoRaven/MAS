@@ -336,6 +336,25 @@ export function poolSets(recs: EvalRecord[]): EvalRecord {
 }
 
 /**
+ * What a run of a system costs, from its earlier finished evaluations on the same models (the latest five): the mean
+ * and the dearest of their per-run averages, and how many runs they cover. A game's cost per run varies with the model
+ * more than anything (Avalon: $0.017 on flash-lite, $0.13 on 3.8-flash), so other models' runs are not counted.
+ */
+export function costPerRun(
+  evals: (Pick<EvalRecord, "status" | "usd" | "mock" | "on_model" | "started_at"> & { invalid?: unknown; total?: number })[],
+  onModel: string | undefined,
+): { mean: number; max: number; runs: number; evals: number } | null {
+  const same = evals
+    .filter((e) => e.status === "finished" && !e.mock && !e.invalid && (e.on_model ?? "") === (onModel ?? "") && !!e.total && e.usd > 0)
+    .sort((a, b) => b.started_at.localeCompare(a.started_at))
+    .slice(0, 5);
+  if (!same.length) return null;
+  const each = same.map((e) => e.usd / e.total!);
+  const runs = same.reduce((n, e) => n + e.total!, 0);
+  return { mean: same.reduce((n, e) => n + e.usd, 0) / runs, max: Math.max(...each), runs, evals: same.length };
+}
+
+/**
  * The 95% Wilson interval of a proportion: how far an accuracy measured on n cases could be from the system's own
  * by chance. 19 of 30 is 63% (46–78): a 30-question score moves by about 15 points, so one run says little.
  */

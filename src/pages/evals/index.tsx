@@ -14,7 +14,7 @@ import { ModelWarnings } from "@/components/shared/ModelWarnings";
 import { cn } from "@/lib/utils";
 import type { SystemDoc } from "@/model/types";
 import { builtinDatasets, type DatasetSummary, summarize } from "@/run/datasets";
-import { type EvalRecord, failureReasons, type Grader, parseCases, metricStats, repeatStats, etaSeconds, retryableCase, wilson } from "@/run/evals";
+import { type EvalRecord, costPerRun, failureReasons, type Grader, parseCases, metricStats, repeatStats, etaSeconds, retryableCase, wilson } from "@/run/evals";
 import { expectFor, resultTypeFor } from "@/run/result";
 import { simulate } from "@/run/simulate";
 import { formatVars, parseVars, readVars, sweepOf } from "@/run/vars";
@@ -352,6 +352,21 @@ function Evals({ systemId }: { systemId: string }) {
                 · ≈{Math.min(caseCount * Number(repeats), MAX_RUNS) * callsPerRun} model calls, at least {Math.max(1, Math.ceil((Math.min(caseCount * Number(repeats), MAX_RUNS) * callsPerRun) / rpm))} min at {rpm}/min
               </span>
             )}
+            {caseCount > 0 &&
+              !dry &&
+              (() => {
+                // what it will cost, from this system's earlier finished evaluations on the same models
+                const est = costPerRun(list, onModel && onModel !== "per" ? onModel : undefined);
+                if (!est || alsoDocs.length) return null;
+                const n = Math.min(caseCount * Number(repeats), MAX_RUNS);
+                const short = !!maxUsd && Number(maxUsd) < est.max * n;
+                return (
+                  <span className={cn(short && "text-amber-600")} title={`From the ${est.evals} latest finished evaluation${est.evals === 1 ? "" : "s"} of this system on the same models (${est.runs} runs): $${est.mean.toFixed(3)} a run on average, $${est.max.toFixed(3)} in the dearest. Other models' runs are not counted.`}>
+                    {" "}
+                    · ≈${(est.mean * n).toFixed(2)} (up to ${(est.max * n).toFixed(2)}){short ? `: a limit of $${maxUsd} in all may stop it early` : ""}
+                  </span>
+                );
+              })()}
             {caseCount > 0 &&
               !dry &&
               (() => {

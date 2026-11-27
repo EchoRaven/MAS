@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, poolSets, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, latexValue, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, costPerRun, poolRuns, poolSets, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, latexValue, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -162,6 +162,17 @@ describe("pooling one setup over several question sets", () => {
     // a beats b on one AIME and one HMMT question, loses none
     const d = pairedDiff(a, b);
     expect([d.fixed, d.lost, d.shared]).toEqual([[0, 3], [], 5]);
+  });
+});
+
+describe("the cost of a run from earlier evaluations", () => {
+  it("counts finished evaluations on the same models only, and gives the mean and the dearest per-run average", () => {
+    const e = (on: string | undefined, usd: number, total: number, status = "finished", at = "2026-11-27T00:00:00Z") => ({ status: status as "finished", usd, total, mock: false, on_model: on, started_at: at });
+    const list = [e("gemini", 2.6, 20), e("gemini", 0.6, 4), e("gemini_lite", 0.3, 20), e("gemini", 5, 10, "stopped"), e(undefined, 1, 1)];
+    expect(costPerRun(list, "gemini")).toEqual({ mean: 3.2 / 24, max: 0.15, runs: 24, evals: 2 });
+    expect(costPerRun(list, "gemini_lite")?.mean).toBeCloseTo(0.015);
+    expect(costPerRun(list, undefined)?.runs).toBe(1);
+    expect(costPerRun(list, "gemma")).toBeNull();
   });
 });
 
