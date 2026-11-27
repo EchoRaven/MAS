@@ -191,6 +191,12 @@ describe("runtime", () => {
     expect(metric(bad.events, "a passing deal was proposed")).toBe(0);
     const none = await talk("I propose A1 and B2.", { rounds: 1 });
     expect(none.out).toContain("Final proposal: none");
+    // with plan, the notes stay private and come back to their writer; only the message is said
+    const planned = await talk("Notes: the Builder wants D1.\nMessage: Let us settle.\nProposal: A1 B1 C1 D1 E2", { rounds: 1, plan: true });
+    expect(planned.out).toContain("Council: Let us settle. Proposal: A1 B1 C1 D1 E2");
+    expect(planned.out).not.toContain("the Builder wants D1");
+    const toCouncil = planned.events.filter((e) => e.type === "message" && (e as { to?: string }).to === "council").map((e) => (e as { text: string }).text);
+    expect(toCouncil[1]).toContain("Your private notes from your last turn:\nthe Builder wants D1.");
   });
 
   it("Consensus seeking: who sees whom, agreement, and the stubborn agent's brief", async () => {

@@ -28,6 +28,10 @@ const rounds = Number(ctx.vars.rounds ?? 3);
 // greedy / saboteur: a party's number (1-6), told to get the most for itself / to stop any deal, in secret
 const greedy = Number(ctx.vars.greedy ?? 0) - 1;
 const saboteur = Number(ctx.vars.saboteur ?? 0) - 1;
+// plan: each party keeps a private scratchpad between turns (what the others seem to want, its plan), as the paper's
+// structured prompts do; only the part after "Message:" is said to the others
+const plan = ctx.vars.plan === true || ctx.vars.plan === "true";
+const notes = {};
 const letters = "ABCDE";
 const code = (deal) => deal.map((o, i) => letters[i] + (o + 1)).join(" ");
 const score = (p, deal) => deal.reduce((s, o, i) => s + SCORES[p][i][o], 0);
@@ -47,9 +51,14 @@ const brief = (p) => {
 const said = [];
 const proposals = [];
 const turn = async (p, last) => {
-  const r = await tools.call_agent(PARTIES[p], brief(p) + "\n\nThe talks so far:\n" + (said.join("\n") || "(nothing yet)") +
-    (last ? "\n\nThis is the end of the talks: make your final proposal, the one put to the vote. End with a last line 'Proposal: A? B? C? D? E?' (one option of each issue)."
-      : "\n\nWrite your message to the others in two to four sentences. You may end with a last line 'Proposal: A? B? C? D? E?' to put a deal on the table."));
+  const ask = last ? "This is the end of the talks: make your final proposal, the one put to the vote. End with a last line 'Proposal: A? B? C? D? E?' (one option of each issue)."
+    : "Write your message to the others in two to four sentences. You may end with a last line 'Proposal: A? B? C? D? E?' to put a deal on the table.";
+  const scratch = plan ? "\n\nYour private notes from your last turn:\n" + (notes[p] ?? "(none yet)") +
+    "\n\nFirst, under 'Notes:', write privately what each other party seems to want from what they said, and which deals might pass for them and for you. Then, under 'Message:', " + ask.charAt(0).toLowerCase() + ask.slice(1) + " Only the message is shown to the others." : "\n\n" + ask;
+  const raw = String(await tools.call_agent(PARTIES[p], brief(p) + "\n\nThe talks so far:\n" + (said.join("\n") || "(nothing yet)") + scratch));
+  const cut = plan ? raw.search(/message\s*[:：]/i) : -1;
+  if (plan) notes[p] = (cut >= 0 ? raw.slice(0, cut) : raw).replace(/^\W*notes\s*[:：]/i, "").trim().slice(0, 1500);
+  const r = cut >= 0 ? raw.slice(cut).replace(/^message\s*[:：]\s*/i, "") : raw;
   const deal = read(r);
   said.push(PARTIES[p] + ": " + String(r).replace(/\s+/g, " ").slice(0, 500));
   if (deal) proposals.push({ by: p, deal });
@@ -105,6 +114,7 @@ export const stakeholders: TemplateInfo = {
   notes: {
     mapped: [
       "A custom loop holds the private score tables and minimums (seven of the 243 possible deals pass), runs the turns (each party once a round, three rounds) and checks the Council's final proposal by the rule.",
+      "Run variable plan=true gives each party a private scratchpad kept between its turns (what the others seem to want, which deals might pass), as the paper's structured prompts; only its message is shown.",
       "Run variable greedy=N makes party N care only for its own score; saboteur=N makes it secretly work against any deal, as the paper's adversarial games.",
       "Metrics: whether the final deal passes, how many parties reach their minimum, whether any passing deal was proposed on the way, and the greedy party's and the others' scores.",
     ],
