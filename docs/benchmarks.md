@@ -2520,8 +2520,8 @@ topped up and pooled):
   give him away); with it 12 in 20, and good wins 8 games against 2 (Fisher
   p 0.03), at the same cost.
 - **On flash-lite there is nothing to hide from.** Its evil players join 70%
-  of approved teams yet almost never play fail (one game in 40 lost a
-  quest), and its Assassin finds Merlin 5 times in 20: good wins 15 of 20
+  of approved teams yet rarely play fail (good won three quests in 39
+  of 40 games), and its Assassin finds Merlin 5 times in 20: good wins 15 of 20
   without ReCon, 11 with it (p 0.32).
 - The paper's ReCon refines a draft of speech in a second pass; here
   thinking and answer are one call.
