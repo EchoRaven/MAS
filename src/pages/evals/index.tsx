@@ -96,6 +96,8 @@ function Evals({ systemId }: { systemId: string }) {
   const [onModel, setOnModel] = useState("");
   const [modelMap, setModelMap] = useState<Record<string, string>>({});
   const usedModels = useMemo(() => [...new Set(modelUses(doc).map((u) => u.model))].filter((id) => (doc.models.find((m) => m.id === id)?.kind ?? "chat") === "chat"), [doc]);
+  // agents with a model of their own, which "node:<id>" in the map serves apart from their slot (a judge on another model)
+  const modelNodes = useMemo(() => doc.nodes.filter((n) => n.data.kind === "agent" && typeof (n.data as { model?: unknown }).model === "string").map((n) => ({ id: n.id, name: (n.data as { name?: string }).name ?? n.id, model: (n.data as { model: string }).model })), [doc]);
   // chat models the system could be run on instead of its own: its catalog, then the defaults
   const chatModels = useMemo(() => {
     const seen = new Map<string, string>();
@@ -428,6 +430,28 @@ function Evals({ systemId }: { systemId: string }) {
                   />
                 </label>
               ))}
+              {modelNodes.length > 1 && (
+                <details className="pt-1 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">One agent apart (a judge on another model)</summary>
+                  <div className="mt-1.5 space-y-1.5">
+                    {modelNodes.map((n) => (
+                      <label key={n.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">
+                          {n.name} <span className="opacity-70">({modelMap[n.model] ?? n.model})</span>
+                        </span>
+                        <Select
+                          value={modelMap[`node:${n.id}`] ?? "same"}
+                          onValueChange={(v) => setModelMap(({ [`node:${n.id}`]: _old, ...rest }) => (v === "same" ? rest : { ...rest, [`node:${n.id}`]: v }))}
+                          items={[{ value: "same", label: "with its model" }, ...chatModels.map((m) => ({ value: m.value, label: m.label }))]}
+                          ariaLabel={`Serve ${n.name} with`}
+                          size="sm"
+                          className="max-w-48"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           )}
           {(wanted.length > 0 || varsText) && (

@@ -103,7 +103,8 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   after another, so a comparison never multiplies the request rate. An
   evaluation can put every model of a system on another one (`on_model`,
   `model_map`, where `node:<id>` serves one node apart from the slot it
-  shares), set run variables (`vars`: ensemble size, debate rounds), and
+  shares; on the Evaluate page, "Choose per model…" → "One agent apart",
+  how SOTOPIA's evaluator was put on the other model), set run variables (`vars`: ensemble size, debate rounds), and
   give each run a longer time limit (`time_limit_min`) for a slower model.
 - **Graders** are rules (`answer`, `number`, `contains`, and `math`, which
   compares LaTeX answers by form and, for expressions without variables, by
