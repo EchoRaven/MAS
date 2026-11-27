@@ -149,6 +149,19 @@ const DEMOS: Record<string, DemoConfig> = {
     input: "Begin the game.",
     vars: { days: 4 },
   },
+  // the games, short: a check is about whether they finish with their outcome, not about the outcome
+  "paper-werewolf-experience": { input: "Begin the game.", vars: { days: 2 } },
+  "paper-govsim": { input: "Start the fishing season.", vars: { months: 2 } },
+  "paper-repeated-games": { input: "Start the game.", vars: { rounds: 3, opponent: "tit_for_tat" } },
+  "paper-negotiation": { input: "Start the negotiations.", vars: { games: 1, turns: 6 } },
+  "paper-auction-arena": { input: "Start the auction." },
+  "paper-sotopia": { input: "Run the scenarios.", vars: { scenarios: "1", turns: 4 } },
+  "paper-consensus": { input: "Start.", vars: { rounds: 2 } },
+  "paper-stakeholders": { input: "Start the talks.", vars: { rounds: 1 } },
+  "paper-machinesom": { input: "What is 17 × 23 − 4 × 19? Give the number.", vars: { strategy: "dr" } },
+  "paper-tradingagents-backtest": {
+    input: "Ticker: NVDA. Daily closes for the last ten trading days, oldest first: 120.1, 121.4, 119.8, 122.6, 124.0, 123.2, 125.9, 127.3, 126.1, 128.4. Should we buy, sell or hold for the next trading day?",
+  },
   "paper-tradingagents": {
     input: "Should we trade NVIDIA (NVDA) today? Use what you know up to your training cutoff.",
   },
@@ -298,11 +311,16 @@ function writeIndex() {
   fs.writeFileSync(path.join(OUT, "index.json"), JSON.stringify(index, null, 1));
 }
 
+// templates with no entry of their own take a short question with a number for an answer
+const FALLBACK: DemoConfig = { input: "What is 17 × 23 − 4 × 19? Give the number." };
+// left out of a check of everything: hour-long town simulations, checked on their own when changed
+const SLOW = new Set(["paper-generative-agents-town", "paper-generative-agents-town-12", "paper-generative-agents-town-25", "paper-generative-agents-town-25-short", "paper-generative-agents-town-25-memory"]);
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-const ids = args.length ? args : Object.keys(DEMOS);
+// a check of everything covers every paper template (not only those recorded for the Demos page)
+const ids = args.length ? args : CHECK ? TEMPLATES.map((t) => t.id).filter((id) => id.startsWith("paper-") && !SLOW.has(id)) : Object.keys(DEMOS);
 for (const id of ids) {
   try {
-    await record(id, DEMOS[id]);
+    await record(id, DEMOS[id] ?? FALLBACK);
   } catch (e) {
     console.log(`\n  failed: ${(e as Error).message}`);
     if (CHECK) checks.push({ id, status: "failed", reason: (e as Error).message.slice(0, 80), answer: false, marked: false, errors: [], asked: 0, calls: 0, usd: 0, seconds: 0 });
