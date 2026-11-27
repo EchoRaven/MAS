@@ -132,7 +132,10 @@ exact McNemar tests against one agent on the same questions.
   ([SOTOPIA](#sotopia-social-goals-played-or-written),
   [MachineSoM](#machinesom-debate-or-reflect-and-in-which-order),
   [Consensus](#consensus-seeking-the-network-and-a-stubborn-agent),
-  [Stakeholders](#llm-stakeholders-six-parties-a-veto-and-five-of-six)).
+  [Stakeholders](#llm-stakeholders-six-parties-a-veto-and-five-of-six),
+  [Avalon](#recon-on-avalon-hiding-merlin)). ReCon's private contemplation
+  hides Avalon's Merlin on 3.8-flash (good wins 8 of 20 against 2 of 21, p
+  0.03); on flash-lite, whose evil players never sabotage, it changes nothing.
 - **Where gains exist they cost**: five debaters cost 17 times one agent
   for 3.5 questions; the cost frontier on Hard computation is the code
   runners (Compare → accuracy against cost). Trying to save the other way
@@ -2489,6 +2492,39 @@ checked by the rule. Twenty games a row:
   deal is proposed in 9 games against 1. 3.8-flash passes 10 of 20 against
   12, at 1.7 times the cost ($0.92 for 20): it needed no notes to read the
   others.
+
+## ReCon on Avalon: hiding Merlin
+
+Wang et al.'s Avalon (`paper-avalon-recon`): six players, four good (Merlin,
+who knows the evil players; Percival, who sees Merlin and Morgana without
+telling which is which; two Loyal Servants) and two evil (Morgana and the
+Assassin, who know each other), roles shuffled every game. Leaders propose
+teams, everyone speaks once and votes, teams play secret cards; three
+successful quests leave the Assassin one guess at Merlin. With ReCon
+(`recon=good`) the good players first think in private what each other player
+is and how their own words and votes will be read, notes kept for their next
+turn; only the answer is seen. Twenty games a row (21 without ReCon on
+3.8-flash, the first test game included; batches stopped at their cap were
+topped up and pooled):
+
+| | Good won | Three quests succeeded | Assassin found Merlin | Approved teams with an evil player | Cost a game |
+|---|---|---|---|---|---|
+| gemini-3.8-flash, no ReCon | 2 of 21 | 21 | 19 | 27% | $0.13 |
+| gemini-3.8-flash, ReCon for good | **8 of 20** | 20 | 12 | 23% | $0.12 |
+| flash-lite, no ReCon | 15 of 20 | 20 | 5 | 70% | $0.017 |
+| flash-lite, ReCon for good | 11 of 20 | 19 | 8 | 69% | $0.021 |
+
+- **On 3.8-flash ReCon hides Merlin, as the paper found.** Good wins the
+  quests every game either way; the game is lost at the Assassin's guess.
+  Without ReCon Merlin is found 19 times in 21 (his rejections of evil teams
+  give him away); with it 12 in 20, and good wins 8 games against 2 (Fisher
+  p 0.03), at the same cost.
+- **On flash-lite there is nothing to hide from.** Its evil players join 70%
+  of approved teams yet almost never play fail (one game in 40 lost a
+  quest), and its Assassin finds Merlin 5 times in 20: good wins 15 of 20
+  without ReCon, 11 with it (p 0.32).
+- The paper's ReCon refines a draft of speech in a second pass; here
+  thinking and answer are one call.
 
 ## The games on a stronger model
 

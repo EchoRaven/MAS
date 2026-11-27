@@ -125,7 +125,7 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   Their rules are a custom loop, a referee or moderator in code that calls
   each player agent through call edges and tells it only what its role may
   know (Werewolf, GovSim's fishery, the repeated games, the negotiation,
-  Auction Arena, SOTOPIA's social scenarios, scored by an evaluator agent, the consensus game, the six-party negotiation); the loop reports its outcome with `metric(name, value)`,
+  Auction Arena, SOTOPIA's social scenarios, scored by an evaluator agent, the consensus game, the six-party negotiation, Avalon); the loop reports its outcome with `metric(name, value)`,
   and the evaluation keeps each case's metrics and shows their means and
   ranges, on the Evaluate page and in Compare. With one or two questions run
   many times, Compare tests a difference by Fisher's exact test on the runs
