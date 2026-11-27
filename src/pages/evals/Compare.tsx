@@ -141,22 +141,32 @@ export function ComparePage() {
     return out;
   }, [records, groups]);
 
-  // questions flagged as broken in the set's dataset: left out of scores unless asked for
-  const datasetId = useMemo(() => members.map((e) => recs[e.id]?.dataset?.id).find(Boolean) ?? null, [members, recs]);
-  const [flags, setFlags] = useState<DatasetFlag[]>([]);
+  // questions flagged as broken in each set's dataset (every pooled set's): left out of scores unless asked for
+  const datasetOf = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const e of rawMembers) {
+      const r = records[e.id];
+      if (r?.dataset?.id) for (const c of r.cases) if (!out.has(c.input)) out.set(c.input, r.dataset.id);
+    }
+    return out;
+  }, [rawMembers, records]);
+  const datasetIds = useMemo(() => [...new Set(datasetOf.values())].sort(), [datasetOf]);
+  const datasetKey = datasetIds.join("|");
+  const [flags, setFlags] = useState<Record<string, DatasetFlag[]>>({});
   const [leaveOut, setLeaveOut] = useState(true);
   useEffect(() => {
-    setFlags([]);
-    if (!datasetId) return;
-    Api.datasetFlags(datasetId)
-      .then((r) => setFlags(r.flags))
-      .catch(() => undefined);
-  }, [datasetId]);
-  const flagged = useMemo(() => new Map(flags.map((f) => [f.input, f.reason])), [flags]);
+    setFlags({});
+    for (const id of datasetKey ? datasetKey.split("|") : [])
+      Api.datasetFlags(id)
+        .then((r) => setFlags((f) => ({ ...f, [id]: r.flags })))
+        .catch(() => undefined);
+  }, [datasetKey]);
+  const flagged = useMemo(() => new Map(Object.values(flags).flat().map((f) => [f.input, f.reason])), [flags]);
   const flag = (input: string, reason: string | null) => {
-    if (!datasetId) return;
-    Api.flagQuestion(datasetId, input, reason)
-      .then((r) => setFlags(r.flags))
+    const id = datasetOf.get(input);
+    if (!id) return;
+    Api.flagQuestion(id, input, reason)
+      .then((r) => setFlags((f) => ({ ...f, [id]: r.flags })))
       .catch((e) => setError(e.message));
   };
 
@@ -405,7 +415,7 @@ export function ComparePage() {
           <div className="mb-2 flex flex-wrap items-center gap-3">
             <h2 className="text-sm font-semibold">Question by question</h2>
             {flagged.size > 0 && (
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title={flags.map((f) => `${f.reason}: ${f.input.slice(0, 80)}`).join("\n")}>
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title={Object.values(flags).flat().map((f) => `${f.reason}: ${f.input.slice(0, 80)}`).join("\n")}>
                 <input type="checkbox" checked={leaveOut} onChange={(ev) => setLeaveOut(ev.target.checked)} /> Leave out {flagged.size} flagged question{flagged.size === 1 ? "" : "s"}
               </label>
             )}
@@ -438,7 +448,7 @@ export function ComparePage() {
                   <tr key={k} className={cn(allFail && !why && "bg-destructive/5", why && "opacity-50")}>
                     <td className="pr-2 text-right tabular-nums text-muted-foreground">{k + 1}</td>
                     <td className="max-w-[28rem] truncate py-0.5 pr-3" title={why ? `Flagged: ${why}\n\n${input}` : input}>
-                      {datasetId && (
+                      {datasetOf.has(input) && (
                         <button
                           type="button"
                           className={cn("mr-1.5 align-middle", why ? "text-amber-600" : "text-muted-foreground/40 hover:text-amber-600")}
