@@ -2378,8 +2378,15 @@ majority vote over independent samples (12 is the society's number of calls):
   nearly all three end on the same answer (2.79 of 3 for `ddd`); after
   reflection rounds they agree less (2.24) and are right more often: the
   paper's conformity, at a cost of the vote's independence.
-- One model, one society (EEE); the paper also varies traits and uses
-  gpt-3.5 on MMLU, MATH and chess. Not run on gemini-3.8-flash: one agent
+- **Traits change little.** Three overconfident agents (`traits=OOO`):
+  `ddd` 38 (21 and 17) against 34 for easygoing ones (+5 −1, p 0.22), `rrr`
+  37 against 37 (+3 −3). Overconfidence did not stop the agreement either:
+  2.81 of 3 agree after `ddd`, as with easygoing agents (2.79), and 2.21
+  after `rrr`. Both OOO societies again beat the 12-sample vote (`ddd` +9
+  −1, p 0.02; `rrr` +8 −1, p 0.04). As the paper found, the strategy matters
+  more than the traits; unlike it, debating first was not the better
+  strategy. About $1.5 a society for the 63.
+- One model; the paper uses gpt-3.5 and others on MMLU, MATH and chess. Not run on gemini-3.8-flash: one agent
   already solves 61 of these 63 (30 and 31).
 
 ## The games on a stronger model
