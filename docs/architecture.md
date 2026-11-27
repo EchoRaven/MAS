@@ -144,7 +144,10 @@ dataset (versioned cases) ──► evaluation: one run per case × repeats ─�
   short); misses graded by rule record which member had the right answer
   (`reached`); and Check misses with the judge gives a second opinion on the
   wrong answers without changing a grade.
-- **Compare** groups evaluations by their questions (a hash of the cases), and
+- **Compare** groups evaluations by their questions (a hash of the cases)
+  (several sets can be pooled, `?set=a+b`: each setup that ran on all of
+  them becomes one row over all their questions, `poolSets`, so AIME and
+  HMMT are tested together), and
   shows accuracy with its 95% interval, each repeat's score and spread, the
   questions fixed and lost against a reference with McNemar's p, misses a
   member had and lost, cost per correct answer, a chart of accuracy against

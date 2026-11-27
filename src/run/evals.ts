@@ -312,6 +312,30 @@ export function poolRuns(recs: EvalRecord[]): EvalRecord {
 }
 
 /**
+ * One setup's evaluations on different question sets (AIME and HMMT) as one: their cases one after another, each
+ * question numbered past the sets before it, runs kept as they are, costs and counts added. Questions still match by
+ * their text, so two pooled setups are compared question by question over all the sets.
+ */
+export function poolSets(recs: EvalRecord[]): EvalRecord {
+  const cases: EvalCaseResult[] = [];
+  let offset = 0;
+  for (const r of recs) {
+    const n = Math.max(0, ...r.cases.map((c, i) => (c.case ?? i) + 1));
+    r.cases.forEach((c, i) => cases.push({ ...c, case: (c.case ?? i) + offset }));
+    offset += n;
+  }
+  const last = [...recs].sort((a, b) => a.started_at.localeCompare(b.started_at))[recs.length - 1];
+  return {
+    ...last,
+    id: `sets:${recs.map((r) => r.id).join(",")}`,
+    cases,
+    passed: recs.reduce((n, r) => n + r.passed, 0),
+    graded: recs.reduce((n, r) => n + r.graded, 0),
+    usd: recs.reduce((n, r) => n + r.usd, 0),
+  };
+}
+
+/**
  * The 95% Wilson interval of a proportion: how far an accuracy measured on n cases could be from the system's own
  * by chance. 19 of 30 is 63% (46–78): a 30-question score moves by about 15 points, so one run says little.
  */

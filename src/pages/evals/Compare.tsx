@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/select";
 import { downloadText, timeAgo, usd } from "@/lib/format";
 import { csvGrid, markdownTable, metricsText } from "@/run/exportEvals";
 import { cn } from "@/lib/utils";
-import { type EvalRecord, pairedDiff, poolRuns, repeatStats, retryableCase, wilson } from "@/run/evals";
+import { type EvalRecord, pairedDiff, poolRuns, poolSets, repeatStats, retryableCase, wilson } from "@/run/evals";
 import { OpenEnded } from "./OpenEnded";
 import { CostChart } from "./CostChart";
 import { formatVars } from "@/run/vars";
@@ -22,6 +22,9 @@ const modelsLabel = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock" | "va
 
 /** The models an evaluation ran on, as one key for the filter: "gemini_lite", "mixed models", "its own models". */
 const modelKey = (e: Pick<EvalRecord, "on_model" | "model_map" | "mock">) => (e.mock ? "dry run" : e.on_model ? e.on_model : e.model_map && Object.keys(e.model_map).length ? "mixed models" : "its own models");
+
+/** a group of evaluations' id as the page knows it: one evaluation's own, or "pool:" and theirs */
+const groupId = (g: Pick<EvalSummary, "id">[]) => (g.length === 1 ? g[0].id : `pool:${g.map((e) => e.id).join(",")}`);
 
 const incomplete = (e: EvalSummary) => e.status !== "finished" || e.graded < e.total;
 /** an evaluation in which no model ever answered (no key, a dead endpoint): a broken run, not a score of 0 */
@@ -59,25 +62,43 @@ export function ComparePage() {
     for (const e of all ?? []) by.set(e.set, [...(by.get(e.set) ?? []), e]);
     return [...by.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [all]);
-  const set = params.get("set") ?? sets[0]?.[0] ?? "";
-  const rawMembers = useMemo(() => sets.find(([id]) => id === set)?.[1] ?? [], [sets, set]);
+  // "a+b": several question sets pooled (AIME and HMMT), each setup's evaluations on them counted as one
+  const setIds = useMemo(() => {
+    const known = new Set(sets.map(([id]) => id));
+    const ids = [...new Set((params.get("set") ?? "").split("+").filter((id) => known.has(id)))];
+    return ids.length ? ids : sets[0] ? [sets[0][0]] : [];
+  }, [params, sets]);
+  const set = setIds[0] ?? "";
+  const multi = setIds.length > 1;
+  const rawMembers = useMemo(() => setIds.flatMap((id) => sets.find(([s]) => s === id)?.[1] ?? []), [sets, setIds]);
   // several evaluations of one setup (a second run started later) as one row with all their runs
   const [pool, setPool] = useState(true);
   const groups = useMemo(() => {
     const by = new Map<string, EvalSummary[]>();
     for (const e of rawMembers) {
-      const k = pool && !incomplete(e) && !noAnswers(e) && !e.invalid ? `${e.system_id}|${e.system_version ?? ""}|${modelsLabel(e)}|${e.grader}` : e.id;
+      const whole = !incomplete(e) && !noAnswers(e) && !e.invalid;
+      // pooled sets: only whole evaluations, grouped by setup whatever the pooling of runs; a setup's runs on one set
+      // are then pooled too, or only its latest is kept
+      if (multi && !whole) continue;
+      const k = (pool || multi) && whole ? `${e.system_id}|${e.system_version ?? ""}|${modelsLabel(e)}|${e.grader}` : e.id;
       by.set(k, [...(by.get(k) ?? []), e]);
     }
-    return [...by.values()].map((g) => [...g].sort((a, b) => a.started_at.localeCompare(b.started_at)));
-  }, [rawMembers, pool]);
+    let out = [...by.values()].map((g) => [...g].sort((a, b) => a.started_at.localeCompare(b.started_at)));
+    if (multi) {
+      // a setup counts only where it ran on every set; without pooling, its latest run on each
+      out = out
+        .filter((g) => setIds.every((id) => g.some((e) => e.set === id)))
+        .map((g) => (pool ? g : setIds.map((id) => g.filter((e) => e.set === id).pop()!)));
+    }
+    return out;
+  }, [rawMembers, pool, multi, setIds]);
   const members = useMemo(
     () =>
       groups.map((g): EvalSummary => {
         if (g.length === 1) return g[0];
         const last = g[g.length - 1];
         const sum = (f: (e: EvalSummary) => number) => g.reduce((n, e) => n + f(e), 0);
-        return { ...last, id: `pool:${g.map((e) => e.id).join(",")}`, usd: sum((e) => e.usd), passed: sum((e) => e.passed), graded: sum((e) => e.graded), total: sum((e) => e.total), repeats: sum((e) => e.repeats ?? 1) };
+        return { ...last, id: groupId(g), usd: sum((e) => e.usd), passed: sum((e) => e.passed), graded: sum((e) => e.graded), total: sum((e) => e.total), repeats: Math.max(...[...new Set(g.map((e) => e.set))].map((id) => g.filter((e) => e.set === id).reduce((n, e) => n + (e.repeats ?? 1), 0))) };
       }),
     [groups],
   );
@@ -112,8 +133,10 @@ export function ComparePage() {
     const out: Record<string, EvalRecord> = { ...records };
     for (const g of groups) {
       if (g.length < 2 || !g.every((e) => records[e.id])) continue;
-      const pooled = poolRuns(g.map((e) => records[e.id]));
-      out[pooled.id] = pooled;
+      // runs of one set pooled first, then the sets one after another
+      const bySet = [...new Set(g.map((e) => e.set))].map((id) => g.filter((e) => e.set === id).map((e) => records[e.id]));
+      const perSet = bySet.map((rs) => (rs.length > 1 ? poolRuns(rs) : rs[0]));
+      out[groupId(g)] = { ...(perSet.length > 1 ? poolSets(perSet) : perSet[0]), id: groupId(g) };
     }
     return out;
   }, [records, groups]);
@@ -195,6 +218,21 @@ export function ComparePage() {
           ariaLabel="Question set"
           className="max-w-xl"
         />
+        {/* more sets pooled with the first: each setup that ran on all of them, question by question over all */}
+        {setIds.slice(1).map((id) => (
+          <Button key={id} variant="secondary" size="sm" title="Pooled with the first set; click to leave it out" onClick={() => (setParams({ set: setIds.filter((x) => x !== id).join("+") }), setPicked(null))}>
+            + {sets.find(([s]) => s === id)?.[1].find((e) => e.set_name)?.set_name ?? id} ×
+          </Button>
+        ))}
+        {sets.length > setIds.length && (
+          <Select
+            value="none"
+            onValueChange={(v) => v !== "none" && (setParams({ set: [...setIds, v].join("+") }), setPicked(null))}
+            items={[{ value: "none", label: "Pool with another set…" }, ...sets.filter(([id]) => !setIds.includes(id)).map(([id, es]) => ({ value: id, label: `${es.find((e) => e.set_name)?.set_name ?? `“${es[0].first_question.slice(0, 48)}…”`} · ${es[0].questions} questions` }))]}
+            ariaLabel="Pool with another question set"
+            className="max-w-xs"
+          />
+        )}
         {models.length > 1 && (
           <Select
             value={models.includes(modelFilter) ? modelFilter : "all"}
@@ -224,7 +262,7 @@ export function ComparePage() {
             >
               <Copy className="mr-1.5 h-3.5 w-3.5" /> {copied || "Copy as Markdown"}
             </Button>
-            <Button variant="outline" size="sm" title="Question by question: the share of runs each system got right" onClick={() => downloadText(`comparison-${set}.csv`, csvGrid(exportRows), "text/csv")}>
+            <Button variant="outline" size="sm" title="Question by question: the share of runs each system got right" onClick={() => downloadText(`comparison-${setIds.join("+")}.csv`, csvGrid(exportRows), "text/csv")}>
               <Download className="mr-1.5 h-3.5 w-3.5" /> CSV
             </Button>
           </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, latexValue, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
+import { DEFAULT_CRITERION, type PairwiseResult, poolJudgements, answerTrail, trailStats, boxedContent, caseSetId, poolRuns, poolSets, reachedBy, repeatStats, retryableCase, wilson, etaSeconds, failureReasons, finalAnswer, gradeByRule, mcnemarP, fisherP, latexValue, pairedDiff, parseCases, parseNumber, SAMPLE_SETS } from "./evals";
 
 describe("grading", () => {
   it("finds the final answer: the last Answer/Final line, else the last line", () => {
@@ -145,6 +145,23 @@ describe("pooling the runs of one setup", () => {
     expect([p.repeats, p.passed, p.graded]).toEqual([3, 4, 6]);
     expect(p.id).toBe("pool:e1,e2");
     expect(repeatStats(p).per.length).toBe(3);
+  });
+});
+
+describe("pooling one setup over several question sets", () => {
+  it("numbers the second set's questions after the first's, and pairs two setups over both", () => {
+    const rec = (id: string, set: string, passes: boolean[]) => ({
+      id, system_id: id, system_name: id, grader: "number" as const, mock: false, status: "finished" as const, started_at: "2026-11-27T00:00:00Z",
+      cases: passes.map((p, i) => ({ case: i, input: `${set}${i}`, expected: "1", status: "done" as const, pass: p, usd: 0.01 })),
+      passed: passes.filter(Boolean).length, graded: passes.length, usd: passes.length * 0.01,
+    });
+    const a = poolSets([rec("a1", "aime", [true, true, false]), rec("a2", "hmmt", [true, false])]);
+    const b = poolSets([rec("b1", "aime", [false, true, false]), rec("b2", "hmmt", [false, false])]);
+    expect(a.cases.map((c) => c.case)).toEqual([0, 1, 2, 3, 4]);
+    expect([a.passed, a.graded, a.id]).toEqual([3, 5, "sets:a1,a2"]);
+    // a beats b on one AIME and one HMMT question, loses none
+    const d = pairedDiff(a, b);
+    expect([d.fixed, d.lost, d.shared]).toEqual([[0, 3], [], 5]);
   });
 });
 
