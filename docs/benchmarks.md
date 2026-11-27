@@ -120,6 +120,19 @@ exact McNemar tests against one agent on the same questions.
 - **A model critiquing itself helps on reasoning and open-ended answers, not
   arithmetic** (Self-Refine: MATH level 5 40 → 44; Hard computation revisions
   4 right, 3 wrong; open-ended instructions 25–2, above).
+- **In games and simulations the model decides more than the design.** A
+  greedy fisher empties GovSim's commons on all three models; the
+  LLM-Stakeholders negotiation closes 12 of 20 deals on gemini-3.8-flash and
+  none of 60 on flash-lite; SOTOPIA's one writer who knows both goals scores
+  above two agents on 3.8-flash (p < 0.001, under either judge) and not on
+  flash-lite. MachineSoM's societies beat one agent and an equal-call vote on
+  AIME and HMMT, but debating first, the paper's finding, did not win; and
+  in the consensus game the agents move to the mean of what they see, a
+  star's hub pulling the group and a stubborn agent stalling a ring
+  ([SOTOPIA](#sotopia-social-goals-played-or-written),
+  [MachineSoM](#machinesom-debate-or-reflect-and-in-which-order),
+  [Consensus](#consensus-seeking-the-network-and-a-stubborn-agent),
+  [Stakeholders](#llm-stakeholders-six-parties-a-veto-and-five-of-six)).
 - **Where gains exist they cost**: five debaters cost 17 times one agent
   for 3.5 questions; the cost frontier on Hard computation is the code
   runners (Compare → accuracy against cost). Trying to save the other way
