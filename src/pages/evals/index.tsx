@@ -24,7 +24,7 @@ import { Trail } from "./Trail";
 import { useServer } from "@/store/server";
 import { useSystems } from "@/store/systems";
 
-type Summary = Omit<EvalRecord, "cases"> & { total: number };
+type Summary = Omit<EvalRecord, "cases"> & { total: number; done?: number };
 
 const GRADERS: { value: Grader; label: string; hint: string }[] = [
   { value: "number", label: "Number", hint: "The last number in the final answer equals the expected one (fractions and percentages too)" },

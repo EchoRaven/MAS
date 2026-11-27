@@ -341,16 +341,19 @@ export function poolSets(recs: EvalRecord[]): EvalRecord {
  * more than anything (Avalon: $0.017 on flash-lite, $0.13 on 3.8-flash), so other models' runs are not counted.
  */
 export function costPerRun(
-  evals: (Pick<EvalRecord, "status" | "usd" | "mock" | "on_model" | "started_at"> & { invalid?: unknown; total?: number })[],
+  evals: (Pick<EvalRecord, "status" | "usd" | "mock" | "on_model" | "started_at"> & { invalid?: unknown; total?: number; done?: number })[],
   onModel: string | undefined,
 ): { mean: number; max: number; runs: number; evals: number } | null {
+  // a stopped evaluation counts by the runs it finished (stopped at its limit, it is the dearest kind); without that
+  // count only finished ones are known
+  const runsOf = (e: { status: string; total?: number; done?: number }) => (e.done != null ? e.done : e.status === "finished" ? (e.total ?? 0) : 0);
   const same = evals
-    .filter((e) => e.status === "finished" && !e.mock && !e.invalid && (e.on_model ?? "") === (onModel ?? "") && !!e.total && e.usd > 0)
+    .filter((e) => (e.status === "finished" || e.status === "stopped") && !e.mock && !e.invalid && (e.on_model ?? "") === (onModel ?? "") && runsOf(e) > 0 && e.usd > 0)
     .sort((a, b) => b.started_at.localeCompare(a.started_at))
     .slice(0, 5);
   if (!same.length) return null;
-  const each = same.map((e) => e.usd / e.total!);
-  const runs = same.reduce((n, e) => n + e.total!, 0);
+  const each = same.map((e) => e.usd / runsOf(e));
+  const runs = same.reduce((n, e) => n + runsOf(e), 0);
   return { mean: same.reduce((n, e) => n + e.usd, 0) / runs, max: Math.max(...each), runs, evals: same.length };
 }
 

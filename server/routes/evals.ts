@@ -91,6 +91,8 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
       evals: store.listEvals(req.query.get("system") ?? undefined).map(({ cases, ...rest }) => ({
         ...rest,
         total: cases.length,
+        // runs that finished (a stopped evaluation's cost is theirs): what the cost estimate divides by
+        done: cases.filter((c) => c.status === "done").length,
         // evaluations of the same questions group together, however they were given (a dataset, a file, typed)
         set: caseSetId(cases),
         questions: new Set(cases.map((c) => c.input)).size,

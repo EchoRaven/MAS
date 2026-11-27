@@ -45,7 +45,7 @@ export interface PairwiseJob {
   error?: string;
 }
 
-export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; set: string; questions: number; first_question: string; set_name?: string };
+export type EvalSummary = Omit<EvalRecord, "cases"> & { total: number; done?: number; set: string; questions: number; first_question: string; set_name?: string };
 
 export interface SystemVersion {
   version: string;

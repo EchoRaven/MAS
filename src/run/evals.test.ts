@@ -173,6 +173,9 @@ describe("the cost of a run from earlier evaluations", () => {
     expect(costPerRun(list, "gemini_lite")?.mean).toBeCloseTo(0.015);
     expect(costPerRun(list, undefined)?.runs).toBe(1);
     expect(costPerRun(list, "gemma")).toBeNull();
+    // a stopped evaluation counts by the runs it finished, when the summary says
+    const stopped = [{ ...e("gemini", 2.29, 20, "stopped"), done: 17 }, e("gemini", 0.3, 3)];
+    expect(costPerRun(stopped, "gemini")).toEqual({ mean: 2.59 / 20, max: 2.29 / 17, runs: 20, evals: 2 });
   });
 });
 
