@@ -2332,8 +2332,19 @@ writing and judging:
   warmer ending remains (p 0.07).
 - **Refusing is easier than asking.** On every row the second speaker, whose
   goal is mostly to decline, scores about twice the first.
-- The evaluator is the same model that played, as in the paper's
-  self-evaluation setting; no human scores are compared.
+- **The judge is not the cause.** With the evaluator swapped to the other
+  model (`model_map: {"node:evaluator": ...}`), ten runs again per row:
+
+  | Players, judged by the other model | Two agents | One writer | p |
+  |---|---|---|---|
+  | gemini-3.8-flash, judged by flash-lite | 5.95 | **7.20** | < 0.001 |
+  | flash-lite, judged by gemini-3.8-flash | 6.33 | 6.24 | 0.67 |
+
+  The gap follows the model that plays, not the one that judges: 3.8-flash's
+  written conversations win under either judge, flash-lite's under neither.
+  Under both judges the writer's conversations end warmer (relationship 1.02
+  against 0.63, p 0.004; 0.62 against -0.09, p 0.007). No human scores are
+  compared.
 
 ## The games on a stronger model
 
