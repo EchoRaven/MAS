@@ -165,6 +165,29 @@ describe("runtime", () => {
     expect(none.out).toContain("Mean deal price: none");
   });
 
+  it("SOTOPIA: turns, leaving, the evaluator's scores and the script mode", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const talk = async (scripts: Record<string, string[]>, vars: Record<string, unknown>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-sotopia")!.build();
+      doc.models.push(...Object.entries(scripts).map(([id, sc]) => mock(`m_${id}`, sc)), mock("m_ref", ["ok"]));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "referee" ? "m_ref" : `m_${n.id}`;
+      const { events } = await run(doc, "Start.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return { out: (events.find((e) => e.type === "output") as { text: string }).text, events };
+    };
+    // B leaves on its second message: four lines; the scores are read and clamped (12 becomes 10)
+    const a = await talk({ char_a: ["Could you take the bins?"], char_b: ["Maybe.", "Sorry, I must go.\nLeave"], evaluator: ["A goal: 3\nB goal: 12\nRelationship: -1"], writer: ["x"] }, { scenarios: "1" });
+    expect(a.out).toContain("Scenario 1 (Lena and Omar, 4 lines): goals 3 and 10, relationship -1");
+    expect(a.out).toContain("Goal completion (0-10): 6.5");
+    const toB = a.events.filter((e) => e.type === "message" && (e as { to?: string }).to === "char_b").map((e) => (e as { text: string }).text);
+    // each character sees its own goal and not the other's
+    expect(toB.every((t) => t.includes("You have exams") && !t.includes("night shifts"))).toBe(true);
+    // script mode: the writer's lines are kept, the characters never asked
+    const s = await talk({ char_a: ["x"], char_b: ["x"], writer: ["**Priya:** Hi.\nTom: Hello.\n(narration)\nPriya: Refund?"], evaluator: ["A goal: 8\nB goal: 6\nRelationship: 2"] }, { scenarios: "2", mode: "script" });
+    expect(s.out).toContain("Scenario 2 (Priya and Tom, 3 lines): goals 8 and 6, relationship 2");
+    expect(s.events.some((e) => e.type === "message" && (e as { to?: string }).to === "char_a")).toBe(false);
+  });
+
   it("Repeated games: the payoffs, the fixed opponents and the scores", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const play = async (reply: string, vars: Record<string, unknown>) => {

@@ -47,8 +47,9 @@ import { govsim } from "./govsim";
 import { repeatedGames } from "./repeatedGames";
 import { negotiation } from "./negotiation";
 import { auctionArena } from "./auctionArena";
+import { sotopia } from "./sotopia";
 
-const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex, mav, macm, selfRefine, dmad, longAgent, frugalgpt, usc, llmDiscussion, metaPrompting, metaPromptingPython, selfCorrect, critic, generativeTown, generativeTown12, generativeTown25, generativeTown25Short, generativeTown25Memory, werewolfExperience, tradingagentsBacktest, govsim, repeatedGames, negotiation, auctionArena];
+const PAPERS: TemplateInfo[] = [chatdev, metagpt, debate, generativeAgents, moa, magenticOne, camel, autogen, agentcoder, agentverse, chateval, mapcoder, voyager, reflexion, dylan, tradingagents, werewolf, chainOfAgents, mad, reconcile, medagents, autoagents, eot, agentsroom, storm, virtuallab, agentForest, macnet, spp, corex, mav, macm, selfRefine, dmad, longAgent, frugalgpt, usc, llmDiscussion, metaPrompting, metaPromptingPython, selfCorrect, critic, generativeTown, generativeTown12, generativeTown25, generativeTown25Short, generativeTown25Memory, werewolfExperience, tradingagentsBacktest, govsim, repeatedGames, negotiation, auctionArena, sotopia];
 
 // each with what it scored here, beside how it maps to its paper
 export const PAPER_TEMPLATES: TemplateInfo[] = PAPERS.map((t) => (t.notes && MEASURED[t.id] ? { ...t, notes: { ...t.notes, measured: MEASURED[t.id] } } : t));
