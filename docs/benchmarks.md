@@ -2480,6 +2480,15 @@ checked by the rule. Twenty games a row:
 - **Proposed, then lost.** On 3.8-flash 16 cooperative games saw a passing
   deal proposed and 12 ended on one: the Council's last proposal is not
   always the best one on the table.
+- **A private scratchpad lifts the small model off zero, not the strong
+  one.** With `plan=true` each party first writes notes it alone sees (what
+  the others seem to want, which deals might pass for them), kept for its
+  next turn, as the paper's structured prompts do. flash-lite then passes 4
+  of 20 (against 0 of 20 cooperative, p 0.11; 0 of all 60 games without
+  notes, p 0.003), 3.8 parties at their minimum against 3.1, and a passing
+  deal is proposed in 9 games against 1. 3.8-flash passes 10 of 20 against
+  12, at 1.7 times the cost ($0.92 for 20): it needed no notes to read the
+  others.
 
 ## The games on a stronger model
 
