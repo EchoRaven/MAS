@@ -2302,6 +2302,39 @@ report their profits as metrics. Five auctions each.
   or above their own value, and earned $580 each an auction; the rule bidder,
   still bidding while below its value, won 10 and earned $1,560.
 
+## SOTOPIA: social goals, played or written
+
+SOTOPIA (`paper-sotopia`): two characters, each with a private social goal
+that pulls against the other's (a flatmate who wants the other to take over the
+bins, one who has exams; a refund past the return policy), talk for up to 10
+messages, and an evaluator agent scores each character's goal completion (0 to
+10) and the change in their relationship (-5 to 5). The follow-up "Is this the
+real life?" (Zhou et al. 2024) found that one model writing the whole
+conversation, knowing both goals, scores higher than two agents who each know
+only their own: `mode=script` is that comparison. Six scenarios written for
+the template, ten runs each (60 conversations per row), the same model playing,
+writing and judging:
+
+| Ten runs of six scenarios | Goal completion (0-10) | First speaker (the one who asks) | Second speaker | Relationship | Cost per run |
+|---|---|---|---|---|---|
+| gemini-3.8-flash, two agents | 6.07 | 4.06 | 8.0 | 0.61 | $0.028 |
+| gemini-3.8-flash, one writer | **6.96** | 4.91 | 9.0 | 0.98 | $0.009 |
+| flash-lite, two agents | 6.26 | 3.81 | 8.7 | 0.18 | $0.017 |
+| flash-lite, one writer | 6.48 | 3.46 | 9.5 | 0.66 | $0.004 |
+
+- **On 3.8-flash the paper's finding holds.** The written conversations score
+  0.9 higher (permutation test over the ten runs, p < 0.001); more for the one
+  who asks (4.91 against 4.06, p 0.03), and the relationship ends warmer (p
+  0.05). A writer who knows both goals finds the compromise both can accept;
+  agents who know only their own goal more often end without one.
+- **On flash-lite it does not.** 6.48 against 6.26 (p 0.38); the writer helps
+  the one who refuses, not the one who asks (3.46 against 3.81). Only the
+  warmer ending remains (p 0.07).
+- **Refusing is easier than asking.** On every row the second speaker, whose
+  goal is mostly to decline, scores about twice the first.
+- The evaluator is the same model that played, as in the paper's
+  self-evaluation setting; no human scores are compared.
+
 ## The games on a stronger model
 
 Each game setup here can be rerun with one command, with the server up:
