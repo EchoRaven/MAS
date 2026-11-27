@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EvalRecord } from "./evals";
-import { csvGrid, markdownTable } from "./exportEvals";
+import { csvGrid, markdownTable, metricsText } from "./exportEvals";
 
 const rec = (passes: boolean[][], usd: number): EvalRecord => ({
   id: "e",
@@ -49,5 +49,15 @@ describe("exporting evaluations", () => {
       { label: "B", setup: "y", rec: rec([[false, false], [true, true]], 0.1) },
     ]);
     expect(csv).toBe('#,question,expected,A (x),B (y)\n1,1+1?,0,1,0\n2,"Say ""hi"", twice",1,0.5,1\n');
+  });
+});
+
+describe("a game's metrics", () => {
+  it("reads a yes/no metric as a count, against the reference's by Fisher's exact test", () => {
+    const game = (won: number[], quests: number[]) => ({ cases: won.map((w, i) => ({ input: "Start.", expected: "", status: "done" as const, metrics: { "good won": w, quests: quests[i] } })) });
+    const recon = game([1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Array(20).fill(3));
+    const none = game([1, 1, ...Array(19).fill(0)], [3, 2, ...Array(19).fill(3)]);
+    expect(metricsText(recon, none)).toBe("good won 8 of 20 (vs 2 of 21, p 0.03) · quests 3");
+    expect(metricsText(none)).toBe("good won 2 of 21 · quests 2.95 (2–3)");
   });
 });

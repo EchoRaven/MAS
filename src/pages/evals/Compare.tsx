@@ -326,8 +326,8 @@ export function ComparePage() {
                       {e.system_name}
                     </Link>
                     {r && metricsText(r.rec) && (
-                      <span className="block text-[11px] tabular-nums text-muted-foreground" title="The runs' own metrics: each one's mean over the cases, with its range">
-                        {metricsText(r.rec)}
+                      <span className="block text-[11px] tabular-nums text-muted-foreground" title="The runs' own metrics: each one's mean over the cases, with its range; a yes/no metric as a count, against the reference's by Fisher's exact test">
+                        {metricsText(r.rec, ref && ref !== r ? ref.rec : undefined)}
                       </span>
                     )}
                   </td>
