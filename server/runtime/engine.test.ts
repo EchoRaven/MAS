@@ -165,6 +165,25 @@ describe("runtime", () => {
     expect(none.out).toContain("Mean deal price: none");
   });
 
+  it("Consensus seeking: who sees whom, agreement, and the stubborn agent's brief", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const doc = TEMPLATES.find((t) => t.id === "paper-consensus")!.build();
+    doc.models.push(mock("m_a", ["Meet in the middle.\nNumber: 50"]), mock("m_m", ["ok"]));
+    for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "moderator" ? "m_m" : "m_a";
+    const { events } = await run(doc, "Start.", { mock: false, vars: { topology: "star", stubborn: 1 } });
+    expect(errors(events)).toEqual([]);
+    const out = (events.find((e) => e.type === "output") as { text: string }).text;
+    expect(out).toContain("Round 1: 50, 50, 50, 50, 50 (spread 0.0)");
+    expect(out).toContain("Topology star, 1 stubborn. Agreed in round 1 at about 50.0");
+    expect(events.find((e) => e.type === "metric" && (e as { name: string }).name === "rounds to agree")).toMatchObject({ value: 1 });
+    const to = (id: string) => events.filter((e) => e.type === "message" && (e as { to?: string }).to === id).map((e) => (e as { text: string }).text)[0];
+    // in a star the hub sees the four others, a leaf only the hub
+    expect(to("agent_1")).toMatch(/Agent 2: \d+\nAgent 3: \d+\nAgent 4: \d+\nAgent 5: \d+/);
+    expect(to("agent_2")).toMatch(/can see:\nAgent 1: \d+\nThis is round/);
+    expect(to("agent_1")).toContain("You are stubborn");
+    expect(to("agent_2")).not.toContain("You are stubborn");
+  });
+
   it("MachineSoM: debate shows the others' answers, reflection only one's own, the last round's majority answers", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const doc = TEMPLATES.find((t) => t.id === "paper-machinesom")!.build();
