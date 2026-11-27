@@ -165,6 +165,34 @@ describe("runtime", () => {
     expect(none.out).toContain("Mean deal price: none");
   });
 
+  it("LLM-Stakeholders: proposals are read, the final deal is checked by the rule, the greedy brief reaches its party", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const talk = async (reply: string, vars: Record<string, unknown>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-stakeholders")!.build();
+      doc.models.push(mock("m_p", [reply]), mock("m_r", ["ok"]));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "referee" ? "m_r" : "m_p";
+      const { events } = await run(doc, "Start.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return { out: (events.find((e) => e.type === "output") as { text: string }).text, events };
+    };
+    const metric = (events: { type: string }[], name: string) => (events.find((e) => e.type === "metric" && (e as { name: string }).name === name) as { value: number } | undefined)?.value;
+    // A1 B1 C1 D1 E2 is one of the seven deals that pass
+    const ok = await talk("Let us settle.\nProposal: A1, B1, C1, D1, E2", { rounds: 1, greedy: 6 });
+    expect(ok.out).toContain("Final proposal: A1 B1 C1 D1 E2");
+    expect(ok.out).toContain("The deal passes.");
+    expect(metric(ok.events, "proposals made")).toBe(7);
+    expect(metric(ok.events, "greedy party's score")).toBe(0 + 0 + 8 + 31 + 22);
+    const toBuilder = ok.events.filter((e) => e.type === "message" && (e as { to?: string }).to === "builder").map((e) => (e as { text: string }).text);
+    expect(toBuilder[0]).toContain("You care only about your own score");
+    expect(toBuilder[0]).toContain("D1 = 31");
+    // the Council's own best deal fails the rule; a message without a full proposal is no proposal
+    const bad = await talk("Proposal: A2 B1 C2 D1 E3", { rounds: 1 });
+    expect(bad.out).toContain("The deal fails.");
+    expect(metric(bad.events, "a passing deal was proposed")).toBe(0);
+    const none = await talk("I propose A1 and B2.", { rounds: 1 });
+    expect(none.out).toContain("Final proposal: none");
+  });
+
   it("Consensus seeking: who sees whom, agreement, and the stubborn agent's brief", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const doc = TEMPLATES.find((t) => t.id === "paper-consensus")!.build();
