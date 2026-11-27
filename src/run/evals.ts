@@ -341,20 +341,25 @@ export function poolSets(recs: EvalRecord[]): EvalRecord {
  * more than anything (Avalon: $0.017 on flash-lite, $0.13 on 3.8-flash), so other models' runs are not counted.
  */
 export function costPerRun(
-  evals: (Pick<EvalRecord, "status" | "usd" | "mock" | "on_model" | "started_at"> & { invalid?: unknown; total?: number; done?: number })[],
+  evals: (Pick<EvalRecord, "status" | "usd" | "mock" | "on_model" | "started_at" | "vars"> & { invalid?: unknown; total?: number; done?: number })[],
   onModel: string | undefined,
-): { mean: number; max: number; runs: number; evals: number } | null {
+  vars?: Record<string, unknown>,
+): { mean: number; max: number; runs: number; evals: number; sameVars: boolean } | null {
   // a stopped evaluation counts by the runs it finished (stopped at its limit, it is the dearest kind); without that
   // count only finished ones are known
   const runsOf = (e: { status: string; total?: number; done?: number }) => (e.done != null ? e.done : e.status === "finished" ? (e.total ?? 0) : 0);
-  const same = evals
+  const known = evals
     .filter((e) => (e.status === "finished" || e.status === "stopped") && !e.mock && !e.invalid && (e.on_model ?? "") === (onModel ?? "") && runsOf(e) > 0 && e.usd > 0)
-    .sort((a, b) => b.started_at.localeCompare(a.started_at))
-    .slice(0, 5);
+    .sort((a, b) => b.started_at.localeCompare(a.started_at));
+  // run variables change the cost too (Avalon with both sides contemplating: $0.17 a game against $0.12): runs with the
+  // same variables first, else any run on the same models
+  const key = (v?: Record<string, unknown>) => JSON.stringify(Object.entries(v ?? {}).map(([k, x]) => [k, String(x)]).sort());
+  const alike = known.filter((e) => key(e.vars) === key(vars));
+  const same = (alike.length ? alike : known).slice(0, 5);
   if (!same.length) return null;
   const each = same.map((e) => e.usd / runsOf(e));
   const runs = same.reduce((n, e) => n + runsOf(e), 0);
-  return { mean: same.reduce((n, e) => n + e.usd, 0) / runs, max: Math.max(...each), runs, evals: same.length };
+  return { mean: same.reduce((n, e) => n + e.usd, 0) / runs, max: Math.max(...each), runs, evals: same.length, sameVars: alike.length > 0 };
 }
 
 /**

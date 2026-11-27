@@ -169,13 +169,18 @@ describe("the cost of a run from earlier evaluations", () => {
   it("counts finished evaluations on the same models only, and gives the mean and the dearest per-run average", () => {
     const e = (on: string | undefined, usd: number, total: number, status = "finished", at = "2026-11-27T00:00:00Z") => ({ status: status as "finished", usd, total, mock: false, on_model: on, started_at: at });
     const list = [e("gemini", 2.6, 20), e("gemini", 0.6, 4), e("gemini_lite", 0.3, 20), e("gemini", 5, 10, "stopped"), e(undefined, 1, 1)];
-    expect(costPerRun(list, "gemini")).toEqual({ mean: 3.2 / 24, max: 0.15, runs: 24, evals: 2 });
+    expect(costPerRun(list, "gemini")).toEqual({ mean: 3.2 / 24, max: 0.15, runs: 24, evals: 2, sameVars: true });
     expect(costPerRun(list, "gemini_lite")?.mean).toBeCloseTo(0.015);
     expect(costPerRun(list, undefined)?.runs).toBe(1);
     expect(costPerRun(list, "gemma")).toBeNull();
     // a stopped evaluation counts by the runs it finished, when the summary says
     const stopped = [{ ...e("gemini", 2.29, 20, "stopped"), done: 17 }, e("gemini", 0.3, 3)];
-    expect(costPerRun(stopped, "gemini")).toEqual({ mean: 2.59 / 20, max: 2.29 / 17, runs: 20, evals: 2 });
+    expect(costPerRun(stopped, "gemini")).toEqual({ mean: 2.59 / 20, max: 2.29 / 17, runs: 20, evals: 2, sameVars: true });
+    // runs with the same variables first ("2" and 2 are the same), else every run on the model
+    const byVars = [{ ...e("gemini", 3.3, 20), vars: { recon: "all" } }, { ...e("gemini", 2.4, 20), vars: { recon: "good" } }];
+    expect(costPerRun(byVars, "gemini", { recon: "all" })).toMatchObject({ mean: 3.3 / 20, sameVars: true });
+    expect(costPerRun(byVars, "gemini", { recon: "evil" })).toMatchObject({ runs: 40, sameVars: false });
+    expect(costPerRun([{ ...e("gemini", 1, 10), vars: { n: "2" } }], "gemini", { n: 2 })?.sameVars).toBe(true);
   });
 });
 

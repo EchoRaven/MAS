@@ -356,12 +356,12 @@ function Evals({ systemId }: { systemId: string }) {
               !dry &&
               (() => {
                 // what it will cost, from this system's earlier finished evaluations on the same models
-                const est = costPerRun(list, onModel && onModel !== "per" ? onModel : undefined);
+                const est = costPerRun(list, onModel && onModel !== "per" ? onModel : undefined, vars.vars);
                 if (!est || alsoDocs.length) return null;
                 const n = Math.min(caseCount * Number(repeats), MAX_RUNS);
                 const short = !!maxUsd && Number(maxUsd) < est.max * n;
                 return (
-                  <span className={cn(short && "text-amber-600")} title={`From the ${est.evals} latest finished evaluation${est.evals === 1 ? "" : "s"} of this system on the same models (${est.runs} runs): $${est.mean.toFixed(3)} a run on average, $${est.max.toFixed(3)} in the dearest. Other models' runs are not counted.`}>
+                  <span className={cn(short && "text-amber-600")} title={`From the ${est.evals} latest evaluation${est.evals === 1 ? "" : "s"} of this system on the same models${est.sameVars ? " and run variables" : " (none with these run variables, which can change the cost)"} (${est.runs} runs): $${est.mean.toFixed(3)} a run on average, $${est.max.toFixed(3)} in the dearest. Other models' runs are not counted.`}>
                     {" "}
                     · ≈${(est.mean * n).toFixed(2)} (up to ${(est.max * n).toFixed(2)}){short ? `: a limit of $${maxUsd} in all may stop it early` : ""}
                   </span>
