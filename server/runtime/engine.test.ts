@@ -165,6 +165,32 @@ describe("runtime", () => {
     expect(none.out).toContain("Mean deal price: none");
   });
 
+  it("ReCon Avalon: teams, votes, cards, the Assassin's guess, rejections, and private thoughts", async () => {
+    const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
+    const game = async (reply: string, vars: Record<string, unknown>) => {
+      const doc = TEMPLATES.find((t) => t.id === "paper-avalon-recon")!.build();
+      doc.models.push(mock("m_p", [reply]), mock("m_r", ["ok"]));
+      for (const n of doc.nodes) if (n.data.kind === "agent") n.data.model = n.id === "referee" ? "m_r" : "m_p";
+      const { events } = await run(doc, "Start.", { mock: false, vars });
+      expect(errors(events)).toEqual([]);
+      return { out: (events.find((e) => e.type === "output") as { text: string }).text, events };
+    };
+    // everyone approves and plays success: three quests of 2, 3 and 4, then the Assassin names Alice
+    const ok = await game("Fine.\nTeam: Alice, Bob, Carol, Dave\nMerlin: Alice\nCard: success\nVote: approve", {});
+    expect(ok.out).toMatch(/Quest 1 \(Alice, Bob\): success\nVotes|Quest 1 \(Alice, Bob\): success/);
+    expect(ok.out).toContain("Quest 3 (Alice, Bob, Carol, Dave): success");
+    expect(ok.out).toMatch(/(Good wins: the Assassin named Alice, not Merlin|Evil wins: the Assassin named Alice, Merlin)\./);
+    // everyone rejects: five teams in a row, evil wins
+    const no = await game("No.\nTeam: Eve, Frank\nVote: reject", {});
+    expect(no.out).toContain("Evil wins: five teams rejected in a row.");
+    // with recon, thoughts stay private and come back to their writer
+    const th = await game("Think: Bob seems evil.\nAnswer: Team: Alice, Bob, Carol, Dave\nVote: reject", { recon: "all" });
+    const msgs = th.events.filter((e) => e.type === "message" && (e as { to?: string }).to === "alice").map((e) => (e as { text: string }).text);
+    expect(msgs[1]).toContain("Your private thoughts from your last turn:\nBob seems evil.");
+    expect(msgs.every((m) => !m.includes("Alice: Think"))).toBe(true);
+    expect(th.out).not.toContain("Bob seems evil");
+  });
+
   it("LLM-Stakeholders: proposals are read, the final deal is checked by the rule, the greedy brief reaches its party", async () => {
     const mock = (id: string, script: unknown[]) => ({ id, provider: "mock" as const, model: "mock", api: { params: { script } }, price_in: 0, price_out: 0, modalities: ["text"] });
     const talk = async (reply: string, vars: Record<string, unknown>) => {
