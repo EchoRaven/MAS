@@ -13,6 +13,16 @@ import { checkDoc } from "./systems";
 
 const GRADERS: Grader[] = ["answer", "contains", "number", "math", "llm", "code", "check", "none"];
 
+/**
+ * The evaluations a sweep makes: one per value of a run variable (n = 2, 4, 8), or, for the reserved name on_model, one
+ * per model, the system run all on each (on_model=gemini|gemini_lite: the same setup on two models, as a finding on
+ * one model has to be checked on another).
+ */
+export function sweepVariants<T extends { vars?: Record<string, unknown>; on_model?: string }>(opts: T, name: string, values: unknown[]): T[] {
+  if (name === "on_model") return values.map((v) => ({ ...opts, on_model: String(v) }));
+  return values.map((v) => ({ ...opts, vars: { ...(opts.vars ?? {}), [name]: v } }));
+}
+
 export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
   type StartBody = { system_id?: string; doc?: unknown; cases?: EvalCase[]; grader?: Grader; mock?: boolean; concurrency?: number; judge?: string; on_model?: string; time_limit_min?: number; usd_limit?: number; max_usd?: number; repeats?: number; model_map?: Record<string, string>; vars?: Record<string, unknown>; dataset_id?: string; sample?: { n?: number; seed?: number }; force?: boolean; expect?: ResultSpec | null; check?: string };
   // the questions and options of an evaluation, shared by one system and a batch of them
@@ -76,11 +86,12 @@ export function evalRoutes(r: Router, store: Store, evals: EvalManager) {
     const values = Array.isArray(sweep?.values) ? sweep.values : null;
     if (sweep && (!sweep.name || !/^[A-Za-z_]\w*$/.test(String(sweep.name)) || !values?.length || values.length > 10)) throw new HttpError(400, "sweep needs a variable name and one to ten values");
     if (values && docs.length * values.length > 20) throw new HttpError(400, `A sweep of ${values.length} values over ${docs.length} systems is ${docs.length * values.length} evaluations; at most 20 at once`);
-    const variants = values ? values.map((v) => ({ ...opts, vars: { ...(opts.vars ?? {}), [String(sweep!.name)]: v } })) : [opts];
+    const variants = values ? sweepVariants(opts, String(sweep!.name), values) : [opts];
     for (const d of docs) checkValid(d, b.force); // all or none: a batch that stops halfway compares less than it says
     if (given) for (const d of given) store.putSystem(d);
     try {
-      for (const d of docs) evals.prepare(d, opts); // a model with no key in any of them refuses the whole batch
+      // a model with no key in any of them (or any swept model) refuses the whole batch
+      for (const d of docs) for (const o of variants) evals.prepare(d, o);
       return { evals: variants.flatMap((o) => docs.map((d) => evals.start(d, o, true))) };
     } catch (e) {
       throw new HttpError(400, (e as Error).message);

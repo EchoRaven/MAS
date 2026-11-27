@@ -470,7 +470,7 @@ function Evals({ systemId }: { systemId: string }) {
             </div>
           )}
           {(wanted.length > 0 || varsText) && (
-            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Values every run starts with; the system's code reads them as ctx.vars. n=2|4|8 sweeps n: one evaluation per value, one after another">
+            <label className="flex flex-col gap-1 text-xs text-muted-foreground" title="Values every run starts with; the system's code reads them as ctx.vars. n=2|4|8 sweeps n: one evaluation per value, one after another; on_model=gemini|gemini_lite runs the same setup on each model">
               Variables
               <Input value={varsText} onChange={(e) => setVarsText(e.target.value)} placeholder={wanted.map((w) => `${w}=…`).join(", ")} aria-label="Run variables" className="h-8 text-xs" />
               {vars.bad.length > 0 && <span className="text-destructive">not name=value: {vars.bad[0]}</span>}
