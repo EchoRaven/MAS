@@ -2379,7 +2379,8 @@ majority vote over independent samples (12 is the society's number of calls):
   reflection rounds they agree less (2.24) and are right more often: the
   paper's conformity, at a cost of the vote's independence.
 - One model, one society (EEE); the paper also varies traits and uses
-  gpt-3.5 on MMLU, MATH and chess. Not yet measured on gemini-3.8-flash.
+  gpt-3.5 on MMLU, MATH and chess. Not run on gemini-3.8-flash: one agent
+  already solves 61 of these 63 (30 and 31).
 
 ## The games on a stronger model
 
