@@ -2511,6 +2511,7 @@ topped up and pooled):
 |---|---|---|---|---|---|
 | gemini-3.8-flash, no ReCon | 2 of 21 | 21 | 19 | 27% | $0.13 |
 | gemini-3.8-flash, ReCon for good | **8 of 20** | 20 | 12 | 23% | $0.12 |
+| gemini-3.8-flash, ReCon for both sides | 6 of 20 | 20 | 14 | 20% | $0.17 |
 | flash-lite, no ReCon | 15 of 20 | 20 | 5 | 70% | $0.017 |
 | flash-lite, ReCon for good | 11 of 20 | 19 | 8 | 69% | $0.021 |
 
@@ -2519,6 +2520,12 @@ topped up and pooled):
   Without ReCon Merlin is found 19 times in 21 (his rejections of evil teams
   give him away); with it 12 in 20, and good wins 8 games against 2 (Fisher
   p 0.03), at the same cost.
+- **Evil's contemplation takes back part of it.** With both sides thinking
+  first, good wins 6 of 20: between no ReCon (2 of 21, p 0.13) and ReCon for
+  good alone (8 of 20, p 0.74), the Assassin finding Merlin 14 times. Two
+  contemplating sides cost 1.4 times as much a game ($0.17); the cost estimate
+  from the earlier runs ($2.5 for 20) missed that, as it pools the system's
+  runs across run variables.
 - **On flash-lite there is nothing to hide from.** Its evil players join 70%
   of approved teams yet rarely play fail (good won three quests in 39
   of 40 games), and its Assassin finds Merlin 5 times in 20: good wins 15 of 20
