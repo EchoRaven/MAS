@@ -125,7 +125,7 @@ exact McNemar tests against one agent on the same questions.
   LLM-Stakeholders negotiation closes 12 of 20 deals on gemini-3.8-flash and
   none of 60 on flash-lite; SOTOPIA's one writer who knows both goals scores
   above two agents on 3.8-flash (p < 0.001, under either judge) and not on
-  flash-lite. MachineSoM's societies beat one agent and an equal-call vote on
+  flash-lite or gemma. MachineSoM's societies beat one agent and an equal-call vote on
   AIME and HMMT, but debating first, the paper's finding, did not win; and
   in the consensus game the agents move to the mean of what they see, a
   star's hub pulling the group and a stubborn agent stalling a ring
