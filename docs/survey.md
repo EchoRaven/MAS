@@ -329,7 +329,7 @@ the vocabulary:
   are the same shape with an evaluator agent as the scorer: on
   gemini-3.8-flash one writer knowing both goals scores 0.9 higher than two
   agents each knowing only its own (p < 0.001), the follow-up paper's finding,
-  under either model as judge; on flash-lite no gain under either. MachineSoM's society
+  under either model as judge; on flash-lite and gemma no gain. MachineSoM's society
   of three, which debates or reflects round by round, beats one agent and a
   vote of as many samples on AIME and HMMT 2026 (flash-lite), but reflecting
   first did as well as debating first: debate made the agents agree, not

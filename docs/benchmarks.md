@@ -2337,6 +2337,8 @@ writing and judging:
 | gemini-3.8-flash, one writer | **6.96** | 4.91 | 9.0 | 0.98 | $0.009 |
 | flash-lite, two agents | 6.26 | 3.81 | 8.7 | 0.18 | $0.017 |
 | flash-lite, one writer | 6.48 | 3.46 | 9.5 | 0.66 | $0.004 |
+| gemma-4-26b-a4b-it, two agents | 5.94 | 2.65 | 9.2 | 0.48 | free |
+| gemma-4-26b-a4b-it, one writer | 5.82 | 1.96 | 9.7 | 0.53 | free |
 
 - **On 3.8-flash the paper's finding holds.** The written conversations score
   0.9 higher (permutation test over the ten runs, p < 0.001); more for the one
@@ -2346,6 +2348,11 @@ writing and judging:
 - **On flash-lite it does not.** 6.48 against 6.26 (p 0.38); the writer helps
   the one who refuses, not the one who asks (3.46 against 3.81). Only the
   warmer ending remains (p 0.07).
+- **On gemma neither.** 5.94 against 5.82 (p 0.60, one batch sweeping
+  `mode`); as on flash-lite, the writer favours the one who refuses (9.7
+  against 9.2) and leaves the one who asks with less (1.96 against 2.65, p
+  0.02). The follow-up paper's gap shows on the strongest of the three models
+  only.
 - **Refusing is easier than asking.** On every row the second speaker, whose
   goal is mostly to decline, scores about twice the first.
 - **The judge is not the cause.** With the evaluator swapped to the other
