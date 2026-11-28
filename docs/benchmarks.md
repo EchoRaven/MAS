@@ -2428,17 +2428,23 @@ stubborn agent where there is one):
 | star | 18 | 4.9 | 7.0 | **13.5** | 73% | $0.05 |
 | full, agent 1 stubborn | 20 | 4.2 | 2.2 | 21.1 | 87% | $0.05 |
 | ring, agent 1 stubborn | **5** | 5.6 | 10.6 | **13.5** | 90% | $0.06 |
+| gemma-4-26b-a4b-it, full (10 games) | 10 | 1.4 | 3.9 | 27.6 | 96% | free |
+| ring | 10 | 5.2 | 2.1 | 20.9 | 95% | free |
+| star | 10 | 4.8 | 4.5 | **14.4** | 81% | free |
 
-- **The average strategy, as the paper found.** On both models 73% to 99% of
+- **The average strategy, as the paper found.** On all three models 73% to 99% of
   changes move toward the mean of what the agent sees, and with everyone
   seeing everyone the group meets near the starting mean (within 2 to 5 of
   it) in two or three rounds.
 - **A sparse network is slower but fairer.** In a ring agreement takes about
   five rounds and fails in 7 and 2 of 20 games within six, but where it is
   reached it lies closest to the starting mean (1.6 and 0.9).
-- **The hub pulls.** In the star, the agent who sees everyone (and whom the
-  others see) ends the game about 11 to 14 from where the group meets,
-  against 17 to 26 for an ordinary agent: the others move toward it.
+- **The hub pulls, on all three models.** In the star, the agent who sees
+  everyone (and whom the others see) ends the game about 11 to 14 from where
+  the group meets, against 17 to 28 for an ordinary agent: the others move
+  toward it. gemma (10 games a network, a sweep over `topology` in one batch)
+  agrees in every ring game, where 3.8-flash and flash-lite failed in 7 and 2
+  of 20.
 - **A stubborn agent is felt in a ring, hardly with everyone seeing it.** With
   full sight the stubborn agent slows agreement (about 4 rounds against 2)
   but the meeting point is no nearer its number (16.9 against 16.8 on
